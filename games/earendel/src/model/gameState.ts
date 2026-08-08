@@ -10,6 +10,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
+import { TechnologyCard } from './technology.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
 export const EarendelGameState = Type.Evaluate(
@@ -18,7 +19,13 @@ export const EarendelGameState = Type.Evaluate(
         Type.Object({
             players: Type.Array(EarendelPlayerState), // Redefine with the specific player state type
             machineState: Type.Enum(MachineState), // Redefine with the specific machine states
-            board: EarendelBoard
+            board: EarendelBoard,
+            // The shared technology deck, in draw order, and its discard. Both are hidden
+            // information: the deck's order is what exploring reveals, so anything exposing
+            // state to a player must keep it that way (and initializeExplorationState has to
+            // reshuffle it).
+            technologyDeck: Type.Array(TechnologyCard),
+            technologyDiscard: Type.Array(TechnologyCard)
         })
     ])
 )
@@ -40,6 +47,8 @@ export class HydratedEarendelGameState
     declare turnManager: HydratedTurnManager
     declare machineState: MachineState
     declare board: EarendelBoard
+    declare technologyDeck: TechnologyCard[]
+    declare technologyDiscard: TechnologyCard[]
     declare result?: GameResult
     declare winningPlayerIds: string[]
 

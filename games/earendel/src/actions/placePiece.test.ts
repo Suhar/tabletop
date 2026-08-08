@@ -43,6 +43,8 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         turnManager: { series: [], turnOrder: playerIds, turnCounts: {} },
         winningPlayerIds: [],
         board: boardWithPlanetAtOrigin(),
+        technologyDeck: [],
+        technologyDiscard: [],
         ...overrides
     } as EarendelGameState
 

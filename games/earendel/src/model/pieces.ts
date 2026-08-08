@@ -28,9 +28,22 @@ export const STARTING_BAG: Record<PieceType, number> = {
     [PieceType.Fighter]: 6
 }
 
+// How many technology cards a probe reveals when it explores. Probes are visually distinct
+// by level, and a player knows which they drew before deciding where to place it - a level 3
+// probe is strictly the better explorer, so the draw changes the placement decision.
+export enum ProbeLevel {
+    Two = 2,
+    Three = 3
+}
+
+// Three of each level among the six probes in a bag.
+export const PROBES_PER_LEVEL = 3
+
 export type Piece = Type.Static<typeof Piece>
 export const Piece = Type.Object({
     id: Type.String(),
     playerId: Type.String(),
-    type: Type.Enum(PieceType)
+    type: Type.Enum(PieceType),
+    // Probes only. Absent on anything else.
+    level: Type.Optional(Type.Enum(ProbeLevel))
 })

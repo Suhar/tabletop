@@ -1,5 +1,5 @@
 import { type AxialCoordinates, Prng, shuffle } from '@tabletop/common'
-import { EarendelBoard, HexKind, hexKey } from '../model/board.js'
+import { EarendelBoard, HexKind, hexKey, PLANET_COLORS } from '../model/board.js'
 
 // A tile is four hexes in a diamond: an axial rhombus, (0,0) (1,0) (0,1) (1,1) relative to
 // its origin. Two of the four are planets and two are open space, but WHICH two varies from
@@ -58,7 +58,18 @@ export function buildStartingBoard(playerCount: number, prng: Prng): EarendelBoa
 
         TILE_HEX_OFFSETS.forEach((offset, hexIndex) => {
             const coords = { q: origin.q + offset.q, r: origin.r + offset.r }
-            board.hexes[hexKey(coords)] = { coords, tileId, kind: kinds[hexIndex] }
+            const kind = kinds[hexIndex]
+            board.hexes[hexKey(coords)] = {
+                coords,
+                tileId,
+                kind,
+                // Placeholder distribution: each planet's colour drawn independently. How
+                // colours should actually be spread across the opening map is still open -
+                // an even spread and a clumpy one play very differently.
+                ...(kind === HexKind.Planet
+                    ? { color: PLANET_COLORS[Math.floor(prng.random() * PLANET_COLORS.length)] }
+                    : {})
+            }
         })
     })
 

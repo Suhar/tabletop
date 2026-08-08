@@ -22,6 +22,24 @@ export enum HexKind {
     Open = 'open'
 }
 
+// Every planet has one of five colours. A technology card lists the colours of planet it can
+// be housed on, so colour is what decides which technologies a planet can ever hold.
+export enum PlanetColor {
+    Azure = 'azure',
+    Crimson = 'crimson',
+    Verdant = 'verdant',
+    Gold = 'gold',
+    Violet = 'violet'
+}
+
+export const PLANET_COLORS: PlanetColor[] = [
+    PlanetColor.Azure,
+    PlanetColor.Crimson,
+    PlanetColor.Verdant,
+    PlanetColor.Gold,
+    PlanetColor.Violet
+]
+
 export type Hex = Type.Static<typeof Hex>
 export const Hex = Type.Object({
     // Its own coordinates, even though the hexes record is keyed by them. The key is a
@@ -33,6 +51,11 @@ export const Hex = Type.Object({
     // that cares about whole tiles has something to group by.
     tileId: Type.String(),
     kind: Type.Enum(HexKind),
+    // Planet hexes only.
+    color: Type.Optional(Type.Enum(PlanetColor)),
+    // The technology housed here, chosen by whoever explored it. Set once and permanent -
+    // whoever controls the planet has access to it, and loses access with control.
+    technologyId: Type.Optional(Type.String()),
     // The ship standing here, if any. A planet hex is never occupied: ships sit AROUND
     // planets and exert power on them (see planetControl).
     piece: Type.Optional(Piece),

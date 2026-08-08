@@ -22,7 +22,7 @@ planets. Each contributes *power* toward controlling adjacent planets:
 
 | Piece | Power | Notes |
 | --- | --- | --- |
-| Probe | 0 | An explorer, not a claim. Has a **level** (2 or 3). |
+| Probe | 0 | An explorer, not a claim. Has a **level** (2 or 3), visually distinct, known to the player the moment it is drawn. |
 | Station | 1 | |
 | Fighter | 2 | |
 
@@ -36,9 +36,9 @@ everyone, including the owner. Pieces are drawn blind.
 **Technology deck** — a shared deck. Each card is associated with **one, two, or three
 planet colors**, and can only be housed on a planet of a color it lists.
 
-**Special pieces** — earned through exploration, kept face-up in front of their owner.
-**OPEN:** how these relate to technology cards — are they one reward type among several, or
-is "technology" itself the thing that grants them?
+**Special pieces** — kept face-up in front of their owner, and playable instead of drawing
+from the bag. They come *from technologies*: a technology may grant a special piece (and
+nothing else). Technology is the reward; a special piece is one form it takes.
 
 ---
 
@@ -73,13 +73,16 @@ Exploring reveals the planet's nature:
 
 1. Cards are flipped from the technology deck **until the number of revealed cards showing
    the planet's color equals the probe's level** (2 or 3).
-2. The exploring player **selects one** to become that planet's technology.
-3. The rest are discarded.
+2. The exploring player **selects one of the matching cards** to become that planet's
+   technology. Cards that were flipped without the planet's color are never candidates -
+   they are simply turned over on the way.
+3. Every other flipped card is discarded, matching or not.
 
-**OPEN:** whether the choice is among the matching cards only, or among everything flipped.
-**OPEN:** what happens to non-matching flipped cards, and whether the deck reshuffles when
-exhausted.
-**OPEN:** what happens if the deck cannot produce enough matching cards.
+If the deck runs out mid-reveal, the discard pile is shuffled to form a new deck. If even
+that cannot produce enough matching cards, the planet is explored with **fewer** candidates
+than the probe's level - down to one, or to none at all, in which case it is explored but
+receives no technology. The deck is intended to carry enough variety that this never comes
+up in practice.
 
 A planet's technology is permanent. A player who **controls** the planet can access its
 technology; losing control loses access.

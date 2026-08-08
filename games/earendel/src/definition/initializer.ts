@@ -9,8 +9,9 @@ import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
 import { MachineState } from './states.js'
-import { type Piece, PieceType, STARTING_BAG } from '../model/pieces.js'
+import { type Piece, PieceType, PROBES_PER_LEVEL, ProbeLevel, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
+import { buildTechnologyDeck } from '../util/technologyDeck.js'
 import { EarendelGameConfig } from './config.js'
 import { EarendelColors } from './colors.js'
 
@@ -24,7 +25,18 @@ export class EarendelGameInitializer
     // hidden information, this method can be used to modify the game state to hide such information.
     // Shuffling the remaining cards in a deck would be a reasonable example.
     initializeExplorationState(state: EarendelGameState): EarendelGameState {
-        return state
+        // Exploring a game must not hand over what exploring a PLANET is supposed to reveal.
+        // Three things are hidden: the technology deck's order (which is precisely what a
+        // probe uncovers), the discard - which becomes the deck when it runs out - and every
+        // player's bag, including the explorer's own. Shuffled with Math.random rather than
+        // the seeded prng so an exploration branch can't be reproduced from the real game.
+        const explorationState = structuredClone(state)
+        shuffle(explorationState.technologyDeck, () => Math.random())
+        shuffle(explorationState.technologyDiscard, () => Math.random())
+        for (const player of explorationState.players) {
+            shuffle(player.bag, () => Math.random())
+        }
+        return explorationState
     }
 
     // Initialize the game state based on things like the number of players and the game config
@@ -56,6 +68,8 @@ export class EarendelGameInitializer
             turnManager: turnManager,
             // Two tiles per player, each with its own planet layout (see buildStartingBoard).
             board: buildStartingBoard(game.players.length, prng),
+            technologyDeck: buildTechnologyDeck(prng),
+            technologyDiscard: [],
         })
 
         // I suppose the engine could actually do the hydration with the hydrator, but this is how it
@@ -93,7 +107,20 @@ function buildBag(playerId: string, prng: Prng): Piece[] {
     const bag: Piece[] = []
     for (const [type, count] of Object.entries(STARTING_BAG) as [PieceType, number][]) {
         for (let index = 0; index < count; index++) {
-            bag.push({ id: `${playerId}-${type}-${index}`, playerId, type })
+            // The six probes are three of each level - a level 3 probe reveals more
+            // technology when it explores, so which one you draw shapes the turn.
+            const level =
+                type === PieceType.Probe
+                    ? index < PROBES_PER_LEVEL
+                        ? ProbeLevel.Two
+                        : ProbeLevel.Three
+                    : undefined
+            bag.push({
+                id: `${playerId}-${type}-${index}`,
+                playerId,
+                type,
+                ...(level ? { level } : {})
+            })
         }
     }
     shuffle(bag, prng.random)
