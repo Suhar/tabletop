@@ -65,11 +65,14 @@ already has on the board.
 
 ### Exploration
 
-Placing a **probe** adjacent to an unexplored planet explores it. This is not a separate
-decision — it happens because the probe landed there. One probe can explore several planets
-at once, since a hex touches six.
+Placing a **probe** adjacent to an unexplored planet explores it. Landing there is what
+triggers exploration — the player doesn't decide *whether* to explore.
 
-Exploring reveals the planet's nature:
+A hex touches six others, so a probe may land beside **several** unexplored planets. It
+still explores only **one**: the player chooses which. The others remain unexplored and can
+be reached later by another probe.
+
+Exploring reveals the chosen planet's nature:
 
 1. Cards are flipped from the technology deck **until the number of revealed cards showing
    the planet's color equals the probe's level** (2 or 3).

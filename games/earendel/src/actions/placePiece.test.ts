@@ -4,7 +4,7 @@ import { EarendelGameState, HydratedEarendelGameState } from '../model/gameState
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { EarendelBoard, HexKind, hexKey, neighborsOf } from '../model/board.js'
-import { PieceType } from '../model/pieces.js'
+import { PieceType, ProbeLevel } from '../model/pieces.js'
 import { HydratedPlacePiece, PieceSource } from './placePiece.js'
 
 const ORIGIN: AxialCoordinates = { q: 0, r: 0 }
@@ -29,7 +29,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
             playerId,
             color: [Color.Blue, Color.Red][index],
             bag: [
-                { id: `${playerId}-probe`, playerId, type: PieceType.Probe },
+                { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: ProbeLevel.Two },
                 { id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }
             ],
             specialPieces: [],
@@ -84,7 +84,7 @@ describe('HydratedPlacePiece', () => {
         expect(action.metadata?.pieceType).toBe(PieceType.Probe)
     })
 
-    it('explores every unexplored planet a probe lands beside', () => {
+    it('offers every reachable unexplored planet as a candidate, exploring none of them yet', () => {
         const state = buildState()
         const target = neighborsOf(ORIGIN)[0]
         // A second planet touching the same hex, so one probe reaches two.
@@ -97,10 +97,16 @@ describe('HydratedPlacePiece', () => {
             kind: HexKind.Planet
         }
 
-        makePlacePiece('p1', target).apply(state)
+        const action = makePlacePiece('p1', target)
+        action.apply(state)
 
-        expect(state.board.hexes[hexKey(ORIGIN)].explored).toBe(true)
-        expect(state.board.hexes[hexKey(secondPlanet)].explored).toBe(true)
+        // A probe explores ONE planet - which one is the player's choice, so nothing is
+        // explored and no cards are flipped until they make it.
+        expect(action.metadata?.explorable).toHaveLength(2)
+        expect(state.board.hexes[hexKey(ORIGIN)].explored).toBeUndefined()
+        expect(state.board.hexes[hexKey(secondPlanet)].explored).toBeUndefined()
+        expect(state.pendingExploration?.candidatePlanets).toHaveLength(2)
+        expect(state.pendingExploration?.playerId).toBe('p1')
     })
 
     it('does not explore when the ship drawn is not a probe', () => {
@@ -114,18 +120,21 @@ describe('HydratedPlacePiece', () => {
 
         expect(action.metadata?.pieceType).toBe(PieceType.Fighter)
         expect(state.board.hexes[hexKey(ORIGIN)].explored).toBeUndefined()
-        expect(action.metadata?.explored).toBeUndefined()
+        expect(action.metadata?.explorable).toBeUndefined()
+        expect(state.pendingExploration).toBeUndefined()
     })
 
-    it('explores a planet only once', () => {
+    it('offers nothing when the only planet in reach is already explored', () => {
         const state = buildState()
         state.board.hexes[hexKey(ORIGIN)].explored = true
 
         const action = makePlacePiece('p1', neighborsOf(ORIGIN)[0])
         action.apply(state)
 
-        // Already explored, so this probe discovers nothing and history says so.
-        expect(action.metadata?.explored).toBeUndefined()
+        // A planet is explored once and never again, so this probe has nothing to do and the
+        // turn isn't held open.
+        expect(action.metadata?.explorable).toBeUndefined()
+        expect(state.pendingExploration).toBeUndefined()
     })
 
     it('refuses a planet hex, an occupied hex, and a hex off the board', () => {

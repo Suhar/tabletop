@@ -5,7 +5,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey, isOpenHex } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
-import { markExplored, planetsExploredBy } from '../util/exploration.js'
+import { explorablePlanets } from '../util/exploration.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
 // GameAction already has a `source` (User vs System) and shadowing it silently breaks the
@@ -24,8 +24,10 @@ export const PlacePieceMetadata = Type.Object({
     // Which ship actually came out of the bag - the player doesn't choose it, so history has
     // to say what they got.
     pieceType: Type.Optional(Type.Enum(PieceType)),
-    // Planets this placement discovered, if it was a probe. Empty or absent otherwise.
-    explored: Type.Optional(Type.Array(AxialCoordinates))
+    // Planets this probe could explore from where it landed. One of them will be explored -
+    // the player picks which - and the rest stay unexplored. Absent when the placement
+    // reached no unexplored planet, or wasn't a probe at all.
+    explorable: Type.Optional(Type.Array(AxialCoordinates))
 })
 
 export type PlacePiece = Type.Static<typeof PlacePiece>
@@ -86,11 +88,23 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
-        const explored = markExplored(state.board, planetsExploredBy(state.board, this.coords, piece.type))
+        // A probe landing beside unexplored planets doesn't resolve anything here: which
+        // planet it explores is the player's choice, and the reveal that follows consumes the
+        // technology deck. Both belong in their own actions so each is separately undoable
+        // and the deck is only touched once the target is settled.
+        const explorable = explorablePlanets(state.board, this.coords, piece.type)
+        if (explorable.length > 0) {
+            state.pendingExploration = {
+                playerId: this.playerId,
+                probeCoords: this.coords,
+                probeLevel: piece.level!,
+                candidatePlanets: explorable
+            }
+        }
 
         this.metadata = {
             pieceType: piece.type,
-            ...(explored.length > 0 ? { explored } : {})
+            ...(explorable.length > 0 ? { explorable } : {})
         }
     }
 

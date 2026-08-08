@@ -2,10 +2,11 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { EarendelBoard, getHex, HexKind, hexKey, neighborsOf } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 
-// Exploring isn't a decision - it happens BECAUSE a probe landed next to an unexplored
-// planet. One probe can reach several planets at once (a hex touches six others), so this
-// answers with all of them rather than one.
-export function planetsExploredBy(
+// Landing a probe beside an unexplored planet is what triggers exploration - the player
+// doesn't choose WHETHER to explore. But a hex touches six others, so a probe can land beside
+// several unexplored planets at once, and it still explores only ONE of them. These are the
+// planets it could explore; which one it does is the player's call.
+export function explorablePlanets(
     board: EarendelBoard,
     coords: AxialCoordinates,
     pieceType: PieceType
@@ -18,16 +19,11 @@ export function planetsExploredBy(
     })
 }
 
-// Marks them explored and returns the ones that actually changed, so a caller can attach
-// exactly what happened to the action's metadata - history should report a probe reaching
-// two planets as two discoveries, and a probe reaching none as none.
-export function markExplored(board: EarendelBoard, planets: AxialCoordinates[]): AxialCoordinates[] {
-    const discovered: AxialCoordinates[] = []
-    for (const coords of planets) {
-        const hex = board.hexes[hexKey(coords)]
-        if (!hex || hex.kind !== HexKind.Planet || hex.explored) continue
-        hex.explored = true
-        discovered.push(coords)
-    }
-    return discovered
+// Marks the one chosen planet explored. Returns false if it wasn't a planet, or was already
+// explored - a planet is explored once and never again.
+export function markExplored(board: EarendelBoard, coords: AxialCoordinates): boolean {
+    const hex = board.hexes[hexKey(coords)]
+    if (!hex || hex.kind !== HexKind.Planet || hex.explored) return false
+    hex.explored = true
+    return true
 }

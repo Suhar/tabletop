@@ -11,6 +11,7 @@ import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { TechnologyCard } from './technology.js'
+import { PendingExploration } from './exploration.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
 export const EarendelGameState = Type.Evaluate(
@@ -25,7 +26,11 @@ export const EarendelGameState = Type.Evaluate(
             // state to a player must keep it that way (and initializeExplorationState has to
             // reshuffle it).
             technologyDeck: Type.Array(TechnologyCard),
-            technologyDiscard: Type.Array(TechnologyCard)
+            technologyDiscard: Type.Array(TechnologyCard),
+            // Set while a probe placement is waiting on its player: which planet to explore
+            // (when it reached more than one), and then which revealed technology to keep.
+            // Cleared once the exploration resolves. Its presence is what holds the turn open.
+            pendingExploration: Type.Optional(PendingExploration)
         })
     ])
 )
@@ -49,6 +54,7 @@ export class HydratedEarendelGameState
     declare board: EarendelBoard
     declare technologyDeck: TechnologyCard[]
     declare technologyDiscard: TechnologyCard[]
+    declare pendingExploration?: PendingExploration
     declare result?: GameResult
     declare winningPlayerIds: string[]
 
