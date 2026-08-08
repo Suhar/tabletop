@@ -9,6 +9,7 @@ import { EarendelPlayerState, HydratedEarendelPlayerState } from './playerState.
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
+import { EarendelBoard } from './board.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
 export const EarendelGameState = Type.Evaluate(
@@ -17,6 +18,7 @@ export const EarendelGameState = Type.Evaluate(
         Type.Object({
             players: Type.Array(EarendelPlayerState), // Redefine with the specific player state type
             machineState: Type.Enum(MachineState), // Redefine with the specific machine states
+            board: EarendelBoard
         })
     ])
 )
@@ -37,6 +39,7 @@ export class HydratedEarendelGameState
     declare players: HydratedEarendelPlayerState[]
     declare turnManager: HydratedTurnManager
     declare machineState: MachineState
+    declare board: EarendelBoard
     declare result?: GameResult
     declare winningPlayerIds: string[]
 

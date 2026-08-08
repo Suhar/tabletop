@@ -1,0 +1,75 @@
+import { type AxialCoordinates, Prng, shuffle } from '@tabletop/common'
+import { EarendelBoard, HexKind, hexKey } from '../model/board.js'
+
+// A tile is four hexes in a diamond: an axial rhombus, (0,0) (1,0) (0,1) (1,1) relative to
+// its origin. Two of the four are planets and two are open space, but WHICH two varies from
+// tile to tile - that variety is the whole reason the board is interesting, so the layout is
+// drawn at random per tile rather than fixed.
+export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
+    { q: 0, r: 0 },
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+    { q: 1, r: 1 }
+]
+
+export const PLANETS_PER_TILE = 2
+
+// Where the starting tiles go. Tiles are 2 wide and 2 tall in axial terms, so stepping the
+// origin by 2 lays them edge to edge with no gaps and no overlap. They spiral outward from
+// the centre so that 4 tiles (2 players) and 10 tiles (5 players) both make a compact board
+// rather than a long strip.
+//
+// This is a placeholder arrangement, not a rule: the shape of the starting map is exactly the
+// sort of thing to tune once the game is played, and only this function has to change.
+export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
+    const origins: AxialCoordinates[] = [{ q: 0, r: 0 }]
+    // Tile-space directions, scaled to the 2x2 footprint of a tile.
+    const steps: AxialCoordinates[] = [
+        { q: 2, r: 0 },
+        { q: 0, r: 2 },
+        { q: -2, r: 2 },
+        { q: -2, r: 0 },
+        { q: 0, r: -2 },
+        { q: 2, r: -2 }
+    ]
+
+    let ring = 1
+    while (origins.length < tileCount) {
+        let coords: AxialCoordinates = { q: steps[4].q * ring, r: steps[4].r * ring }
+        for (let side = 0; side < 6 && origins.length < tileCount; side++) {
+            for (let step = 0; step < ring && origins.length < tileCount; step++) {
+                origins.push(coords)
+                coords = { q: coords.q + steps[side].q, r: coords.r + steps[side].r }
+            }
+        }
+        ring++
+    }
+
+    return origins.slice(0, tileCount)
+}
+
+// The board every game starts from: 2 tiles per player, each with its own planet layout.
+export function buildStartingBoard(playerCount: number, prng: Prng): EarendelBoard {
+    const board: EarendelBoard = { hexes: {} }
+
+    startingTileOrigins(playerCount * 2).forEach((origin, index) => {
+        const tileId = `tile-${index}`
+        const kinds = shuffledTileKinds(prng)
+
+        TILE_HEX_OFFSETS.forEach((offset, hexIndex) => {
+            const coords = { q: origin.q + offset.q, r: origin.r + offset.r }
+            board.hexes[hexKey(coords)] = { coords, tileId, kind: kinds[hexIndex] }
+        })
+    })
+
+    return board
+}
+
+function shuffledTileKinds(prng: Prng): HexKind[] {
+    const kinds = [
+        ...Array(PLANETS_PER_TILE).fill(HexKind.Planet),
+        ...Array(TILE_HEX_OFFSETS.length - PLANETS_PER_TILE).fill(HexKind.Open)
+    ] as HexKind[]
+    shuffle(kinds, prng.random)
+    return kinds
+}
