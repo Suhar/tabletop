@@ -53,6 +53,9 @@ count. Each player's bag is shuffled. Scores start at 0.
 
 ## A turn
 
+A turn is **exactly one placement**, plus resolving whatever that placement triggered. There
+is no action phase, no second placement, and nothing to do between turns.
+
 A player either:
 
 1. **Draws a ship** blind from their own bag and places it, or
@@ -90,6 +93,13 @@ up in practice.
 A planet's technology is permanent. A player who **controls** the planet can access its
 technology; losing control loses access.
 
+Both exploration decisions — which planet, then which card — belong to the placing player
+and happen inside their own turn. Neither is ever *presented* when it has only one answer: a
+probe beside a single unexplored planet explores it without asking, and a reveal that turns
+up one matching card (or none) houses it without asking. Only genuine choices interrupt.
+
+Other piece types resolve their own effects on placement; only probes explore.
+
 ---
 
 ## Control and scoring
@@ -122,8 +132,15 @@ player chooses the tile's rotation.
 ## End of the game
 
 The moment **any player has played the last piece from their bag**, the game ends
-immediately. Every player has the same number of pieces, so everyone has had the same number
-of placements.
+immediately — **mid-round**, with no final go-around. Players later in the turn order simply
+don't get another turn.
 
-**OPEN:** whether the game finishes the current round rather than stopping mid-round, and
-final scoring beyond planet control.
+Everyone starts with the same 18 pieces, so the player who empties their bag first is the
+one who has spent the fewest pieces on special-piece turns, not the one who was luckiest
+with the order: playing a special piece instead of drawing leaves the bag untouched and buys
+an extra turn.
+
+An exploration owed by the final placement is still resolved — the game ends after it, not
+instead of it.
+
+**OPEN:** final scoring beyond planet control.

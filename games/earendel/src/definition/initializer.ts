@@ -64,7 +64,7 @@ export class EarendelGameInitializer
 
         const earendelGameState: EarendelGameState = Object.assign(state, {
             players: orderedPlayers,
-            machineState: MachineState.StartOfTurn,
+            machineState: MachineState.PlacingPiece,
             turnManager: turnManager,
             // Two tiles per player, each with its own planet layout (see buildStartingBoard).
             board: buildStartingBoard(game.players.length, prng),

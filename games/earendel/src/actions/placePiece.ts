@@ -4,7 +4,7 @@ import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey, isOpenHex } from '../model/board.js'
-import { PieceType } from '../model/pieces.js'
+import { PieceType, ProbeLevel } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
@@ -97,7 +97,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             state.pendingExploration = {
                 playerId: this.playerId,
                 probeCoords: this.coords,
-                probeLevel: piece.level!,
+                // A probe won from a technology may not carry a level of its own; the
+                // weaker level is the safe reading.
+                probeLevel: piece.level ?? ProbeLevel.Two,
                 candidatePlanets: explorable
             }
         }

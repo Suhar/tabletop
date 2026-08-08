@@ -39,7 +39,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         actionCount: 0,
         actionChecksum: 0,
         prng: { seed: 1, invocations: 0 },
-        machineState: MachineState.StartOfTurn,
+        machineState: MachineState.PlacingPiece,
         turnManager: { series: [], turnOrder: playerIds, turnCounts: {} },
         winningPlayerIds: [],
         board: boardWithPlanetAtOrigin(),

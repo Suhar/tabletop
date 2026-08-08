@@ -72,6 +72,10 @@ export function hexKey(coords: AxialCoordinates): number {
     return coordinatesToNumber(coords)
 }
 
+export function sameHex(a: AxialCoordinates, b: AxialCoordinates): boolean {
+    return a.q === b.q && a.r === b.r
+}
+
 export function getHex(board: EarendelBoard, coords: AxialCoordinates): Hex | undefined {
     return board.hexes[hexKey(coords)]
 }
@@ -88,6 +92,14 @@ export function neighborsOf(coords: AxialCoordinates): AxialCoordinates[] {
 export function isOpenHex(board: EarendelBoard, coords: AxialCoordinates): boolean {
     const hex = getHex(board, coords)
     return hex !== undefined && hex.kind === HexKind.Open && hex.piece === undefined
+}
+
+// Whether a ship can be placed anywhere at all. Only ever false on a wholly gridlocked
+// board, but the turn has to have an out when it is.
+export function hasOpenHex(board: EarendelBoard): boolean {
+    return Object.values(board.hexes).some(
+        (hex) => hex.kind === HexKind.Open && hex.piece === undefined
+    )
 }
 
 export type PlanetControl = {
