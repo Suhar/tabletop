@@ -9,6 +9,7 @@ import {
     sameHex
 } from '../model/board.js'
 import type { ScoredChain } from '../model/chains.js'
+import { connectedGroup } from './groups.js'
 
 // T(n) = 1 + 2 + ... + n. Chains pay superlinearly, so joining two DISTANT planets of a
 // colour is worth far more than joining two that nearly touch - and costs the ships and the
@@ -24,33 +25,13 @@ export function planetPairKey(a: AxialCoordinates, b: AxialCoordinates): string 
 }
 
 // Every hex holding one of this player's ships that is reachable from `start` through their
-// own ships. Planets are never occupied, so a planet hex is a wall - a chain has to go
-// around one, never through it.
+// own ships, of any type - unlike a station group, a chain is happy to run through a probe.
 function componentContaining(
     board: EarendelBoard,
     playerId: string,
     start: AxialCoordinates
 ): AxialCoordinates[] {
-    if (getHex(board, start)?.piece?.playerId !== playerId) return []
-
-    const seen = new Set<number>([hexKey(start)])
-    const queue: AxialCoordinates[] = [start]
-    const component: AxialCoordinates[] = []
-
-    while (queue.length > 0) {
-        const coords = queue.shift()!
-        component.push(coords)
-
-        for (const neighbor of neighborsOf(coords)) {
-            const key = hexKey(neighbor)
-            if (seen.has(key)) continue
-            if (board.hexes[key]?.piece?.playerId !== playerId) continue
-            seen.add(key)
-            queue.push(neighbor)
-        }
-    }
-
-    return component
+    return connectedGroup(board, start, (hex) => hex.piece?.playerId === playerId)
 }
 
 function planetsTouching(

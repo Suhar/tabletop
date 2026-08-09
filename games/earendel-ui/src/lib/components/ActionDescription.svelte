@@ -32,6 +32,14 @@
                     `(putting a ${describePiece(placed.metadata.returnedToBag)} back in the bag)`
                 )
             }
+            if (placed.metadata?.stationGroupPoints) {
+                const points = placed.metadata.stationGroupPoints
+                parts.push(
+                    points === 1
+                        ? 'for 1'
+                        : `joining a group of ${points} stations for ${points}`
+                )
+            }
             for (const chain of placed.metadata?.chains ?? []) {
                 parts.push(
                     `and joined two ${chain.color} planets with ${chain.length} ${

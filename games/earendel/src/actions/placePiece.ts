@@ -13,6 +13,7 @@ import { hexKey, isOpenHex } from '../model/board.js'
 import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
+import { stationGroupPoints } from '../util/stations.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
 import { destroyableTargets } from '../util/attack.js'
 import { ScoredChain } from '../model/chains.js'
@@ -41,6 +42,9 @@ export const PlacePieceMetadata = Type.Object({
     // unbroken run of the player's ships. Recorded because the points are scored here and
     // history has to be able to say why the score moved.
     chains: Type.Optional(Type.Array(ScoredChain)),
+    // What a station paid: one for itself and one for every station already in the group it
+    // joined. Absent for anything that isn't a station.
+    stationGroupPoints: Type.Optional(Type.Number()),
     // Technologies gained by taking outright hold of an explored planet. Kept for good -
     // the planet can be taken away afterwards, the technology can't.
     technologiesGained: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String()))),
@@ -121,6 +125,15 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         state.drawnPiece = undefined
         state.board.hexes[hexKey(this.coords)].piece = piece
 
+        // A station pays for the company it keeps: one for itself, one for each station
+        // already in the group it joins. Scored on every placement, so a cluster built up
+        // one station at a time pays 1, 2, 3, ...
+        const stationPoints =
+            piece.type === PieceType.Station
+                ? stationGroupPoints(state.board, this.playerId, this.coords)
+                : 0
+        playerState.score += stationPoints
+
         // Joining two planets of one colour pays T(n) on the n ships between them. Scored
         // here, on the placement that completes it, and never again for that pair.
         const chains = chainsCompletedBy(
@@ -169,6 +182,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         this.metadata = {
             pieceType: piece.type,
             ...(returnedToBag ? { returnedToBag } : {}),
+            ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),

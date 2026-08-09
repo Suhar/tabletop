@@ -232,6 +232,23 @@ the game's clock.
 - One placement can complete **several pairs at once** (a ship touching three planets of one
   color joins three pairs); each is measured and paid separately.
 
+### Station groups
+
+Placing a **station** scores **1 for itself and 1 for every other friendly station in a
+contiguous group with it**.
+
+Stations link to **stations only**: a probe or fighter standing between two of them — yours
+or anyone else's — leaves them in separate groups, and a planet does the same, since no ship
+can stand on one.
+
+Because it pays on every placement, a cluster built up one station at a time pays 1, 2, 3, …
+— the same triangular total a chain pays, but earned incrementally and with no need for
+planets to line up. Placing stations apart and joining them later pays *less* than building
+compactly from the start (1+1+3 = 5 against 1+2+3 = 6), which is the decision the rule
+creates. All six stations in one cluster is 21 points, the practical ceiling.
+
+This gives each piece type a job: probes explore, fighters destroy, stations score.
+
 **OPEN:** which other acts score during play, and how much. Taking control of a planet from
 another player is a candidate.
 
