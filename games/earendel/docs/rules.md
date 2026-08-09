@@ -63,10 +63,19 @@ count. Each player's bag is shuffled. Scores start at 0.
 A turn is **exactly one placement**, plus resolving whatever that placement triggered. There
 is no action phase, no second placement, and nothing to do between turns.
 
-A player either:
+A turn opens with a **draw**: the player takes a ship blind from their own bag and turns it
+face up. Knowing what they have is what makes the placement a decision, so the draw always
+comes first.
 
-1. **Draws a ship** blind from their own bag and places it, or
-2. **Places a special piece** from the face-up pieces in front of them, instead of drawing.
+They then either:
+
+1. **Place the ship they drew**, or
+2. **Put it back in the bag** — which is reshuffled — and **place a special piece** from the
+   face-up pieces in front of them instead.
+
+Putting a draw back costs nothing but the turn's placement, and leaves the bag one turn
+further from running out. Note the drawn ship is **public**: everyone sees what was drawn,
+including what was put back.
 
 A ship may be placed on **any open hex** — never on a planet, never on an occupied hex.
 
@@ -241,9 +250,8 @@ immediately — **mid-round**, with no final go-around. Players later in the tur
 don't get another turn.
 
 Everyone starts with the same 18 pieces, so the player who empties their bag first is the
-one who has spent the fewest pieces on special-piece turns, not the one who was luckiest
-with the order: playing a special piece instead of drawing leaves the bag untouched and buys
-an extra turn.
+one who has spent the fewest turns on special pieces, not the one who was luckiest with the
+order: a draw that goes back in the bag doesn't advance that player's clock.
 
 An exploration owed by the final placement is still resolved — the game ends after it, not
 instead of it.

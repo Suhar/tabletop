@@ -66,9 +66,7 @@ function scenario({
     game.state.board = testBoard({ secondPlanet })
     game.state.technologyDeck = deck
     game.state.technologyDiscard = []
-    for (const player of game.state.players) {
-        player.bag = bag(player.playerId)
-    }
+    game.stackBags(bag)
     return game
 }
 
@@ -87,6 +85,37 @@ describe('the turn spine', () => {
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.activePlayerId).not.toBe(mover)
         expect(game.state.pendingExploration).toBeUndefined()
+    })
+
+    it('draws before the placement, and puts the draw back when a special is played instead', () => {
+        const game = scenario({ bag: (playerId) => [fighter(playerId), fighter(playerId)] })
+        const mover = game.activePlayerId
+
+        // Face up before any hex is chosen - knowing what you drew is what makes the
+        // placement a decision.
+        expect(game.state.drawnPiece).toBeDefined()
+        const drawnId = game.state.drawnPiece!.id
+
+        const special = { id: `${mover}-special`, playerId: mover, type: PieceType.Station }
+        game.state.players.find((p) => p.playerId === mover)!.specialPieces = [special]
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: { q: 5, r: 5 },
+            pieceSource: PieceSource.Special,
+            pieceId: special.id
+        })
+
+        expect(game.state.board.hexes[hexKey({ q: 5, r: 5 })].piece?.id).toBe(special.id)
+
+        // The ship they didn't fancy is back in the bag, so declining a draw costs nothing
+        // but the turn's placement.
+        const moverState = game.state.players.find((p) => p.playerId === mover)!
+        expect(moverState.bag).toHaveLength(2)
+        expect(moverState.bag.map((piece) => piece.id)).toContain(drawnId)
+        // The turn has passed, so what is face up now is the next player's own draw.
+        expect(game.state.drawnPiece?.playerId).toBe(game.activePlayerId)
     })
 
     it('holds the turn open when a probe finds a planet, and hands it on when the choice is made', () => {

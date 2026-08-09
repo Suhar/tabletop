@@ -38,6 +38,11 @@ export class PlacingPieceStateHandler
         const gameState = context.gameState
         const nextPlayerId = gameState.turnManager.startNextTurn(gameState.actionCount)
         gameState.activePlayerIds = [nextPlayerId]
+
+        // The draw opens the turn, before any hex is chosen. Knowing what you drew is what
+        // makes the placement a decision at all - and a player who doesn't like it may put
+        // it back and spend a special piece instead (see PlacePiece).
+        gameState.drawnPiece = gameState.getPlayerState(nextPlayerId).drawFromBag()
     }
 
     onAction(
@@ -82,7 +87,7 @@ export class PlacingPieceStateHandler
         switch (actionType) {
             case ActionType.PlacePiece: {
                 if (!canPlaceSomewhere) return false
-                return !playerState.bagIsEmpty || playerState.specialPieces.length > 0
+                return gameState.drawnPiece !== undefined || playerState.specialPieces.length > 0
             }
             case ActionType.Pass: {
                 // Only ever a safety valve: a player with pieces and somewhere to put them

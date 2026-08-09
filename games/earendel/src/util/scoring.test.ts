@@ -103,13 +103,9 @@ describe('planet points at the end of the game', () => {
 
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
-        for (const player of game.state.players) {
-            // One piece each: the mover's placement empties their bag and ends the game on
-            // the spot, before the other player ever places.
-            player.bag = [
-                { id: `${player.playerId}-a`, playerId: player.playerId, type: PieceType.Fighter }
-            ]
-        }
+        // One piece each: drawing it empties the mover's bag, so the game ends the moment
+        // that piece is placed, before the other player ever gets a turn.
+        game.stackBags((playerId) => [{ id: `${playerId}-a`, playerId, type: PieceType.Fighter }])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,

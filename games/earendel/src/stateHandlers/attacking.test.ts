@@ -98,12 +98,10 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
-        for (const player of game.state.players) {
-            player.bag = [
-                ship(player.playerId, PieceType.Fighter, PieceLevel.Two),
-                ship(player.playerId, PieceType.Station)
-            ]
-        }
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -126,8 +124,12 @@ describe('a fighter arriving', () => {
 
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
         expect((shot as DestroyPiece).metadata?.destroyed?.playerId).toBe(other)
-        // Out of the game entirely - not back into its owner's bag.
-        expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(2)
+        // Out of the game entirely - not back into its owner's bag. They started with two
+        // pieces and have since drawn one for their own turn, so one is left in the bag and
+        // the destroyed station is nowhere.
+        // They started with two pieces and have since drawn one for their own turn, so one
+        // is left. Had the destroyed station gone back, there would be two.
+        expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(1)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.activePlayerId).not.toBe(mover)
     })
@@ -143,12 +145,10 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
-        for (const player of game.state.players) {
-            player.bag = [
-                ship(player.playerId, PieceType.Fighter, PieceLevel.Two),
-                ship(player.playerId, PieceType.Station)
-            ]
-        }
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -179,12 +179,10 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
-        for (const player of game.state.players) {
-            player.bag = [
-                ship(player.playerId, PieceType.Fighter, PieceLevel.Two),
-                ship(player.playerId, PieceType.Station)
-            ]
-        }
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -212,12 +210,10 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
-        for (const player of game.state.players) {
-            player.bag = [
-                ship(player.playerId, PieceType.Fighter, PieceLevel.Two),
-                ship(player.playerId, PieceType.Station)
-            ]
-        }
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
 
         expect(game.state.players.find((p) => p.playerId === bystander)!.technologies).toEqual([])
 
@@ -257,12 +253,10 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
-        for (const player of game.state.players) {
-            player.bag = [
-                ship(player.playerId, PieceType.Fighter, PieceLevel.Two),
-                ship(player.playerId, PieceType.Station)
-            ]
-        }
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -290,7 +284,10 @@ describe('a fighter arriving', () => {
 
 describe('the starting bag', () => {
     it('deals three fighters of each level, as it does probes', () => {
-        const bag = new TestGame().state.players[0].bag
+        const game = new TestGame()
+        // A player who hasn't taken a turn yet, so their bag is still whole - the player on
+        // turn has already drawn.
+        const bag = game.state.players.find((p) => p.playerId !== game.activePlayerId)!.bag
 
         const levelsOf = (type: PieceType) =>
             bag.filter((piece) => piece.type === type).map((piece) => piece.level)

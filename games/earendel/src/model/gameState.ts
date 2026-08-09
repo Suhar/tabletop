@@ -10,6 +10,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
+import { Piece } from './pieces.js'
 import { TechnologyCard } from './technology.js'
 import { PendingExploration } from './exploration.js'
 import { PendingAttack } from './attack.js'
@@ -32,6 +33,11 @@ export const EarendelGameState = Type.Evaluate(
             // (when it reached more than one), and then which revealed technology to keep.
             // Cleared once the exploration resolves. Its presence is what holds the turn open.
             pendingExploration: Type.Optional(PendingExploration),
+            // The ship drawn at the start of the current turn, waiting to be placed. Drawn
+            // before the player chooses a hex, because knowing what you got is what makes
+            // the placement a decision. Public: the platform sends state to every client
+            // whole, so there is nowhere to hide it.
+            drawnPiece: Type.Optional(Piece),
             // Set while a newly placed fighter's owner decides whether to fire. Like
             // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
@@ -63,6 +69,7 @@ export class HydratedEarendelGameState
     declare technologyDeck: TechnologyCard[]
     declare technologyDiscard: TechnologyCard[]
     declare pendingExploration?: PendingExploration
+    declare drawnPiece?: Piece
     declare pendingAttack?: PendingAttack
     declare scoredPlanetPairs: string[]
     declare result?: GameResult

@@ -10,6 +10,7 @@ import {
 import type * as Type from 'typebox'
 import { EarendelRuntime } from '../definition/runtime.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
+import type { Piece } from '../model/pieces.js'
 
 // A game driven through the real engine rather than by calling apply() directly. Anything
 // about the turn spine - who is active, when a turn ends, which system actions fire - is only
@@ -47,6 +48,20 @@ export class TestGame {
         const { startedGame, initialState } = this.engine.startGame(game)
         this.game = startedGame
         this.state = initialState
+    }
+
+    // Replaces every player's bag with a known stack. The turn's opening draw has already
+    // happened by the time a test can do this, so the piece on the table is drawn again from
+    // the new bag - otherwise the first placement of every test would use a random piece
+    // from the generated bag.
+    stackBags(bag: (playerId: string) => Piece[]) {
+        for (const player of this.state.players) {
+            player.bag = bag(player.playerId)
+        }
+        const active = this.state.players.find(
+            (player) => player.playerId === this.activePlayerId
+        )!
+        this.state.drawnPiece = active.bag.shift()
     }
 
     get hydrated(): HydratedEarendelGameState {

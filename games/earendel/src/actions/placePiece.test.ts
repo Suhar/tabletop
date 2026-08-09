@@ -28,10 +28,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         players: playerIds.map((playerId, index) => ({
             playerId,
             color: [Color.Blue, Color.Red][index],
-            bag: [
-                { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
-                { id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }
-            ],
+            bag: [{ id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }],
             specialPieces: [],
             technologies: [],
             score: 0
@@ -47,6 +44,9 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         technologyDeck: [],
         technologyDiscard: [],
         scoredPlanetPairs: [],
+        // The turn's draw happens when the turn opens, so a placement always arrives with
+        // something already face up.
+        drawnPiece: { id: 'p1-probe', playerId: 'p1', type: PieceType.Probe, level: PieceLevel.Two },
         ...overrides
     } as EarendelGameState
 
@@ -72,7 +72,7 @@ function makePlacePiece(
 }
 
 describe('HydratedPlacePiece', () => {
-    it('draws the next ship from the player’s own bag and stands it on the hex', () => {
+    it('stands the ship drawn at the start of the turn on the hex', () => {
         const state = buildState()
         const target = neighborsOf(ORIGIN)[0]
 
@@ -80,10 +80,19 @@ describe('HydratedPlacePiece', () => {
         expect(action.invalidPlacePieceReason(state)).toBeUndefined()
         action.apply(state)
 
-        // The draw is resolved by the engine, not the client - the player doesn't choose.
+        // The piece was already face up: the player chose this hex knowing what they had.
         expect(state.board.hexes[hexKey(target)].piece?.id).toBe('p1-probe')
+        expect(state.drawnPiece).toBeUndefined()
         expect(state.getPlayerState('p1').bag.map((p) => p.id)).toEqual(['p1-fighter'])
         expect(action.metadata?.pieceType).toBe(PieceType.Probe)
+    })
+
+    it('refuses a bag placement when nothing has been drawn', () => {
+        const state = buildState({ drawnPiece: undefined })
+
+        expect(makePlacePiece('p1', neighborsOf(ORIGIN)[0]).invalidPlacePieceReason(state)).toBe(
+            'Nothing has been drawn to place.'
+        )
     })
 
     it('offers every reachable unexplored planet as a candidate, exploring none of them yet', () => {
@@ -112,9 +121,9 @@ describe('HydratedPlacePiece', () => {
     })
 
     it('does not explore when the ship drawn is not a probe', () => {
-        const state = buildState()
-        // Drop the probe so a fighter comes out instead.
-        state.getPlayerState('p1').bag.shift()
+        const state = buildState({
+            drawnPiece: { id: 'p1-fighter', playerId: 'p1', type: PieceType.Fighter }
+        })
         const target = neighborsOf(ORIGIN)[0]
 
         const action = makePlacePiece('p1', target)
@@ -174,8 +183,14 @@ describe('HydratedPlacePiece', () => {
 
         expect(state.board.hexes[hexKey(target)].piece?.id).toBe('p1-special')
         expect(state.getPlayerState('p1').specialPieces).toEqual([])
-        // The bag is untouched - spending a special is INSTEAD of drawing.
-        expect(state.getPlayerState('p1').bag).toHaveLength(2)
+        // The drawn ship goes back in the bag - a player who doesn't like what they drew can
+        // spend a special instead and lose nothing by it.
+        expect(state.getPlayerState('p1').bag.map((p) => p.id).sort()).toEqual([
+            'p1-fighter',
+            'p1-probe'
+        ])
+        expect(state.drawnPiece).toBeUndefined()
+        expect(action.metadata?.returnedToBag?.id).toBe('p1-probe')
     })
 
     it('refuses a special piece the player does not have in front of them', () => {

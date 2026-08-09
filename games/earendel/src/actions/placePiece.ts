@@ -1,10 +1,16 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    shuffle
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey, isOpenHex } from '../model/board.js'
-import { PieceType, PieceLevel } from '../model/pieces.js'
+import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
@@ -15,9 +21,10 @@ import { ScoredChain } from '../model/chains.js'
 // GameAction already has a `source` (User vs System) and shadowing it silently breaks the
 // action's own contract.
 //
-// Where the ship being placed comes from. Drawing is the ordinary turn; a player may instead
-// spend one of the special pieces sitting face-up in front of them, which is why the source
-// has to be part of the action rather than inferred.
+// Bag means the piece drawn at the start of this turn, already face up. A player who doesn't
+// like what they drew may instead spend one of the special pieces in front of them, in which
+// case the drawn piece goes back into the bag - so the source has to be part of the action
+// rather than inferred.
 export enum PieceSource {
     Bag = 'bag',
     Special = 'special'
@@ -25,9 +32,11 @@ export enum PieceSource {
 
 export type PlacePieceMetadata = Type.Static<typeof PlacePieceMetadata>
 export const PlacePieceMetadata = Type.Object({
-    // Which ship actually came out of the bag - the player doesn't choose it, so history has
-    // to say what they got.
+    // Which ship was placed - for a bag turn the player didn't choose it, so history has to
+    // say what they got.
     pieceType: Type.Optional(Type.Enum(PieceType)),
+    // The drawn ship put back because a special piece was played instead.
+    returnedToBag: Type.Optional(Piece),
     // Chains this placement completed, if any: two planets of one colour newly joined by an
     // unbroken run of the player's ships. Recorded because the points are scored here and
     // history has to be able to say why the score moved.
@@ -87,16 +96,29 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         const playerState = state.getPlayerState(this.playerId)
 
-        // A bag draw is resolved HERE rather than by the client, so the drawn ship is decided
-        // by authoritative state and lands in the action log where undo and replay can see it.
-        const piece =
-            this.pieceSource === PieceSource.Bag
-                ? playerState.drawFromBag()!
-                : playerState.specialPieces.splice(
-                      playerState.specialPieces.findIndex((candidate) => candidate.id === this.pieceId),
-                      1
-                  )[0]
+        // The ship was drawn when the turn opened, so the player chose this hex already
+        // knowing what they had. Spending a special instead sends the drawn ship back.
+        let piece: Piece
+        let returnedToBag: Piece | undefined
 
+        if (this.pieceSource === PieceSource.Bag) {
+            piece = state.drawnPiece!
+        } else {
+            piece = playerState.specialPieces.splice(
+                playerState.specialPieces.findIndex((candidate) => candidate.id === this.pieceId),
+                1
+            )[0]
+
+            returnedToBag = state.drawnPiece
+            if (returnedToBag) {
+                // Back in and reshuffled, so putting one back tells the player nothing about
+                // what comes next.
+                playerState.bag.push(returnedToBag)
+                shuffle(playerState.bag, state.getPrng().random)
+            }
+        }
+
+        state.drawnPiece = undefined
         state.board.hexes[hexKey(this.coords)].piece = piece
 
         // Joining two planets of one colour pays T(n) on the n ships between them. Scored
@@ -146,6 +168,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         this.metadata = {
             pieceType: piece.type,
+            ...(returnedToBag ? { returnedToBag } : {}),
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
@@ -175,9 +198,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         const playerState = state.getPlayerState(this.playerId)
 
         if (this.pieceSource === PieceSource.Bag) {
-            // An empty bag ends the game rather than blocking a turn, so reaching here means
-            // something has gone wrong with the turn order rather than with this placement.
-            if (playerState.bagIsEmpty) return 'Your bag is empty.'
+            // The draw happens when the turn opens, so there is always something face up by
+            // the time a placement arrives - unless the turn has gone wrong elsewhere.
+            if (!state.drawnPiece) return 'Nothing has been drawn to place.'
             return undefined
         }
 
