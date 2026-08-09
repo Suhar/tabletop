@@ -94,6 +94,15 @@ up in practice.
 A planet's technology is permanent. A player who **controls** the planet can access its
 technology; losing control loses access.
 
+**Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
+the planet will hold — picking a technology that suits their position, from cards nobody
+else has seen — and that they know what is coming while everyone else must react to it.
+
+**OPEN:** whether a technology may carry an extra reward for the explorer specifically — for
+example granting the explorer two copies of a special piece where a later controller gets
+one. This is a reason for a probe's *level* to matter beyond the size of the reveal: a level
+3 probe sees more cards, so it is likelier to find a technology worth exploring for.
+
 Both exploration decisions — which planet, then which card — belong to the placing player
 and happen inside their own turn. Neither is ever *presented* when it has only one answer: a
 probe beside a single unexplored planet explores it without asking, and a reveal that turns
