@@ -170,10 +170,13 @@ describe('scoring a chain in play', () => {
         ])
         game.state.technologyDeck = []
         for (const player of game.state.players) {
-            player.bag = [
-                { id: `${player.playerId}-a`, playerId: player.playerId, type: PieceType.Fighter },
-                { id: `${player.playerId}-b`, playerId: player.playerId, type: PieceType.Fighter }
-            ]
+            // A spare piece each, so no bag runs out and ends the game - planets pay out at
+            // the end, and this test is about what the chain paid.
+            player.bag = ['a', 'b', 'c'].map((suffix) => ({
+                id: `${player.playerId}-${suffix}`,
+                playerId: player.playerId,
+                type: PieceType.Fighter
+            }))
         }
 
         const mover = game.activePlayerId

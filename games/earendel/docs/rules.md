@@ -141,8 +141,22 @@ the game's clock.
 **OPEN:** which other acts score during play, and how much. Taking control of a planet from
 another player is a candidate.
 
-**OPEN:** end-of-game scoring for controlled planets — how much a planet is worth, and
-whether it varies by color, technology, or size of the surrounding presence.
+### At the end of the game
+
+Every planet pays **1 point** to each player controlling it, explored or not. Ties pay in
+full, so one planet can pay two players a point each.
+
+This is the only scoring that waits until the end: control can change hands all game without
+anyone banking anything, so it's the board's final shape that counts.
+
+**OPEN:** whether an explored planet should be worth more than an unexplored one.
+
+**OPEN:** whether each technology carries its own end-game point value, so that choosing
+which technology to house on a planet is also a scoring decision. Note that the player who
+explores a planet often isn't the player who ends up controlling it — probes have no power —
+so a technology's value would be points offered to *whoever holds the planet at the end*,
+which makes housing a low-value technology on a planet you don't expect to hold a deliberate
+denial play.
 
 ---
 
