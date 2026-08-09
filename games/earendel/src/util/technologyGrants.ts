@@ -1,20 +1,16 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import {
-    type EarendelBoard,
-    getHex,
-    HexKind,
-    neighborsOf,
-    planetControl
-} from '../model/board.js'
+import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } from '../model/board.js'
 
 // Technologies a placement just handed its owner: those on explored planets the placement
-// brought them into control of, and which they don't already hold.
+// gave them OUTRIGHT hold of, and which they don't already hold.
 //
-// Only the placing player can gain anything here. Control is whoever has the most power
-// around a planet, and a placement only ever ADDS to the placer's power - it can push them
-// into the controlling set, or push others out of it, but it can never put a third party in.
-// Players pushed out keep everything they had already gained; a technology, once gained, is
-// never lost.
+// Outright, not merely tied - matching an opponent's presence is not a way to copy what they
+// hold (see dominantPlayerId). Only the placing player can gain anything here, since a
+// placement only ever adds to the placer's power: it can make them dominant, or break
+// someone else's dominance, but it can never make a third party dominant.
+//
+// Players who lose a planet keep everything they had already gained; a technology, once
+// gained, is never lost, and never gained twice by the same player.
 export function technologiesGainedBy(
     board: EarendelBoard,
     playerId: string,
@@ -28,7 +24,7 @@ export function technologiesGainedBy(
         const hex = getHex(board, neighbor)
         if (hex?.kind !== HexKind.Planet) continue
         if (!hex.technologyId || held.has(hex.technologyId)) continue
-        if (!planetControl(board, neighbor).controllingPlayerIds.includes(playerId)) continue
+        if (dominantPlayerId(board, neighbor) !== playerId) continue
 
         held.add(hex.technologyId)
         gained.push(hex.technologyId)

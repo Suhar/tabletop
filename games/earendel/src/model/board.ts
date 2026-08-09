@@ -136,6 +136,22 @@ export function planetControl(board: EarendelBoard, coords: AxialCoordinates): P
     return { powerByPlayerId, controllingPlayerIds, power }
 }
 
+// The player who OUTRIGHT holds a planet: strictly more power than any other player, not
+// merely tied for the most. Undefined when the strongest presence is shared, or when nobody
+// has any power there at all.
+//
+// Deliberately stricter than planetControl. Control is generous where points are concerned -
+// tied players each score the planet in full - and strict where technology is concerned:
+// sharing a planet's points is fine, sharing its technology is not. A tie hands nobody the
+// technology, so matching an opponent's presence is not a way to copy what they hold.
+export function dominantPlayerId(
+    board: EarendelBoard,
+    coords: AxialCoordinates
+): string | undefined {
+    const { controllingPlayerIds } = planetControl(board, coords)
+    return controllingPlayerIds.length === 1 ? controllingPlayerIds[0] : undefined
+}
+
 export function planetCoordinates(board: EarendelBoard): AxialCoordinates[] {
     return Object.values(board.hexes)
         .filter((hex) => hex.kind === HexKind.Planet)

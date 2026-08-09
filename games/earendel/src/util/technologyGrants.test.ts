@@ -62,18 +62,20 @@ describe('technologiesGainedBy', () => {
         expect(technologiesGainedBy(board, 'p2', at(0, 1), [])).toEqual(['tech-a'])
     })
 
-    it('hands the same technology to both players when control is tied', () => {
+    it('hands nothing to either player when the strongest presence is tied', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Station] }],
             [at(0, 1), { ship: ['p2', PieceType.Station] }]
         ])
 
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual(['tech-a'])
-        expect(technologiesGainedBy(board, 'p2', at(0, 1), [])).toEqual(['tech-a'])
+        // A tie is enough to share the planet's point at the end, but not to take what it
+        // holds - otherwise matching an opponent would copy their technology for one piece.
+        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual([])
+        expect(technologiesGainedBy(board, 'p2', at(0, 1), [])).toEqual([])
     })
 
-    it('never hands over the same technology twice', () => {
+    it('never hands over the same technology twice, however control moves', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }]

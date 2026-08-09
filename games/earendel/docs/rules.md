@@ -97,20 +97,22 @@ up in practice.
 A planet's technology is permanent, and so is holding it. A technology is **gained** at two
 moments:
 
-1. The player who **explores** the planet gains it immediately, on choosing it. They do not
-   need to control the planet, then or ever.
-2. Any player who later **comes into control** of the planet gains it too.
+1. The player who **explores** the planet gains it immediately, on choosing it. They need no
+   power there at all, then or ever.
+2. Any player who later holds the planet **outright** gains it too.
 
-A gained technology is **never lost** — not when control changes hands, not ever. Whatever
-it grants (a special piece, a continuous power) stays with the player who gained it. Several
-players can therefore hold the same planet's technology, and over a game technologies only
+Outright means **strictly more power than any other player** — not merely tied for the most.
+This is stricter than control for scoring purposes (see below): matching an opponent's
+presence beside a planet is *not* a way to copy what they hold.
+
+A gained technology is **never lost** — not when the planet is, not ever. Whatever it grants
+(a special piece, a continuous power) stays with the player who gained it. Several players
+can therefore hold the same planet's technology, and over a game technologies only
 accumulate.
 
-**OPEN:** whether a player who loses control and later regains it gains the reward *again*.
-This only matters for technologies granting a physical reward like a special piece — a
-continuous power is already held and can't be held twice — but it decides whether a planet
-can be farmed by control changing hands repeatedly. Assumed **no** in the code: a technology
-is handed to each player at most once.
+A planet pays each player **once and once only**. Losing a planet and taking it back again
+gains nothing the second time, so a planet can't be farmed by control passing back and
+forth.
 
 **Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
 the planet will hold — picking a technology that suits their position, from cards nobody
@@ -132,9 +134,19 @@ Other piece types resolve their own effects on placement; only probes explore.
 
 ## Control and scoring
 
-A planet is controlled by whoever has the most **power** in the six hexes touching it.
-**Ties are not broken** — every tied player controls the planet and receives the full
-reward. A planet touched only by probes (0 power) is controlled by nobody.
+A planet is controlled by whoever has the most **power** in the six hexes touching it. A
+planet touched only by probes (0 power) is controlled by nobody.
+
+Ties are treated differently depending on what is at stake:
+
+| At stake | A tie |
+| --- | --- |
+| End-game points for the planet | **Pays every tied player in full** |
+| The planet's technology | **Pays nobody** — it takes strictly more power than anyone else |
+
+So sharing a planet's points is fine; sharing what it holds is not. One consequence worth
+knowing: deliberately *tying* a planet freezes its technology out of everyone's reach, since
+no one is then holding it outright.
 
 Scores are **public** and are a **running total that never decreases**: points scored for
 control during the game are kept even if control is later lost.
