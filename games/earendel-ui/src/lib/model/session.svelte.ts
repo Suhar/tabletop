@@ -9,6 +9,7 @@ import {
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
+    hexesClosedToProbesOf,
     hexKey,
     isOpenHex,
     MachineState,
@@ -17,6 +18,8 @@ import {
     PieceType,
     PlacePiece,
     sameHex,
+    type SightLine,
+    sightLines,
     type TechnologyCard
 } from '@tabletop/earendel'
 
@@ -87,16 +90,35 @@ export class EarendelGameSession extends GameSession<
         return pending.playerId === this.myPlayer?.id ? pending.targets : []
     })
 
+    // Every station pair projecting a blockade, whoever owns it. Drawn for everyone, since a
+    // corridor you can't see is a rule you can only discover by being refused.
+    sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
+
+    // Hexes this player's probes are shut out of. Only meaningful while holding a probe, so
+    // the board isn't cluttered with a restriction that doesn't apply to the piece in hand.
+    hexesClosedToMe: AxialCoordinates[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || this.pieceToPlace?.type !== PieceType.Probe) return []
+        return hexesClosedToProbesOf(this.gameState.board, playerId)
+    })
+
     // What the board should invite a click on right now. One list keeps the board component
     // from having to know which decision is outstanding.
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
         if (this.choosablePlanets.length > 0) return this.choosablePlanets
         if (this.attackTargets.length > 0) return this.attackTargets
         if (!this.isPlacing || !this.pieceToPlace) return []
+
+        const closed = this.hexesClosedToMe
         return Object.values(this.gameState.board.hexes)
             .filter((hex) => isOpenHex(this.gameState.board, hex.coords))
+            .filter((hex) => !closed.some((blocked) => sameHex(blocked, hex.coords)))
             .map((hex) => hex.coords)
     })
+
+    isClosedToMe(coords: AxialCoordinates): boolean {
+        return this.hexesClosedToMe.some((blocked) => sameHex(blocked, coords))
+    }
 
     // Where a fighter about to be placed could shoot, shown before it lands so the placement
     // can be aimed rather than discovered.
@@ -132,6 +154,9 @@ export class EarendelGameSession extends GameSession<
         if (this.isPlacing) {
             const piece = this.pieceToPlace
             if (!piece) return 'Nothing to place.'
+            if (piece.type === PieceType.Probe && this.hexesClosedToMe.length > 0) {
+                return `You drew a ${describePiece(piece)}. The wavy lines are closed to it — anything else may pass.`
+            }
             return this.chosenSpecialId
                 ? `Place your ${describePiece(piece)} — your draw goes back in the bag.`
                 : `You drew a ${describePiece(piece)}. Place it, or play a special piece instead.`

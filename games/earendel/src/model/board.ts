@@ -81,12 +81,16 @@ export function getHex(board: EarendelBoard, coords: AxialCoordinates): Hex | un
     return board.hexes[hexKey(coords)]
 }
 
-// The six hexes touching this one. hexNeighborCoords answers one direction at a time, so
-// this walks the clockwise direction set for the board's orientation.
+// One step in each of the six directions, in clockwise order. Because the order is
+// clockwise, direction i and direction i+3 are exactly opposite - which is what lets a
+// straight line be walked out from a hex in both directions at once (see lineOfSight).
+export const HEX_STEPS: AxialCoordinates[] = ClockwiseFlatHexDirections.map((direction) =>
+    hexNeighborCoords({ q: 0, r: 0 }, BOARD_ORIENTATION, direction)
+)
+
+// The six hexes touching this one.
 export function neighborsOf(coords: AxialCoordinates): AxialCoordinates[] {
-    return ClockwiseFlatHexDirections.map((direction) =>
-        hexNeighborCoords(coords, BOARD_ORIENTATION, direction)
-    )
+    return HEX_STEPS.map((step) => ({ q: coords.q + step.q, r: coords.r + step.r }))
 }
 
 // A hex a ship can be placed on: on the board, not a planet, and unoccupied.

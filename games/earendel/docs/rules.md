@@ -254,6 +254,21 @@ creates. All six stations in one cluster is 21 points, the practical ceiling.
 
 This gives each piece type a job: probes explore, fighters destroy, stations score.
 
+### Station blockades
+
+Two of one player's stations with **clear empty space between them along a straight line**
+close that space to **every other player's probes**. Nothing else is affected: an opponent
+may place a station or a fighter in the corridor, and doing so is exactly what breaks it.
+
+- The line must be **clear**. Any piece standing between the two stations, of any colour,
+  ends it — and so does a planet, which is a world rather than a gap to see past.
+- Stations that are already **touching** close nothing: there is no space between them.
+- The owner's own probes pass freely.
+
+So a station pair is a fence that costs nothing to maintain and can only be broken by
+committing a real piece to the gap. Since probes are the only way to explore, a well-placed
+pair can shut opponents out of the planets beyond it.
+
 **OPEN:** which other acts score during play, and how much. Taking control of a planet from
 another player is a candidate.
 

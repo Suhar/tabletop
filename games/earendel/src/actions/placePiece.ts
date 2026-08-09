@@ -16,6 +16,7 @@ import { chainsCompletedBy } from '../util/chains.js'
 import { stationGroupPoints } from '../util/stations.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
 import { destroyableTargets } from '../util/attack.js'
+import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
@@ -210,17 +211,25 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         }
 
         const playerState = state.getPlayerState(this.playerId)
+        let piece: Piece | undefined
 
         if (this.pieceSource === PieceSource.Bag) {
             // The draw happens when the turn opens, so there is always something face up by
             // the time a placement arrives - unless the turn has gone wrong elsewhere.
             if (!state.drawnPiece) return 'Nothing has been drawn to place.'
-            return undefined
+            piece = state.drawnPiece
+        } else {
+            if (!this.pieceId) return 'No special piece was chosen.'
+            piece = playerState.specialPieces.find((candidate) => candidate.id === this.pieceId)
+            if (!piece) return "That special piece isn't in front of you."
         }
 
-        if (!this.pieceId) return 'No special piece was chosen.'
-        if (!playerState.specialPieces.some((piece) => piece.id === this.pieceId)) {
-            return "That special piece isn't in front of you."
+        // Two of a player's stations with clear space between them close that space to
+        // everyone else's probes. Only probes - anything else may be placed there, and doing
+        // so breaks the line. This check is possible at all because the draw now happens
+        // before the hex is chosen, so the engine knows what is being placed.
+        if (piece.type === PieceType.Probe && probeBlockedBy(state.board, this.coords, this.playerId)) {
+            return 'Two enemy stations watch that space — no probe of yours can enter it.'
         }
 
         return undefined

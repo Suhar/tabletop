@@ -59,6 +59,38 @@
         return previewTargets.some((target) => sameHex(target, coords))
     }
 
+    // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
+    // so the wavelength stays constant however long or however angled the line is.
+    function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
+        const start = hexGeometry(from).center
+        const end = hexGeometry(to).center
+
+        const dx = end.x - start.x
+        const dy = end.y - start.y
+        const length = Math.hypot(dx, dy)
+        if (length === 0) return ''
+
+        // Unit vectors along the line and across it.
+        const ux = dx / length
+        const uy = dy / length
+        const px = -uy
+        const py = ux
+
+        const amplitude = 9
+        const samples = Math.max(24, Math.round(length / 4))
+        const waves = Math.max(2, Math.round(length / 46))
+
+        let path = ''
+        for (let i = 0; i <= samples; i++) {
+            const t = i / samples
+            const offset = Math.sin(t * waves * 2 * Math.PI) * amplitude
+            const x = start.x + ux * length * t + px * offset
+            const y = start.y + uy * length * t + py * offset
+            path += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)} `
+        }
+        return path.trim()
+    }
+
     function isExploringPlanet(coords: AxialCoordinates): boolean {
         const planet = gameSession.gameState.pendingExploration?.exploringPlanet
         return planet !== undefined && sameHex(planet, coords)
@@ -185,6 +217,19 @@
                 <polygon points={entry.points} fill="none" stroke="#ffffff" stroke-width="4" />
             {/if}
 
+            {#if gameSession.isClosedToMe(hex.coords)}
+                <!-- Shut to the probe in hand. Shown only while holding one, since the
+                     blockade doesn't apply to anything else. -->
+                <polygon
+                    points={entry.points}
+                    fill="#ff6b5e"
+                    fill-opacity="0.1"
+                    stroke="#ff6b5e"
+                    stroke-width="2"
+                    stroke-dasharray="4 5"
+                />
+            {/if}
+
             {#if highlighted}
                 <polygon
                     points={entry.points}
@@ -196,6 +241,30 @@
                 />
             {/if}
         </g>
+    {/each}
+
+    <!-- Station blockades, drawn last so they read above the hexes they cross. Two stations
+         of one player with clear space between them shut that space to everyone else's
+         probes; anything else may be placed there, and doing so breaks the line. -->
+    {#each gameSession.sightLines as line, index (line.playerId + index)}
+        {@const color = gameSession.colors.getPlayerUiColor(line.playerId)}
+        <path
+            d={wavePath(line.from, line.to)}
+            fill="none"
+            stroke={color}
+            stroke-opacity="0.35"
+            stroke-width="9"
+            stroke-linecap="round"
+        />
+        <path
+            class="beam"
+            d={wavePath(line.from, line.to)}
+            fill="none"
+            stroke={color}
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-dasharray="14 12"
+        />
     {/each}
 </svg>
 
@@ -212,5 +281,16 @@
 
     .pulse {
         animation: glow 2.2s ease-in-out infinite;
+    }
+
+    @keyframes flow {
+        to {
+            stroke-dashoffset: -52;
+        }
+    }
+
+    /* Light travelling along the wave, so a live blockade reads as active rather than drawn on. */
+    .beam {
+        animation: flow 1.6s linear infinite;
     }
 </style>
