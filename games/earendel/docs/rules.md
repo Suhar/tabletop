@@ -37,8 +37,9 @@ everyone, including the owner. Pieces are drawn blind.
 planet colors**, and can only be housed on a planet of a color it lists.
 
 **Special pieces** — kept face-up in front of their owner, and playable instead of drawing
-from the bag. They come *from technologies*: a technology may grant a special piece (and
-nothing else). Technology is the reward; a special piece is one form it takes.
+from the bag. They come *from technologies*: a technology may grant one or more special
+pieces, or instead a continuous power. Technology is the reward; a special piece is one form
+it takes.
 
 ---
 
@@ -91,8 +92,25 @@ than the probe's level - down to one, or to none at all, in which case it is exp
 receives no technology. The deck is intended to carry enough variety that this never comes
 up in practice.
 
-A planet's technology is permanent. A player who **controls** the planet can access its
-technology; losing control loses access.
+### Gaining a technology
+
+A planet's technology is permanent, and so is holding it. A technology is **gained** at two
+moments:
+
+1. The player who **explores** the planet gains it immediately, on choosing it. They do not
+   need to control the planet, then or ever.
+2. Any player who later **comes into control** of the planet gains it too.
+
+A gained technology is **never lost** — not when control changes hands, not ever. Whatever
+it grants (a special piece, a continuous power) stays with the player who gained it. Several
+players can therefore hold the same planet's technology, and over a game technologies only
+accumulate.
+
+**OPEN:** whether a player who loses control and later regains it gains the reward *again*.
+This only matters for technologies granting a physical reward like a special piece — a
+continuous power is already held and can't be held twice — but it decides whether a planet
+can be farmed by control changing hands repeatedly. Assumed **no** in the code: a technology
+is handed to each player at most once.
 
 **Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
 the planet will hold — picking a technology that suits their position, from cards nobody

@@ -60,6 +60,10 @@ export class HydratedChooseTechnology
 
         if (chosen) {
             state.board.hexes[hexKey(pending.exploringPlanet!)].technologyId = chosen.id
+            // The explorer gains it outright, without having to control the planet - being
+            // first is the whole reward for exploring. Anyone who takes control later gains
+            // it too, and nobody ever loses it.
+            state.getPlayerState(this.playerId).technologies.push(chosen.id)
         }
 
         // Everything turned over goes to the discard except the one card the planet keeps -

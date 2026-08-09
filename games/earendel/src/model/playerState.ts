@@ -17,6 +17,11 @@ export const EarendelPlayerState = Type.Evaluate(
             // Rewards from exploring planets, kept face-up in front of the player. A turn
             // may spend one of these INSTEAD of drawing from the bag.
             specialPieces: Type.Array(Piece),
+            // Technologies this player has gained, by card id. Gained by exploring the
+            // planet, or by coming into control of it later - and never lost afterwards,
+            // even when the planet is. Ids are unique across the deck, so a card id names
+            // the planet it came from.
+            technologies: Type.Array(Type.String()),
             // A running total that only ever goes up: control scored during the game is kept
             // even if the planet is later lost.
             score: Type.Number()
@@ -34,6 +39,7 @@ export class HydratedEarendelPlayerState
     declare color: Color
     declare bag: Piece[]
     declare specialPieces: Piece[]
+    declare technologies: string[]
     declare score: number
 
     // The game ends the moment any player's bag runs out (see EndOfGame), so this is the

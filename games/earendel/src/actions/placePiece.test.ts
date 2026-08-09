@@ -33,6 +33,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
                 { id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }
             ],
             specialPieces: [],
+            technologies: [],
             score: 0
         })),
         activePlayerIds: ['p1'],

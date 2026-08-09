@@ -94,6 +94,7 @@ export class EarendelGameInitializer
                 // turns' worth of pieces.
                 bag: buildBag(player.id, prng),
                 specialPieces: [],
+                technologies: [],
                 score: 0
             })
         })

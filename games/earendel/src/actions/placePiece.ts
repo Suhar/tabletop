@@ -7,6 +7,7 @@ import { hexKey, isOpenHex } from '../model/board.js'
 import { PieceType, ProbeLevel } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
+import { technologiesGainedBy } from '../util/technologyGrants.js'
 import { ScoredChain } from '../model/chains.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
@@ -30,6 +31,9 @@ export const PlacePieceMetadata = Type.Object({
     // unbroken run of the player's ships. Recorded because the points are scored here and
     // history has to be able to say why the score moved.
     chains: Type.Optional(Type.Array(ScoredChain)),
+    // Technologies gained by coming into control of an explored planet. Kept for good -
+    // control can be taken away afterwards, the technology can't.
+    technologiesGained: Type.Optional(Type.Array(Type.String())),
     // Planets this probe could explore from where it landed. One of them will be explored -
     // the player picks which - and the rest stay unexplored. Absent when the placement
     // reached no unexplored planet, or wasn't a probe at all.
@@ -107,6 +111,16 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             state.scoredPlanetPairs.push(chain.pairKey)
         }
 
+        // Coming into control of an explored planet hands its technology over, permanently.
+        // A probe can never do this - zero power controls nothing - but the check is general.
+        const technologiesGained = technologiesGainedBy(
+            state.board,
+            this.playerId,
+            this.coords,
+            playerState.technologies
+        )
+        playerState.technologies.push(...technologiesGained)
+
         // A probe landing beside unexplored planets doesn't resolve anything here: which
         // planet it explores is the player's choice, and the reveal that follows consumes the
         // technology deck. Both belong in their own actions so each is separately undoable
@@ -128,6 +142,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
+            ...(technologiesGained.length > 0 ? { technologiesGained } : {}),
             ...(explorable.length > 0 ? { explorable } : {})
         }
     }
