@@ -24,8 +24,8 @@ planets. Each contributes *power* toward controlling adjacent planets:
 | --- | --- | --- |
 | Probe | 0 | An explorer, not a claim. Its **level** (2 or 3) is how many technology cards it reveals. |
 | Station | 1 | |
-| Fighter (level 2) | 2 | Destroys a probe or station on arrival. |
-| Fighter (level 3) | 3 | Destroys a probe, station, or level 2 fighter on arrival. |
+| Fighter (level 2) | 2 | Destroys an enemy probe on arrival. |
+| Fighter (level 3) | 3 | Destroys an enemy probe or level 2 fighter on arrival. |
 
 Probes and fighters come in two **levels**, 2 and 3, visually distinct and known to the
 player the moment the piece is drawn. The number means something different for each: a
@@ -169,9 +169,14 @@ Other piece types resolve their own effects on placement; only probes explore.
 ### Fighters destroy
 
 A fighter arrives shooting. On being placed, it **may destroy one adjacent piece with
-strictly less power than itself** — so a level 2 fighter clears probes and stations, and a
-level 3 fighter also kills level 2 fighters. Nothing destroys its equal, which makes a level
-3 fighter untouchable.
+strictly less power than itself**. Nothing destroys its equal, which makes a level 3 fighter
+untouchable.
+
+**Stations are immune.** A station is a structure, not a ship, and no fighter shifts one
+whatever its level. So a level 2 fighter can only clear probes, and a level 3 fighter clears
+probes and level 2 fighters. Removing a station is meant to take a **special piece won from
+a technology** — when one exists, it goes in the destroy table as its own piece type rather
+than as a change to what fighters can do.
 
 - It is **optional**. Even with a single target, the choice is the player's and is never
   taken for them.

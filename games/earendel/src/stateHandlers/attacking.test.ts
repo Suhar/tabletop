@@ -51,15 +51,25 @@ describe('powerOf', () => {
 })
 
 describe('destroyableTargets', () => {
-    it('offers everything adjacent and weaker that belongs to someone else', () => {
+    it('offers everything adjacent it can remove that belongs to someone else', () => {
         const board = boardOf([
             [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
-            [at(1, 0), { ship: ship('p2', PieceType.Station) }],
             [at(0, 1), { ship: ship('p2', PieceType.Probe, PieceLevel.Two) }],
             [at(1, -1), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
         ])
 
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toHaveLength(3)
+        expect(destroyableTargets(board, at(0, 0), 'p1')).toHaveLength(2)
+    })
+
+    it('never offers a station, whatever the fighter’s level', () => {
+        // A station is a structure, not a ship. Removing one is meant to take a special
+        // piece won from a technology, not a fighter.
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Station) }]
+        ])
+
+        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
     })
 
     it('spares an equal, a stronger, and the fighter’s own side', () => {
@@ -70,7 +80,7 @@ describe('destroyableTargets', () => {
             // Stronger.
             [at(0, 1), { ship: ship('p2', PieceType.Fighter, PieceLevel.Three) }],
             // Weaker, but the attacker's own.
-            [at(1, -1), { ship: ship('p1', PieceType.Station) }]
+            [at(1, -1), { ship: ship('p1', PieceType.Probe, PieceLevel.Two) }]
         ])
 
         expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
@@ -94,7 +104,7 @@ describe('a fighter arriving', () => {
 
         game.state.board = boardOf([
             [at(0, 0), {}],
-            [at(1, 0), { ship: ship(other, PieceType.Station) }],
+            [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
@@ -124,9 +134,7 @@ describe('a fighter arriving', () => {
 
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
         expect((shot as DestroyPiece).metadata?.destroyed?.playerId).toBe(other)
-        // Out of the game entirely - not back into its owner's bag. They started with two
-        // pieces and have since drawn one for their own turn, so one is left in the bag and
-        // the destroyed station is nowhere.
+        // Out of the game entirely - not back into its owner's bag.
         // They started with two pieces and have since drawn one for their own turn, so one
         // is left. Had the destroyed station gone back, there would be two.
         expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(1)
@@ -141,7 +149,7 @@ describe('a fighter arriving', () => {
 
         game.state.board = boardOf([
             [at(0, 0), {}],
-            [at(1, 0), { ship: ship(other, PieceType.Station) }],
+            [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
@@ -201,17 +209,18 @@ describe('a fighter arriving', () => {
 
         game.state.board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
-            // The blocker's station ties the bystander's station, so nobody holds the planet
-            // outright and the bystander has never been able to take it.
-            [at(1, 0), { ship: ship(blocker, PieceType.Station) }],
-            [at(0, 1), { ship: ship(bystander, PieceType.Station) }],
+            // The blocker's fighter ties the bystander's, so nobody holds the planet outright
+            // and the bystander has never been able to take it.
+            [at(1, 0), { ship: ship(blocker, PieceType.Fighter, PieceLevel.Two) }],
+            [at(0, 1), { ship: ship(bystander, PieceType.Fighter, PieceLevel.Two) }],
             // Where the mover's fighter lands: adjacent to the blocker, not to the planet.
             [at(2, 0), {}],
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []
+        // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
         game.stackBags((playerId) => [
-            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Fighter, PieceLevel.Three),
             ship(playerId, PieceType.Station)
         ])
 
@@ -248,7 +257,7 @@ describe('a fighter arriving', () => {
 
         game.state.board = boardOf([
             [at(0, 0), {}],
-            [at(1, 0), { ship: ship(other, PieceType.Station) }],
+            [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(4, 4), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
