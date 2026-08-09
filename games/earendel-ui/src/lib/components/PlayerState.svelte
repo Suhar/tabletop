@@ -1,6 +1,6 @@
 <script lang="ts">
     import { type Player } from '@tabletop/common'
-    import { EarendelPlayerState } from '@tabletop/earendel'
+    import { EarendelPlayerState, planetPointsByPlayer } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     let gameSession = getGameSession()
@@ -8,6 +8,12 @@
 
     let isTurn = $derived(gameSession.game.state?.activePlayerIds.includes(player.id))
     let bgColor = $derived(gameSession.colors.getPlayerBgColor(player.id))
+
+    // Planets pay only at the end, so a running total alone would hide half of what a player
+    // has going. This shows what the board owes them if it stopped right now.
+    let planetPoints = $derived(
+        planetPointsByPlayer(gameSession.gameState.board)[playerState.playerId] ?? 0
+    )
 </script>
 
 <div class="relative">
@@ -16,9 +22,28 @@
             playerState.playerId
         )} font-medium flex flex-col justify-between {isTurn ? 'border-2 pulse-border' : ''}"
     >
-        <h1 class="{isTurn ? 'text-xl font-semibold' : 'text-lg font-medium'} mb-2">
-            {isTurn ? '\u21e2 ' : ''}{player.name}{isTurn ? ' \u21e0' : ''}
+        <h1 class="{isTurn ? 'text-xl font-semibold' : 'text-lg font-medium'} mb-1">
+            {isTurn ? '⇢ ' : ''}{player.name}{isTurn ? ' ⇠' : ''}
         </h1>
+
+        <div class="flex justify-center gap-3 text-sm">
+            <span title="Points banked so far">{playerState.score} pts</span>
+            <span title="Points from planets if the game ended now">+{planetPoints} held</span>
+            <span title="Pieces left in the bag">{playerState.bag.length} in bag</span>
+        </div>
+
+        {#if playerState.technologies.length > 0}
+            <div class="mt-1 text-xs opacity-90" title="Technologies gained, kept for good">
+                tech: {playerState.technologies.map((id) => id.replace('tech-', 'T')).join(' ')}
+            </div>
+        {/if}
+
+        {#if playerState.specialPieces.length > 0}
+            <div class="text-xs opacity-90">
+                specials: {playerState.specialPieces.length}
+            </div>
+        {/if}
+
         {#if gameSession.showDebug}
             <div class="text-xs mt-2">id: {player.id}</div>
         {/if}
