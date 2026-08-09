@@ -12,7 +12,11 @@ export default defineProject(
             }
         },
         server: {
-            port: 5173
+            port: 5173,
+            // Bind every interface, not just loopback. Without this vite listens on [::1]
+            // alone, and VS Code's port forwarding connects over IPv4 - so the browser gets
+            // "localhost refused to connect" while the server is running perfectly well.
+            host: true
         }
     })
 )
