@@ -12,7 +12,23 @@ export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
     { q: 1, r: 1 }
 ]
 
-export const PLANETS_PER_TILE = 2
+// One planet per tile, three hexes of open space. PROVISIONAL, chosen by simulation rather
+// than by feel: two planets per tile left so little room that no game could reach its own
+// ending, and dropping to one is what makes the open space add up (see rules.md).
+export const PLANETS_PER_TILE = 1
+
+// Six tiles per player. Along with PLANETS_PER_TILE this sets how much open space the game
+// starts with, which is the number the bag size has to be matched against: 18 open hexes per
+// player against a bag of 18. PROVISIONAL - if board growth lands, the opening map should
+// start smaller and let growth make up the difference.
+export const TILES_PER_PLAYER = 6
+
+// Both numbers are being tuned, so they can be overridden without editing the constants -
+// see simulate.ts, which sweeps them.
+export type BoardSetupOptions = {
+    tilesPerPlayer?: number
+    planetsPerTile?: number
+}
 
 // Where the starting tiles go. Tiles are 2 wide and 2 tall in axial terms, so stepping the
 // origin by 2 lays them edge to edge with no gaps and no overlap. They spiral outward from
@@ -48,13 +64,19 @@ export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
     return origins.slice(0, tileCount)
 }
 
-// The board every game starts from: 2 tiles per player, each with its own planet layout.
-export function buildStartingBoard(playerCount: number, prng: Prng): EarendelBoard {
+// The board every game starts from: TILES_PER_PLAYER per player, each with its own layout.
+export function buildStartingBoard(
+    playerCount: number,
+    prng: Prng,
+    options: BoardSetupOptions = {}
+): EarendelBoard {
     const board: EarendelBoard = { hexes: {} }
+    const tilesPerPlayer = options.tilesPerPlayer ?? TILES_PER_PLAYER
+    const planetsPerTile = options.planetsPerTile ?? PLANETS_PER_TILE
 
-    startingTileOrigins(playerCount * 2).forEach((origin, index) => {
+    startingTileOrigins(playerCount * tilesPerPlayer).forEach((origin, index) => {
         const tileId = `tile-${index}`
-        const kinds = shuffledTileKinds(prng)
+        const kinds = shuffledTileKinds(prng, planetsPerTile)
 
         TILE_HEX_OFFSETS.forEach((offset, hexIndex) => {
             const coords = { q: origin.q + offset.q, r: origin.r + offset.r }
@@ -76,10 +98,10 @@ export function buildStartingBoard(playerCount: number, prng: Prng): EarendelBoa
     return board
 }
 
-function shuffledTileKinds(prng: Prng): HexKind[] {
+function shuffledTileKinds(prng: Prng, planetsPerTile: number): HexKind[] {
     const kinds = [
-        ...Array(PLANETS_PER_TILE).fill(HexKind.Planet),
-        ...Array(TILE_HEX_OFFSETS.length - PLANETS_PER_TILE).fill(HexKind.Open)
+        ...Array(planetsPerTile).fill(HexKind.Planet),
+        ...Array(TILE_HEX_OFFSETS.length - planetsPerTile).fill(HexKind.Open)
     ] as HexKind[]
     shuffle(kinds, prng.random)
     return kinds

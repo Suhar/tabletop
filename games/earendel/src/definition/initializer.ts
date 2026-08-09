@@ -9,14 +9,8 @@ import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
 import { MachineState } from './states.js'
-import {
-    type Piece,
-    LEVELLED_TYPES,
-    PieceLevel,
-    PIECES_PER_LEVEL,
-    PieceType,
-    STARTING_BAG
-} from '../model/pieces.js'
+import type { Piece } from '../model/pieces.js'
+import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
 import { buildTechnologyDeck } from '../util/technologyDeck.js'
 import { EarendelGameConfig } from './config.js'
@@ -108,30 +102,4 @@ export class EarendelGameInitializer
 
         return players
     }
-}
-
-// One player's starting bag, shuffled. Piece ids are stable and unique so the UI can key on
-// them and history can name a specific ship.
-function buildBag(playerId: string, prng: Prng): Piece[] {
-    const bag: Piece[] = []
-    for (const [type, count] of Object.entries(STARTING_BAG) as [PieceType, number][]) {
-        for (let index = 0; index < count; index++) {
-            // Probes and fighters are three of each level. A level 3 probe reveals more
-            // technology; a level 3 fighter is simply stronger. Either way, which one you
-            // draw shapes the turn.
-            const level = LEVELLED_TYPES.includes(type)
-                ? index < PIECES_PER_LEVEL
-                    ? PieceLevel.Two
-                    : PieceLevel.Three
-                : undefined
-            bag.push({
-                id: `${playerId}-${type}-${index}`,
-                playerId,
-                type,
-                ...(level ? { level } : {})
-            })
-        }
-    }
-    shuffle(bag, prng.random)
-    return bag
 }

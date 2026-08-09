@@ -6,10 +6,22 @@ import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { DestroyPiece } from '../actions/destroyPiece.js'
 import { Pass } from '../actions/pass.js'
+import { Prng } from '@tabletop/common'
+import { PieceType } from '../model/pieces.js'
+import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
+import { buildBag } from './bag.js'
 import { TestGame } from './testHarness.js'
+
+// Setup numbers a simulation may override, to try a sizing without committing to it.
+export type SetupOverrides = BoardSetupOptions & {
+    piecesPerType?: number
+}
 
 export type GameSummary = {
     playerCount: number
+    // How the game actually ended - the rules name the empty bag, but a gridlocked board
+    // ends it too, and which one fires is the whole question about sizing.
+    endedBy: 'empty bag' | 'gridlock' | 'unfinished'
     turns: number
     finished: boolean
     // Why it stopped, when it didn't finish.
@@ -37,8 +49,32 @@ function lcg(seed: number): () => number {
 // Plays a whole game with every choice made at random. Not an AI and not meant to be one:
 // its job is to find out whether the rules as written can reach the end of a game at all,
 // and what the board looks like when they do.
-export function playRandomGame(playerCount: number, seed: number, maxTurns = 500): GameSummary {
+export function playRandomGame(
+    playerCount: number,
+    seed: number,
+    overrides: SetupOverrides = {},
+    maxTurns = 2000
+): GameSummary {
     const game = new TestGame(playerCount, seed)
+
+    if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
+        game.state.board = buildStartingBoard(playerCount, new Prng({ seed, invocations: 0 }), overrides)
+    }
+    if (overrides.piecesPerType !== undefined) {
+        const perType = {
+            [PieceType.Probe]: overrides.piecesPerType,
+            [PieceType.Station]: overrides.piecesPerType,
+            [PieceType.Fighter]: overrides.piecesPerType
+        }
+        game.stackBags((playerId) =>
+            buildBag(playerId, new Prng({ seed: seed + 1, invocations: 0 }), perType)
+        )
+    } else if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
+        // The opening draw happened against the old board; redraw so the turn is coherent.
+        game.stackBags((playerId) =>
+            game.state.players.find((player) => player.playerId === playerId)!.bag
+        )
+    }
     const random = lcg(seed * 7919 + 13)
     const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]
 
@@ -113,8 +149,16 @@ export function playRandomGame(playerCount: number, seed: number, maxTurns = 500
         (hex) => hex.kind === HexKind.Planet
     )
 
+    const bagsEmpty = game.state.players.some((player) => player.bag.length === 0)
+
     return {
         playerCount,
+        endedBy:
+            game.state.machineState !== MachineState.EndOfGame
+                ? 'unfinished'
+                : bagsEmpty
+                  ? 'empty bag'
+                  : 'gridlock',
         turns,
         finished: game.state.machineState === MachineState.EndOfGame,
         stoppedBecause,

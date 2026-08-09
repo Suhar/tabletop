@@ -11,8 +11,8 @@ settling it first.
 
 ## Components
 
-**Tiles** — four hexes in a diamond (an axial rhombus). Each tile has two planet hexes and
-two hexes of open space; *which* two are planets varies from tile to tile.
+**Tiles** — four hexes in a diamond (an axial rhombus). Each tile has one planet hex and
+three hexes of open space; *which* hex is the planet varies from tile to tile.
 
 **Planets** — every planet hex has one of **five colors**. A planet is either unexplored or
 explored; once explored it can never be explored again.
@@ -51,29 +51,31 @@ it takes.
 
 ## Setup
 
-The board starts as **2 tiles per player**, arranged so the map is compact at every player
+The board starts as **6 tiles per player**, arranged so the map is compact at every player
 count. Each player's bag is shuffled. Scores start at 0.
 
 **OPEN:** how planet colors are distributed across the starting tiles.
 
-**PROBLEM — the board is far too small for the bags.** Two tiles per player, each half
-planets, gives **4 open hexes per player**, while every player holds **18 pieces**. Random
-playthroughs (see `simulation.test.ts`) jam solid after about **4 placements each**, with 13
-or 14 pieces still in every bag and only a third of the planets explored. The game cannot
-currently reach its own stated ending.
+**Sizing, settled by simulation rather than by feel.** Two tiles per player with two planets
+each gave 4 open hexes per player against a bag of 18 pieces: games jammed solid after about
+4 placements each and could never reach their own ending. Random playthroughs across the
+alternatives gave:
 
-Getting there needs roughly **18 open hexes per player** rather than 4 — a factor of about
-four and a half. The levers, which can be combined:
+| Setup | Ends by empty bag | Placed each | Planets explored | Chains scored |
+| --- | --- | --- | --- | --- |
+| 2 tiles, 2 planets/tile (old) | 0 of 5 | 4.3 / 18 | 33% | 3–10 |
+| 2 tiles, 1 planet/tile | 0 of 5 | 7.3 / 18 | 70–80% | 1–3 |
+| **6 tiles, 1 planet/tile** | **5 of 5** | **17 / 18** | **57–66%** | **8–12** |
+| 9 tiles, 2 planets/tile | 5 of 5 | 17 / 18 | 30% | 30–67 |
+| 4 tiles, 1 planet/tile, bag 12 | 5 of 5 | 11.5 / 12 | 65% | 3–7 |
 
-| Lever | Effect |
-| --- | --- |
-| Board growth during play | Needs ~7 added tiles *per player* to close the gap alone — likely too many |
-| More starting tiles | ~9 per player to close it alone; a big opening map |
-| Fewer planets per tile (1 of 4, not 2) | Takes 4 open hexes per player to 6 — helps, nowhere near enough |
-| Smaller bags | 18 pieces is what sets the target; halving it halves the problem |
+One planet per tile turned out to matter for a second reason: with two, planets are so dense
+that chains fire constantly and swamp everything else (30–67 a game at 9 tiles). With one,
+they stay an achievement. But *only* dropping to one planet doesn't fix the jam — it takes
+open space from 4 to 6 hexes per player when 18 are needed.
 
-This is the most urgent open item: nothing else can be tuned honestly against a board that
-ends the game a quarter of the way in.
+**PROVISIONAL: 6 tiles per player, 1 planet per tile.** If board growth lands, the opening
+map should start smaller and let growth make up the difference.
 
 ---
 

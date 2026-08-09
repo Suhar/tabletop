@@ -26,18 +26,23 @@ describe('a whole game, played at random', () => {
         }
     })
 
-    // CANARY, expected to fail once the board is sized properly.
-    //
-    // Every game currently ends because the board filled up, never because a player emptied
-    // their bag - the condition the rules actually name. The starting board gives 4 open
-    // hexes per player and every player holds 18 pieces, so play stops at about a quarter of
-    // a bag. When board growth or a resizing lands, this test should start failing, and that
-    // is the signal to delete it.
-    it('still ends by gridlock rather than by an empty bag', () => {
+    it('ends because a bag ran out, which is the ending the rules name', () => {
         for (const playerCount of [2, 3, 5]) {
-            const summary = playRandomGame(playerCount, 1)
-            expect(summary.openHexesLeft).toBe(0)
-            expect(summary.piecesLeftInBags.every((left) => left > 0)).toBe(true)
+            for (const seed of SEEDS) {
+                const summary = playRandomGame(playerCount, seed)
+                expect(summary.endedBy, `${playerCount}p seed ${seed}`).toBe('empty bag')
+                // Nearly the whole bag gets played, so the board is big enough for the game
+                // it is holding - the thing two planets per tile could never manage.
+                expect(Math.max(...summary.piecesLeftInBags)).toBeLessThan(4)
+            }
         }
+    })
+
+    it('explores a good share of the planets and pays chains without being swamped by them', () => {
+        // Not assertions about balance, which is a playtest question - just a tripwire for a
+        // sizing change that quietly turns the game into something else.
+        const summary = playRandomGame(3, 1)
+        expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
+        expect(summary.chainsScored).toBeGreaterThan(0)
     })
 })
