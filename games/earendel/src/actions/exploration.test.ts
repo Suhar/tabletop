@@ -4,7 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
-import { PieceType, ProbeLevel } from '../model/pieces.js'
+import { PieceType, PieceLevel } from '../model/pieces.js'
 import type { PendingExploration } from '../model/exploration.js'
 import { HydratedChoosePlanet } from './choosePlanet.js'
 import { HydratedChooseTechnology } from './chooseTechnology.js'
@@ -31,7 +31,7 @@ function board(): EarendelBoard {
             coords: PROBE_HEX,
             tileId: 't1',
             kind: HexKind.Open,
-            piece: { id: 'probe', playerId: 'p1', type: PieceType.Probe, level: ProbeLevel.Two }
+            piece: { id: 'probe', playerId: 'p1', type: PieceType.Probe, level: PieceLevel.Two }
         }
     }
     return { hexes }
@@ -73,7 +73,7 @@ function unsettled(): PendingExploration {
     return {
         playerId: 'p1',
         probeCoords: PROBE_HEX,
-        probeLevel: ProbeLevel.Two,
+        probeLevel: PieceLevel.Two,
         candidatePlanets: [PLANET_A]
     }
 }

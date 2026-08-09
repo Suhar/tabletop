@@ -1,6 +1,6 @@
 import * as Type from 'typebox'
 import { AxialCoordinates } from '@tabletop/common'
-import { ProbeLevel } from './pieces.js'
+import { PieceLevel } from './pieces.js'
 import { TechnologyCard } from './technology.js'
 
 // A probe placement waiting on the player who made it. Two decisions can be pending, in
@@ -14,7 +14,7 @@ export type PendingExploration = Type.Static<typeof PendingExploration>
 export const PendingExploration = Type.Object({
     playerId: Type.String(),
     probeCoords: AxialCoordinates,
-    probeLevel: Type.Enum(ProbeLevel),
+    probeLevel: Type.Enum(PieceLevel),
     // The planets this probe could explore. Exactly one will be.
     candidatePlanets: Type.Array(AxialCoordinates),
     // Set once the planet is settled and its cards are face up: the planet being explored,

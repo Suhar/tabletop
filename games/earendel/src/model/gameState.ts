@@ -12,6 +12,7 @@ import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { TechnologyCard } from './technology.js'
 import { PendingExploration } from './exploration.js'
+import { PendingAttack } from './attack.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
 export const EarendelGameState = Type.Evaluate(
@@ -31,6 +32,9 @@ export const EarendelGameState = Type.Evaluate(
             // (when it reached more than one), and then which revealed technology to keep.
             // Cleared once the exploration resolves. Its presence is what holds the turn open.
             pendingExploration: Type.Optional(PendingExploration),
+            // Set while a newly placed fighter's owner decides whether to fire. Like
+            // pendingExploration, its presence is what holds the turn open.
+            pendingAttack: Type.Optional(PendingAttack),
             // Pairs of planets already joined by a chain (see planetPairKey). A pair pays
             // out once and is then spent for everyone, so the record is global rather than
             // per player - joining a colour first is the whole race.
@@ -59,6 +63,7 @@ export class HydratedEarendelGameState
     declare technologyDeck: TechnologyCard[]
     declare technologyDiscard: TechnologyCard[]
     declare pendingExploration?: PendingExploration
+    declare pendingAttack?: PendingAttack
     declare scoredPlanetPairs: string[]
     declare result?: GameResult
     declare winningPlayerIds: string[]

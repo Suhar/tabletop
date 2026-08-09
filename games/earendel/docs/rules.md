@@ -22,15 +22,21 @@ planets. Each contributes *power* toward controlling adjacent planets:
 
 | Piece | Power | Notes |
 | --- | --- | --- |
-| Probe | 0 | An explorer, not a claim. Has a **level** (2 or 3), visually distinct, known to the player the moment it is drawn. |
+| Probe | 0 | An explorer, not a claim. Its **level** (2 or 3) is how many technology cards it reveals. |
 | Station | 1 | |
-| Fighter | 2 | |
+| Fighter (level 2) | 2 | Destroys a probe or station on arrival. |
+| Fighter (level 3) | 3 | Destroys a probe, station, or level 2 fighter on arrival. |
+
+Probes and fighters come in two **levels**, 2 and 3, visually distinct and known to the
+player the moment the piece is drawn. The number means something different for each: a
+probe's level is how many cards it reveals, while a **fighter's level is its power** — so a
+level 3 fighter both holds planets harder and kills more.
 
 Further piece types are expected to arrive as rewards from exploration; each will declare
 its own power.
 
 **Bags** — each player has their own bag containing **6 probes, 6 stations, 6 fighters**.
-The six probes are three of level 2 and three of level 3. Bag contents are hidden from
+The six probes are three of level 2 and three of level 3, and the six fighters likewise. Bag contents are hidden from
 everyone, including the owner. Pieces are drawn blind.
 
 **Technology deck** — a shared deck. Each card is associated with **one, two, or three
@@ -129,6 +135,25 @@ probe beside a single unexplored planet explores it without asking, and a reveal
 up one matching card (or none) houses it without asking. Only genuine choices interrupt.
 
 Other piece types resolve their own effects on placement; only probes explore.
+
+### Fighters destroy
+
+A fighter arrives shooting. On being placed, it **may destroy one adjacent piece with
+strictly less power than itself** — so a level 2 fighter clears probes and stations, and a
+level 3 fighter also kills level 2 fighters. Nothing destroys its equal, which makes a level
+3 fighter untouchable.
+
+- It is **optional**. Even with a single target, the choice is the player's and is never
+  taken for them.
+- Only **one** piece, and only an **opponent's** — a fighter never fires on its own side.
+- The destroyed piece is **out of the game**. It does not return to its owner's bag, so the
+  owner's clock is unaffected; what it frees is the hex.
+
+This is the only way a hex is ever vacated. Nothing else ever leaves the board.
+
+Destroying can change who holds a nearby planet outright, and therefore hand over its
+technology — **including to a player who took no part in the attack**, when the removal
+breaks a tie they were losing to.
 
 ---
 

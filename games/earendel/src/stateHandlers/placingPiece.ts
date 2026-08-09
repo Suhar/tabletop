@@ -48,10 +48,14 @@ export class PlacingPieceStateHandler
 
         switch (true) {
             case isPlacePiece(action): {
-                // A probe that reached an unexplored planet holds the turn open - the same
-                // player still owes a decision or two. Everything else finishes here.
+                // A placement that owes the player a decision holds the turn open. A piece
+                // is one type or the other, so these are never both pending: probes explore,
+                // fighters shoot.
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
+                }
+                if (gameState.pendingAttack) {
+                    return MachineState.Attacking
                 }
                 return endTurn(gameState)
             }

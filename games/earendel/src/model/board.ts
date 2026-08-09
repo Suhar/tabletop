@@ -53,8 +53,9 @@ export const Hex = Type.Object({
     kind: Type.Enum(HexKind),
     // Planet hexes only.
     color: Type.Optional(Type.Enum(PlanetColor)),
-    // The technology housed here, chosen by whoever explored it. Set once and permanent -
-    // whoever controls the planet has access to it, and loses access with control.
+    // The technology housed here, chosen by whoever explored it. Set once and permanent.
+    // The explorer gains it outright, and so does anyone who later holds the planet with
+    // strictly more power than anyone else - and nobody ever loses it again.
     technologyId: Type.Optional(Type.String()),
     // The ship standing here, if any. A planet hex is never occupied: ships sit AROUND
     // planets and exert power on them (see planetControl).
@@ -120,7 +121,7 @@ export function planetControl(board: EarendelBoard, coords: AxialCoordinates): P
     for (const neighbor of neighborsOf(coords)) {
         const piece = getHex(board, neighbor)?.piece
         if (!piece) continue
-        powerByPlayerId[piece.playerId] = (powerByPlayerId[piece.playerId] ?? 0) + powerOf(piece.type)
+        powerByPlayerId[piece.playerId] = (powerByPlayerId[piece.playerId] ?? 0) + powerOf(piece)
     }
 
     let power = 0

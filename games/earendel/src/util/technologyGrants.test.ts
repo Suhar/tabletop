@@ -141,7 +141,7 @@ describe('holding a technology through the game', () => {
             pieceSource: PieceSource.Bag
         })
 
-        expect((taking as PlacePiece).metadata?.technologiesGained).toEqual(['tech-a'])
+        expect((taking as PlacePiece).metadata?.technologiesGained).toEqual({ [mover]: ['tech-a'] })
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
             'tech-a'
         ])

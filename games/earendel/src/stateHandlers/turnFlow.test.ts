@@ -3,7 +3,7 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
-import { type Piece, PieceType, ProbeLevel } from '../model/pieces.js'
+import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
 import type { TechnologyCard } from '../model/technology.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
@@ -43,7 +43,7 @@ function card(id: string, ...colors: PlanetColor[]): TechnologyCard {
     return { id, colors }
 }
 
-function probe(playerId: string, level = ProbeLevel.Two): Piece {
+function probe(playerId: string, level = PieceLevel.Two): Piece {
     return { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level }
 }
 
@@ -172,7 +172,7 @@ describe('the turn spine', () => {
         const game = scenario({
             // A level 3 probe against a deck holding a single Azure card: the reveal exhausts
             // the piles and offers one candidate, which is no choice at all.
-            bag: (playerId) => [probe(playerId, ProbeLevel.Three), fighter(playerId)],
+            bag: (playerId) => [probe(playerId, PieceLevel.Three), fighter(playerId)],
             deck: [card('only-azure', PlanetColor.Azure), card('miss', PlanetColor.Gold)]
         })
         const mover = game.activePlayerId

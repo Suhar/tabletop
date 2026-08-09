@@ -2,23 +2,51 @@ import * as Type from 'typebox'
 
 // The ships a player draws from their bag. More types are expected to arrive as rewards
 // for exploring planets (see the special pieces held face-up in front of a player), so
-// nothing here assumes these three are the whole set - power is looked up per type.
+// nothing here assumes these three are the whole set - power is looked up per piece.
 export enum PieceType {
     Probe = 'probe',
     Station = 'station',
     Fighter = 'fighter'
 }
 
-// How much a piece contributes toward controlling an adjacent planet. A probe contributes
-// nothing: it's an explorer, not a claim. Anything added later just needs an entry here.
+// Probes and fighters come in two levels, and a player knows which they drew before deciding
+// where to place it. The number means something different for each: a probe's level is how
+// many technology cards it reveals, a fighter's level IS its power, and so also decides what
+// it can destroy on arrival.
+export enum PieceLevel {
+    Two = 2,
+    Three = 3
+}
+
+// Three of each level among the six probes, and among the six fighters, in a bag.
+export const PIECES_PER_LEVEL = 3
+
+// Base power by type, for pieces that carry no level of their own - a special piece won from
+// a technology, say. Anything added later just needs an entry here.
 export const PIECE_POWER: Record<PieceType, number> = {
     [PieceType.Probe]: 0,
     [PieceType.Station]: 1,
     [PieceType.Fighter]: 2
 }
 
-export function powerOf(type: PieceType): number {
-    return PIECE_POWER[type] ?? 0
+export type Piece = Type.Static<typeof Piece>
+export const Piece = Type.Object({
+    id: Type.String(),
+    playerId: Type.String(),
+    type: Type.Enum(PieceType),
+    // Probes and fighters. Absent on anything else.
+    level: Type.Optional(Type.Enum(PieceLevel))
+})
+
+// How much this piece contributes toward controlling an adjacent planet, and - for a fighter -
+// how much it has to beat to destroy something. A probe contributes nothing: it's an
+// explorer, not a claim. A fighter's level is its power, so a level 3 fighter both holds
+// planets harder and kills more.
+export function powerOf(piece: Piece): number {
+    if (piece.type === PieceType.Fighter) {
+        return piece.level ?? PIECE_POWER[PieceType.Fighter]
+    }
+    return PIECE_POWER[piece.type] ?? 0
 }
 
 // How many of each type each player starts with in their bag.
@@ -28,22 +56,5 @@ export const STARTING_BAG: Record<PieceType, number> = {
     [PieceType.Fighter]: 6
 }
 
-// How many technology cards a probe reveals when it explores. Probes are visually distinct
-// by level, and a player knows which they drew before deciding where to place it - a level 3
-// probe is strictly the better explorer, so the draw changes the placement decision.
-export enum ProbeLevel {
-    Two = 2,
-    Three = 3
-}
-
-// Three of each level among the six probes in a bag.
-export const PROBES_PER_LEVEL = 3
-
-export type Piece = Type.Static<typeof Piece>
-export const Piece = Type.Object({
-    id: Type.String(),
-    playerId: Type.String(),
-    type: Type.Enum(PieceType),
-    // Probes only. Absent on anything else.
-    level: Type.Optional(Type.Enum(ProbeLevel))
-})
+// Which types are dealt out in two levels, three of each.
+export const LEVELLED_TYPES: PieceType[] = [PieceType.Probe, PieceType.Fighter]

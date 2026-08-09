@@ -1,5 +1,6 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } from '../model/board.js'
+import type { HydratedEarendelGameState } from '../model/gameState.js'
 
 // Technologies a placement just handed its owner: those on explored planets the placement
 // gave them OUTRIGHT hold of, and which they don't already hold.
@@ -11,23 +12,54 @@ import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } fr
 //
 // Players who lose a planet keep everything they had already gained; a technology, once
 // gained, is never lost, and never gained twice by the same player.
+// Written around a hex rather than around a player because a board change cuts both ways: a
+// placement hands technology to the placer, but a DESTRUCTION can hand it to whoever is left
+// standing next to the planet, who may have had nothing to do with the attack.
+export function technologiesGainedAround(
+    board: EarendelBoard,
+    coords: AxialCoordinates,
+    held: Record<string, string[]>
+): Record<string, string[]> {
+    const gained: Record<string, string[]> = {}
+
+    for (const neighbor of neighborsOf(coords)) {
+        const hex = getHex(board, neighbor)
+        if (hex?.kind !== HexKind.Planet || !hex.technologyId) continue
+
+        const playerId = dominantPlayerId(board, neighbor)
+        if (!playerId) continue
+        if ((held[playerId] ?? []).includes(hex.technologyId)) continue
+        if ((gained[playerId] ?? []).includes(hex.technologyId)) continue
+
+        gained[playerId] = [...(gained[playerId] ?? []), hex.technologyId]
+    }
+
+    return gained
+}
+
+// What one player gains from a change at this hex.
 export function technologiesGainedBy(
     board: EarendelBoard,
     playerId: string,
     coords: AxialCoordinates,
     alreadyHeld: string[]
 ): string[] {
-    const held = new Set(alreadyHeld)
-    const gained: string[] = []
+    return technologiesGainedAround(board, coords, { [playerId]: alreadyHeld })[playerId] ?? []
+}
 
-    for (const neighbor of neighborsOf(coords)) {
-        const hex = getHex(board, neighbor)
-        if (hex?.kind !== HexKind.Planet) continue
-        if (!hex.technologyId || held.has(hex.technologyId)) continue
-        if (dominantPlayerId(board, neighbor) !== playerId) continue
+// Credits every player who now holds a neighbouring planet outright, and reports what each
+// gained. The board must already be in its new shape when this is called.
+export function applyTechnologyGains(
+    state: HydratedEarendelGameState,
+    coords: AxialCoordinates
+): Record<string, string[]> {
+    const held = Object.fromEntries(
+        state.players.map((player) => [player.playerId, player.technologies])
+    )
+    const gained = technologiesGainedAround(state.board, coords, held)
 
-        held.add(hex.technologyId)
-        gained.push(hex.technologyId)
+    for (const [playerId, technologies] of Object.entries(gained)) {
+        state.getPlayerState(playerId).technologies.push(...technologies)
     }
 
     return gained

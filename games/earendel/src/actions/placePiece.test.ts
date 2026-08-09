@@ -4,7 +4,7 @@ import { EarendelGameState, HydratedEarendelGameState } from '../model/gameState
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { EarendelBoard, HexKind, hexKey, neighborsOf } from '../model/board.js'
-import { PieceType, ProbeLevel } from '../model/pieces.js'
+import { PieceType, PieceLevel } from '../model/pieces.js'
 import { HydratedPlacePiece, PieceSource } from './placePiece.js'
 
 const ORIGIN: AxialCoordinates = { q: 0, r: 0 }
@@ -29,7 +29,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
             playerId,
             color: [Color.Blue, Color.Red][index],
             bag: [
-                { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: ProbeLevel.Two },
+                { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
                 { id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }
             ],
             specialPieces: [],

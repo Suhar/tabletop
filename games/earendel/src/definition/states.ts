@@ -6,5 +6,8 @@ export enum MachineState {
     // Held open only while a probe placement is waiting on its player - which planet to
     // explore, then which revealed technology to keep. Still the same turn.
     Exploring = 'Exploring',
+    // Held open while a newly placed fighter's owner decides whether to destroy something
+    // adjacent, and which. Still the same turn.
+    Attacking = 'Attacking',
     EndOfGame = 'EndOfGame'
 }
