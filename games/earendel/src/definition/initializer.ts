@@ -70,6 +70,7 @@ export class EarendelGameInitializer
             board: buildStartingBoard(game.players.length, prng),
             technologyDeck: buildTechnologyDeck(prng),
             technologyDiscard: [],
+            scoredPlanetPairs: [],
         })
 
         // I suppose the engine could actually do the hydration with the hydrator, but this is how it

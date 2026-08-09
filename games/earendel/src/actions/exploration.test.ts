@@ -61,6 +61,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
             { id: 'azure-2', colors: [PlanetColor.Azure] }
         ],
         technologyDiscard: [],
+        scoredPlanetPairs: [],
         ...(pending ? { pendingExploration: pending } : {})
     } as EarendelGameState
 

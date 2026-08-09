@@ -6,6 +6,8 @@ import { ActionType } from '../definition/actions.js'
 import { hexKey, isOpenHex } from '../model/board.js'
 import { PieceType, ProbeLevel } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
+import { chainsCompletedBy } from '../util/chains.js'
+import { ScoredChain } from '../model/chains.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
 // GameAction already has a `source` (User vs System) and shadowing it silently breaks the
@@ -24,6 +26,10 @@ export const PlacePieceMetadata = Type.Object({
     // Which ship actually came out of the bag - the player doesn't choose it, so history has
     // to say what they got.
     pieceType: Type.Optional(Type.Enum(PieceType)),
+    // Chains this placement completed, if any: two planets of one colour newly joined by an
+    // unbroken run of the player's ships. Recorded because the points are scored here and
+    // history has to be able to say why the score moved.
+    chains: Type.Optional(Type.Array(ScoredChain)),
     // Planets this probe could explore from where it landed. One of them will be explored -
     // the player picks which - and the rest stay unexplored. Absent when the placement
     // reached no unexplored planet, or wasn't a probe at all.
@@ -88,6 +94,19 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
+        // Joining two planets of one colour pays T(n) on the n ships between them. Scored
+        // here, on the placement that completes it, and never again for that pair.
+        const chains = chainsCompletedBy(
+            state.board,
+            this.playerId,
+            this.coords,
+            state.scoredPlanetPairs
+        )
+        for (const chain of chains) {
+            playerState.score += chain.points
+            state.scoredPlanetPairs.push(chain.pairKey)
+        }
+
         // A probe landing beside unexplored planets doesn't resolve anything here: which
         // planet it explores is the player's choice, and the reveal that follows consumes the
         // technology deck. Both belong in their own actions so each is separately undoable
@@ -106,6 +125,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         this.metadata = {
             pieceType: piece.type,
+            ...(chains.length > 0
+                ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
+                : {}),
             ...(explorable.length > 0 ? { explorable } : {})
         }
     }
@@ -121,6 +143,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             return "It isn't your turn."
         }
 
+        // Any open hex, anywhere. Deliberately no adjacency or connection requirement - the
+        // whole board is in play every turn - so this being the only spatial check is the
+        // rule, not an unfinished one.
         if (!isOpenHex(state.board, this.coords)) {
             return 'A ship can only go on an empty hex of open space - not on a planet, and not on an occupied hex.'
         }

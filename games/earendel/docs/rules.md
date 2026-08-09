@@ -63,8 +63,9 @@ A player either:
 
 A ship may be placed on **any open hex** — never on a planet, never on an occupied hex.
 
-**OPEN:** whether placement is otherwise unrestricted, or must relate to pieces the player
-already has on the board.
+Placement is otherwise **unrestricted**: a ship need not connect to, or sit near, anything
+its owner has already placed. The whole board is in play on every turn. Individual rules may
+carve out exceptions later, but there is no general adjacency requirement to build on.
 
 ### Exploration
 
@@ -111,7 +112,33 @@ reward. A planet touched only by probes (0 power) is controlled by nobody.
 Scores are **public** and are a **running total that never decreases**: points scored for
 control during the game are kept even if control is later lost.
 
-**OPEN:** which acts score during play, and how much. Taking control of a planet from
+### Chains
+
+If a placement creates an unbroken chain of that player's own ships joining **two planets of
+the same color**, the player scores **T(n)**, where *n* is the number of ships in the chain
+(planets aren't counted) and T(n) is the *n*th triangular number: 1, 3, 6, 10, 15, …
+
+A chain is a run of ships on adjacent hexes; the first touches one planet, the last touches
+the other. Ship type is irrelevant — a probe links a chain as well as a fighter does. Only
+the player's *own* ships link, and since no ship can stand on a planet, a planet is a wall a
+chain must go around.
+
+Because T grows faster than *n*, joining two **distant** planets of a color is worth far more
+than joining two that nearly touch — and costs the ships and turns to match, which is also
+the game's clock.
+
+**ASSUMED** (settle before playtesting):
+
+- *n* is the length of the **shortest** run through the player's ships. Once ships bunch up
+  there are many routes; the shortest is the one that is well defined, and it's the only
+  measure that doesn't pay a player for wandering.
+- A **pair of planets pays once, ever, to whoever joins it first** — it is then spent for
+  everyone. Otherwise the same two planets could be re-joined by a longer route for a bigger
+  payout.
+- One placement can complete **several pairs at once** (a ship touching three planets of one
+  color joins three pairs); each is measured and paid separately.
+
+**OPEN:** which other acts score during play, and how much. Taking control of a planet from
 another player is a candidate.
 
 **OPEN:** end-of-game scoring for controlled planets — how much a planet is worth, and

@@ -45,6 +45,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         board: boardWithPlanetAtOrigin(),
         technologyDeck: [],
         technologyDiscard: [],
+        scoredPlanetPairs: [],
         ...overrides
     } as EarendelGameState
 
