@@ -56,6 +56,25 @@ count. Each player's bag is shuffled. Scores start at 0.
 
 **OPEN:** how planet colors are distributed across the starting tiles.
 
+**PROBLEM — the board is far too small for the bags.** Two tiles per player, each half
+planets, gives **4 open hexes per player**, while every player holds **18 pieces**. Random
+playthroughs (see `simulation.test.ts`) jam solid after about **4 placements each**, with 13
+or 14 pieces still in every bag and only a third of the planets explored. The game cannot
+currently reach its own stated ending.
+
+Getting there needs roughly **18 open hexes per player** rather than 4 — a factor of about
+four and a half. The levers, which can be combined:
+
+| Lever | Effect |
+| --- | --- |
+| Board growth during play | Needs ~7 added tiles *per player* to close the gap alone — likely too many |
+| More starting tiles | ~9 per player to close it alone; a big opening map |
+| Fewer planets per tile (1 of 4, not 2) | Takes 4 open hexes per player to 6 — helps, nowhere near enough |
+| Smaller bags | 18 pieces is what sets the target; halving it halves the problem |
+
+This is the most urgent open item: nothing else can be tuned honestly against a board that
+ends the game a quarter of the way in.
+
 ---
 
 ## A turn
@@ -246,7 +265,12 @@ player chooses the tile's rotation.
 ## End of the game
 
 The moment **any player has played the last piece from their bag**, the game ends
-immediately — **mid-round**, with no final go-around. Players later in the turn order simply
+immediately — **mid-round**, with no final go-around.
+
+The game also ends if **no legal placement exists** — a full board never unjams itself, since
+only a placement can free a hex. This is **PROVISIONAL**: it exists so play always
+terminates, and today it is the condition that ends every game, which is a symptom of the
+board-size problem above rather than a rule worth having. Players later in the turn order simply
 don't get another turn.
 
 Everyone starts with the same 18 pieces, so the player who empties their bag first is the

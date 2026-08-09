@@ -166,7 +166,11 @@ describe('scoring a chain in play', () => {
             [at(1, 0), {}],
             [at(2, 0), {}],
             [at(3, 0), { planet: PlanetColor.Azure }],
-            [at(9, 9), {}]
+            // Spare space well clear of the planets, so filling the board doesn't end the
+            // game before the chain is paid.
+            [at(9, 9), {}],
+            [at(8, 8), {}],
+            [at(7, 7), {}]
         ])
         game.state.technologyDeck = []
         // A spare piece each, so no bag runs out and ends the game - planets pay out at the

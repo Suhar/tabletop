@@ -1,6 +1,6 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import { GameAction, HydratableAction, MachineContext, shuffle } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 
@@ -35,21 +35,24 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
         super(data, PassValidator)
     }
 
-    apply(state: HydratedEarendelGameState, context?: MachineContext) {
+    apply(state: HydratedEarendelGameState, _context?: MachineContext) {
         if (!this.isValidPass(state)) {
             throw Error('Invalid Pass action')
+        }
+
+        // A turn that places nothing must still put its draw back, or the piece simply
+        // vanishes - and the bag is the game's clock, so pieces quietly leaving it would
+        // shorten the game for reasons no one could see.
+        if (state.drawnPiece) {
+            state.getPlayerState(this.playerId).bag.push(state.drawnPiece)
+            shuffle(state.getPlayerState(this.playerId).bag, state.getPrng().random)
+            state.drawnPiece = undefined
         }
 
         this.metadata = {}
     }
 
-    isValidPass(state: HydratedEarendelGameState): boolean {
-        const playerState = state.getPlayerState(this.playerId)
-        return true
-    }
-
-    static canPass(state: HydratedEarendelGameState, playerId: string): boolean {
-        const playerState = state.getPlayerState(playerId)
+    isValidPass(_state: HydratedEarendelGameState): boolean {
         return true
     }
 }
