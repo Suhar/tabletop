@@ -10,6 +10,7 @@ import { Prng } from '@tabletop/common'
 import { PieceType } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
+import { legalPlacementsFor } from './placement.js'
 import { TestGame } from './testHarness.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
@@ -21,7 +22,7 @@ export type GameSummary = {
     playerCount: number
     // How the game actually ended - the rules name the empty bag, but a gridlocked board
     // ends it too, and which one fires is the whole question about sizing.
-    endedBy: 'empty bag' | 'gridlock' | 'unfinished'
+    endedBy: 'empty bag' | 'no legal placement' | 'unfinished'
     turns: number
     finished: boolean
     // Why it stopped, when it didn't finish.
@@ -93,19 +94,20 @@ export function playRandomGame(
         const playerId = game.activePlayerId
 
         if (game.state.machineState === MachineState.PlacingPiece) {
-            const open = Object.values(game.state.board.hexes).filter(
-                (hex) => hex.kind === HexKind.Open && !hex.piece
-            )
+            const drawn = game.state.drawnPiece
+            const open = drawn ? legalPlacementsFor(game.state.board, playerId, drawn) : []
 
             if (open.length === 0) {
-                stoppedBecause = 'the board filled up: no open hex left to place on'
+                // Shouldn't happen: the engine ends the game in enter() when the player who
+                // has just drawn cannot place. Reaching here means that check has a hole.
+                stoppedBecause = 'no legal placement, but the game did not end'
                 break
             }
 
             const placed = game.run(PlacePiece, {
                 type: ActionType.PlacePiece,
                 playerId,
-                coords: pick(open).coords,
+                coords: pick(open),
                 pieceSource: PieceSource.Bag
             })
             chainsScored += placed.reduce(
@@ -158,7 +160,7 @@ export function playRandomGame(
                 ? 'unfinished'
                 : bagsEmpty
                   ? 'empty bag'
-                  : 'gridlock',
+                  : 'no legal placement',
         turns,
         finished: game.state.machineState === MachineState.EndOfGame,
         stoppedBecause,

@@ -18,9 +18,6 @@ export enum PieceLevel {
     Three = 3
 }
 
-// Three of each level among the six probes, and among the six fighters, in a bag.
-export const PIECES_PER_LEVEL = 3
-
 // Base power by type, for pieces that carry no level of their own - a special piece won from
 // a technology, say. Anything added later just needs an entry here.
 export const PIECE_POWER: Record<PieceType, number> = {
@@ -49,11 +46,12 @@ export function powerOf(piece: Piece): number {
     return PIECE_POWER[piece.type] ?? 0
 }
 
-// How many of each type each player starts with in their bag.
+// How many of each type each player starts with in their bag. Probes and fighters are split
+// evenly between the two levels (see buildBag), so both counts are even.
 export const STARTING_BAG: Record<PieceType, number> = {
-    [PieceType.Probe]: 6,
+    [PieceType.Probe]: 8,
     [PieceType.Station]: 6,
-    [PieceType.Fighter]: 6
+    [PieceType.Fighter]: 8
 }
 
 // Which types are dealt out in two levels, three of each.

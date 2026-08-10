@@ -26,16 +26,23 @@ describe('a whole game, played at random', () => {
         }
     })
 
-    it('ends because a bag ran out, which is the ending the rules name', () => {
-        for (const playerCount of [2, 3, 5]) {
-            for (const seed of SEEDS) {
-                const summary = playRandomGame(playerCount, seed)
-                expect(summary.endedBy, `${playerCount}p seed ${seed}`).toBe('empty bag')
-                // Nearly the whole bag gets played, so the board is big enough for the game
-                // it is holding - the thing two planets per tile could never manage.
-                expect(Math.max(...summary.piecesLeftInBags)).toBeLessThan(4)
-            }
-        }
+    it('almost always ends on an empty bag, with nearly every piece played', () => {
+        // Both endings are real rules now, but they say different things about the board. A
+        // bag running out means the map held the game it was carrying; a player unable to
+        // place what they drew should be the rare case, not the norm. If this ratio slips,
+        // the board has got too small for the bags again - which is exactly the failure two
+        // planets per tile used to produce, silently.
+        const summaries = [2, 3, 4, 5].flatMap((playerCount) =>
+            SEEDS.map((seed) => playRandomGame(playerCount, seed))
+        )
+
+        const byEmptyBag = summaries.filter((summary) => summary.endedBy === 'empty bag').length
+        expect(byEmptyBag / summaries.length).toBeGreaterThan(0.85)
+
+        const fewestPlaced = Math.min(
+            ...summaries.flatMap((summary) => summary.piecesLeftInBags.map((left) => 22 - left))
+        )
+        expect(fewestPlaced).toBeGreaterThan(18)
     })
 
     it('explores a good share of the planets and pays chains without being swamped by them', () => {

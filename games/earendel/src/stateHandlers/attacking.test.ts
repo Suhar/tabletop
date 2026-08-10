@@ -292,7 +292,7 @@ describe('a fighter arriving', () => {
 })
 
 describe('the starting bag', () => {
-    it('deals three fighters of each level, as it does probes', () => {
+    it('deals the levelled types evenly between the two levels', () => {
         const game = new TestGame()
         // A player who hasn't taken a turn yet, so their bag is still whole - the player on
         // turn has already drawn.
@@ -301,8 +301,8 @@ describe('the starting bag', () => {
         const levelsOf = (type: PieceType) =>
             bag.filter((piece) => piece.type === type).map((piece) => piece.level)
 
-        expect(levelsOf(PieceType.Fighter).sort()).toEqual([2, 2, 2, 3, 3, 3])
-        expect(levelsOf(PieceType.Probe).sort()).toEqual([2, 2, 2, 3, 3, 3])
+        expect(levelsOf(PieceType.Fighter).sort()).toEqual([2, 2, 2, 2, 3, 3, 3, 3])
+        expect(levelsOf(PieceType.Probe).sort()).toEqual([2, 2, 2, 2, 3, 3, 3, 3])
         // Stations have no level: nothing about them varies.
         expect(levelsOf(PieceType.Station).every((level) => level === undefined)).toBe(true)
         expect(levelsOf(PieceType.Station)).toHaveLength(6)

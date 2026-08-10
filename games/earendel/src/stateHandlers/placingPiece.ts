@@ -3,9 +3,9 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
-import { HydratedPass, isPass } from '../actions/pass.js'
+import { HydratedPass, isPass, Pass } from '../actions/pass.js'
 import { endTurn } from '../util/turn.js'
-import { hasOpenHex } from '../model/board.js'
+import { hasAnyPlacement } from '../util/placement.js'
 
 type PlacingPieceAction = HydratedPlacePiece | HydratedPass
 
@@ -42,7 +42,24 @@ export class PlacingPieceStateHandler
         // The draw opens the turn, before any hex is chosen. Knowing what you drew is what
         // makes the placement a decision at all - and a player who doesn't like it may put
         // it back and spend a special piece instead (see PlacePiece).
-        gameState.drawnPiece = gameState.getPlayerState(nextPlayerId).drawFromBag()
+        const playerState = gameState.getPlayerState(nextPlayerId)
+        gameState.drawnPiece = playerState.drawFromBag()
+
+        // A player who cannot legally place what they drew, and has no special piece they
+        // could place instead, ends the game. This can only be judged here, after the draw:
+        // a hex closed to a probe is wide open to a fighter, so the answer depends on what
+        // came out of the bag. Passing is not an option and never was - the Pass is a system
+        // action so that the ending is recorded rather than silently arrived at.
+        if (
+            !hasAnyPlacement(
+                gameState.board,
+                nextPlayerId,
+                gameState.drawnPiece,
+                playerState.specialPieces
+            )
+        ) {
+            context.addSystemAction(Pass, { playerId: nextPlayerId })
+        }
     }
 
     onAction(
@@ -65,7 +82,9 @@ export class PlacingPieceStateHandler
                 return endTurn(gameState)
             }
             case isPass(action): {
-                return endTurn(gameState)
+                // Only ever reached when the player had nothing they could legally place,
+                // which is itself the end of the game.
+                return MachineState.EndOfGame
             }
             default: {
                 throw Error('Invalid action type')
@@ -82,17 +101,24 @@ export class PlacingPieceStateHandler
         const playerState = gameState.findPlayerState(playerId)
         if (!playerState) return false
 
-        const canPlaceSomewhere = hasOpenHex(gameState.board)
+        // Asked of the pieces actually in hand, not of the board alone: a station blockade
+        // can shut every open hex to a probe while leaving them all open to a fighter.
+        const canPlace = hasAnyPlacement(
+            gameState.board,
+            playerId,
+            gameState.drawnPiece,
+            playerState.specialPieces
+        )
 
         switch (actionType) {
             case ActionType.PlacePiece: {
-                if (!canPlaceSomewhere) return false
-                return gameState.drawnPiece !== undefined || playerState.specialPieces.length > 0
+                return canPlace
             }
             case ActionType.Pass: {
-                // Only ever a safety valve: a player with pieces and somewhere to put them
-                // must place. Passing exists so a wholly blocked board can't wedge the game.
-                return !canPlaceSomewhere
+                // Only ever a safety valve: a player with something they can place must
+                // place it. This covers a full board, and the subtler case of drawing a probe
+                // when every open hex is closed to probes - the draw goes back in the bag.
+                return !canPlace
             }
         }
         return false

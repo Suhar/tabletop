@@ -35,8 +35,8 @@ level 3 fighter both holds planets harder and kills more.
 Further piece types are expected to arrive as rewards from exploration; each will declare
 its own power.
 
-**Bags** — each player has their own bag containing **6 probes, 6 stations, 6 fighters**.
-The six probes are three of level 2 and three of level 3, and the six fighters likewise. Bag contents are hidden from
+**Bags** — each player has their own bag containing **8 probes, 6 stations, 8 fighters** —
+22 pieces. The probes are four of level 2 and four of level 3, and the fighters likewise. Bag contents are hidden from
 everyone, including the owner. Pieces are drawn blind.
 
 **Technology deck** — a shared deck. Each card is associated with **one, two, or three
@@ -51,30 +51,27 @@ it takes.
 
 ## Setup
 
-The board starts as **6 tiles per player**, arranged so the map is compact at every player
+The board starts as **7 tiles per player**, arranged so the map is compact at every player
 count. Each player's bag is shuffled. Scores start at 0.
 
 **OPEN:** how planet colors are distributed across the starting tiles.
 
-**Sizing, settled by simulation rather than by feel.** Two tiles per player with two planets
-each gave 4 open hexes per player against a bag of 18 pieces: games jammed solid after about
-4 placements each and could never reach their own ending. Random playthroughs across the
-alternatives gave:
+**Sizing, settled by simulation rather than by feel.** The open space on the board has to be
+matched against the size of the bags, or the game cannot reach its own ending. Two tiles per
+player with two planets each gave 4 open hexes per player against a bag of 18: games jammed
+solid after about 4 placements each.
 
-| Setup | Ends by empty bag | Placed each | Planets explored | Chains scored |
-| --- | --- | --- | --- | --- |
-| 2 tiles, 2 planets/tile (old) | 0 of 5 | 4.3 / 18 | 33% | 3–10 |
-| 2 tiles, 1 planet/tile | 0 of 5 | 7.3 / 18 | 70–80% | 1–3 |
-| **6 tiles, 1 planet/tile** | **5 of 5** | **17 / 18** | **57–66%** | **8–12** |
-| 9 tiles, 2 planets/tile | 5 of 5 | 17 / 18 | 30% | 30–67 |
-| 4 tiles, 1 planet/tile, bag 12 | 5 of 5 | 11.5 / 12 | 65% | 3–7 |
+One planet per tile matters for a second reason beyond making room. With two, planets are so
+dense that chains fire constantly and swamp everything else — 30 to 67 a game on a large
+board — and barely a third of planets get explored, because there is no need to reach for
+them. With one, chains stay an achievement.
 
-One planet per tile turned out to matter for a second reason: with two, planets are so dense
-that chains fire constantly and swamp everything else (30–67 a game at 9 tiles). With one,
-they stay an achievement. But *only* dropping to one planet doesn't fix the jam — it takes
-open space from 4 to 6 hexes per player when 18 are needed.
+At **7 tiles per player and 22-piece bags** — 21 open hexes each — 31 of 32 simulated games
+end on an empty bag, with every player placing at least 21 of their 22 pieces. Enlarging the
+board further only lowers the share of planets explored, since the probes per player stay
+fixed.
 
-**PROVISIONAL: 6 tiles per player, 1 planet per tile.** If board growth lands, the opening
+**PROVISIONAL: 7 tiles per player, 1 planet per tile.** If board growth lands, the opening
 map should start smaller and let growth make up the difference.
 
 ---
@@ -306,10 +303,14 @@ player chooses the tile's rotation.
 The moment **any player has played the last piece from their bag**, the game ends
 immediately — **mid-round**, with no final go-around.
 
-The game also ends if **no legal placement exists** — a full board never unjams itself, since
-only a placement can free a hex. This is **PROVISIONAL**: it exists so play always
-terminates, and today it is the condition that ends every game, which is a symptom of the
-board-size problem above rather than a rule worth having. Players later in the turn order simply
+The game also ends the moment a player **cannot legally place the piece they drew**, and has
+no special piece they could place instead. A full board is one way that happens; a probe
+drawn while every open hex is closed by enemy station blockades is another.
+
+This can only be judged after the draw, since a hex shut to a probe is wide open to the
+fighter behind it in the same bag. It is a real ending rather than a safety valve, but a rare
+one: roughly one simulated game in thirty ends this way, and if it becomes common the board
+has grown too small for the bags. Players later in the turn order simply
 don't get another turn.
 
 Everyone starts with the same 18 pieces, so the player who empties their bag first is the

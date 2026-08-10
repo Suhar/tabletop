@@ -125,14 +125,13 @@ describe('holding a technology through the game', () => {
         const bagOf = (playerId: string, types: PieceType[]) =>
             types.map((type, index) => ({ id: `${playerId}-${index}`, playerId, type }))
 
-        game.state.players.find((p) => p.playerId === mover)!.bag = bagOf(mover, [
-            PieceType.Station,
-            PieceType.Station
-        ])
-        game.state.players.find((p) => p.playerId === other)!.bag = bagOf(other, [
-            PieceType.Fighter,
-            PieceType.Fighter
-        ])
+        // stackBags, not a bare assignment: the turn's draw has already happened, so setting
+        // the bag alone would leave a piece from the generated bag face up and place that.
+        game.stackBags((playerId) =>
+            playerId === mover
+                ? bagOf(mover, [PieceType.Station, PieceType.Station])
+                : bagOf(other, [PieceType.Fighter, PieceType.Fighter])
+        )
 
         const [taking] = game.run(PlacePiece, {
             type: ActionType.PlacePiece,

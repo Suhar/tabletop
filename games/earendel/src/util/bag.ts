@@ -3,7 +3,6 @@ import {
     LEVELLED_TYPES,
     type Piece,
     PieceLevel,
-    PIECES_PER_LEVEL,
     PieceType,
     STARTING_BAG
 } from '../model/pieces.js'
@@ -23,8 +22,8 @@ export function buildBag(
     for (const [type, count] of Object.entries(perType) as [PieceType, number][]) {
         // Levelled types are split evenly between the two levels: a level 3 probe reveals
         // more technology, a level 3 fighter is simply stronger, so which one you draw
-        // shapes the turn.
-        const perLevel = Math.min(PIECES_PER_LEVEL, Math.ceil(count / 2))
+        // shapes the turn. Halving keeps the split even at whatever count is set.
+        const perLevel = Math.ceil(count / 2)
 
         for (let index = 0; index < count; index++) {
             const level = LEVELLED_TYPES.includes(type)

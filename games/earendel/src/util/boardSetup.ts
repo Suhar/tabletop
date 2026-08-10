@@ -17,11 +17,13 @@ export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
 // ending, and dropping to one is what makes the open space add up (see rules.md).
 export const PLANETS_PER_TILE = 1
 
-// Six tiles per player. Along with PLANETS_PER_TILE this sets how much open space the game
-// starts with, which is the number the bag size has to be matched against: 18 open hexes per
-// player against a bag of 18. PROVISIONAL - if board growth lands, the opening map should
-// start smaller and let growth make up the difference.
-export const TILES_PER_PLAYER = 6
+// Seven tiles per player. Along with PLANETS_PER_TILE this sets how much open space the game
+// starts with, which is the number the bag size has to be matched against: 21 open hexes per
+// player against a bag of 22. Chosen by simulation as the smallest board on which every game
+// still ends by a bag running out, which also keeps the share of planets explored highest.
+// PROVISIONAL - if board growth lands, the opening map should start smaller and let growth
+// make up the difference.
+export const TILES_PER_PLAYER = 7
 
 // Both numbers are being tuned, so they can be overridden without editing the constants -
 // see simulate.ts, which sweeps them.
