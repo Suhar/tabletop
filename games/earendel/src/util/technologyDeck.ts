@@ -1,6 +1,11 @@
 import { Prng, shuffle } from '@tabletop/common'
 import { PlanetColor } from '../model/board.js'
-import { matchesColor, TechnologyCard, TechnologyTier } from '../model/technology.js'
+import {
+    matchesColor,
+    TechnologyCard,
+    TechnologyEffectKind,
+    TechnologyTier
+} from '../model/technology.js'
 
 export type TechnologyPiles = {
     deck: TechnologyCard[]
@@ -68,6 +73,30 @@ export function revealForExploration(
 // than it looks: an elevated card removes the explorer's choice, so a deck thick with them
 // turns exploring from a decision into a lottery.
 export const ELEVATED_SHARE = 3
+// A deck of nothing but the named effect, one card per planet colour so that whatever a probe
+// reaches, the effect comes up. A testing aid - see the technologyDeck config option.
+export function buildFocusedTechnologyDeck(
+    prng: Prng,
+    kind: TechnologyEffectKind,
+    copiesPerColor = 12
+): TechnologyCard[] {
+    const deck: TechnologyCard[] = []
+
+    for (const color of Object.values(PlanetColor)) {
+        for (let copy = 0; copy < copiesPerColor; copy++) {
+            deck.push({
+                id: `${kind}-${color}-${copy}`,
+                colors: [color],
+                tier: TechnologyTier.Standard,
+                effect: { kind }
+            })
+        }
+    }
+
+    shuffle(deck, prng.random)
+    return deck
+}
+
 export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
     const colors = Object.values(PlanetColor)
     const combinations: PlanetColor[][] = []
@@ -87,7 +116,12 @@ export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
         colors: cardColors,
         // Spread by position over the generated combinations, so elevated cards land on a
         // mix of colours and card widths rather than clumping on one kind.
-        tier: index % ELEVATED_SHARE === 0 ? TechnologyTier.Elevated : TechnologyTier.Standard
+        tier: index % ELEVATED_SHARE === 0 ? TechnologyTier.Elevated : TechnologyTier.Standard,
+        // PROVISIONAL: a third of the standard cards carry the one effect that exists, so the
+        // resolution flow gets exercised in play. Real technologies replace this wholesale.
+        ...(index % ELEVATED_SHARE === 1
+            ? { effect: { kind: TechnologyEffectKind.MoveFriendlyPiece } }
+            : {})
     }))
 
     shuffle(deck, prng.random)

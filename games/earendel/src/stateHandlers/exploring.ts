@@ -83,6 +83,10 @@ export class ExploringStateHandler
                 return MachineState.Exploring
             }
             case isChooseTechnology(action): {
+                // A technology that acts the moment it is housed holds the turn open again.
+                if (gameState.pendingTechnology) {
+                    return MachineState.ResolvingTechnology
+                }
                 return endTurn(gameState)
             }
             default: {

@@ -11,6 +11,8 @@ import { PieceType } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
 import { legalPlacementsFor } from './placement.js'
+import { legalMovesFor } from './movement.js'
+import { MovePiece } from '../actions/movePiece.js'
 import { TestGame } from './testHarness.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
@@ -34,6 +36,8 @@ export type GameSummary = {
     piecesLeftInBags: number[]
     piecesDestroyed: number
     chainsScored: number
+    // Immediate technology effects actually carried out.
+    technologiesResolved: number
 }
 
 // A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
@@ -81,6 +85,7 @@ export function playRandomGame(
 
     let turns = 0
     let piecesDestroyed = 0
+    let technologiesResolved = 0
     let chainsScored = 0
     let stoppedBecause: string | undefined
 
@@ -131,6 +136,21 @@ export function playRandomGame(
                     ...(candidates.length > 0 ? { technologyId: pick(candidates).id } : {})
                 })
             }
+        } else if (game.state.machineState === MachineState.ResolvingTechnology) {
+            const moves = legalMovesFor(game.state.board, playerId)
+            if (moves.length === 0) {
+                // enter() should have taken this for us, so reaching here is a hole.
+                stoppedBecause = 'a technology could not resolve and the game did not move on'
+                break
+            }
+            const move = pick(moves)
+            game.run(MovePiece, {
+                type: ActionType.MovePiece,
+                playerId,
+                from: move.from,
+                to: move.to
+            })
+            technologiesResolved++
         } else if (game.state.machineState === MachineState.Attacking) {
             const pending = game.state.pendingAttack!
             // Fires two times in three, so both branches get exercised.
@@ -172,7 +192,8 @@ export function playRandomGame(
         ).length,
         piecesLeftInBags: game.state.players.map((player) => player.bag.length),
         piecesDestroyed,
-        chainsScored
+        chainsScored,
+        technologiesResolved
     }
 }
 

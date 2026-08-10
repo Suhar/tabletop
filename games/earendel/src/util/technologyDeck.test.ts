@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { Prng } from '@tabletop/common'
 import { PlanetColor } from '../model/board.js'
 import type { TechnologyCard } from '../model/technology.js'
-import { buildTechnologyDeck, revealForExploration, type TechnologyPiles } from './technologyDeck.js'
-import { TechnologyTier } from '../model/technology.js'
+import {
+    buildFocusedTechnologyDeck,
+    buildTechnologyDeck,
+    revealForExploration,
+    type TechnologyPiles
+} from './technologyDeck.js'
+import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
 
 const prng = () => new Prng({ seed: 5, invocations: 0 })
 
@@ -126,5 +131,23 @@ describe('buildTechnologyDeck', () => {
 
     it('is deterministic for a given seed', () => {
         expect(buildTechnologyDeck(prng())).toEqual(buildTechnologyDeck(prng()))
+    })
+})
+
+describe('buildFocusedTechnologyDeck', () => {
+    it('fills the deck with one effect in every colour, so it always comes up', () => {
+        const deck = buildFocusedTechnologyDeck(
+            prng(),
+            TechnologyEffectKind.MoveFriendlyPiece
+        )
+
+        expect(deck.every((card) => card.effect?.kind === TechnologyEffectKind.MoveFriendlyPiece)).toBe(
+            true
+        )
+        // Every colour is represented, so whatever planet a probe reaches finds a match.
+        for (const color of Object.values(PlanetColor)) {
+            expect(deck.some((card) => card.colors.includes(color))).toBe(true)
+        }
+        expect(new Set(deck.map((card) => card.id)).size).toBe(deck.length)
     })
 })

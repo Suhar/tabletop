@@ -12,7 +12,7 @@ import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { Piece } from './pieces.js'
 import { TechnologyCard } from './technology.js'
-import { PendingExploration } from './exploration.js'
+import { PendingExploration, PendingTechnology } from './exploration.js'
 import { PendingAttack } from './attack.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
@@ -38,6 +38,8 @@ export const EarendelGameState = Type.Evaluate(
             // the placement a decision. Public: the platform sends state to every client
             // whole, so there is nowhere to hide it.
             drawnPiece: Type.Optional(Piece),
+            // Set while an immediate technology effect is owed to the player who chose it.
+            pendingTechnology: Type.Optional(PendingTechnology),
             // Set while a newly placed fighter's owner decides whether to fire. Like
             // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
@@ -71,6 +73,7 @@ export class HydratedEarendelGameState
     declare pendingExploration?: PendingExploration
     declare drawnPiece?: Piece
     declare pendingAttack?: PendingAttack
+    declare pendingTechnology?: PendingTechnology
     declare scoredPlanetPairs: string[]
     declare result?: GameResult
     declare winningPlayerIds: string[]

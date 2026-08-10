@@ -16,12 +16,34 @@ export enum TechnologyTier {
     Elevated = 'elevated'
 }
 
+// What a technology does. One entry so far; each new effect is a new member here plus a
+// branch wherever the timing says it fires.
+export enum TechnologyEffectKind {
+    // Immediate: on being chosen, move one friendly piece into an adjacent empty space.
+    MoveFriendlyPiece = 'moveFriendlyPiece'
+}
+
+// Immediate effects resolve the moment the technology is chosen for the planet, inside the
+// exploring player's own turn. Other timings - a standing power, a granted special piece -
+// will need their own field here rather than being squeezed into this one.
+export type TechnologyEffect = Type.Static<typeof TechnologyEffect>
+export const TechnologyEffect = Type.Object({
+    kind: Type.Enum(TechnologyEffectKind)
+})
+
 export type TechnologyCard = Type.Static<typeof TechnologyCard>
 export const TechnologyCard = Type.Object({
     id: Type.String(),
     colors: Type.Array(Type.Enum(PlanetColor)),
-    tier: Type.Enum(TechnologyTier)
+    tier: Type.Enum(TechnologyTier),
+    // Absent on a card that does nothing yet - most of the placeholder deck.
+    effect: Type.Optional(TechnologyEffect)
 })
+
+// Whether choosing this card owes its player an action before the turn can end.
+export function hasImmediateEffect(card: TechnologyCard): boolean {
+    return card.effect !== undefined
+}
 
 export function matchesColor(card: TechnologyCard, color: PlanetColor): boolean {
     return card.colors.includes(color)

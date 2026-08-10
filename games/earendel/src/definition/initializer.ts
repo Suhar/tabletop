@@ -12,8 +12,9 @@ import { MachineState } from './states.js'
 import type { Piece } from '../model/pieces.js'
 import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
-import { buildTechnologyDeck } from '../util/technologyDeck.js'
-import { EarendelGameConfig } from './config.js'
+import { buildFocusedTechnologyDeck, buildTechnologyDeck } from '../util/technologyDeck.js'
+import { EarendelGameConfig, FULL_DECK } from './config.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { EarendelColors } from './colors.js'
 
 // This class is responsible for initializing a new game, including setting up the initial game state and
@@ -69,7 +70,7 @@ export class EarendelGameInitializer
             turnManager: turnManager,
             // Two tiles per player, each with its own planet layout (see buildStartingBoard).
             board: buildStartingBoard(game.players.length, prng),
-            technologyDeck: buildTechnologyDeck(prng),
+            technologyDeck: buildDeckFor(config, prng),
             technologyDiscard: [],
             scoredPlanetPairs: [],
         })
@@ -102,4 +103,15 @@ export class EarendelGameInitializer
 
         return players
     }
+}
+
+// The full deck unless the config names a single technology to fill it with, which is a
+// testing aid rather than a variant (see config.ts).
+function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
+    const choice = config?.technologyDeck ?? FULL_DECK
+    const kinds = Object.values(TechnologyEffectKind) as string[]
+
+    return kinds.includes(choice)
+        ? buildFocusedTechnologyDeck(prng, choice as TechnologyEffectKind)
+        : buildTechnologyDeck(prng)
 }

@@ -131,6 +131,27 @@ So an elevated card is both a stronger prize and a loss of control — the more 
 deck, the more exploring becomes a lottery rather than a decision. Where only one card can be
 taken there is no decision to present, so the engine houses it without asking.
 
+### Immediate effects
+
+A technology may be **immediate**: its effect happens the moment the player chooses it for the
+planet they have just explored, inside that same turn. The turn does not end until it is
+resolved.
+
+The first one is: **move any friendly piece into any adjacent empty space.**
+
+- The piece must be the player's **own**, and the destination adjacent, open space, and empty.
+- **A step is not a placement.** Nothing that a placement triggers happens: no chain scores,
+  no station group pays out, no probe explores the planet it lands beside, no fighter fires.
+  What does change is position, and so who holds the planets at either end of the step —
+  which can hand a technology to a player who had nothing to do with it.
+- A probe still cannot step into a space closed by an enemy station blockade. That rule closes
+  the space itself, not the act of placing.
+- The move is **not optional** — it is the technology's whole effect, not a bonus alongside
+  it. If no friendly piece can step anywhere, it simply fizzles.
+
+**ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
+far stronger effect; this is the conservative reading.
+
 **OPEN:** what proportion of the deck is elevated. Provisionally one card in three, which is
 a placeholder standing in until the real technologies exist, since it depends on how much
 stronger an elevated one is.
@@ -337,3 +358,13 @@ An exploration owed by the final placement is still resolved — the game ends a
 instead of it.
 
 **OPEN:** final scoring beyond planet control.
+
+---
+
+## Testing aids
+
+Not rules. The **Technology deck** setup option can fill the deck with a single technology,
+one card in every planet colour, so a newly added effect comes up on every exploration
+instead of waiting on the shuffle. Every planet then houses the same technology, which is no
+kind of game — it is just the fastest way to see a new effect from every angle. Use the full
+deck for anything resembling a real playtest.

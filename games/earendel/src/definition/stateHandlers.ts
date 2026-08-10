@@ -4,6 +4,7 @@ import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { PlacingPieceStateHandler } from '../stateHandlers/placingPiece.js'
 import { ExploringStateHandler } from '../stateHandlers/exploring.js'
 import { AttackingStateHandler } from '../stateHandlers/attacking.js'
+import { ResolvingTechnologyStateHandler } from '../stateHandlers/resolvingTechnology.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
 
 // The mapping of machine states to their handlers, used by the game engine
@@ -14,5 +15,6 @@ export const EarendelStateHandlers: Record<
     [MachineState.PlacingPiece]: new PlacingPieceStateHandler(),
     [MachineState.Exploring]: new ExploringStateHandler(),
     [MachineState.Attacking]: new AttackingStateHandler(),
+    [MachineState.ResolvingTechnology]: new ResolvingTechnologyStateHandler(),
     [MachineState.EndOfGame]: new EndOfGameStateHandler()
 }

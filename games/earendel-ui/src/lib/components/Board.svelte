@@ -213,6 +213,17 @@
                 />
             {/if}
 
+            {#if gameSession.movingFrom && sameHex(gameSession.movingFrom, hex.coords)}
+                <!-- Picked up, waiting for a destination. Click it again to put it back down. -->
+                <polygon
+                    points={entry.points}
+                    fill="#ffd479"
+                    fill-opacity="0.16"
+                    stroke="#ffd479"
+                    stroke-width="5"
+                />
+            {/if}
+
             {#if isExploringPlanet(hex.coords)}
                 <polygon points={entry.points} fill="none" stroke="#ffffff" stroke-width="4" />
             {/if}

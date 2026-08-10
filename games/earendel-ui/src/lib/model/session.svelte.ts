@@ -5,6 +5,7 @@ import {
     ChoosePlanet,
     ChooseTechnology,
     DestroyPiece,
+    destinationsFrom,
     destroyableTargets,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -14,7 +15,9 @@ import {
     hexKey,
     isElevated,
     isOpenHex,
+    legalMovesFor,
     MachineState,
+    MovePiece,
     type Piece,
     PieceSource,
     PieceType,
@@ -30,6 +33,10 @@ export class EarendelGameSession extends GameSession<
     EarendelGameState,
     HydratedEarendelGameState
 > {
+    // The piece the player has picked up to move, while resolving a technology. Two clicks:
+    // choose the piece, then where it steps.
+    movingFrom: AxialCoordinates | undefined = $state(undefined)
+
     // A special piece the player has picked up and is about to place instead of their draw.
     // Held here rather than in game state because until it lands it is only an intention.
     chosenSpecialId: string | undefined = $state(undefined)
@@ -112,9 +119,28 @@ export class EarendelGameSession extends GameSession<
         return hexesClosedToProbesOf(this.gameState.board, playerId)
     })
 
+    // Set while a technology's immediate effect is waiting on this player.
+    isMovingForTechnology: boolean = $derived(
+        this.isMyTurn &&
+            this.gameState.machineState === MachineState.ResolvingTechnology &&
+            this.gameState.pendingTechnology?.playerId === this.myPlayer?.id
+    )
+
+    // The pieces that could be stepped, or - once one is picked up - where it can go.
+    movableHexes: AxialCoordinates[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!this.isMovingForTechnology || !playerId) return []
+
+        if (this.movingFrom) return destinationsFrom(this.gameState.board, this.movingFrom)
+
+        const moves = legalMovesFor(this.gameState.board, playerId)
+        return moves.map((move) => move.from)
+    })
+
     // What the board should invite a click on right now. One list keeps the board component
     // from having to know which decision is outstanding.
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
+        if (this.isMovingForTechnology) return this.movableHexes
         if (this.choosablePlanets.length > 0) return this.choosablePlanets
         if (this.attackTargets.length > 0) return this.attackTargets
         if (!this.isPlacing || !this.pieceToPlace) return []
@@ -162,6 +188,11 @@ export class EarendelGameSession extends GameSession<
         }
         if (this.attackTargets.length > 0) {
             return 'Your fighter may destroy one adjacent piece, or hold fire.'
+        }
+        if (this.isMovingForTechnology) {
+            return this.movingFrom
+                ? 'Now choose where it steps.'
+                : 'That technology moves one of your pieces — choose which.'
         }
         if (this.isPlacing) {
             const piece = this.pieceToPlace
@@ -218,8 +249,37 @@ export class EarendelGameSession extends GameSession<
         )
     }
 
+    async movePiece(to: AxialCoordinates) {
+        const from = this.movingFrom
+        if (!from) return
+
+        this.movingFrom = undefined
+        await this.applyAction(
+            this.createPlayerAction(MovePiece, { type: ActionType.MovePiece, from, to })
+        )
+    }
+
     async onBoardClick(coords: AxialCoordinates) {
         if (this.busy) return
+
+        if (this.isMovingForTechnology) {
+            // Clicking the piece already picked up puts it back down, so a misclick isn't a
+            // committed move.
+            if (this.movingFrom && sameHex(this.movingFrom, coords)) {
+                this.movingFrom = undefined
+                return
+            }
+            if (this.movingFrom && this.movableHexes.some((hex) => sameHex(hex, coords))) {
+                await this.movePiece(coords)
+                return
+            }
+            if (legalMovesFor(this.gameState.board, this.myPlayer?.id ?? '').some((move) =>
+                sameHex(move.from, coords)
+            )) {
+                this.movingFrom = coords
+            }
+            return
+        }
 
         if (this.choosablePlanets.some((candidate) => sameHex(candidate, coords))) {
             await this.choosePlanet(coords)

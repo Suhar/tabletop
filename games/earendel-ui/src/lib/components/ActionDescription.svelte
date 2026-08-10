@@ -9,7 +9,9 @@
         isChooseTechnology,
         isDestroyPiece,
         isPass,
+        isMovePiece,
         isPlacePiece,
+        type MovePiece,
         type PlacePiece
     } from '@tabletop/earendel'
     import { describePiece } from '$lib/model/session.svelte.js'
@@ -66,7 +68,13 @@
                 ? 'held fire'
                 : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
         }
-        if (isPass(action)) return 'passed'
+        if (isMovePiece(action)) {
+            const moved = action as MovePiece
+            return moved.metadata?.noMoveAvailable
+                ? 'had nothing the technology could move'
+                : `moved a ${moved.metadata?.piece?.type ?? 'ship'} one space`
+        }
+        if (isPass(action)) return 'could not place, ending the game'
         return action.type
     })
 </script>

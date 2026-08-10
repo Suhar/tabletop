@@ -4,7 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
-import { isElevated, matchesColor } from '../model/technology.js'
+import { hasImmediateEffect, isElevated, matchesColor } from '../model/technology.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
@@ -71,8 +71,15 @@ export class HydratedChooseTechnology
         // including the matching cards that weren't chosen.
         state.technologyDiscard.push(...revealed.filter((card) => card.id !== chosen?.id))
 
-        // The exploration is done, which is what lets the turn end.
+        // The exploration is done. If the card acts at once, the turn stays open for it.
         state.pendingExploration = undefined
+        if (chosen && hasImmediateEffect(chosen)) {
+            state.pendingTechnology = {
+                playerId: this.playerId,
+                technologyId: chosen.id,
+                kind: chosen.effect!.kind
+            }
+        }
 
         this.metadata = chosen ? { technologyId: chosen.id } : { noTechnologyAvailable: true }
     }

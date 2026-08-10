@@ -1,6 +1,7 @@
 
 import type { GameInfo } from '@tabletop/common'
 import { GAME_VERSION } from './version.js'
+import { EarendelConfigurator } from './configurator.js'
 
 export const EarendelInfo: GameInfo = {
     id: 'earendel',
@@ -16,5 +17,5 @@ export const EarendelInfo: GameInfo = {
         version: GAME_VERSION,
         beta: true
     },
-    configurator: undefined
+    configurator: new EarendelConfigurator()
 }
