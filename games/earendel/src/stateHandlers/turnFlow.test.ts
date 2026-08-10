@@ -4,7 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
 import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
-import type { TechnologyCard } from '../model/technology.js'
+import { type TechnologyCard, TechnologyTier } from '../model/technology.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
@@ -40,7 +40,11 @@ function testBoard({ secondPlanet = false } = {}): EarendelBoard {
 }
 
 function card(id: string, ...colors: PlanetColor[]): TechnologyCard {
-    return { id, colors }
+    return { id, colors, tier: TechnologyTier.Standard }
+}
+
+function elevated(id: string, ...colors: PlanetColor[]): TechnologyCard {
+    return { id, colors, tier: TechnologyTier.Elevated }
 }
 
 function probe(playerId: string, level = PieceLevel.Two): Piece {
@@ -163,6 +167,82 @@ describe('the turn spine', () => {
         expect(game.state.pendingExploration).toBeUndefined()
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.activePlayerId).not.toBe(mover)
+    })
+
+    it('forces an elevated technology, putting the standard matches out of reach', () => {
+        const game = scenario({
+            bag: (playerId) => [probe(playerId, PieceLevel.Three), fighter(playerId)],
+            deck: [
+                card('azure-standard', PlanetColor.Azure),
+                elevated('azure-elevated', PlanetColor.Azure),
+                card('azure-other', PlanetColor.Azure)
+            ]
+        })
+        const mover = game.activePlayerId
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: APPROACH,
+            pieceSource: PieceSource.Bag
+        })
+
+        // All three matched the planet's colour, but the elevated one is the only one that
+        // can be housed - so there was never a decision, and the engine took it.
+        expect(game.processed.map((action) => action.type)).toEqual([
+            ActionType.PlacePiece,
+            ActionType.ChoosePlanet,
+            ActionType.ChooseTechnology
+        ])
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('azure-elevated')
+        // The standard matches are discarded like any other card turned over.
+        expect(game.state.technologyDiscard.map((c) => c.id).sort()).toEqual([
+            'azure-other',
+            'azure-standard'
+        ])
+    })
+
+    it('offers the choice between elevated cards when more than one turns up', () => {
+        const game = scenario({
+            bag: (playerId) => [probe(playerId, PieceLevel.Three), fighter(playerId)],
+            deck: [
+                elevated('elevated-1', PlanetColor.Azure),
+                card('standard', PlanetColor.Azure),
+                elevated('elevated-2', PlanetColor.Azure)
+            ]
+        })
+        const mover = game.activePlayerId
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: APPROACH,
+            pieceSource: PieceSource.Bag
+        })
+
+        // Two elevated cards is a real choice; the standard card between them is not part of
+        // it, even though its colour matches.
+        expect(game.state.machineState).toBe(MachineState.Exploring)
+        expect(game.state.pendingExploration?.candidates?.map((c) => c.id)).toEqual([
+            'elevated-1',
+            'elevated-2'
+        ])
+        expect(game.state.pendingExploration?.revealed).toHaveLength(3)
+
+        expect(() =>
+            game.run(ChooseTechnology, {
+                type: ActionType.ChooseTechnology,
+                playerId: mover,
+                technologyId: 'standard'
+            })
+        ).toThrow()
+
+        game.run(ChooseTechnology, {
+            type: ActionType.ChooseTechnology,
+            playerId: mover,
+            technologyId: 'elevated-2'
+        })
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('elevated-2')
     })
 
     it('asks which planet only when the probe reached more than one', () => {

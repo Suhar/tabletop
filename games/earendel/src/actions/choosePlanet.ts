@@ -4,7 +4,7 @@ import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, sameHex } from '../model/board.js'
-import { TechnologyCard } from '../model/technology.js'
+import { choosableFrom, TechnologyCard } from '../model/technology.js'
 import { markExplored } from '../util/exploration.js'
 import { revealForExploration } from '../util/technologyDeck.js'
 
@@ -13,8 +13,9 @@ export const ChoosePlanetMetadata = Type.Object({
     // Every card turned over on the way, in order - watching the flips is half the point of
     // exploring, so history keeps them, not just the ones that matched.
     flipped: Type.Optional(Type.Array(TechnologyCard)),
-    // The matching cards the player now chooses between. Fewer than the probe's level only
-    // when the deck and discard together couldn't produce enough.
+    // The cards the player may actually take. Fewer than the probe's level when the deck and
+    // discard couldn't produce enough matches - or when an elevated card turned up, which
+    // puts the standard matches out of reach.
     candidates: Type.Optional(Type.Array(TechnologyCard))
 })
 
@@ -67,11 +68,16 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         state.technologyDeck = piles.deck
         state.technologyDiscard = piles.discard
 
+        // Narrowed here rather than at the moment of choosing, so that everything downstream
+        // - validation, and the auto-resolve when only one card is takeable - sees the same
+        // set the player does. `revealed` still holds every flip, so nothing is lost.
+        const choosable = choosableFrom(result.candidates)
+
         pending.exploringPlanet = this.coords
         pending.revealed = result.flipped
-        pending.candidates = result.candidates
+        pending.candidates = choosable
 
-        this.metadata = { flipped: result.flipped, candidates: result.candidates }
+        this.metadata = { flipped: result.flipped, candidates: choosable }
     }
 
     isValidChoosePlanet(state: HydratedEarendelGameState): boolean {

@@ -42,6 +42,9 @@ everyone, including the owner. Pieces are drawn blind.
 **Technology deck** — a shared deck. Each card is associated with **one, two, or three
 planet colors**, and can only be housed on a planet of a color it lists.
 
+Every technology is either **standard** or **elevated**. An elevated technology can't be
+passed over: see *Exploration* below.
+
 **Special pieces** — kept face-up in front of their owner, and playable instead of drawing
 from the bag. They come *from technologies*: a technology may grant one or more special
 pieces, or instead a continuous power. Technology is the reward; a special piece is one form
@@ -118,6 +121,19 @@ Exploring reveals the chosen planet's nature:
    technology. Cards that were flipped without the planet's color are never candidates -
    they are simply turned over on the way.
 3. Every other flipped card is discarded, matching or not.
+
+**Elevated technologies override the choice.** If any matching card is elevated, the planet
+must take an elevated one: the standard matches are out of reach, however attractive. Reveal
+two or more elevated cards and the choice is between *those*. Reveal none and every match is
+on the table as normal.
+
+So an elevated card is both a stronger prize and a loss of control — the more of them in the
+deck, the more exploring becomes a lottery rather than a decision. Where only one card can be
+taken there is no decision to present, so the engine houses it without asking.
+
+**OPEN:** what proportion of the deck is elevated. Provisionally one card in three, which is
+a placeholder standing in until the real technologies exist, since it depends on how much
+stronger an elevated one is.
 
 If the deck runs out mid-reveal, the discard pile is shuffled to form a new deck. If even
 that cannot produce enough matching cards, the planet is explored with **fewer** candidates

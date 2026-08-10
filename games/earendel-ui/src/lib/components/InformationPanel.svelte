@@ -1,9 +1,15 @@
 <script lang="ts">
-    import { PieceType } from '@tabletop/earendel'
+    import { isElevated, matchesColor, PieceType } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { describePiece } from '$lib/model/session.svelte.js'
 
     let gameSession = getGameSession()
+
+    // A card can be the right colour and still be unavailable, when an elevated technology
+    // turned up beside it. Saying which of the two it is keeps the rule visible instead of
+    // just greying a card out.
+    let planetColor = $derived(gameSession.exploringPlanetColor)
+    let anyElevated = $derived(gameSession.technologyChoices.some(isElevated))
 
     let drawn = $derived(gameSession.drawnPiece)
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
@@ -56,15 +62,29 @@
                 {@const choosable = gameSession.technologyChoices.some(
                     (candidate) => candidate.id === card.id
                 )}
+                {@const outranked =
+                    !choosable && anyElevated && planetColor && matchesColor(card, planetColor)}
                 <button
                     disabled={!choosable}
+                    title={choosable
+                        ? ''
+                        : outranked
+                          ? 'An elevated technology was revealed, so this cannot be taken'
+                          : 'Not this planet’s colour'}
                     class="rounded-md px-3 py-2 text-sm border-2 {choosable
-                        ? 'border-white bg-white/15 hover:bg-white/25 cursor-pointer'
+                        ? isElevated(card)
+                            ? 'border-amber-300 bg-amber-300/20 hover:bg-amber-300/30 cursor-pointer'
+                            : 'border-white bg-white/15 hover:bg-white/25 cursor-pointer'
                         : 'border-white/20 bg-white/5 opacity-45 cursor-default'}"
                     onclick={() => choosable && gameSession.chooseTechnology(card.id)}
                 >
-                    <div class="font-semibold">{card.id.replace('tech-', 'Tech ')}</div>
+                    <div class="font-semibold">
+                        {card.id.replace('tech-', 'Tech ')}{isElevated(card) ? ' ★' : ''}
+                    </div>
                     <div class="text-xs opacity-80">{card.colors.join(' · ')}</div>
+                    {#if outranked}
+                        <div class="text-[11px] opacity-70">outranked</div>
+                    {/if}
                 </button>
             {/each}
         </div>

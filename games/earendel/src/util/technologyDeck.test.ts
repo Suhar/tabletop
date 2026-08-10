@@ -3,11 +3,12 @@ import { Prng } from '@tabletop/common'
 import { PlanetColor } from '../model/board.js'
 import type { TechnologyCard } from '../model/technology.js'
 import { buildTechnologyDeck, revealForExploration, type TechnologyPiles } from './technologyDeck.js'
+import { TechnologyTier } from '../model/technology.js'
 
 const prng = () => new Prng({ seed: 5, invocations: 0 })
 
 function card(id: string, ...colors: PlanetColor[]): TechnologyCard {
-    return { id, colors }
+    return { id, colors, tier: TechnologyTier.Standard }
 }
 
 describe('revealForExploration', () => {

@@ -1,6 +1,6 @@
 import { Prng, shuffle } from '@tabletop/common'
 import { PlanetColor } from '../model/board.js'
-import { matchesColor, TechnologyCard } from '../model/technology.js'
+import { matchesColor, TechnologyCard, TechnologyTier } from '../model/technology.js'
 
 export type TechnologyPiles = {
     deck: TechnologyCard[]
@@ -59,10 +59,15 @@ export function revealForExploration(
     return { candidates, flipped, exhausted: false }
 }
 
-// Placeholder deck: every one-colour card, every pair, and every triple, repeated enough that
-// a five-player game can't drain it. Real technologies will replace this wholesale - what
-// matters for now is that colour coverage is even, so the reveal rule can be exercised
-// honestly. Deterministic given a seed, like everything else in setup.
+// Placeholder deck: every one-colour card, every pair, and every triple. Real technologies
+// will replace this wholesale - what matters for now is that colour coverage is even, so the
+// reveal rule can be exercised honestly. Deterministic given a seed, like everything in setup.
+//
+// PROVISIONAL: one card in three is elevated. The real proportion belongs with the real
+// technologies, since it depends on how much stronger an elevated one is. It matters more
+// than it looks: an elevated card removes the explorer's choice, so a deck thick with them
+// turns exploring from a decision into a lottery.
+export const ELEVATED_SHARE = 3
 export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
     const colors = Object.values(PlanetColor)
     const combinations: PlanetColor[][] = []
@@ -79,7 +84,10 @@ export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
 
     const deck: TechnologyCard[] = combinations.map((cardColors, index) => ({
         id: `tech-${index}`,
-        colors: cardColors
+        colors: cardColors,
+        // Spread by position over the generated combinations, so elevated cards land on a
+        // mix of colours and card widths rather than clumping on one kind.
+        tier: index % ELEVATED_SHARE === 0 ? TechnologyTier.Elevated : TechnologyTier.Standard
     }))
 
     shuffle(deck, prng.random)

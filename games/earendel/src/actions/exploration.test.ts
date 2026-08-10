@@ -5,6 +5,7 @@ import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
 import { PieceType, PieceLevel } from '../model/pieces.js'
+import { TechnologyTier } from '../model/technology.js'
 import type { PendingExploration } from '../model/exploration.js'
 import { HydratedChoosePlanet } from './choosePlanet.js'
 import { HydratedChooseTechnology } from './chooseTechnology.js'
@@ -58,8 +59,8 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         winningPlayerIds: [],
         board: board(),
         technologyDeck: [
-            { id: 'azure-1', colors: [PlanetColor.Azure] },
-            { id: 'azure-2', colors: [PlanetColor.Azure] }
+            { id: 'azure-1', colors: [PlanetColor.Azure], tier: TechnologyTier.Standard },
+            { id: 'azure-2', colors: [PlanetColor.Azure], tier: TechnologyTier.Standard }
         ],
         technologyDiscard: [],
         scoredPlanetPairs: [],

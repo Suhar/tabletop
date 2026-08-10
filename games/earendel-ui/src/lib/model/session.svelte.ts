@@ -9,14 +9,17 @@ import {
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
+    getHex,
     hexesClosedToProbesOf,
     hexKey,
+    isElevated,
     isOpenHex,
     MachineState,
     type Piece,
     PieceSource,
     PieceType,
     PlacePiece,
+    type PlanetColor,
     sameHex,
     type SightLine,
     sightLines,
@@ -84,6 +87,13 @@ export class EarendelGameSession extends GameSession<
         this.gameState.pendingExploration?.revealed ?? []
     )
 
+    // The colour of the planet being explored, so the panel can tell a card that missed the
+    // colour from one that matched but was outranked by an elevated card.
+    exploringPlanetColor: PlanetColor | undefined = $derived.by(() => {
+        const planet = this.gameState.pendingExploration?.exploringPlanet
+        return planet ? getHex(this.gameState.board, planet)?.color : undefined
+    })
+
     attackTargets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingAttack
         if (!this.isMyTurn || !pending) return []
@@ -146,7 +156,9 @@ export class EarendelGameSession extends GameSession<
             return 'Your probe reached more than one planet — choose which one it explores.'
         }
         if (this.technologyChoices.length > 0) {
-            return 'Choose the technology this planet will hold.'
+            return this.technologyChoices.length > 1 && this.technologyChoices.every(isElevated)
+                ? 'Two elevated technologies — choose which one this planet holds.'
+                : 'Choose the technology this planet will hold.'
         }
         if (this.attackTargets.length > 0) {
             return 'Your fighter may destroy one adjacent piece, or hold fire.'

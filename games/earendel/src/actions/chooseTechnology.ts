@@ -3,7 +3,8 @@ import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { hexKey } from '../model/board.js'
+import { getHex, hexKey } from '../model/board.js'
+import { isElevated, matchesColor } from '../model/technology.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
@@ -93,9 +94,19 @@ export class HydratedChooseTechnology
         }
 
         if (!this.technologyId) return 'No technology was chosen.'
+
         if (!candidates.some((card) => card.id === this.technologyId)) {
+            // A card can be the right colour and still be out of reach, when an elevated
+            // technology turned up alongside it. Worth saying which of the two it is.
+            const color = getHex(state.board, pending.exploringPlanet)?.color
+            const wanted = (pending.revealed ?? []).find((card) => card.id === this.technologyId)
+
+            if (wanted && color && matchesColor(wanted, color) && candidates.some(isElevated)) {
+                return 'An elevated technology was revealed, so a standard one cannot be taken.'
+            }
             return "That technology isn't one of the cards revealed for this planet."
         }
+
         return undefined
     }
 }
