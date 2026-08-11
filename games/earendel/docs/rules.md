@@ -57,6 +57,10 @@ it takes.
 The board starts as **7 tiles per player**, arranged so the map is compact at every player
 count. Each player's bag is shuffled. Scores start at 0.
 
+> **Currently set to 3 tiles per player for testing.** Deliberately too small, so games reach
+> any given rule quickly. The playtest number is 7, kept in the code as
+> `PLAYTEST_TILES_PER_PLAYER` and used by the sizing assertions so the real target isn't lost.
+
 **OPEN:** how planet colors are distributed across the starting tiles.
 
 **Sizing, settled by simulation rather than by feel.** The open space on the board has to be
@@ -74,8 +78,9 @@ end on an empty bag, with every player placing at least 21 of their 22 pieces. E
 board further only lowers the share of planets explored, since the probes per player stay
 fixed.
 
-**PROVISIONAL: 7 tiles per player, 1 planet per tile.** If board growth lands, the opening
-map should start smaller and let growth make up the difference.
+**PROVISIONAL: 7 tiles per player, 1 planet per tile.** Now that board growth exists, the
+opening map could start smaller and let growth make up the difference — worth re-running the
+sweep to find out how much smaller.
 
 ---
 

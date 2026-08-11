@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { playRandomGame } from './util/simulate.js'
+import { PLAYTEST_TILES_PER_PLAYER } from './util/boardSetup.js'
 
 const SEEDS = [1, 2, 3, 4, 5]
 
@@ -27,7 +28,7 @@ describe('a whole game, played at random', () => {
     })
 
     it(
-        'almost always ends on an empty bag, with nearly every piece played',
+        'almost always ends on an empty bag at the playtest board size',
         { timeout: 120000 },
         () => {
             // Both endings are real rules now, but they say different things about the board.
@@ -35,8 +36,15 @@ describe('a whole game, played at random', () => {
             // to place what they drew should be the rare case, not the norm. If this ratio
             // slips, the board has got too small for the bags again - which is exactly the
             // failure two planets per tile used to produce, silently.
+            // Asked of the playtest sizing rather than the current default, which is
+            // deliberately too small so that test games finish quickly. This is the check that
+            // the real board still holds the game it is carrying.
             const summaries = [2, 3, 4, 5].flatMap((playerCount) =>
-                SEEDS.map((seed) => playRandomGame(playerCount, seed))
+                SEEDS.map((seed) =>
+                    playRandomGame(playerCount, seed, {
+                        tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER
+                    })
+                )
             )
 
             const byEmptyBag = summaries.filter(
@@ -59,7 +67,7 @@ describe('a whole game, played at random', () => {
     it('explores a good share of the planets and pays chains without being swamped by them', () => {
         // Not assertions about balance, which is a playtest question - just a tripwire for a
         // sizing change that quietly turns the game into something else.
-        const summary = playRandomGame(3, 1)
+        const summary = playRandomGame(3, 1, { tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER })
         expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
         expect(summary.chainsScored).toBeGreaterThan(0)
     })
