@@ -3,7 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedDestroyPiece, isDestroyPiece } from '../actions/destroyPiece.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type AttackingAction = HydratedDestroyPiece
 
@@ -45,7 +45,7 @@ export class AttackingStateHandler
     ): MachineState {
         switch (true) {
             case isDestroyPiece(action): {
-                return endTurn(context.gameState, context)
+                return endPlacement(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

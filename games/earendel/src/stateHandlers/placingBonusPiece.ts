@@ -3,7 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type PlacingBonusPieceAction = HydratedPlacePiece
 
@@ -48,9 +48,7 @@ export class PlacingBonusPieceStateHandler
                 gameState.bonusPlacementPieceId = undefined
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
-                // A drafted turn may still be holding a ship of its own.
-                if (gameState.heldPieces.length > 0) return MachineState.PlacingPiece
-                return endTurn(gameState, context)
+                return endPlacement(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

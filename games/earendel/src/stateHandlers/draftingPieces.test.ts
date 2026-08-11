@@ -3,8 +3,10 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { TurnStyle } from '../definition/config.js'
-import { type EarendelBoard, HexKind, hexKey } from '../model/board.js'
-import { type Piece, PieceType } from '../model/pieces.js'
+import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
+import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
+import { MovePiece } from '../actions/movePiece.js'
+import { TechnologyTier } from '../model/technology.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
@@ -246,6 +248,76 @@ describe('a drafted turn', () => {
                 playerId: mover
             })
         ).toThrow()
+    })
+
+    it('keeps the turn through an exploration and its technology', () => {
+        // The reported sequence: keep a probe and a fighter, place the probe beside a planet,
+        // let the technology it finds move a piece - and the fighter must still be to place.
+        const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
+        const mover = game.activePlayerId
+
+        const board = emptyBoard()
+        board.hexes[hexKey(at(0, 3))] = {
+            coords: at(0, 3),
+            tileId: 't1',
+            kind: HexKind.Planet,
+            color: PlanetColor.Azure
+        }
+        game.state.board = board
+        game.state.tileSupply = []
+        game.state.technologyDeck = [
+            {
+                id: 'shift',
+                colors: [PlanetColor.Azure],
+                tier: TechnologyTier.Standard,
+                effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
+            }
+        ]
+        game.state.technologyDiscard = []
+        game.stackBags((playerId) => [
+            { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
+            { id: `${playerId}-fighter`, playerId, type: PieceType.Fighter, level: PieceLevel.Two },
+            { id: `${playerId}-spare`, playerId, type: PieceType.Station }
+        ])
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: `${mover}-spare`
+        })
+
+        // The probe lands beside the planet, explores it, houses the only matching card, and the
+        // technology fires - all inside this one placement.
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 3),
+            pieceSource: PieceSource.Bag,
+            pieceId: `${mover}-probe`
+        })
+
+        expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
+
+        game.run(MovePiece, {
+            type: ActionType.MovePiece,
+            playerId: mover,
+            from: at(1, 3),
+            to: at(2, 3)
+        })
+
+        // Still their turn, fighter still in hand. Ending it here would drop the fighter.
+        expect(game.activePlayerId).toBe(mover)
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.heldPieces.map((piece) => piece.id)).toEqual([`${mover}-fighter`])
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(5, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: `${mover}-fighter`
+        })
+        expect(game.activePlayerId).not.toBe(mover)
     })
 
     it('burns the bag half again as fast as the simple turn', () => {

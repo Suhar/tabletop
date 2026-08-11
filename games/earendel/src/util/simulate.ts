@@ -7,7 +7,7 @@ import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { DestroyPiece } from '../actions/destroyPiece.js'
 import { Pass } from '../actions/pass.js'
 import { Prng } from '@tabletop/common'
-import { PieceType } from '../model/pieces.js'
+import { PieceType, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
 import { TurnStyle } from '../definition/config.js'
@@ -51,6 +51,11 @@ export type GameSummary = {
     discards: number
     // Logistics Upgrades actually spent.
     upgradesSpent: number
+    // Pieces that started in a bag and ended up nowhere. Always zero if the rules are honest:
+    // a piece is on the board, in a bag, in a hand, discarded, or destroyed. This is the check
+    // that catches a turn ending while its player still held a ship - the ship just disappears,
+    // and nothing else in the game would notice.
+    piecesUnaccounted: number
 }
 
 // A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
@@ -249,6 +254,23 @@ export function playRandomGame(
 
     const bagsEmpty = game.state.players.some((player) => player.bag.length === 0)
 
+    // Read from the bag definition rather than assumed: the three types are not dealt in equal
+    // numbers, and guessing that they were is how this check first got its own arithmetic wrong.
+    const bagSize =
+        overrides.piecesPerType !== undefined
+            ? 3 * overrides.piecesPerType
+            : Object.values(STARTING_BAG).reduce((total, count) => total + count, 0)
+    const onBoard = Object.values(game.state.board.hexes).filter((hex) => hex.piece).length
+    const accountedFor =
+        onBoard +
+        game.state.heldPieces.length +
+        piecesDestroyed +
+        discards +
+        game.state.players.reduce(
+            (total, player) => total + player.bag.length + player.specialPieces.length,
+            0
+        )
+
     return {
         playerCount,
         endedBy:
@@ -272,7 +294,8 @@ export function playRandomGame(
         technologiesResolved,
         tilesPlaced,
         discards,
-        upgradesSpent
+        upgradesSpent,
+        piecesUnaccounted: playerCount * bagSize - accountedFor
     }
 }
 

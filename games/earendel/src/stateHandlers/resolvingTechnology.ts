@@ -4,7 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedMovePiece, isMovePiece, MovePiece } from '../actions/movePiece.js'
 import { legalMovesFor } from '../util/movement.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type ResolvingTechnologyAction = HydratedMovePiece
 
@@ -52,7 +52,7 @@ export class ResolvingTechnologyStateHandler
     ): MachineState {
         switch (true) {
             case isMovePiece(action): {
-                return endTurn(context.gameState, context)
+                return endPlacement(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

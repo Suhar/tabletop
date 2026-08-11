@@ -8,7 +8,7 @@ import {
     HydratedChooseTechnology,
     isChooseTechnology
 } from '../actions/chooseTechnology.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type ExploringAction = HydratedChoosePlanet | HydratedChooseTechnology
 
@@ -90,7 +90,7 @@ export class ExploringStateHandler
                 if (gameState.pendingTechnology) {
                     return MachineState.ResolvingTechnology
                 }
-                return endTurn(gameState, context)
+                return endPlacement(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

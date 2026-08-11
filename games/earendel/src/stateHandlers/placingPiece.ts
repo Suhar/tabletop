@@ -4,7 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedPass, isPass, Pass } from '../actions/pass.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 import { hasAnyPlacement } from '../util/placement.js'
 
 type PlacingPieceAction = HydratedPlacePiece | HydratedPass
@@ -102,11 +102,7 @@ export class PlacingPieceStateHandler
                 if (gameState.pendingAttack) {
                     return MachineState.Attacking
                 }
-                // A drafted turn has a second ship to place, and stays with the same player.
-                if (gameState.heldPieces.length > 0) {
-                    return MachineState.PlacingPiece
-                }
-                return endTurn(gameState, context)
+                return endPlacement(gameState, context)
             }
             case isPass(action): {
                 // Only ever reached when the player had nothing they could legally place,

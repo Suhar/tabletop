@@ -4,7 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlaceTile, isPlaceTile, PlaceTile } from '../actions/placeTile.js'
 import { legalTilePlacements } from '../util/tilePlacement.js'
-import { endTurn } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type PlacingTileAction = HydratedPlaceTile
 
@@ -56,7 +56,7 @@ export class PlacingTileStateHandler
                 if (gameState.bonusPlacementTileId) {
                     return MachineState.PlacingBonusPiece
                 }
-                return endTurn(gameState, context)
+                return endPlacement(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

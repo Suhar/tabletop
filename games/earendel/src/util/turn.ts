@@ -23,12 +23,21 @@ export function isEndOfGame(state: HydratedEarendelGameState): boolean {
     return state.players.some((player) => player.bag.length === 0)
 }
 
-// Closes out a turn: hand the turn on, or end the game. Every path that finishes a placement
-// goes through here, so the end condition is checked in exactly one place.
-export function endTurn(
+// Closes out one placement.
+//
+// The turn only ends when the player has nothing left in hand: a drafted turn has two
+// placements in it, three with a Logistics Upgrade, and any of them can detour through an
+// exploration, a shot, a technology or a new tile before coming back. Every one of those paths
+// finishes here, which is why the question "is the turn over?" is answered in exactly one
+// place - answering it per path is how a held ship gets silently dropped.
+export function endPlacement(
     state: HydratedEarendelGameState,
     context?: MachineContext<HydratedEarendelGameState>
 ): MachineState {
+    if (state.heldPieces.length > 0) {
+        return MachineState.PlacingPiece
+    }
+
     state.turnManager.endTurn(state.actionCount)
 
     if (isEndOfGame(state)) {

@@ -17,6 +17,18 @@ describe('a whole game, played at random', () => {
         }
     })
 
+    it('never loses a piece down the back of the sofa', { timeout: 120000 }, () => {
+        // Every piece that leaves a bag has to be somewhere at the end: on the board, back in a
+        // bag, in a hand, discarded, or destroyed. Nothing else in the game notices a ship that
+        // simply stops existing, so this is the only thing that would.
+        for (const playerCount of [2, 3, 4, 5]) {
+            for (const seed of SEEDS) {
+                const summary = playRandomGame(playerCount, seed)
+                expect(summary.piecesUnaccounted, `${playerCount}p seed ${seed}`).toBe(0)
+            }
+        }
+    })
+
     it('leaves nobody with a negative score, and pays nothing twice', { timeout: 120000 }, () => {
         for (const playerCount of [2, 3, 5]) {
             for (const seed of SEEDS) {
