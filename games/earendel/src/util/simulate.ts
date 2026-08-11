@@ -14,7 +14,7 @@ import { legalPlacementsFor } from './placement.js'
 import { legalMovesFor } from './movement.js'
 import { MovePiece } from '../actions/movePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
-import { legalTileOrigins, openHexesOfTile } from './tilePlacement.js'
+import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
@@ -142,15 +142,17 @@ export function playRandomGame(
                 })
             }
         } else if (game.state.machineState === MachineState.PlacingTile) {
-            const origins = legalTileOrigins(game.state.board)
-            if (origins.length === 0) {
+            const placements = legalTilePlacements(game.state.board)
+            if (placements.length === 0) {
                 stoppedBecause = 'a tile could not be laid and the game did not move on'
                 break
             }
+            const placement = pick(placements)
             game.run(PlaceTile, {
                 type: ActionType.PlaceTile,
                 playerId,
-                coords: pick(origins)
+                coords: placement.origin,
+                rotation: placement.rotation
             })
             tilesPlaced++
         } else if (game.state.machineState === MachineState.PlacingBonusPiece) {

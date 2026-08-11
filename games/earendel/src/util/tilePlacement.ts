@@ -24,18 +24,51 @@ export function buildTileSupply(playerCount: number, prng: Prng): Tile[] {
     return supply
 }
 
-// The four hexes a tile laid at this origin would occupy.
-export function tileFootprint(origin: AxialCoordinates): AxialCoordinates[] {
-    return TILE_HEX_OFFSETS.map((offset) => ({ q: origin.q + offset.q, r: origin.r + offset.r }))
+// A tile may be laid in any of six rotations. Rotating 60 degrees about a hex is
+// (q, r) -> (-r, q + r); the sets below are the base offsets turned that many times, each
+// still anchored on (0,0) so the origin is always one of the tile's own hexes.
+//
+// The rhombus is symmetric under a half turn, so rotations 0 and 3 (and 1/4, 2/5) cover the
+// same four hexes. They are still different placements: the planet ends up in the opposite
+// corner, which is the whole point of turning it.
+export const TILE_ROTATIONS = 6
+
+export const TILE_OFFSETS_BY_ROTATION: AxialCoordinates[][] = Array.from(
+    { length: TILE_ROTATIONS },
+    (_unused, rotation) => {
+        let offsets = TILE_HEX_OFFSETS
+        for (let turn = 0; turn < rotation; turn++) {
+            offsets = offsets.map((offset) => ({ q: -offset.r, r: offset.q + offset.r }))
+        }
+        return offsets
+    }
+)
+
+export function tileOffsets(rotation = 0): AxialCoordinates[] {
+    return TILE_OFFSETS_BY_ROTATION[((rotation % TILE_ROTATIONS) + TILE_ROTATIONS) % TILE_ROTATIONS]
 }
+
+// The four hexes a tile laid at this origin, turned this far, would occupy.
+export function tileFootprint(origin: AxialCoordinates, rotation = 0): AxialCoordinates[] {
+    return tileOffsets(rotation).map((offset) => ({
+        q: origin.q + offset.q,
+        r: origin.r + offset.r
+    }))
+}
+
+export type TilePlacement = { origin: AxialCoordinates; rotation: number }
 
 // Whether a tile can be laid here: every hex it would cover must be empty space off the
 // current board, and at least two of them must touch a hex already on it.
 //
 // Two rather than one is what stops the map growing a thin tail - a tile has to be tucked
 // against the existing shape rather than hung off a single corner.
-export function canPlaceTileAt(board: EarendelBoard, origin: AxialCoordinates): boolean {
-    const footprint = tileFootprint(origin)
+export function canPlaceTileAt(
+    board: EarendelBoard,
+    origin: AxialCoordinates,
+    rotation = 0
+): boolean {
+    const footprint = tileFootprint(origin, rotation)
 
     if (footprint.some((coords) => getHex(board, coords) !== undefined)) return false
 
@@ -46,28 +79,40 @@ export function canPlaceTileAt(board: EarendelBoard, origin: AxialCoordinates): 
     return touching.length >= 2
 }
 
-// Every origin a tile could be laid at. Built outward from the hexes already on the board,
-// since a legal tile has to touch two of them - so nowhere else is worth considering.
-export function legalTileOrigins(board: EarendelBoard): AxialCoordinates[] {
-    const candidates = new Map<number, AxialCoordinates>()
+// Every way a tile could be laid: an origin and a rotation. Built outward from the hexes
+// already on the board, since a legal tile has to touch two of them - so nowhere else is
+// worth considering.
+export function legalTilePlacements(board: EarendelBoard): TilePlacement[] {
+    const candidates = new Map<string, TilePlacement>()
 
     for (const hex of Object.values(board.hexes)) {
         for (const neighbor of neighborsOf(hex.coords)) {
-            // Any of the tile's four hexes could be the one touching this neighbour, so try
-            // each offset as the one that lands there.
-            for (const offset of TILE_HEX_OFFSETS) {
-                const origin = { q: neighbor.q - offset.q, r: neighbor.r - offset.r }
-                candidates.set(hexKey(origin), origin)
+            for (let rotation = 0; rotation < TILE_ROTATIONS; rotation++) {
+                // Any of the tile's four hexes could be the one that lands on this neighbour,
+                // so try each offset as that hex and work back to the origin.
+                for (const offset of tileOffsets(rotation)) {
+                    const origin = { q: neighbor.q - offset.q, r: neighbor.r - offset.r }
+                    candidates.set(`${hexKey(origin)}:${rotation}`, { origin, rotation })
+                }
             }
         }
     }
 
-    return [...candidates.values()].filter((origin) => canPlaceTileAt(board, origin))
+    return [...candidates.values()].filter((placement) =>
+        canPlaceTileAt(board, placement.origin, placement.rotation)
+    )
 }
 
 // Lays the tile down, turning it into four hexes on the board.
-export function placeTileOnBoard(board: EarendelBoard, tile: Tile, origin: AxialCoordinates) {
-    tileFootprint(origin).forEach((coords, index) => {
+export function placeTileOnBoard(
+    board: EarendelBoard,
+    tile: Tile,
+    origin: AxialCoordinates,
+    rotation = 0
+) {
+    // planetOffset indexes the tile's own hexes, and rotation permutes where those hexes
+    // land - so the planet turns with the tile without any special handling.
+    tileFootprint(origin, rotation).forEach((coords, index) => {
         const isPlanet = index === tile.planetOffset
         board.hexes[hexKey(coords)] = {
             coords,

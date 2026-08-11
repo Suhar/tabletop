@@ -3,7 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlaceTile, isPlaceTile, PlaceTile } from '../actions/placeTile.js'
-import { legalTileOrigins } from '../util/tilePlacement.js'
+import { legalTilePlacements } from '../util/tilePlacement.js'
 import { endTurn } from '../util/turn.js'
 
 type PlacingTileAction = HydratedPlaceTile
@@ -39,7 +39,7 @@ export class PlacingTileStateHandler
         gameState.activePlayerIds = [pending.playerId]
 
         // Nowhere to lay it - the technology comes to nothing rather than wedging the turn.
-        if (legalTileOrigins(gameState.board).length === 0) {
+        if (legalTilePlacements(gameState.board).length === 0) {
             context.addSystemAction(PlaceTile, { playerId: pending.playerId })
         }
     }

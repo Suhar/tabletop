@@ -12,10 +12,11 @@ import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
 import {
     canPlaceTileAt,
-    legalTileOrigins,
+    legalTilePlacements,
     openHexesOfTile,
     placeTileOnBoard,
-    tileFootprint
+    tileFootprint,
+    TILE_ROTATIONS
 } from './tilePlacement.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
@@ -70,10 +71,10 @@ describe('canPlaceTileAt', () => {
         // separate board hexes - so a lone hex is still something to build against.
         const board = boardOf([at(0, 0)])
 
-        const origins = legalTileOrigins(board)
-        expect(origins.length).toBeGreaterThan(0)
-        for (const origin of origins) {
-            const touching = tileFootprint(origin).filter((coords) =>
+        const placements = legalTilePlacements(board)
+        expect(placements.length).toBeGreaterThan(0)
+        for (const { origin, rotation } of placements) {
+            const touching = tileFootprint(origin, rotation).filter((coords) =>
                 neighborsOf(coords).some((neighbor) => getHex(board, neighbor) !== undefined)
             )
             expect(touching.length).toBeGreaterThanOrEqual(2)
@@ -88,10 +89,64 @@ describe('canPlaceTileAt', () => {
 
     it('offers only legal origins, and every one of them works', () => {
         const board = boardOf(tileFootprint(at(0, 0)))
-        const origins = legalTileOrigins(board)
+        const placements = legalTilePlacements(board)
 
-        expect(origins.length).toBeGreaterThan(0)
-        expect(origins.every((origin) => canPlaceTileAt(board, origin))).toBe(true)
+        expect(placements.length).toBeGreaterThan(0)
+        expect(
+            placements.every(({ origin, rotation }) => canPlaceTileAt(board, origin, rotation))
+        ).toBe(true)
+    })
+})
+
+describe('rotation', () => {
+    it('turns the tile through six anchored footprints', () => {
+        const shapes = new Set(
+            Array.from({ length: TILE_ROTATIONS }, (_unused, rotation) =>
+                tileFootprint(at(0, 0), rotation)
+                    .map((coords) => `${coords.q},${coords.r}`)
+                    .sort()
+                    .join(' ')
+            )
+        )
+
+        // All six are distinct as anchored placements, and every one includes the origin.
+        expect(shapes.size).toBe(TILE_ROTATIONS)
+        for (let rotation = 0; rotation < TILE_ROTATIONS; rotation++) {
+            expect(tileFootprint(at(0, 0), rotation)).toContainEqual(at(0, 0))
+            expect(tileFootprint(at(0, 0), rotation)).toHaveLength(4)
+        }
+    })
+
+    it('turns the planet with the tile', () => {
+        const board = boardOf(tileFootprint(at(0, 0)))
+        const tile = { id: 'spare', planetOffset: 1, color: PlanetColor.Violet }
+
+        const planetFor = (rotation: number) => {
+            const fresh = boardOf(tileFootprint(at(0, 0)))
+            placeTileOnBoard(fresh, tile, at(4, 0), rotation)
+            return Object.values(fresh.hexes).find((hex) => hex.kind === HexKind.Planet)!.coords
+        }
+
+        // Same origin, same tile, different rotations - the planet lands somewhere different
+        // each time, which is the reason to offer the choice at all.
+        const positions = new Set(
+            Array.from({ length: TILE_ROTATIONS }, (_unused, rotation) => {
+                const coords = planetFor(rotation)
+                return `${coords.q},${coords.r}`
+            })
+        )
+        expect(positions.size).toBe(TILE_ROTATIONS)
+        expect(board).toBeDefined()
+    })
+
+    it('opens up placements a single orientation could not reach', () => {
+        // A one-hex board: with the tile fixed one way there are far fewer ways to tuck two
+        // of its hexes against it than with all six available.
+        const board = boardOf([at(0, 0)])
+        const all = legalTilePlacements(board)
+        const upright = all.filter((placement) => placement.rotation === 0)
+
+        expect(all.length).toBeGreaterThan(upright.length)
     })
 })
 
@@ -168,8 +223,13 @@ describe('growing the board in play', () => {
         expect(game.validActionsFor(mover)).toEqual([ActionType.PlaceTile])
         expect(game.state.pendingTile?.tile.id).toBe('spare-0')
 
-        const origin = legalTileOrigins(game.state.board)[0]
-        game.run(PlaceTile, { type: ActionType.PlaceTile, playerId: mover, coords: origin })
+        const { origin, rotation } = legalTilePlacements(game.state.board)[0]
+        game.run(PlaceTile, {
+            type: ActionType.PlaceTile,
+            playerId: mover,
+            coords: origin,
+            rotation
+        })
 
         // A ship is drawn and owed to the new tile, and nowhere else.
         expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
@@ -199,10 +259,12 @@ describe('growing the board in play', () => {
             coords: at(1, 0),
             pieceSource: PieceSource.Bag
         })
+        const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
             playerId: mover,
-            coords: legalTileOrigins(game.state.board)[0]
+            coords: first.origin,
+            rotation: first.rotation
         })
 
         // (1,1) is open space on the starting tile, not the one just laid.

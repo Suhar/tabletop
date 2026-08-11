@@ -48,7 +48,7 @@
     let ghosts = $derived(
         gameSession.tileOrigins.map((origin) => ({
             origin,
-            hexes: tileFootprint(origin).map((coords) => {
+            hexes: tileFootprint(origin, gameSession.tileRotation).map((coords) => {
                 const geometry = hexGeometry(coords)
                 return {
                     coords,

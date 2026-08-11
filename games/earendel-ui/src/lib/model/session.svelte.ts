@@ -16,12 +16,13 @@ import {
     isElevated,
     isOpenHex,
     legalMovesFor,
-    legalTileOrigins,
+    legalTilePlacements,
     MachineState,
     MovePiece,
     openHexesOfTile,
     PlaceTile,
     tileFootprint,
+    TILE_ROTATIONS,
     type Piece,
     PieceSource,
     PieceType,
@@ -133,16 +134,33 @@ export class EarendelGameSession extends GameSession<
     // The tile waiting to be laid, so the board can show what is about to land.
     pendingTile = $derived(this.gameState.pendingTile?.tile)
 
+    // How far the tile in hand is turned. A tile may be laid any of six ways, and the
+    // rhombus's half-turn symmetry means two of those cover the same hexes with the planet in
+    // opposite corners - so turning is worth doing even when the outline doesn't move.
+    tileRotation: number = $state(0)
+
+    private allTilePlacements = $derived(
+        this.isPlacingTile ? legalTilePlacements(this.gameState.board) : []
+    )
+
+    // Where this tile could go at its current rotation.
     tileOrigins: AxialCoordinates[] = $derived(
-        this.isPlacingTile ? legalTileOrigins(this.gameState.board) : []
+        this.allTilePlacements
+            .filter((placement) => placement.rotation === this.tileRotation)
+            .map((placement) => placement.origin)
     )
 
     // The hex the cursor is over while laying a tile, so its footprint can be previewed.
     tilePreviewOrigin: AxialCoordinates | undefined = $state(undefined)
 
     tilePreviewHexes: AxialCoordinates[] = $derived(
-        this.tilePreviewOrigin ? tileFootprint(this.tilePreviewOrigin) : []
+        this.tilePreviewOrigin ? tileFootprint(this.tilePreviewOrigin, this.tileRotation) : []
     )
+
+    rotateTile(step = 1) {
+        this.tileRotation = (this.tileRotation + step + TILE_ROTATIONS) % TILE_ROTATIONS
+        this.tilePreviewOrigin = undefined
+    }
 
     // Set while the ship that follows a laid tile is owed, which may only land on that tile.
     bonusPlacementHexes: AxialCoordinates[] = $derived.by(() => {
@@ -224,7 +242,9 @@ export class EarendelGameSession extends GameSession<
             return 'Your fighter may destroy one adjacent piece, or hold fire.'
         }
         if (this.isPlacingTile) {
-            return 'That technology grows the map — lay the new tile against the board.'
+            return this.tileOrigins.length === 0
+                ? 'No room for the tile turned this way — rotate it.'
+                : 'That technology grows the map — rotate the tile if you like, then lay it.'
         }
         if (this.bonusPlacementHexes.length > 0) {
             const piece = this.drawnPiece
@@ -303,9 +323,15 @@ export class EarendelGameSession extends GameSession<
     }
 
     async placeTile(coords: AxialCoordinates) {
+        const rotation = this.tileRotation
         this.tilePreviewOrigin = undefined
+        this.tileRotation = 0
         await this.applyAction(
-            this.createPlayerAction(PlaceTile, { type: ActionType.PlaceTile, coords })
+            this.createPlayerAction(PlaceTile, {
+                type: ActionType.PlaceTile,
+                coords,
+                rotation
+            })
         )
     }
 

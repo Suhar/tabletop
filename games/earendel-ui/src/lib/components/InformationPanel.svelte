@@ -90,6 +90,26 @@
         </div>
     {/if}
 
+    {#if gameSession.isPlacingTile}
+        <!-- Turning the tile is worth offering even when the outline doesn't move: the shape
+             repeats every half turn but the planet swaps corners. -->
+        <div class="flex items-center gap-2">
+            <button
+                class="rounded-md px-3 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+                onclick={() => gameSession.rotateTile(-1)}
+            >
+                ⟲ Rotate
+            </button>
+            <span class="text-xs opacity-75">turn {gameSession.tileRotation + 1} of 6</span>
+            <button
+                class="rounded-md px-3 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+                onclick={() => gameSession.rotateTile(1)}
+            >
+                Rotate ⟳
+            </button>
+        </div>
+    {/if}
+
     {#if gameSession.attackTargets.length > 0}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"

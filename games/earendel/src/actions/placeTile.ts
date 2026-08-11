@@ -6,14 +6,16 @@ import { ActionType } from '../definition/actions.js'
 import { Tile } from '../model/tile.js'
 import {
     canPlaceTileAt,
-    legalTileOrigins,
+    legalTilePlacements,
     openHexesOfTile,
-    placeTileOnBoard
+    placeTileOnBoard,
+    TILE_ROTATIONS
 } from '../util/tilePlacement.js'
 
 export type PlaceTileMetadata = Type.Static<typeof PlaceTileMetadata>
 export const PlaceTileMetadata = Type.Object({
     tile: Type.Optional(Tile),
+    rotation: Type.Optional(Type.Number()),
     // True when the supply was empty or there was nowhere legal to lay it.
     noTilePlaced: Type.Optional(Type.Boolean()),
     // The tile went down but no ship followed - an empty bag, or no room on the tile.
@@ -29,6 +31,8 @@ export const PlaceTile = Type.Evaluate(
             playerId: Type.String(),
             // The tile's origin hex. Absent only when no tile could be laid at all.
             coords: Type.Optional(AxialCoordinates),
+            // How far the tile is turned, 0-5. A sixth of a turn each.
+            rotation: Type.Optional(Type.Number()),
             metadata: Type.Optional(PlaceTileMetadata)
         })
     ])
@@ -47,6 +51,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
     declare type: ActionType.PlaceTile
     declare playerId: string
     declare coords?: AxialCoordinates
+    declare rotation?: number
     declare metadata?: PlaceTileMetadata
 
     constructor(data: PlaceTile) {
@@ -67,7 +72,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
             return
         }
 
-        placeTileOnBoard(state.board, pending.tile, this.coords)
+        placeTileOnBoard(state.board, pending.tile, this.coords, this.rotation ?? 0)
 
         // The ship that follows is drawn here rather than on entering the next state, so the
         // turn can be routed knowing whether there is anything to place. An empty bag means
@@ -84,7 +89,11 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         }
 
         state.pendingTile = undefined
-        this.metadata = { tile: pending.tile, ...(drawn && room ? {} : { noShipPlaced: true }) }
+        this.metadata = {
+            tile: pending.tile,
+            rotation: this.rotation ?? 0,
+            ...(drawn && room ? {} : { noShipPlaced: true })
+        }
     }
 
     isValidPlaceTile(state: HydratedEarendelGameState): boolean {
@@ -96,13 +105,18 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         if (!pending) return 'No tile is waiting to be laid.'
         if (pending.playerId !== this.playerId) return "That tile isn't yours to lay."
 
+        const rotation = this.rotation ?? 0
+        if (!Number.isInteger(rotation) || rotation < 0 || rotation >= TILE_ROTATIONS) {
+            return 'That is not a rotation a tile can be laid in.'
+        }
+
         if (!this.coords) {
-            return legalTileOrigins(state.board).length > 0
+            return legalTilePlacements(state.board).length > 0
                 ? 'There is somewhere to lay that tile, so it has to be laid.'
                 : undefined
         }
 
-        if (!canPlaceTileAt(state.board, this.coords)) {
+        if (!canPlaceTileAt(state.board, this.coords, rotation)) {
             return 'A tile must cover empty space and touch the board with at least two of its hexes.'
         }
 

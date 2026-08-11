@@ -166,9 +166,12 @@ that tile.**
 Because the placed ship can be a probe, growing the board can trigger another exploration,
 another technology, and so another tile. The chain is bounded by the tile supply and the bag.
 
-**OPEN:** how large the tile supply should be — provisionally two tiles per player — and
-whether the player may rotate a tile as they lay it. Tiles currently go down in a fixed
-orientation.
+The player may **turn the tile** to any of six rotations before laying it. The tile is a
+rhombus, so it covers the same four hexes every half turn — but the planet swaps corners, so
+turning is worth doing even when the outline doesn't move. Rotation also reaches placements a
+fixed orientation cannot.
+
+**OPEN:** how large the tile supply should be — provisionally two tiles per player.
 
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
 far stronger effect; this is the conservative reading.
