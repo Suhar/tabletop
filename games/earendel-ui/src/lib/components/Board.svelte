@@ -65,15 +65,27 @@
     // The board is generated and can grow mid-game, so its extent isn't known ahead of time -
     // the view has to be measured from the hexes that actually exist, plus anywhere a tile
     // is currently being offered.
-    let viewBox = $derived.by(() => {
-        const boxes = [...placed.map((entry) => entry.box), ...ghosts.flatMap((ghost) => ghost.hexes.map((hex) => hex.box))]
-        if (boxes.length === 0) return '0 0 100 100'
-        const minX = Math.min(...boxes.map((box) => box.x)) - PADDING
-        const minY = Math.min(...boxes.map((box) => box.y)) - PADDING
-        const maxX = Math.max(...boxes.map((box) => box.x + box.width)) + PADDING
-        const maxY = Math.max(...boxes.map((box) => box.y + box.height)) + PADDING
-        return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
+    //
+    // Kept as numbers as well as a string, because anything drawn on top of the board - a
+    // popup, say - has to be kept inside these bounds or the SVG simply clips it away.
+    let view = $derived.by(() => {
+        const boxes = [
+            ...placed.map((entry) => entry.box),
+            ...ghosts.flatMap((ghost) => ghost.hexes.map((hex) => hex.box))
+        ]
+        if (boxes.length === 0) return { minX: 0, minY: 0, maxX: 100, maxY: 100 }
+
+        return {
+            minX: Math.min(...boxes.map((box) => box.x)) - PADDING,
+            minY: Math.min(...boxes.map((box) => box.y)) - PADDING,
+            maxX: Math.max(...boxes.map((box) => box.x + box.width)) + PADDING,
+            maxY: Math.max(...boxes.map((box) => box.y + box.height)) + PADDING
+        }
     })
+
+    let viewBox = $derived(
+        `${view.minX} ${view.minY} ${view.maxX - view.minX} ${view.maxY - view.minY}`
+    )
 
     let hovered: AxialCoordinates | undefined = $state(undefined)
 
@@ -133,6 +145,28 @@
             center: entry.center
         }
     })
+
+    // Beside the planet if it fits, otherwise on its other side, and kept inside the view
+    // either way. The board is scaled to its viewBox, so anything hanging over the edge is not
+    // squeezed in - it is cut off.
+    function popupPosition(
+        center: { x: number; y: number },
+        width: number,
+        height: number
+    ): { x: number; y: number } {
+        const gap = 40
+
+        let x = center.x + gap
+        if (x + width > view.maxX) x = center.x - gap - width
+
+        return {
+            x: Math.min(Math.max(x, view.minX), Math.max(view.minX, view.maxX - width)),
+            y: Math.min(
+                Math.max(center.y - height / 2, view.minY),
+                Math.max(view.minY, view.maxY - height)
+            )
+        }
+    }
 
     // SVG has no text wrapping, so the ability is broken into lines here.
     function wrap(text: string, limit: number): string[] {
@@ -364,8 +398,9 @@
         {@const width = 300}
         {@const lines = wrap(technologyAbility(shown.card), 34)}
         {@const height = 52 + lines.length * 20}
-        {@const x = shown.center.x + 40}
-        {@const y = shown.center.y - height / 2}
+        {@const box = popupPosition(shown.center, width, height)}
+        {@const x = box.x}
+        {@const y = box.y}
         <g pointer-events="none">
             <rect
                 {x}
