@@ -17,7 +17,6 @@ import {
     isOpenHex,
     legalMovesFor,
     legalTilePlacements,
-    MachineState,
     MovePiece,
     openHexesOfTile,
     PlaceTile,
@@ -54,8 +53,14 @@ export class EarendelGameSession extends GameSession<
     drawnPiece: Piece | undefined = $derived(this.gameState.drawnPiece)
 
     // The piece that would land if the player clicked a hex right now.
+    // The ship owed after a tile is laid is the one drawn with it - a special piece is not an
+    // alternative there, so the choice isn't offered.
+    canPlaySpecial: boolean = $derived.by(
+        () => this.isPlacing && this.bonusPlacementHexes.length === 0
+    )
+
     pieceToPlace: Piece | undefined = $derived.by(() => {
-        if (this.chosenSpecialId) {
+        if (this.chosenSpecialId && this.canPlaySpecial) {
             return this.myPlayerState?.specialPieces.find(
                 (piece) => piece.id === this.chosenSpecialId
             )
@@ -73,8 +78,11 @@ export class EarendelGameSession extends GameSession<
         return pending?.playerId === this.myPlayer?.id ? pending : undefined
     }
 
+    // Asked of the engine rather than matched against a list of machine states. More than one
+    // state permits a placement - the ordinary turn, and the ship owed after a tile is laid -
+    // and hard-coding them meant the board highlighted hexes it then refused to act on.
     isPlacing: boolean = $derived(
-        this.isMyTurn && this.gameState.machineState === MachineState.PlacingPiece
+        this.isMyTurn && this.validActionTypes.includes(ActionType.PlacePiece)
     )
 
     // Planets this probe could explore, when more than one was in reach. Empty at every other
@@ -126,9 +134,7 @@ export class EarendelGameSession extends GameSession<
 
     // Set while this player has a tile to lay.
     isPlacingTile: boolean = $derived(
-        this.isMyTurn &&
-            this.gameState.machineState === MachineState.PlacingTile &&
-            this.gameState.pendingTile?.playerId === this.myPlayer?.id
+        this.isMyTurn && this.validActionTypes.includes(ActionType.PlaceTile)
     )
 
     // The tile waiting to be laid, so the board can show what is about to land.
@@ -171,9 +177,7 @@ export class EarendelGameSession extends GameSession<
 
     // Set while a technology's immediate effect is waiting on this player.
     isMovingForTechnology: boolean = $derived(
-        this.isMyTurn &&
-            this.gameState.machineState === MachineState.ResolvingTechnology &&
-            this.gameState.pendingTechnology?.playerId === this.myPlayer?.id
+        this.isMyTurn && this.validActionTypes.includes(ActionType.MovePiece)
     )
 
     // The pieces that could be stepped, or - once one is picked up - where it can go.
@@ -372,7 +376,9 @@ export class EarendelGameSession extends GameSession<
             await this.destroy(coords)
             return
         }
-        if (this.isPlacing && isOpenHex(this.gameState.board, coords)) {
+        // isHighlighted rather than isOpenHex, so the restriction to a newly laid tile is
+        // honoured by the same list the board drew from.
+        if (this.isPlacing && isOpenHex(this.gameState.board, coords) && this.isHighlighted(coords)) {
             await this.place(coords)
         }
     }

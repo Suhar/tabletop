@@ -278,6 +278,64 @@ describe('growing the board in play', () => {
         ).toThrow()
     })
 
+    it('refuses a special piece in place of the ship drawn with the tile', () => {
+        const { game, mover } = scenario()
+        game.state.players.find((p) => p.playerId === mover)!.specialPieces = [
+            ship(mover, PieceType.Station)
+        ]
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+        const first = legalTilePlacements(game.state.board)[0]
+        game.run(PlaceTile, {
+            type: ActionType.PlaceTile,
+            playerId: mover,
+            coords: first.origin,
+            rotation: first.rotation
+        })
+
+        const onTile = openHexesOfTile(game.state.board, 'spare-0')
+        const special = game.state.players.find((p) => p.playerId === mover)!.specialPieces[0]
+
+        // The technology says draw a ship and place it - a special piece is not a stand-in.
+        expect(() =>
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId: mover,
+                coords: onTile[0],
+                pieceSource: PieceSource.Special,
+                pieceId: special.id
+            })
+        ).toThrow()
+    })
+
+    it('offers PlacePiece as a valid action while the tile ship is owed', () => {
+        // The board asks the engine what is legal rather than matching machine states by
+        // name, so this is the check that keeps the two in step.
+        const { game, mover } = scenario()
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+        const first = legalTilePlacements(game.state.board)[0]
+        game.run(PlaceTile, {
+            type: ActionType.PlaceTile,
+            playerId: mover,
+            coords: first.origin,
+            rotation: first.rotation
+        })
+
+        expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
+        expect(game.validActionsFor(mover)).toContain(ActionType.PlacePiece)
+    })
+
     it('comes to nothing when the supply is empty', () => {
         const { game, mover } = scenario(0)
 

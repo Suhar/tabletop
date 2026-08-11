@@ -231,6 +231,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             if (hex?.tileId !== state.bonusPlacementTileId) {
                 return 'That ship must be placed on the tile you just laid.'
             }
+            if (this.pieceSource === PieceSource.Special) {
+                return 'The ship that follows a tile is the one drawn with it.'
+            }
         }
 
         // Two of a player's stations with clear space between them close that space to
