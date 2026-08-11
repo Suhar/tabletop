@@ -100,6 +100,7 @@ export class EarendelGameInitializer
                 bag: buildBag(player.id, prng),
                 specialPieces: [],
                 technologies: [],
+                storedEffects: [],
                 score: 0
             })
         })

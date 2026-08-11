@@ -4,6 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
+import { grantTechnology } from '../util/technologyGrants.js'
 import {
     hasImmediateEffect,
     isElevated,
@@ -69,7 +70,7 @@ export class HydratedChooseTechnology
             // The explorer gains it outright, without having to control the planet - being
             // first is the whole reward for exploring. Anyone who takes control later gains
             // it too, and nobody ever loses it.
-            state.getPlayerState(this.playerId).technologies.push(chosen.id)
+            grantTechnology(state, this.playerId, chosen)
         }
 
         // Everything turned over goes to the discard except the one card the planet keeps -

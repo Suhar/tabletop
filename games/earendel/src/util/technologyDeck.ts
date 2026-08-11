@@ -73,6 +73,15 @@ export function revealForExploration(
 // than it looks: an elevated card removes the explorer's choice, so a deck thick with them
 // turns exploring from a decision into a lottery.
 export const ELEVATED_SHARE = 3
+
+// Dealt round-robin across the deck so every effect gets exercised in play, and so an elevated
+// card is not strictly worse than a standard one for having no effect. Real technologies
+// replace this wholesale.
+const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
+    TechnologyEffectKind.MoveFriendlyPiece,
+    TechnologyEffectKind.GrowBoard,
+    TechnologyEffectKind.LogisticsUpgrade
+]
 // A deck of nothing but the named effect, one card per planet colour so that whatever a probe
 // reaches, the effect comes up. A testing aid - see the technologyDeck config option.
 export function buildFocusedTechnologyDeck(
@@ -120,12 +129,7 @@ export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
         // PROVISIONAL: the effects that exist are dealt alternately across the whole deck so
         // both get exercised in play, and so an elevated card isn't strictly worse than a
         // standard one for having no effect. Real technologies replace this wholesale.
-        effect: {
-            kind:
-                index % 2 === 0
-                    ? TechnologyEffectKind.MoveFriendlyPiece
-                    : TechnologyEffectKind.GrowBoard
-        }
+        effect: { kind: PLACEHOLDER_EFFECTS[index % PLACEHOLDER_EFFECTS.length] }
     }))
 
     shuffle(deck, prng.random)

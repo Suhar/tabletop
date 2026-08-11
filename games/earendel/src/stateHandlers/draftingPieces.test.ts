@@ -7,6 +7,8 @@ import { type EarendelBoard, HexKind, hexKey } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
+import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { TestGame } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
@@ -183,6 +185,67 @@ describe('a drafted turn', () => {
         expect((discard as DiscardPiece).metadata?.nothingToDiscard).toBe(true)
         expect(game.state.heldPieces).toHaveLength(1)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+    })
+
+    it('places all three when a Logistics Upgrade is spent', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+        const moverState = () => game.state.players.find((p) => p.playerId === mover)!
+        moverState().storedEffects = [TechnologyEffectKind.LogisticsUpgrade]
+
+        expect(game.validActionsFor(mover)).toContain(ActionType.UseLogisticsUpgrade)
+
+        const [used] = game.run(UseLogisticsUpgrade, {
+            type: ActionType.UseLogisticsUpgrade,
+            playerId: mover
+        })
+
+        // Nothing thrown away, and the charge is spent.
+        expect((used as UseLogisticsUpgrade).metadata?.piecesKept).toBe(3)
+        expect(game.state.heldPieces).toHaveLength(3)
+        expect(moverState().storedEffects).toEqual([])
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+
+        // Three placements this turn, not two - the turn runs until the hand empties, so this
+        // needed no new machinery.
+        for (const coords of [at(0, 0), at(1, 0), at(2, 0)]) {
+            expect(game.activePlayerId).toBe(mover)
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId: mover,
+                coords,
+                pieceSource: PieceSource.Bag,
+                pieceId: game.state.heldPieces[0].id
+            })
+        }
+
+        expect(game.activePlayerId).not.toBe(mover)
+    })
+
+    it('is not offered without the charge, and cannot be spent twice', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        expect(game.validActionsFor(mover)).not.toContain(ActionType.UseLogisticsUpgrade)
+        expect(() =>
+            game.run(UseLogisticsUpgrade, {
+                type: ActionType.UseLogisticsUpgrade,
+                playerId: mover
+            })
+        ).toThrow()
+
+        game.state.players.find((p) => p.playerId === mover)!.storedEffects = [
+            TechnologyEffectKind.LogisticsUpgrade
+        ]
+        game.run(UseLogisticsUpgrade, { type: ActionType.UseLogisticsUpgrade, playerId: mover })
+
+        // One time only.
+        expect(() =>
+            game.run(UseLogisticsUpgrade, {
+                type: ActionType.UseLogisticsUpgrade,
+                playerId: mover
+            })
+        ).toThrow()
     })
 
     it('burns the bag half again as fast as the simple turn', () => {

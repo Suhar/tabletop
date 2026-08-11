@@ -11,6 +11,8 @@
         isPass,
         isDiscardPiece,
         type DiscardPiece,
+        isUseLogisticsUpgrade,
+        type UseLogisticsUpgrade,
         isMovePiece,
         isPlacePiece,
         isPlaceTile,
@@ -71,6 +73,10 @@
             return shot.metadata?.declined
                 ? 'held fire'
                 : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+        }
+        if (isUseLogisticsUpgrade(action)) {
+            const used = action as UseLogisticsUpgrade
+            return `spent a Logistics Upgrade, keeping all ${used.metadata?.piecesKept ?? 3} ships`
         }
         if (isDiscardPiece(action)) {
             const discard = action as DiscardPiece

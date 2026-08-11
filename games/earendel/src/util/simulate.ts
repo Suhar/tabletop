@@ -16,6 +16,7 @@ import { legalMovesFor } from './movement.js'
 import { MovePiece } from '../actions/movePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
+import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 
@@ -48,6 +49,8 @@ export type GameSummary = {
     tilesPlaced: number
     // Ships thrown out of the game by the draft.
     discards: number
+    // Logistics Upgrades actually spent.
+    upgradesSpent: number
 }
 
 // A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
@@ -100,6 +103,7 @@ export function playRandomGame(
     let technologiesResolved = 0
     let tilesPlaced = 0
     let discards = 0
+    let upgradesSpent = 0
     let chainsScored = 0
     let stoppedBecause: string | undefined
 
@@ -113,14 +117,27 @@ export function playRandomGame(
         const playerId = game.activePlayerId
 
         if (game.state.machineState === MachineState.DraftingPieces) {
-            // Throw away a random one of the three.
             const held = game.state.heldPieces
-            game.run(DiscardPiece, {
-                type: ActionType.DiscardPiece,
-                playerId,
-                pieceId: pick(held).id
-            })
-            discards++
+            const canUpgrade = game
+                .validActionsFor(playerId)
+                .includes(ActionType.UseLogisticsUpgrade)
+
+            // Spends the upgrade most of the time it is available, so both branches of the
+            // draft get exercised.
+            if (canUpgrade && random() < 0.8) {
+                game.run(UseLogisticsUpgrade, {
+                    type: ActionType.UseLogisticsUpgrade,
+                    playerId
+                })
+                upgradesSpent++
+            } else {
+                game.run(DiscardPiece, {
+                    type: ActionType.DiscardPiece,
+                    playerId,
+                    pieceId: pick(held).id
+                })
+                discards++
+            }
         } else if (game.state.machineState === MachineState.PlacingPiece) {
             // Any held ship with somewhere legal to go. A drafted hand may hold one that is
             // stuck and one that isn't, so the choice of ship is part of the move.
@@ -254,7 +271,8 @@ export function playRandomGame(
         chainsScored,
         technologiesResolved,
         tilesPlaced,
-        discards
+        discards,
+        upgradesSpent
     }
 }
 

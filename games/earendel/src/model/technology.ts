@@ -22,7 +22,16 @@ export enum TechnologyEffectKind {
     // Immediate: on being chosen, move one friendly piece into an adjacent empty space.
     MoveFriendlyPiece = 'moveFriendlyPiece',
     // Immediate: lay a tile from the supply, then draw a ship and place it on that tile.
-    GrowBoard = 'growBoard'
+    GrowBoard = 'growBoard',
+    // Stored: once, on a later turn, keep the ship a draft would have thrown away.
+    LogisticsUpgrade = 'logisticsUpgrade'
+}
+
+// When an effect happens. Immediate ones resolve the moment the technology is chosen; stored
+// ones are put in front of the player and spent later, once each.
+export enum TechnologyTiming {
+    Immediate = 'immediate',
+    Stored = 'stored'
 }
 
 // Immediate effects resolve the moment the technology is chosen for the planet, inside the
@@ -42,25 +51,42 @@ export const TechnologyCard = Type.Object({
     effect: Type.Optional(TechnologyEffect)
 })
 
-// Whether choosing this card owes its player an action before the turn can end.
+// Whether choosing this card owes its player an action before the turn can end. A stored
+// effect owes nothing now - it waits in front of them until they spend it.
 export function hasImmediateEffect(card: TechnologyCard): boolean {
-    return card.effect !== undefined
+    return timingOf(card) === TechnologyTiming.Immediate
 }
 
 // What each effect is called and what it does, for anything that has to show a technology to
 // a player. Kept beside the effects themselves so a new one cannot be added without a name.
 export const TECHNOLOGY_EFFECT_INFO: Record<
     TechnologyEffectKind,
-    { name: string; ability: string }
+    { name: string; ability: string; timing: TechnologyTiming }
 > = {
     [TechnologyEffectKind.MoveFriendlyPiece]: {
         name: 'Tactical Shift',
-        ability: 'Move any friendly piece into an adjacent empty space.'
+        ability: 'Move any friendly piece into an adjacent empty space.',
+        timing: TechnologyTiming.Immediate
     },
     [TechnologyEffectKind.GrowBoard]: {
         name: 'Beyond the Frontier',
-        ability: 'Lay a new tile against the board, then place a drawn ship on it.'
+        ability: 'Lay a new tile against the board, then place a drawn ship on it.',
+        timing: TechnologyTiming.Immediate
+    },
+    [TechnologyEffectKind.LogisticsUpgrade]: {
+        name: 'Logistics Upgrade',
+        ability: 'Once, on a later turn, place the ship you would otherwise discard.',
+        timing: TechnologyTiming.Stored
     }
+}
+
+export function timingOf(card: TechnologyCard): TechnologyTiming | undefined {
+    return card.effect ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].timing : undefined
+}
+
+// The effect this card puts in front of its new owner to spend later, if any.
+export function storedEffectOf(card: TechnologyCard): TechnologyEffectKind | undefined {
+    return timingOf(card) === TechnologyTiming.Stored ? card.effect!.kind : undefined
 }
 
 export function technologyName(card: TechnologyCard): string {

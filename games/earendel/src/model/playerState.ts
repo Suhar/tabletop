@@ -3,6 +3,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { Color } from '@tabletop/common'
 import { Piece } from './pieces.js'
+import { TechnologyEffectKind } from './technology.js'
 
 export type EarendelPlayerState = Type.Static<typeof EarendelPlayerState>
 export const EarendelPlayerState = Type.Evaluate(
@@ -22,6 +23,10 @@ export const EarendelPlayerState = Type.Evaluate(
             // even when the planet is. Ids are unique across the deck, so a card id names
             // the planet it came from.
             technologies: Type.Array(Type.String()),
+            // Effects gained from technologies that are spent later rather than at once, each
+            // usable a single time. A player can hold several, including two of the same kind
+            // from two different planets.
+            storedEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
             // A running total that only ever goes up: control scored during the game is kept
             // even if the planet is later lost.
             score: Type.Number()
@@ -40,12 +45,22 @@ export class HydratedEarendelPlayerState
     declare bag: Piece[]
     declare specialPieces: Piece[]
     declare technologies: string[]
+    declare storedEffects: TechnologyEffectKind[]
     declare score: number
 
     // The game ends the moment any player's bag runs out (see EndOfGame), so this is the
     // clock everything else is measured against.
     get bagIsEmpty(): boolean {
         return this.bag.length === 0
+    }
+
+    hasStoredEffect(kind: TechnologyEffectKind): boolean {
+        return this.storedEffects.includes(kind)
+    }
+
+    spendStoredEffect(kind: TechnologyEffectKind) {
+        const index = this.storedEffects.indexOf(kind)
+        if (index >= 0) this.storedEffects.splice(index, 1)
     }
 
     drawFromBag(): Piece | undefined {

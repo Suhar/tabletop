@@ -1,6 +1,7 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
+import { storedEffectOf, type TechnologyCard } from '../model/technology.js'
 
 // Technologies a placement just handed its owner: those on explored planets the placement
 // gave them OUTRIGHT hold of, and which they don't already hold.
@@ -47,6 +48,21 @@ export function technologiesGainedBy(
     return technologiesGainedAround(board, coords, { [playerId]: alreadyHeld })[playerId] ?? []
 }
 
+// Hands one technology to one player: the id for the ledger, and anything the card stores for
+// them to spend later. The single place a technology changes hands, so the explorer and a
+// later conqueror cannot drift apart.
+export function grantTechnology(
+    state: HydratedEarendelGameState,
+    playerId: string,
+    card: TechnologyCard
+) {
+    const playerState = state.getPlayerState(playerId)
+    playerState.technologies.push(card.id)
+
+    const stored = storedEffectOf(card)
+    if (stored) playerState.storedEffects.push(stored)
+}
+
 // Credits every player who now holds a neighbouring planet outright, and reports what each
 // gained. The board must already be in its new shape when this is called.
 export function applyTechnologyGains(
@@ -59,7 +75,12 @@ export function applyTechnologyGains(
     const gained = technologiesGainedAround(state.board, coords, held)
 
     for (const [playerId, technologies] of Object.entries(gained)) {
-        state.getPlayerState(playerId).technologies.push(...technologies)
+        for (const technologyId of technologies) {
+            const hex = Object.values(state.board.hexes).find(
+                (candidate) => candidate.technology?.id === technologyId
+            )
+            if (hex?.technology) grantTechnology(state, playerId, hex.technology)
+        }
     }
 
     return gained

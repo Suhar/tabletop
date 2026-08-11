@@ -48,6 +48,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
             bag: [],
             specialPieces: [],
             technologies: [],
+            storedEffects: [],
             score: 0
         })),
         activePlayerIds: ['p1'],

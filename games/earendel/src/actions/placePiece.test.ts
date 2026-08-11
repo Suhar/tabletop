@@ -31,6 +31,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
             bag: [{ id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }],
             specialPieces: [],
             technologies: [],
+            storedEffects: [],
             score: 0
         })),
         activePlayerIds: ['p1'],

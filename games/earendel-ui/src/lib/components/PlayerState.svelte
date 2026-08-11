@@ -3,6 +3,7 @@
     import {
         EarendelPlayerState,
         planetPointsByPlayer,
+        TECHNOLOGY_EFFECT_INFO,
         technologyName
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -54,6 +55,14 @@
         {#if heldTechnologyNames.length > 0}
             <div class="mt-1 text-xs opacity-90" title="Technologies gained, kept for good">
                 {heldTechnologyNames.join(', ')}
+            </div>
+        {/if}
+
+        {#if playerState.storedEffects.length > 0}
+            <div class="text-xs opacity-90" title="Technology powers not yet spent">
+                unspent: {playerState.storedEffects
+                    .map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
+                    .join(', ')}
             </div>
         {/if}
 

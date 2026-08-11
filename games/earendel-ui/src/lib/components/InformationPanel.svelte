@@ -123,6 +123,15 @@
         </div>
     {/if}
 
+    {#if gameSession.canUseLogisticsUpgrade}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold bg-amber-300/20 hover:bg-amber-300/30 border-2 border-amber-300"
+            onclick={() => gameSession.useLogisticsUpgrade()}
+        >
+            Spend Logistics Upgrade — keep all three
+        </button>
+    {/if}
+
     {#if gameSession.isPlacingTile}
         <!-- Turning the tile is worth offering even when the outline doesn't move: the shape
              repeats every half turn but the planet swaps corners. -->

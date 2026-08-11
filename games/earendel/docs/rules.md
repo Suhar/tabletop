@@ -185,6 +185,22 @@ fixed orientation cannot.
 
 **OPEN:** how large the tile supply should be — provisionally two tiles per player.
 
+### Stored effects
+
+A technology may instead be **stored**: it goes in front of its owner unused, and is spent
+later, **once**. A player can hold several, including two of the same kind gained from two
+different planets. Like every technology, it is gained by the explorer and by anyone who later
+holds the planet outright — so the same card can hand a charge to several players over a game.
+
+The first is **Logistics Upgrade**: *once, on a later turn, place the ship you would otherwise
+discard.*
+
+Spent at the opening of a drafted turn, in place of the discard, so that turn places all
+**three** drawn ships instead of two. It needs no other rule: a turn runs until its hand is
+empty.
+
+Note it does nothing in the simpler one-draw turn style, where there is no discard to save.
+
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
 far stronger effect; this is the conservative reading.
 

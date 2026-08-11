@@ -2,10 +2,12 @@ import { type HydratedAction, type MachineStateHandler, MachineContext } from '@
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { DiscardPiece, HydratedDiscardPiece, isDiscardPiece } from '../actions/discardPiece.js'
+import { DiscardPiece, HydratedDiscardPiece } from '../actions/discardPiece.js'
+import { HydratedUseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { drawCountFor, type EarendelGameConfig } from '../definition/config.js'
 
-type DraftingAction = HydratedDiscardPiece
+type DraftingAction = HydratedDiscardPiece | HydratedUseLogisticsUpgrade
 
 // The opening of a drafted turn: draw three, throw one away, then place the other two.
 //
@@ -28,7 +30,7 @@ export class DraftingPiecesStateHandler
         playerId: string,
         context: MachineContext<HydratedEarendelGameState>
     ): ActionType[] {
-        return [ActionType.DiscardPiece].filter((actionType) =>
+        return [ActionType.DiscardPiece, ActionType.UseLogisticsUpgrade].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
         )
     }
@@ -68,7 +70,20 @@ export class DraftingPiecesStateHandler
         playerId: string,
         context: MachineContext<HydratedEarendelGameState>
     ): boolean {
-        if (!context.gameState.activePlayerIds.includes(playerId)) return false
+        const gameState = context.gameState
+        if (!gameState.activePlayerIds.includes(playerId)) return false
+
+        if (actionType === ActionType.UseLogisticsUpgrade) {
+            // Only worth offering when there is something to save, and only to a player
+            // holding the charge.
+            return (
+                gameState.heldPieces.length > 1 &&
+                gameState
+                    .getPlayerState(playerId)
+                    .hasStoredEffect(TechnologyEffectKind.LogisticsUpgrade)
+            )
+        }
+
         return actionType === ActionType.DiscardPiece
     }
 }

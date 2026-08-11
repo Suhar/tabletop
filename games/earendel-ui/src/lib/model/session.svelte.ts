@@ -7,6 +7,7 @@ import {
     DestroyPiece,
     destinationsFrom,
     DiscardPiece,
+    TechnologyEffectKind,
     destroyableTargets,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -23,6 +24,7 @@ import {
     openHexesOfTile,
     PlaceTile,
     tileFootprint,
+    UseLogisticsUpgrade,
     TILE_ROTATIONS,
     type Piece,
     PieceSource,
@@ -74,6 +76,15 @@ export class EarendelGameSession extends GameSession<
     isDiscarding: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.DiscardPiece)
     )
+
+    // Whether a Logistics Upgrade could be spent right now, in place of discarding.
+    canUseLogisticsUpgrade: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseLogisticsUpgrade)
+    )
+
+    storedEffectCount(kind: TechnologyEffectKind): number {
+        return (this.myPlayerState?.storedEffects ?? []).filter((stored) => stored === kind).length
+    }
 
     // While a laid tile owes a ship, only that ship may be placed - so the rest of the hand is
     // not selectable.
@@ -291,7 +302,9 @@ export class EarendelGameSession extends GameSession<
                 : 'That technology moves one of your pieces — choose which.'
         }
         if (this.isDiscarding) {
-            return 'Three drawn — throw one out of the game, then place the other two.'
+            return this.canUseLogisticsUpgrade
+                ? 'Three drawn — throw one out, or spend a Logistics Upgrade to keep all three.'
+                : 'Three drawn — throw one out of the game, then place the other two.'
         }
         if (this.isPlacing) {
             const piece = this.pieceToPlace
@@ -325,6 +338,14 @@ export class EarendelGameSession extends GameSession<
         this.chosenSpecialId = undefined
         this.chosenHeldId = undefined
         await this.applyAction(action)
+    }
+
+    async useLogisticsUpgrade() {
+        await this.applyAction(
+            this.createPlayerAction(UseLogisticsUpgrade, {
+                type: ActionType.UseLogisticsUpgrade
+            })
+        )
     }
 
     async discard(pieceId: string) {
