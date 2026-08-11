@@ -149,6 +149,27 @@ The first one is: **move any friendly piece into any adjacent empty space.**
 - The move is **not optional** — it is the technology's whole effect, not a bonus alongside
   it. If no friendly piece can step anywhere, it simply fizzles.
 
+The second is: **draw a tile from the supply and lay it, then draw a ship and place it on
+that tile.**
+
+- The tile must be laid so that **at least two of its own hexes border hexes already on the
+  board**. Two of them may border the *same* hex — the rule is about the tile's contact, not
+  the board's. This is what stops the map growing a thin tail.
+- The ship that follows is a **real placement**, unlike the move above: it explores, it
+  shoots, it scores its station group, all as normal. It just has to land on the tile that
+  was jut laid.
+- The ship is a fresh draw from the player's own bag, so this technology **spends a piece and
+  brings that player's own ending closer** — the bag is the clock.
+- If the supply is empty, or there is nowhere legal to lay a tile, the technology comes to
+  nothing. If the bag is empty, the tile is laid and no ship follows.
+
+Because the placed ship can be a probe, growing the board can trigger another exploration,
+another technology, and so another tile. The chain is bounded by the tile supply and the bag.
+
+**OPEN:** how large the tile supply should be — provisionally two tiles per player — and
+whether the player may rotate a tile as they lay it. Tiles currently go down in a fixed
+orientation.
+
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
 far stronger effect; this is the conservative reading.
 
@@ -330,8 +351,8 @@ denial play.
 Certain actions let a player add a tile to the board. A new tile must be placed so that **at
 least two of its hexes touch existing hexes**.
 
-**OPEN:** what triggers a tile placement, where the tiles come from, and whether the placing
-player chooses the tile's rotation.
+Board growth is a **technology effect** — see *Immediate effects* above. Tiles come from a
+supply held back at setup, and the technology that draws one also places a ship on it.
 
 ---
 

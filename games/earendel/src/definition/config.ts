@@ -22,7 +22,8 @@ const technologyDeckOption: ListConfigOption = {
     alwaysShow: true,
     options: [
         { name: 'Full deck', value: FULL_DECK },
-        { name: 'Only: move a friendly piece', value: TechnologyEffectKind.MoveFriendlyPiece }
+        { name: 'Only: move a friendly piece', value: TechnologyEffectKind.MoveFriendlyPiece },
+        { name: 'Only: grow the board', value: TechnologyEffectKind.GrowBoard }
     ]
 }
 

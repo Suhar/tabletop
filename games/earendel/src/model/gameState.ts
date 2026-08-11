@@ -13,6 +13,7 @@ import { EarendelBoard } from './board.js'
 import { Piece } from './pieces.js'
 import { TechnologyCard } from './technology.js'
 import { PendingExploration, PendingTechnology } from './exploration.js'
+import { Tile } from './tile.js'
 import { PendingAttack } from './attack.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
@@ -38,6 +39,16 @@ export const EarendelGameState = Type.Evaluate(
             // the placement a decision. Public: the platform sends state to every client
             // whole, so there is nowhere to hide it.
             drawnPiece: Type.Optional(Piece),
+            // Tiles held back from the starting map, drawn by the technology that grows the
+            // board.
+            tileSupply: Type.Array(Tile),
+            // A tile drawn and waiting to be laid.
+            pendingTile: Type.Optional(
+                Type.Object({ playerId: Type.String(), tile: Tile })
+            ),
+            // Set between laying a tile and placing the ship that follows it: the ship must
+            // land on this tile, so the placement is restricted while it is set.
+            bonusPlacementTileId: Type.Optional(Type.String()),
             // Set while an immediate technology effect is owed to the player who chose it.
             pendingTechnology: Type.Optional(PendingTechnology),
             // Set while a newly placed fighter's owner decides whether to fire. Like
@@ -74,6 +85,9 @@ export class HydratedEarendelGameState
     declare drawnPiece?: Piece
     declare pendingAttack?: PendingAttack
     declare pendingTechnology?: PendingTechnology
+    declare tileSupply: Tile[]
+    declare pendingTile?: { playerId: string; tile: Tile }
+    declare bonusPlacementTileId?: string
     declare scoredPlanetPairs: string[]
     declare result?: GameResult
     declare winningPlayerIds: string[]

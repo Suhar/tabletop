@@ -9,6 +9,10 @@ export enum MachineState {
     // Held open while an immediate technology effect waits on the player who just chose it.
     // The exploration itself is already finished. Still the same turn.
     ResolvingTechnology = 'ResolvingTechnology',
+    // Held open while a player lays a tile drawn by a technology, and then while they place
+    // the ship that has to land on it. Still the same turn.
+    PlacingTile = 'PlacingTile',
+    PlacingBonusPiece = 'PlacingBonusPiece',
     // Held open while a newly placed fighter's owner decides whether to destroy something
     // adjacent, and which. Still the same turn.
     Attacking = 'Attacking',

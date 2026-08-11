@@ -4,7 +4,12 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
-import { hasImmediateEffect, isElevated, matchesColor } from '../model/technology.js'
+import {
+    hasImmediateEffect,
+    isElevated,
+    matchesColor,
+    TechnologyEffectKind
+} from '../model/technology.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
@@ -74,10 +79,21 @@ export class HydratedChooseTechnology
         // The exploration is done. If the card acts at once, the turn stays open for it.
         state.pendingExploration = undefined
         if (chosen && hasImmediateEffect(chosen)) {
-            state.pendingTechnology = {
-                playerId: this.playerId,
-                technologyId: chosen.id,
-                kind: chosen.effect!.kind
+            const kind = chosen.effect!.kind
+
+            if (kind === TechnologyEffectKind.GrowBoard) {
+                // Drawn here so the tile is decided by authoritative state and lands in the
+                // action log. An empty supply means the technology simply comes to nothing.
+                const tile = state.tileSupply.shift()
+                if (tile) {
+                    state.pendingTile = { playerId: this.playerId, tile }
+                }
+            } else {
+                state.pendingTechnology = {
+                    playerId: this.playerId,
+                    technologyId: chosen.id,
+                    kind
+                }
             }
         }
 

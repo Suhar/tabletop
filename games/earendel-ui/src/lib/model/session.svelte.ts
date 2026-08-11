@@ -16,8 +16,12 @@ import {
     isElevated,
     isOpenHex,
     legalMovesFor,
+    legalTileOrigins,
     MachineState,
     MovePiece,
+    openHexesOfTile,
+    PlaceTile,
+    tileFootprint,
     type Piece,
     PieceSource,
     PieceType,
@@ -119,6 +123,34 @@ export class EarendelGameSession extends GameSession<
         return hexesClosedToProbesOf(this.gameState.board, playerId)
     })
 
+    // Set while this player has a tile to lay.
+    isPlacingTile: boolean = $derived(
+        this.isMyTurn &&
+            this.gameState.machineState === MachineState.PlacingTile &&
+            this.gameState.pendingTile?.playerId === this.myPlayer?.id
+    )
+
+    // The tile waiting to be laid, so the board can show what is about to land.
+    pendingTile = $derived(this.gameState.pendingTile?.tile)
+
+    tileOrigins: AxialCoordinates[] = $derived(
+        this.isPlacingTile ? legalTileOrigins(this.gameState.board) : []
+    )
+
+    // The hex the cursor is over while laying a tile, so its footprint can be previewed.
+    tilePreviewOrigin: AxialCoordinates | undefined = $state(undefined)
+
+    tilePreviewHexes: AxialCoordinates[] = $derived(
+        this.tilePreviewOrigin ? tileFootprint(this.tilePreviewOrigin) : []
+    )
+
+    // Set while the ship that follows a laid tile is owed, which may only land on that tile.
+    bonusPlacementHexes: AxialCoordinates[] = $derived.by(() => {
+        const tileId = this.gameState.bonusPlacementTileId
+        if (!tileId || !this.isMyTurn) return []
+        return openHexesOfTile(this.gameState.board, tileId)
+    })
+
     // Set while a technology's immediate effect is waiting on this player.
     isMovingForTechnology: boolean = $derived(
         this.isMyTurn &&
@@ -140,6 +172,8 @@ export class EarendelGameSession extends GameSession<
     // What the board should invite a click on right now. One list keeps the board component
     // from having to know which decision is outstanding.
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
+        if (this.isPlacingTile) return this.tileOrigins
+        if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
         if (this.isMovingForTechnology) return this.movableHexes
         if (this.choosablePlanets.length > 0) return this.choosablePlanets
         if (this.attackTargets.length > 0) return this.attackTargets
@@ -188,6 +222,15 @@ export class EarendelGameSession extends GameSession<
         }
         if (this.attackTargets.length > 0) {
             return 'Your fighter may destroy one adjacent piece, or hold fire.'
+        }
+        if (this.isPlacingTile) {
+            return 'That technology grows the map — lay the new tile against the board.'
+        }
+        if (this.bonusPlacementHexes.length > 0) {
+            const piece = this.drawnPiece
+            return piece
+                ? `You drew a ${describePiece(piece)} with the tile — it must land on the new tile.`
+                : 'Place the drawn ship on the new tile.'
         }
         if (this.isMovingForTechnology) {
             return this.movingFrom
@@ -259,8 +302,22 @@ export class EarendelGameSession extends GameSession<
         )
     }
 
+    async placeTile(coords: AxialCoordinates) {
+        this.tilePreviewOrigin = undefined
+        await this.applyAction(
+            this.createPlayerAction(PlaceTile, { type: ActionType.PlaceTile, coords })
+        )
+    }
+
     async onBoardClick(coords: AxialCoordinates) {
         if (this.busy) return
+
+        if (this.isPlacingTile) {
+            if (this.tileOrigins.some((origin) => sameHex(origin, coords))) {
+                await this.placeTile(coords)
+            }
+            return
+        }
 
         if (this.isMovingForTechnology) {
             // Clicking the piece already picked up puts it back down, so a misclick isn't a

@@ -9,7 +9,7 @@ import {
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { hexKey, isOpenHex } from '../model/board.js'
+import { getHex, hexKey, isOpenHex } from '../model/board.js'
 import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
@@ -222,6 +222,15 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             if (!this.pieceId) return 'No special piece was chosen.'
             piece = playerState.specialPieces.find((candidate) => candidate.id === this.pieceId)
             if (!piece) return "That special piece isn't in front of you."
+        }
+
+        // The ship that follows a laid tile has to land on that tile - it is part of the
+        // technology's effect, not a free placement anywhere.
+        if (state.bonusPlacementTileId) {
+            const hex = getHex(state.board, this.coords)
+            if (hex?.tileId !== state.bonusPlacementTileId) {
+                return 'That ship must be placed on the tile you just laid.'
+            }
         }
 
         // Two of a player's stations with clear space between them close that space to

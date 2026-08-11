@@ -13,6 +13,8 @@ import { buildBag } from './bag.js'
 import { legalPlacementsFor } from './placement.js'
 import { legalMovesFor } from './movement.js'
 import { MovePiece } from '../actions/movePiece.js'
+import { PlaceTile } from '../actions/placeTile.js'
+import { legalTileOrigins, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
@@ -38,6 +40,8 @@ export type GameSummary = {
     chainsScored: number
     // Immediate technology effects actually carried out.
     technologiesResolved: number
+    // Tiles laid during play by the board-growing technology.
+    tilesPlaced: number
 }
 
 // A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
@@ -86,6 +90,7 @@ export function playRandomGame(
     let turns = 0
     let piecesDestroyed = 0
     let technologiesResolved = 0
+    let tilesPlaced = 0
     let chainsScored = 0
     let stoppedBecause: string | undefined
 
@@ -136,6 +141,31 @@ export function playRandomGame(
                     ...(candidates.length > 0 ? { technologyId: pick(candidates).id } : {})
                 })
             }
+        } else if (game.state.machineState === MachineState.PlacingTile) {
+            const origins = legalTileOrigins(game.state.board)
+            if (origins.length === 0) {
+                stoppedBecause = 'a tile could not be laid and the game did not move on'
+                break
+            }
+            game.run(PlaceTile, {
+                type: ActionType.PlaceTile,
+                playerId,
+                coords: pick(origins)
+            })
+            tilesPlaced++
+        } else if (game.state.machineState === MachineState.PlacingBonusPiece) {
+            const tileId = game.state.bonusPlacementTileId!
+            const open = openHexesOfTile(game.state.board, tileId)
+            if (open.length === 0) {
+                stoppedBecause = 'nowhere on the new tile to place the ship'
+                break
+            }
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId,
+                coords: pick(open),
+                pieceSource: PieceSource.Bag
+            })
         } else if (game.state.machineState === MachineState.ResolvingTechnology) {
             const moves = legalMovesFor(game.state.board, playerId)
             if (moves.length === 0) {
@@ -193,7 +223,8 @@ export function playRandomGame(
         piecesLeftInBags: game.state.players.map((player) => player.bag.length),
         piecesDestroyed,
         chainsScored,
-        technologiesResolved
+        technologiesResolved,
+        tilesPlaced
     }
 }
 

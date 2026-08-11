@@ -117,11 +117,15 @@ export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
         // Spread by position over the generated combinations, so elevated cards land on a
         // mix of colours and card widths rather than clumping on one kind.
         tier: index % ELEVATED_SHARE === 0 ? TechnologyTier.Elevated : TechnologyTier.Standard,
-        // PROVISIONAL: a third of the standard cards carry the one effect that exists, so the
-        // resolution flow gets exercised in play. Real technologies replace this wholesale.
-        ...(index % ELEVATED_SHARE === 1
-            ? { effect: { kind: TechnologyEffectKind.MoveFriendlyPiece } }
-            : {})
+        // PROVISIONAL: the effects that exist are dealt alternately across the whole deck so
+        // both get exercised in play, and so an elevated card isn't strictly worse than a
+        // standard one for having no effect. Real technologies replace this wholesale.
+        effect: {
+            kind:
+                index % 2 === 0
+                    ? TechnologyEffectKind.MoveFriendlyPiece
+                    : TechnologyEffectKind.GrowBoard
+        }
     }))
 
     shuffle(deck, prng.random)

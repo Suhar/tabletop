@@ -20,7 +20,9 @@ export enum TechnologyTier {
 // branch wherever the timing says it fires.
 export enum TechnologyEffectKind {
     // Immediate: on being chosen, move one friendly piece into an adjacent empty space.
-    MoveFriendlyPiece = 'moveFriendlyPiece'
+    MoveFriendlyPiece = 'moveFriendlyPiece',
+    // Immediate: lay a tile from the supply, then draw a ship and place it on that tile.
+    GrowBoard = 'growBoard'
 }
 
 // Immediate effects resolve the moment the technology is chosen for the planet, inside the

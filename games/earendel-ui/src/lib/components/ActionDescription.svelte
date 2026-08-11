@@ -11,6 +11,8 @@
         isPass,
         isMovePiece,
         isPlacePiece,
+        isPlaceTile,
+        type PlaceTile,
         type MovePiece,
         type PlacePiece
     } from '@tabletop/earendel'
@@ -67,6 +69,14 @@
             return shot.metadata?.declined
                 ? 'held fire'
                 : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+        }
+        if (isPlaceTile(action)) {
+            const laid = action as PlaceTile
+            return laid.metadata?.noTilePlaced
+                ? 'had nowhere to lay the new tile'
+                : laid.metadata?.noShipPlaced
+                  ? 'laid a new tile, with no ship left to put on it'
+                  : 'laid a new tile'
         }
         if (isMovePiece(action)) {
             const moved = action as MovePiece

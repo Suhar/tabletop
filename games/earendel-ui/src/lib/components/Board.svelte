@@ -1,6 +1,13 @@
 <script lang="ts">
     import type { AxialCoordinates } from '@tabletop/common'
-    import { HexKind, type Hex, PieceType, PlanetColor, sameHex } from '@tabletop/earendel'
+    import {
+        HexKind,
+        type Hex,
+        PieceType,
+        PlanetColor,
+        sameHex,
+        tileFootprint
+    } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { hexGeometry, verticesToPoints } from '$lib/utils/hexDefinition.js'
 
@@ -36,14 +43,33 @@
         })
     )
 
-    // The board is generated, so its extent isn't known ahead of time - the view has to be
-    // measured from the hexes that actually exist.
+    // Where a tile could be laid. These sit OFF the current board, so they have to be part
+    // of the view or they would be drawn outside it.
+    let ghosts = $derived(
+        gameSession.tileOrigins.map((origin) => ({
+            origin,
+            hexes: tileFootprint(origin).map((coords) => {
+                const geometry = hexGeometry(coords)
+                return {
+                    coords,
+                    points: verticesToPoints(geometry),
+                    center: geometry.center,
+                    box: geometry.boundingBox
+                }
+            })
+        }))
+    )
+
+    // The board is generated and can grow mid-game, so its extent isn't known ahead of time -
+    // the view has to be measured from the hexes that actually exist, plus anywhere a tile
+    // is currently being offered.
     let viewBox = $derived.by(() => {
-        if (placed.length === 0) return '0 0 100 100'
-        const minX = Math.min(...placed.map((entry) => entry.box.x)) - PADDING
-        const minY = Math.min(...placed.map((entry) => entry.box.y)) - PADDING
-        const maxX = Math.max(...placed.map((entry) => entry.box.x + entry.box.width)) + PADDING
-        const maxY = Math.max(...placed.map((entry) => entry.box.y + entry.box.height)) + PADDING
+        const boxes = [...placed.map((entry) => entry.box), ...ghosts.flatMap((ghost) => ghost.hexes.map((hex) => hex.box))]
+        if (boxes.length === 0) return '0 0 100 100'
+        const minX = Math.min(...boxes.map((box) => box.x)) - PADDING
+        const minY = Math.min(...boxes.map((box) => box.y)) - PADDING
+        const maxX = Math.max(...boxes.map((box) => box.x + box.width)) + PADDING
+        const maxY = Math.max(...boxes.map((box) => box.y + box.height)) + PADDING
         return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
     })
 
@@ -251,6 +277,39 @@
                     class="pulse"
                 />
             {/if}
+        </g>
+    {/each}
+
+    <!-- Places a new tile could go. Each marker is the tile's origin hex; hovering shows the
+         whole four-hex footprint, so it is clear what is about to land and where. -->
+    {#each ghosts as ghost (ghost.origin.q + ',' + ghost.origin.r)}
+        {@const previewing =
+            gameSession.tilePreviewOrigin && sameHex(gameSession.tilePreviewOrigin, ghost.origin)}
+        <g
+            role="button"
+            tabindex="-1"
+            class="cursor-pointer"
+            onclick={() => gameSession.placeTile(ghost.origin)}
+            onkeydown={(event) => event.key === 'Enter' && gameSession.placeTile(ghost.origin)}
+            onmouseenter={() => (gameSession.tilePreviewOrigin = ghost.origin)}
+            onmouseleave={() => (gameSession.tilePreviewOrigin = undefined)}
+        >
+            {#each ghost.hexes as hex, index (hex.coords.q + ',' + hex.coords.r)}
+                {@const isPlanet = index === gameSession.pendingTile?.planetOffset}
+                <polygon
+                    points={hex.points}
+                    fill={previewing
+                        ? isPlanet && gameSession.pendingTile
+                            ? PLANET_FILL[gameSession.pendingTile.color]
+                            : '#1d2942'
+                        : '#ffffff'}
+                    fill-opacity={previewing ? (isPlanet ? 0.5 : 0.9) : index === 0 ? 0.14 : 0.03}
+                    stroke="#8fb6ff"
+                    stroke-opacity={previewing ? 0.9 : index === 0 ? 0.7 : 0.15}
+                    stroke-width={previewing ? 4 : 2}
+                    stroke-dasharray={previewing ? '' : '6 5'}
+                />
+            {/each}
         </g>
     {/each}
 

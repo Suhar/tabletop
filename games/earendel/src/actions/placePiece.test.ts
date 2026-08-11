@@ -44,6 +44,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         technologyDeck: [],
         technologyDiscard: [],
         scoredPlanetPairs: [],
+        tileSupply: [],
         // The turn's draw happens when the turn opens, so a placement always arrives with
         // something already face up.
         drawnPiece: { id: 'p1-probe', playerId: 'p1', type: PieceType.Probe, level: PieceLevel.Two },

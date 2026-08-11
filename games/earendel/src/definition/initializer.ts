@@ -12,6 +12,7 @@ import { MachineState } from './states.js'
 import type { Piece } from '../model/pieces.js'
 import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
+import { buildTileSupply } from '../util/tilePlacement.js'
 import { buildFocusedTechnologyDeck, buildTechnologyDeck } from '../util/technologyDeck.js'
 import { EarendelGameConfig, FULL_DECK } from './config.js'
 import { TechnologyEffectKind } from '../model/technology.js'
@@ -72,6 +73,7 @@ export class EarendelGameInitializer
             board: buildStartingBoard(game.players.length, prng),
             technologyDeck: buildDeckFor(config, prng),
             technologyDiscard: [],
+            tileSupply: buildTileSupply(game.players.length, prng),
             scoredPlanetPairs: [],
         })
 
