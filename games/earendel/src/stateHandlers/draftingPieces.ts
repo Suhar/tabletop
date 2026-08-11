@@ -5,7 +5,6 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { DiscardPiece, HydratedDiscardPiece } from '../actions/discardPiece.js'
 import { HydratedUseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { drawCountFor, type EarendelGameConfig } from '../definition/config.js'
 
 type DraftingAction = HydratedDiscardPiece | HydratedUseLogisticsUpgrade
 
@@ -36,25 +35,13 @@ export class DraftingPiecesStateHandler
     }
 
     enter(context: MachineContext<HydratedEarendelGameState>) {
+        // The turn and the draw are both already done - StartOfTurn handed the turn on and the
+        // player drew - so all that is left is to notice when there is nothing to choose
+        // between and take the discard for them.
         const gameState = context.gameState
 
-        const nextPlayerId = gameState.turnManager.startNextTurn(gameState.actionCount)
-        gameState.activePlayerIds = [nextPlayerId]
-
-        const playerState = gameState.getPlayerState(nextPlayerId)
-        const drawCount = drawCountFor(context.gameConfig as EarendelGameConfig)
-
-        gameState.heldPieces = []
-        for (let drawn = 0; drawn < drawCount; drawn++) {
-            const piece = playerState.drawFromBag()
-            if (!piece) break
-            gameState.heldPieces.push(piece)
-        }
-
-        // A short draft leaves nothing to choose between, so the discard is taken for the
-        // player rather than shown as a decision with one answer.
         if (gameState.heldPieces.length <= 1) {
-            context.addSystemAction(DiscardPiece, { playerId: nextPlayerId })
+            context.addSystemAction(DiscardPiece, { playerId: gameState.activePlayerIds[0] })
         }
     }
 

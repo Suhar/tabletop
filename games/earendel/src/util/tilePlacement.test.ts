@@ -246,7 +246,7 @@ describe('growing the board in play', () => {
 
         expect(game.state.board.hexes[hexKey(onTile[0])].piece?.playerId).toBe(mover)
         expect(game.state.bonusPlacementTileId).toBeUndefined()
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 
@@ -352,7 +352,7 @@ describe('growing the board in play', () => {
             ActionType.ChoosePlanet,
             ActionType.ChooseTechnology
         ])
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.state.pendingTile).toBeUndefined()
     })
 })

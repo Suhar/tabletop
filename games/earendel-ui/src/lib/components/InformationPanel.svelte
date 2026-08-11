@@ -123,6 +123,18 @@
         </div>
     {/if}
 
+    {#if gameSession.canDraw}
+        <!-- The turn waits here rather than drawing on its own, so that nothing is revealed
+             until this player asks - and the player before them still has time to undo. -->
+        <button
+            class="rounded-md px-5 py-2 text-sm font-semibold bg-white/20 hover:bg-white/30 border-2 border-white"
+            onclick={() => gameSession.drawPieces()}
+        >
+            Draw {gameSession.drawCount}
+            {gameSession.drawCount === 1 ? 'ship' : 'ships'}
+        </button>
+    {/if}
+
     {#if gameSession.canUseLogisticsUpgrade}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold bg-amber-300/20 hover:bg-amber-300/30 border-2 border-amber-300"

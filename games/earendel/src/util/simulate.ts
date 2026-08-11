@@ -17,6 +17,7 @@ import { MovePiece } from '../actions/movePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
+import { DrawPieces } from '../actions/drawPieces.js'
 import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 
@@ -121,7 +122,9 @@ export function playRandomGame(
 
         const playerId = game.activePlayerId
 
-        if (game.state.machineState === MachineState.DraftingPieces) {
+        if (game.state.machineState === MachineState.StartOfTurn) {
+            game.run(DrawPieces, { type: ActionType.DrawPieces, playerId })
+        } else if (game.state.machineState === MachineState.DraftingPieces) {
             const held = game.state.heldPieces
             const canUpgrade = game
                 .validActionsFor(playerId)

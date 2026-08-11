@@ -90,8 +90,12 @@ sweep to find out how much smaller.
 A turn is a **draft and two placements**, each placement resolving whatever it triggered
 before the next. There is no action phase and nothing to do between turns.
 
-A turn opens with a **draft**: the player takes **three** ships blind from their own bag,
-turns them face up, and **throws one out of the game**. They then place the remaining **two**,
+A turn opens when the player **chooses to draw**. Nothing is revealed until they do — which is
+what leaves the player before them time to take their own turn back, since undo cannot reach
+past a reveal.
+
+They then take **three** ships blind from their own bag, turn them face up, and **throw one out
+of the game**. They then place the remaining **two**,
 one at a time, each resolving everything it triggers before the next is placed.
 
 Knowing what you hold is what makes a placement a decision, so the draw always comes first.
@@ -443,6 +447,9 @@ deck for anything resembling a real playtest.
 A player may take back their own last action, up to the point where something was **revealed**.
 Two actions reveal, and undo cannot reach back past either:
 
+- **Drawing at the start of a turn**, which turns that player's ships face up. This is the
+  reveal that closes the previous player's window: their turn is theirs to take back until the
+  next player draws, and not after.
 - **Choosing which planet to explore**, which turns cards off the shared technology deck. A
   player who could look and then place elsewhere would be reading the deck.
 - **Laying a tile**, which draws from the shared tile supply.

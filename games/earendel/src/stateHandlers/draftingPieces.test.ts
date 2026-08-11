@@ -97,9 +97,9 @@ describe('a drafted turn', () => {
             pieceId: game.state.heldPieces[0].id
         })
 
-        // Hand empty, so the turn passes - and the next one opens with its own draft.
-        expect(game.state.heldPieces).toHaveLength(3)
-        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        // Hand empty, so the turn passes - and waits for the next player to draw.
+        expect(game.state.heldPieces).toEqual([])
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 

@@ -12,6 +12,9 @@ import { EarendelRuntime } from '../definition/runtime.js'
 import { type EarendelGameConfig, TurnStyle } from '../definition/config.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
 import type { Piece } from '../model/pieces.js'
+import { ActionType } from '../definition/actions.js'
+import { MachineState } from '../definition/states.js'
+import { DrawPieces } from '../actions/drawPieces.js'
 
 // A game driven through the real engine rather than by calling apply() directly. Anything
 // about the turn spine - who is active, when a turn ends, which system actions fire - is only
@@ -58,19 +61,24 @@ export class TestGame {
         this.state = initialState
     }
 
-    // Replaces every player's bag with a known stack. The turn's opening draw has already
-    // happened by the time a test can do this, so the piece on the table is drawn again from
-    // the new bag - otherwise the first placement of every test would use a random piece
-    // from the generated bag.
+    // Replaces every player's bag with a known stack, and leaves a hand drawn from it - which
+    // is what a test wants to start from.
+    //
+    // Drawn through the engine when the turn hasn't opened yet, so the state machine ends up
+    // where a real game would. Called mid-turn, it refills the hand directly instead: the draw
+    // action would rightly refuse a second one.
     stackBags(bag: (playerId: string) => Piece[]) {
         for (const player of this.state.players) {
             player.bag = bag(player.playerId)
         }
-        // Redraw whatever the opening of the turn had already taken, so the hand comes from
-        // the stack just set rather than from the generated bag.
-        const active = this.state.players.find(
-            (player) => player.playerId === this.activePlayerId
-        )!
+
+        const playerId = this.activePlayerId
+        if (this.validActionsFor(playerId).includes(ActionType.DrawPieces)) {
+            this.run(DrawPieces, { type: ActionType.DrawPieces, playerId })
+            return
+        }
+
+        const active = this.state.players.find((player) => player.playerId === playerId)!
         const wanted = Math.max(1, this.state.heldPieces.length)
         this.state.heldPieces = []
         for (let drawn = 0; drawn < wanted; drawn++) {
@@ -90,7 +98,23 @@ export class TestGame {
 
     // Submits an action the way the server does, and keeps every action the engine produced -
     // system actions included, which is where auto-resolved choices show up.
+    //
+    // Opens the turn first if it hasn't been: a real player clicks Draw, but a test about
+    // chains or blockades shouldn't have to say so before every placement. Tests that care
+    // about the draw itself assert on `processed`, which records it.
     run<T extends Type.TSchema>(schema: T, data: Partial<Type.Static<T>>): GameAction[] {
+        const opening = data as { type?: string; playerId?: string }
+        if (
+            this.state.machineState === MachineState.StartOfTurn &&
+            opening.type !== ActionType.DrawPieces
+        ) {
+            this.run(DrawPieces, { type: ActionType.DrawPieces, playerId: this.activePlayerId })
+        }
+
+        return this.submit(schema, data)
+    }
+
+    private submit<T extends Type.TSchema>(schema: T, data: Partial<Type.Static<T>>): GameAction[] {
         const action = createAction(schema, {
             gameId: this.game.id,
             ...data

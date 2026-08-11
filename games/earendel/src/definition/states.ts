@@ -1,7 +1,10 @@
 // The list of all possible state machine states
 
 export enum MachineState {
-    // The start of a turn in the drafting style: three ships drawn, one to be thrown away.
+    // Every turn opens here and waits: the player draws when they choose to, which is what
+    // keeps the previous player's undo window open until then.
+    StartOfTurn = 'StartOfTurn',
+    // Three ships drawn, one to be thrown away.
     DraftingPieces = 'DraftingPieces',
     // A player's whole turn: place exactly one ship. Nothing else happens in a turn.
     PlacingPiece = 'PlacingPiece',

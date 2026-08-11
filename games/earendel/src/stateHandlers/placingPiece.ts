@@ -35,28 +35,13 @@ export class PlacingPieceStateHandler
     }
 
     enter(context: MachineContext<HydratedEarendelGameState>) {
+        // Always mid-turn by the time this runs: the turn was handed on by StartOfTurn and the
+        // hand drawn there, so this only has to keep the right player active.
         const gameState = context.gameState
+        const current = gameState.turnManager.currentTurn()
+        if (current) gameState.activePlayerIds = [current.playerId]
 
-        // A hand already in play means this is the same turn continuing - a drafted turn has
-        // two placements in it - so the turn is neither handed on nor drawn for again.
-        if (gameState.heldPieces.length > 0) {
-            const current = gameState.turnManager.currentTurn()
-            if (current) gameState.activePlayerIds = [current.playerId]
-            this.endGameIfStuck(context, gameState.activePlayerIds[0])
-            return
-        }
-
-        // Otherwise this is the start of a simple turn: hand it on and draw the one ship.
-        // Knowing what you drew before choosing a hex is what makes the placement a decision,
-        // and a player who doesn't like it may put it back for a special piece instead.
-        const nextPlayerId = gameState.turnManager.startNextTurn(gameState.actionCount)
-        gameState.activePlayerIds = [nextPlayerId]
-
-        const playerState = gameState.getPlayerState(nextPlayerId)
-        const drawn = playerState.drawFromBag()
-        gameState.heldPieces = drawn ? [drawn] : []
-
-        this.endGameIfStuck(context, nextPlayerId)
+        this.endGameIfStuck(context, gameState.activePlayerIds[0])
     }
 
     // A player who cannot legally place anything they hold, and has no special piece they could

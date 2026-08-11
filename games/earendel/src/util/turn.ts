@@ -1,12 +1,22 @@
 import type { MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
-import { isDraftThree, type EarendelGameConfig } from '../definition/config.js'
+import { drawCountFor, type EarendelGameConfig } from '../definition/config.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 
-// Where a turn begins: the draft, or straight to a placement. Both then run through
-// PlacingPiece until the hand is empty, which is what lets the two styles share a path.
-export function turnStartState(config?: EarendelGameConfig): MachineState {
-    return isDraftThree(config) ? MachineState.DraftingPieces : MachineState.PlacingPiece
+// Where a turn begins, in either style: waiting for the player to draw.
+export function turnStartState(_config?: EarendelGameConfig): MachineState {
+    return MachineState.StartOfTurn
+}
+
+// How many ships this player's turn draws. Comes from the turn style today; the player and the
+// state are taken so that a technology which draws more has somewhere to be read from without
+// every caller changing.
+export function drawCountForPlayer(
+    _state: HydratedEarendelGameState,
+    _playerId: string,
+    config?: EarendelGameConfig
+): number {
+    return drawCountFor(config)
 }
 
 // Whether the game is over on the bag count: the moment ANY player has played the last piece

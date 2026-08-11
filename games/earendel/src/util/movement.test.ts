@@ -153,7 +153,7 @@ describe('an immediate technology', () => {
         expect(game.state.board.hexes[hexKey(at(5, 5))].piece).toBeUndefined()
         expect(game.state.board.hexes[hexKey(at(6, 5))].piece?.playerId).toBe(mover)
         expect(game.state.pendingTechnology).toBeUndefined()
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 

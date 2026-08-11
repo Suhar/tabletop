@@ -86,7 +86,7 @@ describe('the turn spine', () => {
             pieceSource: PieceSource.Bag
         })
 
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
         expect(game.state.pendingExploration).toBeUndefined()
     })
@@ -118,8 +118,10 @@ describe('the turn spine', () => {
         const moverState = game.state.players.find((p) => p.playerId === mover)!
         expect(moverState.bag).toHaveLength(2)
         expect(moverState.bag.map((piece) => piece.id)).toContain(drawnId)
-        // The turn has passed, so what is face up now is the next player's own draw.
-        expect(game.state.heldPieces[0]?.playerId).toBe(game.activePlayerId)
+        // The turn has passed and the next player has not drawn yet - nothing is face up until
+        // they ask for it, which is what leaves this player time to undo.
+        expect(game.state.heldPieces).toEqual([])
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
 
     it('holds the turn open when a probe finds a planet, and hands it on when the choice is made', () => {
@@ -146,6 +148,7 @@ describe('the turn spine', () => {
         expect(game.activePlayerId).toBe(mover)
         expect(game.validActionsFor(mover)).toEqual([ActionType.ChooseTechnology])
         expect(game.processed.map((action) => action.type)).toEqual([
+            ActionType.DrawPieces,
             ActionType.PlacePiece,
             ActionType.ChoosePlanet
         ])
@@ -165,7 +168,7 @@ describe('the turn spine', () => {
         // Everything else that was turned over goes to the discard, matches included.
         expect(game.state.technologyDiscard.map((c) => c.id)).toEqual(['azure-1', 'miss'])
         expect(game.state.pendingExploration).toBeUndefined()
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 
@@ -190,6 +193,7 @@ describe('the turn spine', () => {
         // All three matched the planet's colour, but the elevated one is the only one that
         // can be housed - so there was never a decision, and the engine took it.
         expect(game.processed.map((action) => action.type)).toEqual([
+            ActionType.DrawPieces,
             ActionType.PlacePiece,
             ActionType.ChoosePlanet,
             ActionType.ChooseTechnology
@@ -295,12 +299,13 @@ describe('the turn spine', () => {
 
         // One placement, and the whole exploration resolved itself inside the same submission.
         expect(game.processed.map((action) => action.type)).toEqual([
+            ActionType.DrawPieces,
             ActionType.PlacePiece,
             ActionType.ChoosePlanet,
             ActionType.ChooseTechnology
         ])
         expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('only-azure')
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 
@@ -322,7 +327,7 @@ describe('the turn spine', () => {
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
         expect(game.state.board.hexes[hexKey(PLANET_A)].technology).toBeUndefined()
         expect(game.state.technologyDiscard.map((c) => c.id)).toEqual(['gold'])
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
 
     it('lets no one but the exploring player act while a choice is pending', () => {

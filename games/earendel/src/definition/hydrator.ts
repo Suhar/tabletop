@@ -8,6 +8,7 @@ import { HydratedDestroyPiece, isDestroyPiece } from '../actions/destroyPiece.js
 import { HydratedMovePiece, isMovePiece } from '../actions/movePiece.js'
 import { HydratedPlaceTile, isPlaceTile } from '../actions/placeTile.js'
 import { HydratedDiscardPiece, isDiscardPiece } from '../actions/discardPiece.js'
+import { HydratedDrawPieces, isDrawPieces } from '../actions/drawPieces.js'
 import {
     HydratedUseLogisticsUpgrade,
     isUseLogisticsUpgrade
@@ -31,6 +32,9 @@ export class EarendelHydrator
             }
             case isUseLogisticsUpgrade(data): {
                 return new HydratedUseLogisticsUpgrade(data)
+            }
+            case isDrawPieces(data): {
+                return new HydratedDrawPieces(data)
             }
             case isDiscardPiece(data): {
                 return new HydratedDiscardPiece(data)

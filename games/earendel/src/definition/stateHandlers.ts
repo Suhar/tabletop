@@ -7,6 +7,7 @@ import { AttackingStateHandler } from '../stateHandlers/attacking.js'
 import { ResolvingTechnologyStateHandler } from '../stateHandlers/resolvingTechnology.js'
 import { PlacingTileStateHandler } from '../stateHandlers/placingTile.js'
 import { DraftingPiecesStateHandler } from '../stateHandlers/draftingPieces.js'
+import { StartOfTurnStateHandler } from '../stateHandlers/startOfTurn.js'
 import { PlacingBonusPieceStateHandler } from '../stateHandlers/placingBonusPiece.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
 
@@ -15,6 +16,7 @@ export const EarendelStateHandlers: Record<
     MachineState,
     MachineStateHandler<HydratedAction, HydratedEarendelGameState>
 > = {
+    [MachineState.StartOfTurn]: new StartOfTurnStateHandler(),
     [MachineState.DraftingPieces]: new DraftingPiecesStateHandler(),
     [MachineState.PlacingPiece]: new PlacingPieceStateHandler(),
     [MachineState.Exploring]: new ExploringStateHandler(),

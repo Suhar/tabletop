@@ -144,11 +144,10 @@ describe('a fighter arriving', () => {
 
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
         expect((shot as DestroyPiece).metadata?.destroyed?.playerId).toBe(other)
-        // Out of the game entirely - not back into its owner's bag.
-        // They started with two pieces and have since drawn one for their own turn, so one
-        // is left. Had the destroyed station gone back, there would be two.
-        expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(1)
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        // Out of the game entirely, not back into its owner's bag - which still holds exactly
+        // the two it started with, since that player has not opened their turn yet.
+        expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(2)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
 
@@ -182,7 +181,7 @@ describe('a fighter arriving', () => {
 
         expect((declined as DestroyPiece).metadata?.declined).toBe(true)
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeDefined()
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
 
     it('never stops the turn when there is nothing it could destroy', () => {
@@ -209,7 +208,7 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.state.pendingAttack).toBeUndefined()
     })
 

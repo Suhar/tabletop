@@ -170,10 +170,14 @@ describe('the blockade in play', () => {
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
-        game.state.board = line(3, [
+        // Somewhere outside the corridor to stand, or the drawn probe has nowhere legal at all
+        // and the game ends before the test can ask anything.
+        const board = line(3, [
             [0, station(other)],
             [3, station(other)]
         ])
+        board.hexes[hexKey(at(0, 4))] = { coords: at(0, 4), tileId: 't1', kind: HexKind.Open }
+        game.state.board = board
         game.state.technologyDeck = []
         game.stackBags((playerId) => [ship(playerId, PieceType.Probe, PieceLevel.Two)])
 

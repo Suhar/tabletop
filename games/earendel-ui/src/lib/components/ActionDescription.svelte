@@ -11,6 +11,8 @@
         isPass,
         isDiscardPiece,
         type DiscardPiece,
+        isDrawPieces,
+        type DrawPieces,
         isUseLogisticsUpgrade,
         type UseLogisticsUpgrade,
         isMovePiece,
@@ -73,6 +75,11 @@
             return shot.metadata?.declined
                 ? 'held fire'
                 : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+        }
+        if (isDrawPieces(action)) {
+            const drew = action as DrawPieces
+            const count = drew.metadata?.drawn?.length ?? 0
+            return `drew ${count} ${count === 1 ? 'ship' : 'ships'}`
         }
         if (isUseLogisticsUpgrade(action)) {
             const used = action as UseLogisticsUpgrade

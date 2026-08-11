@@ -7,6 +7,8 @@ import {
     DestroyPiece,
     destinationsFrom,
     DiscardPiece,
+    drawCountForPlayer,
+    DrawPieces,
     TechnologyEffectKind,
     destroyableTargets,
     type EarendelGameState,
@@ -76,6 +78,19 @@ export class EarendelGameSession extends GameSession<
     isDiscarding: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.DiscardPiece)
     )
+
+    // Set while this player's turn is open but nothing has been drawn. Nothing is revealed
+    // until they ask, which is what leaves the player before them time to undo.
+    canDraw: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.DrawPieces)
+    )
+
+    // How many ships this turn will draw, so the button can say so.
+    drawCount: number = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return 0
+        return drawCountForPlayer(this.gameState, playerId, this.primaryGame.config)
+    })
 
     // Whether a Logistics Upgrade could be spent right now, in place of discarding.
     canUseLogisticsUpgrade: boolean = $derived(
@@ -301,6 +316,9 @@ export class EarendelGameSession extends GameSession<
                 ? 'Now choose where it steps.'
                 : 'That technology moves one of your pieces — choose which.'
         }
+        if (this.canDraw) {
+            return `Your turn — draw ${this.drawCount} ${this.drawCount === 1 ? 'ship' : 'ships'} when you are ready.`
+        }
         if (this.isDiscarding) {
             return this.canUseLogisticsUpgrade
                 ? 'Three drawn — throw one out, or spend a Logistics Upgrade to keep all three.'
@@ -338,6 +356,12 @@ export class EarendelGameSession extends GameSession<
         this.chosenSpecialId = undefined
         this.chosenHeldId = undefined
         await this.applyAction(action)
+    }
+
+    async drawPieces() {
+        await this.applyAction(
+            this.createPlayerAction(DrawPieces, { type: ActionType.DrawPieces })
+        )
     }
 
     async useLogisticsUpgrade() {
