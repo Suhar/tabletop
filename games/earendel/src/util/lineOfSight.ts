@@ -1,5 +1,5 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, HEX_STEPS, HexKind } from '../model/board.js'
+import { type EarendelBoard, getHex, HEX_STEPS, HexKind, hexKey } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
 type Sighting = { piece: Piece; coords: AxialCoordinates }
@@ -48,37 +48,63 @@ export function probeBlockedBy(
     return undefined
 }
 
+// The stations of the same player that this station has a clear line to. A wavy line on the
+// board is exactly one of these, and it now links a station complex for scoring as well as
+// closing the space to enemy probes.
+//
+// The walk starts one hex out, so a station standing right next door is not a sight link -
+// there is no clear space between them. That costs nothing, since touching stations are
+// already linked by adjacency.
+export function sightLinkedStations(
+    board: EarendelBoard,
+    coords: AxialCoordinates
+): AxialCoordinates[] {
+    const station = getHex(board, coords)?.piece
+    if (station?.type !== PieceType.Station) return []
+
+    const linked: AxialCoordinates[] = []
+
+    for (const step of HEX_STEPS) {
+        const gap = getHex(board, { q: coords.q + step.q, r: coords.r + step.r })
+        if (!gap || gap.kind === HexKind.Planet || gap.piece) continue
+
+        const far = firstPieceAlong(board, gap.coords, step)
+        if (far?.piece.type !== PieceType.Station) continue
+        if (far.piece.playerId !== station.playerId) continue
+
+        linked.push(far.coords)
+    }
+
+    return linked
+}
+
 export type SightLine = {
     playerId: string
     from: AxialCoordinates
     to: AxialCoordinates
 }
 
-// Every pair of one player's stations with clear empty space between them along an axis.
-// These are what the blockade is drawn from, and there is one entry per pair: only the three
-// forward steps are walked, so a line isn't found a second time from its far end.
+// Every pair of one player's stations with clear empty space between them along an axis - the
+// wavy lines on the board. One entry per pair; the walk finds each line from both ends.
 //
-// Adjacent stations don't count - with no space between them there is nothing to close off.
+// Adjacent stations don't count: with no space between them there is nothing to close off,
+// and they are already one complex by adjacency.
 export function sightLines(board: EarendelBoard): SightLine[] {
     const lines: SightLine[] = []
+    const seen = new Set<string>()
 
     for (const hex of Object.values(board.hexes)) {
         const station = hex.piece
         if (station?.type !== PieceType.Station) continue
 
-        for (let axis = 0; axis < 3; axis++) {
-            const step = HEX_STEPS[axis]
+        for (const far of sightLinkedStations(board, hex.coords)) {
+            // One entry per pair, however it was found - the walk sees each line from both
+            // ends, and drawing it twice would double the beam.
+            const key = [hexKey(hex.coords), hexKey(far)].sort((a, b) => a - b).join(':')
+            if (seen.has(key)) continue
+            seen.add(key)
 
-            // Start one hex out, so a station right next door - which leaves no gap - is not
-            // mistaken for a line.
-            const gap = getHex(board, { q: hex.coords.q + step.q, r: hex.coords.r + step.r })
-            if (!gap || gap.kind === HexKind.Planet || gap.piece) continue
-
-            const far = firstPieceAlong(board, gap.coords, step)
-            if (far?.piece.type !== PieceType.Station) continue
-            if (far.piece.playerId !== station.playerId) continue
-
-            lines.push({ playerId: station.playerId, from: hex.coords, to: far.coords })
+            lines.push({ playerId: station.playerId, from: hex.coords, to: far })
         }
     }
 

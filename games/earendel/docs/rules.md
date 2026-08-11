@@ -300,15 +300,26 @@ the game's clock.
 Placing a **station** scores **1 for itself and 1 for every other friendly station in a
 contiguous group with it**.
 
-Stations link to **stations only**: a probe or fighter standing between two of them — yours
-or anyone else's — leaves them in separate groups, and a planet does the same, since no ship
-can stand on one.
+Two stations are in the same **complex** if they **touch**, or if there is a **clear line**
+between them — the same wavy line that closes that space to enemy probes (see *Station
+blockades*). Links are **transitive**: a complex can run board-wide through a chain of
+adjacency and sight lines, and a single station bridging two clusters welds them into one.
 
-Because it pays on every placement, a cluster built up one station at a time pays 1, 2, 3, …
+So a player with three touching stations who lays a fourth across a gap, with a clear line to
+the run, scores **4**.
+
+Stations link to **stations only**. A probe or fighter standing between two of them — yours or
+anyone else's — breaks *both* kinds of link at once: adjacency by definition, and the line by
+standing in it. So one piece dropped into a gap can split a complex in two, which is the
+counter-play, given that stations cannot be destroyed. A planet breaks a line too, since it
+cannot be seen past.
+
+Because it pays on every placement, a complex built up one station at a time pays 1, 2, 3, …
 — the same triangular total a chain pays, but earned incrementally and with no need for
 planets to line up. Placing stations apart and joining them later pays *less* than building
 compactly from the start (1+1+3 = 5 against 1+2+3 = 6), which is the decision the rule
-creates. All six stations in one cluster is 21 points, the practical ceiling.
+creates. All six stations in one complex is 21 points, the practical ceiling — and sight lines
+make reaching that far easier than adjacency alone would.
 
 This gives each piece type a job: probes explore, fighters destroy, stations score.
 
@@ -326,6 +337,10 @@ may place a station or a fighter in the corridor, and doing so is exactly what b
 So a station pair is a fence that costs nothing to maintain and can only be broken by
 committing a real piece to the gap. Since probes are the only way to explore, a well-placed
 pair can shut opponents out of the planets beyond it.
+
+The same line also joins the two stations into one **complex** for scoring — see *Station
+groups* above. A wavy line therefore does two jobs at once, which is why breaking one is worth
+a piece to an opponent.
 
 **OPEN:** which other acts score during play, and how much. Taking control of a planet from
 another player is a candidate.

@@ -93,6 +93,62 @@ describe('stationGroupPoints', () => {
         expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(1)
     })
 
+    it('counts a station linked only by a wavy line', () => {
+        // Three touching, and a fourth across a clear gap with a line to the end of the run.
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), { ship: station('p1') }],
+            [at(3, 0), {}],
+            [at(4, 0), {}],
+            [at(5, 0), { ship: station('p1') }]
+        ])
+
+        // Four in the complex, however it is entered.
+        expect(stationGroupPoints(board, 'p1', at(5, 0))).toBe(4)
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(4)
+    })
+
+    it('links transitively, through adjacency and lines together', () => {
+        // A touches B, B has a line to C, C touches D: one complex of four.
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), {}],
+            [at(3, 0), { ship: station('p1') }],
+            [at(4, 0), { ship: station('p1') }]
+        ])
+
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(4)
+    })
+
+    it('is cut by anything standing in the line', () => {
+        // The same layout with one enemy fighter parked in the gap: adjacency was already
+        // broken, and now the line is too, so the far station stands alone.
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), { ship: station('p1') }],
+            [at(3, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }],
+            [at(4, 0), {}],
+            [at(5, 0), { ship: station('p1') }]
+        ])
+
+        expect(stationGroupPoints(board, 'p1', at(5, 0))).toBe(1)
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(3)
+    })
+
+    it('does not link along a line to another player’s station', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), {}],
+            [at(2, 0), { ship: station('p2') }]
+        ])
+
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(1)
+        expect(stationGroupPoints(board, 'p2', at(2, 0))).toBe(1)
+    })
+
     it('joins two separate clusters into one when the gap is filled', () => {
         const board = boardOf([
             [at(0, 0), { ship: station('p1') }],
