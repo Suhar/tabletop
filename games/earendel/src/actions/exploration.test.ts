@@ -87,6 +87,7 @@ function choosePlanet(playerId: string, coords: AxialCoordinates): HydratedChoos
         source: ActionSource.User,
         type: ActionType.ChoosePlanet,
         playerId,
+        revealsInfo: true,
         coords
     })
 }

@@ -1,5 +1,11 @@
 <script lang="ts">
-    import { isElevated, matchesColor, PieceType } from '@tabletop/earendel'
+    import {
+        isElevated,
+        matchesColor,
+        PieceType,
+        technologyAbility,
+        technologyName
+    } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { describePiece } from '$lib/model/session.svelte.js'
 
@@ -22,7 +28,19 @@
 </script>
 
 <div class="flex flex-col items-center gap-2 py-2 text-white">
-    <div class="text-center text-sm sm:text-base min-h-[1.5rem]">{gameSession.prompt}</div>
+    <div class="flex items-center gap-3">
+        <div class="text-center text-sm sm:text-base min-h-[1.5rem]">{gameSession.prompt}</div>
+        {#if gameSession.undoableAction}
+            <!-- Only shown when there is something to take back. The platform decides that:
+                 undo cannot reach past an action that revealed anything. -->
+            <button
+                class="rounded-md px-3 py-1 text-xs font-semibold uppercase bg-transparent border-2 border-white/70 hover:bg-white/15"
+                onclick={() => gameSession.undoLastAction()}
+            >
+                Undo
+            </button>
+        {/if}
+    </div>
 
     <div class="flex flex-wrap items-center justify-center gap-3">
         {#if drawn && gameSession.isMyTurn}
@@ -79,9 +97,12 @@
                     onclick={() => choosable && gameSession.chooseTechnology(card.id)}
                 >
                     <div class="font-semibold">
-                        {card.id.replace('tech-', 'Tech ')}{isElevated(card) ? ' ★' : ''}
+                        {technologyName(card)}{isElevated(card) ? ' ★' : ''}
                     </div>
-                    <div class="text-xs opacity-80">{card.colors.join(' · ')}</div>
+                    <div class="text-[11px] opacity-80 max-w-[16rem]">
+                        {technologyAbility(card)}
+                    </div>
+                    <div class="text-[11px] opacity-60">{card.colors.join(' · ')}</div>
                     {#if outranked}
                         <div class="text-[11px] opacity-70">outranked</div>
                     {/if}

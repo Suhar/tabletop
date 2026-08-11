@@ -26,6 +26,9 @@ export const ChoosePlanet = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.ChoosePlanet),
             playerId: Type.String(),
+            // Flips cards off the shared deck, so undo must not reach back past it: a player
+            // who could look and then choose differently would be reading the deck.
+            revealsInfo: Type.Literal(true),
             coords: AxialCoordinates,
             metadata: Type.Optional(ChoosePlanetMetadata)
         })
@@ -45,6 +48,7 @@ export function isChoosePlanet(action?: GameAction): action is ChoosePlanet {
 export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> implements ChoosePlanet {
     declare type: ActionType.ChoosePlanet
     declare playerId: string
+    declare revealsInfo: true
     declare coords: AxialCoordinates
     declare metadata?: ChoosePlanetMetadata
 

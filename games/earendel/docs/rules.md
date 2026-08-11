@@ -39,8 +39,9 @@ its own power.
 22 pieces. The probes are four of level 2 and four of level 3, and the fighters likewise. Bag contents are hidden from
 everyone, including the owner. Pieces are drawn blind.
 
-**Technology deck** — a shared deck. Each card is associated with **one, two, or three
-planet colors**, and can only be housed on a planet of a color it lists.
+**Technology deck** — a shared deck. Each card has a **name**, an **ability**, and is
+associated with **one, two, or three planet colors**; it can only be housed on a planet of a
+color it lists.
 
 Every technology is either **standard** or **elevated**. An elevated technology can't be
 passed over: see *Exploration* below.
@@ -142,7 +143,7 @@ A technology may be **immediate**: its effect happens the moment the player choo
 planet they have just explored, inside that same turn. The turn does not end until it is
 resolved.
 
-The first one is: **move any friendly piece into any adjacent empty space.**
+The first one is **Tactical Shift**: *move any friendly piece into any adjacent empty space.*
 
 - The piece must be the player's **own**, and the destination adjacent, open space, and empty.
 - **A step is not a placement.** Nothing that a placement triggers happens: no chain scores,
@@ -154,8 +155,8 @@ The first one is: **move any friendly piece into any adjacent empty space.**
 - The move is **not optional** — it is the technology's whole effect, not a bonus alongside
   it. If no friendly piece can step anywhere, it simply fizzles.
 
-The second is: **draw a tile from the supply and lay it, then draw a ship and place it on
-that tile.**
+The second is **Beyond the Frontier**: *draw a tile from the supply and lay it, then draw a
+ship and place it on that tile.*
 
 - The tile must be laid so that **at least two of its own hexes border hexes already on the
   board**. Two of them may border the *same* hex — the rule is about the tile's contact, not
@@ -412,3 +413,19 @@ one card in every planet colour, so a newly added effect comes up on every explo
 instead of waiting on the shuffle. Every planet then houses the same technology, which is no
 kind of game — it is just the fastest way to see a new effect from every angle. Use the full
 deck for anything resembling a real playtest.
+
+---
+
+## Undo
+
+A player may take back their own last action, up to the point where something was **revealed**.
+Two actions reveal, and undo cannot reach back past either:
+
+- **Choosing which planet to explore**, which turns cards off the shared technology deck. A
+  player who could look and then place elsewhere would be reading the deck.
+- **Laying a tile**, which draws from the shared tile supply.
+
+Everything else is undoable: a placement that revealed nothing, a shot, a technology's move.
+Note that undo restores the bag order and the random seed exactly, so taking back a turn and
+replaying it identically produces the same draw — the point of the restriction is the
+*knowledge* gained, not a chance to re-roll.

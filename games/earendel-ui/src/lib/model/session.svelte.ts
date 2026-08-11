@@ -37,6 +37,10 @@ export class EarendelGameSession extends GameSession<
     EarendelGameState,
     HydratedEarendelGameState
 > {
+    // A planet whose technology the player has clicked to keep open. Hovering shows one
+    // too; pinning is for reading it without holding the mouse still.
+    pinnedPlanet: AxialCoordinates | undefined = $state(undefined)
+
     // The piece the player has picked up to move, while resolving a technology. Two clicks:
     // choose the piece, then where it steps.
     movingFrom: AxialCoordinates | undefined = $state(undefined)
@@ -376,11 +380,33 @@ export class EarendelGameSession extends GameSession<
             await this.destroy(coords)
             return
         }
+
+        // A planet is never somewhere a ship can go, so a click on one that holds a technology
+        // is only ever a request to read it.
+        if (getHex(this.gameState.board, coords)?.technology) {
+            this.togglePinnedPlanet(coords)
+            return
+        }
         // isHighlighted rather than isOpenHex, so the restriction to a newly laid tile is
         // honoured by the same list the board drew from.
         if (this.isPlacing && isOpenHex(this.gameState.board, coords) && this.isHighlighted(coords)) {
             await this.place(coords)
         }
+    }
+
+    togglePinnedPlanet(coords: AxialCoordinates) {
+        this.pinnedPlanet =
+            this.pinnedPlanet && sameHex(this.pinnedPlanet, coords) ? undefined : coords
+    }
+
+    // Undo the last action of the player's own that nothing has been revealed since. The
+    // platform works out which action that is; a game only has to say which of its actions
+    // reveal something (see revealsInfo on ChoosePlanet and PlaceTile).
+    async undoLastAction() {
+        this.movingFrom = undefined
+        this.chosenSpecialId = undefined
+        this.tilePreviewOrigin = undefined
+        await this.undo()
     }
 
     toggleSpecial(pieceId: string) {

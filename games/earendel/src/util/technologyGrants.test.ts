@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
+import { TechnologyTier } from '../model/technology.js'
 import { technologiesGainedBy } from './technologyGrants.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
@@ -21,7 +22,16 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
                 ? {
                       kind: HexKind.Planet,
                       color: planet,
-                      ...(technologyId ? { technologyId, explored: true } : {})
+                      ...(technologyId
+                          ? {
+                                technology: {
+                                    id: technologyId,
+                                    colors: [planet],
+                                    tier: TechnologyTier.Standard
+                                },
+                                explored: true
+                            }
+                          : {})
                   }
                 : {
                       kind: HexKind.Open,

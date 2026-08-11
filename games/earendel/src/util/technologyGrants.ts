@@ -24,14 +24,14 @@ export function technologiesGainedAround(
 
     for (const neighbor of neighborsOf(coords)) {
         const hex = getHex(board, neighbor)
-        if (hex?.kind !== HexKind.Planet || !hex.technologyId) continue
+        if (hex?.kind !== HexKind.Planet || !hex.technology) continue
 
         const playerId = dominantPlayerId(board, neighbor)
         if (!playerId) continue
-        if ((held[playerId] ?? []).includes(hex.technologyId)) continue
-        if ((gained[playerId] ?? []).includes(hex.technologyId)) continue
+        if ((held[playerId] ?? []).includes(hex.technology.id)) continue
+        if ((gained[playerId] ?? []).includes(hex.technology.id)) continue
 
-        gained[playerId] = [...(gained[playerId] ?? []), hex.technologyId]
+        gained[playerId] = [...(gained[playerId] ?? []), hex.technology.id]
     }
 
     return gained

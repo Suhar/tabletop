@@ -37,38 +37,52 @@ export type BoardSetupOptions = {
     planetsPerTile?: number
 }
 
-// Where the starting tiles go. Tiles are 2 wide and 2 tall in axial terms, so stepping the
-// origin by 2 lays them edge to edge with no gaps and no overlap. They spiral outward from
-// the centre so that 4 tiles (2 players) and 10 tiles (5 players) both make a compact board
-// rather than a long strip.
+// Where the starting tiles go.
 //
-// This is a placeholder arrangement, not a rule: the shape of the starting map is exactly the
-// sort of thing to tune once the game is played, and only this function has to change.
-export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
-    const origins: AxialCoordinates[] = [{ q: 0, r: 0 }]
-    // Tile-space directions, scaled to the 2x2 footprint of a tile.
-    const steps: AxialCoordinates[] = [
-        { q: 2, r: 0 },
-        { q: 0, r: 2 },
-        { q: -2, r: 2 },
-        { q: -2, r: 0 },
-        { q: 0, r: -2 },
-        { q: 2, r: -2 }
-    ]
+// Tiles are laid on a grid whose two steps are axis-aligned on screen: in axial terms (2,-1)
+// is exactly horizontal and (0,2) exactly vertical, so columns and rows line up rather than
+// shearing away as a naive (2,0) step would. Those two steps generate a lattice of index four,
+// which is exactly the size of a tile, so the rhombi tile the plane with no gaps or overlaps.
+const COLUMN_STEP: AxialCoordinates = { q: 2, r: -1 }
+const ROW_STEP: AxialCoordinates = { q: 0, r: 2 }
 
-    let ring = 1
-    while (origins.length < tileCount) {
-        let coords: AxialCoordinates = { q: steps[4].q * ring, r: steps[4].r * ring }
-        for (let side = 0; side < 6 && origins.length < tileCount; side++) {
-            for (let step = 0; step < ring && origins.length < tileCount; step++) {
-                origins.push(coords)
-                coords = { q: coords.q + steps[side].q, r: coords.r + steps[side].r }
-            }
+// How far a column and a row carry on screen, in the units the hexes are drawn in. A tile
+// cell is taller than it is wide, which is why a square grid of them would come out portrait.
+const COLUMN_WIDTH = 150
+const ROW_HEIGHT = 174
+
+// Wider than tall, to sit in an app window rather than fighting it.
+const TARGET_ASPECT = 1.6
+
+// The column count whose grid comes out closest to TARGET_ASPECT.
+function bestColumnCount(tileCount: number): number {
+    let best = 1
+    let bestError = Infinity
+
+    for (let columns = 1; columns <= tileCount; columns++) {
+        const rows = Math.ceil(tileCount / columns)
+        const aspect = (columns * COLUMN_WIDTH) / (rows * ROW_HEIGHT)
+        const error = Math.abs(aspect - TARGET_ASPECT)
+        if (error < bestError) {
+            bestError = error
+            best = columns
         }
-        ring++
     }
 
-    return origins.slice(0, tileCount)
+    return best
+}
+
+export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
+    const columns = bestColumnCount(tileCount)
+
+    return Array.from({ length: tileCount }, (_unused, index) => {
+        const column = index % columns
+        const row = Math.floor(index / columns)
+        return {
+            q: COLUMN_STEP.q * column + ROW_STEP.q * row,
+            r: COLUMN_STEP.r * column + ROW_STEP.r * row
+        }
+    })
 }
 
 // The board every game starts from: TILES_PER_PLAYER per player, each with its own layout.

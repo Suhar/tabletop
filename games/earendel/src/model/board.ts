@@ -7,6 +7,12 @@ import {
     HexOrientation
 } from '@tabletop/common'
 import { Piece, powerOf } from './pieces.js'
+import { PlanetColor } from './planetColor.js'
+import { TechnologyCard } from './technology.js'
+
+// Re-exported so the many modules that reach for a planet colour by way of the board keep
+// working; the enum itself lives in planetColor.ts to keep board and technology acyclic.
+export { PlanetColor, PLANET_COLORS } from './planetColor.js'
 
 // The board is hexes, laid down four at a time as diamond-shaped TILES. A hex is either a
 // planet or open space; a tile carries two of each. Pieces (ships) occupy a single hex.
@@ -21,24 +27,6 @@ export enum HexKind {
     Planet = 'planet',
     Open = 'open'
 }
-
-// Every planet has one of five colours. A technology card lists the colours of planet it can
-// be housed on, so colour is what decides which technologies a planet can ever hold.
-export enum PlanetColor {
-    Azure = 'azure',
-    Crimson = 'crimson',
-    Verdant = 'verdant',
-    Gold = 'gold',
-    Violet = 'violet'
-}
-
-export const PLANET_COLORS: PlanetColor[] = [
-    PlanetColor.Azure,
-    PlanetColor.Crimson,
-    PlanetColor.Verdant,
-    PlanetColor.Gold,
-    PlanetColor.Violet
-]
 
 export type Hex = Type.Static<typeof Hex>
 export const Hex = Type.Object({
@@ -56,7 +44,10 @@ export const Hex = Type.Object({
     // The technology housed here, chosen by whoever explored it. Set once and permanent.
     // The explorer gains it outright, and so does anyone who later holds the planet with
     // strictly more power than anyone else - and nobody ever loses it again.
-    technologyId: Type.Optional(Type.String()),
+    //
+    // The whole card rather than its id, so anything looking at the board can name the
+    // technology and say what it does without a lookup table to consult.
+    technology: Type.Optional(TechnologyCard),
     // The ship standing here, if any. A planet hex is never occupied: ships sit AROUND
     // planets and exert power on them (see planetControl).
     piece: Type.Optional(Piece),

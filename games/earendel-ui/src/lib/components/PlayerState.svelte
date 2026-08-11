@@ -1,6 +1,10 @@
 <script lang="ts">
     import { type Player } from '@tabletop/common'
-    import { EarendelPlayerState, planetPointsByPlayer } from '@tabletop/earendel'
+    import {
+        EarendelPlayerState,
+        planetPointsByPlayer,
+        technologyName
+    } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     let gameSession = getGameSession()
@@ -14,6 +18,21 @@
     let planetPoints = $derived(
         planetPointsByPlayer(gameSession.gameState.board)[playerState.playerId] ?? 0
     )
+
+    // Every technology a player holds is housed on some planet, so the board can name what the
+    // player's own ledger only records by id. Counted, since two planets can hold the same
+    // technology name.
+    let heldTechnologyNames = $derived.by(() => {
+        const held = new Set(playerState.technologies)
+        const names = Object.values(gameSession.gameState.board.hexes)
+            .filter((hex) => hex.technology && held.has(hex.technology.id))
+            .map((hex) => technologyName(hex.technology!))
+
+        const counts = new Map<string, number>()
+        for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1)
+
+        return [...counts].map(([name, count]) => (count > 1 ? `${name} ×${count}` : name))
+    })
 </script>
 
 <div class="relative">
@@ -32,9 +51,9 @@
             <span title="Pieces left in the bag">{playerState.bag.length} in bag</span>
         </div>
 
-        {#if playerState.technologies.length > 0}
+        {#if heldTechnologyNames.length > 0}
             <div class="mt-1 text-xs opacity-90" title="Technologies gained, kept for good">
-                tech: {playerState.technologies.map((id) => id.replace('tech-', 'T')).join(' ')}
+                {heldTechnologyNames.join(', ')}
             </div>
         {/if}
 

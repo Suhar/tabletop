@@ -65,7 +65,7 @@ export class HydratedChooseTechnology
         const chosen = revealed.find((card) => card.id === this.technologyId)
 
         if (chosen) {
-            state.board.hexes[hexKey(pending.exploringPlanet!)].technologyId = chosen.id
+            state.board.hexes[hexKey(pending.exploringPlanet!)].technology = chosen
             // The explorer gains it outright, without having to control the planet - being
             // first is the whole reward for exploring. Anyone who takes control later gains
             // it too, and nobody ever loses it.

@@ -1,5 +1,5 @@
 import * as Type from 'typebox'
-import { PlanetColor } from './board.js'
+import { PlanetColor } from './planetColor.js'
 
 // A technology card. Its colours are the planets it can be housed on - one, two or three of
 // the five - which is how a planet's colour decides what it can ever hold.
@@ -45,6 +45,32 @@ export const TechnologyCard = Type.Object({
 // Whether choosing this card owes its player an action before the turn can end.
 export function hasImmediateEffect(card: TechnologyCard): boolean {
     return card.effect !== undefined
+}
+
+// What each effect is called and what it does, for anything that has to show a technology to
+// a player. Kept beside the effects themselves so a new one cannot be added without a name.
+export const TECHNOLOGY_EFFECT_INFO: Record<
+    TechnologyEffectKind,
+    { name: string; ability: string }
+> = {
+    [TechnologyEffectKind.MoveFriendlyPiece]: {
+        name: 'Tactical Shift',
+        ability: 'Move any friendly piece into an adjacent empty space.'
+    },
+    [TechnologyEffectKind.GrowBoard]: {
+        name: 'Beyond the Frontier',
+        ability: 'Lay a new tile against the board, then place a drawn ship on it.'
+    }
+}
+
+export function technologyName(card: TechnologyCard): string {
+    return card.effect ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].name : 'Uncharted'
+}
+
+export function technologyAbility(card: TechnologyCard): string {
+    return card.effect
+        ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].ability
+        : 'Nothing yet - this technology has no effect.'
 }
 
 export function matchesColor(card: TechnologyCard, color: PlanetColor): boolean {

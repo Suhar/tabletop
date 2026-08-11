@@ -160,7 +160,7 @@ describe('the turn spine', () => {
             technologyId: 'azure-2'
         })
 
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('azure-2')
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('azure-2')
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
         // Everything else that was turned over goes to the discard, matches included.
         expect(game.state.technologyDiscard.map((c) => c.id)).toEqual(['azure-1', 'miss'])
@@ -194,7 +194,7 @@ describe('the turn spine', () => {
             ActionType.ChoosePlanet,
             ActionType.ChooseTechnology
         ])
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('azure-elevated')
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('azure-elevated')
         // The standard matches are discarded like any other card turned over.
         expect(game.state.technologyDiscard.map((c) => c.id).sort()).toEqual([
             'azure-other',
@@ -242,7 +242,7 @@ describe('the turn spine', () => {
             playerId: mover,
             technologyId: 'elevated-2'
         })
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('elevated-2')
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('elevated-2')
     })
 
     it('asks which planet only when the probe reached more than one', () => {
@@ -299,7 +299,7 @@ describe('the turn spine', () => {
             ActionType.ChoosePlanet,
             ActionType.ChooseTechnology
         ])
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('only-azure')
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('only-azure')
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.activePlayerId).not.toBe(mover)
     })
@@ -320,7 +320,7 @@ describe('the turn spine', () => {
 
         // The planet is explored - it can never be explored again - and simply holds nothing.
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBeUndefined()
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology).toBeUndefined()
         expect(game.state.technologyDiscard.map((c) => c.id)).toEqual(['gold'])
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
@@ -392,7 +392,7 @@ describe('the turn spine', () => {
             technologyId: 'b'
         })
 
-        expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe('b')
+        expect(game.state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('b')
         expect(game.state.machineState).toBe(MachineState.EndOfGame)
     })
 })

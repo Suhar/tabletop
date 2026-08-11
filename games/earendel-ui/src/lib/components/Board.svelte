@@ -6,6 +6,8 @@
         PieceType,
         PlanetColor,
         sameHex,
+        technologyAbility,
+        technologyName,
         tileFootprint
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -117,6 +119,39 @@
         return path.trim()
     }
 
+    // Which planet's technology to show: the pinned one, else whatever is under the cursor.
+    let shownTechnology = $derived.by(() => {
+        const coords = gameSession.pinnedPlanet ?? hovered
+        if (!coords) return undefined
+
+        const entry = placed.find((candidate) => sameHex(candidate.hex.coords, coords))
+        if (!entry?.hex.technology) return undefined
+
+        return {
+            key: `${coords.q},${coords.r}`,
+            card: entry.hex.technology,
+            center: entry.center
+        }
+    })
+
+    // SVG has no text wrapping, so the ability is broken into lines here.
+    function wrap(text: string, limit: number): string[] {
+        const lines: string[] = []
+        let line = ''
+
+        for (const word of text.split(' ')) {
+            if (line.length > 0 && (line + ' ' + word).length > limit) {
+                lines.push(line)
+                line = word
+            } else {
+                line = line.length > 0 ? `${line} ${word}` : word
+            }
+        }
+        if (line.length > 0) lines.push(line)
+
+        return lines
+    }
+
     function isExploringPlanet(coords: AxialCoordinates): boolean {
         const planet = gameSession.gameState.pendingExploration?.exploringPlanet
         return planet !== undefined && sameHex(planet, coords)
@@ -163,15 +198,25 @@
                     stroke-width="3"
                     stroke-dasharray={hex.explored ? '' : '5 4'}
                 />
-                {#if hex.technologyId}
-                    <text
-                        x={entry.center.x}
-                        y={entry.center.y + 5}
-                        text-anchor="middle"
-                        class="fill-white text-[15px] font-bold"
-                    >
-                        {hex.technologyId.replace('tech-', 'T')}
-                    </text>
+                {#if hex.technology}
+                    <!-- A mark, not a label: the name and what it does are too much text for a
+                         hex, so they go in a popup on hover or click instead. -->
+                    <circle
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        r="9"
+                        fill="#ffffff"
+                        fill-opacity="0.9"
+                    />
+                    <circle
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        r="15"
+                        fill="none"
+                        stroke="#ffffff"
+                        stroke-opacity="0.55"
+                        stroke-width="2"
+                    />
                 {:else if !hex.explored}
                     <text
                         x={entry.center.x}
@@ -309,6 +354,37 @@
                     stroke-width={previewing ? 4 : 2}
                     stroke-dasharray={previewing ? '' : '6 5'}
                 />
+            {/each}
+        </g>
+    {/each}
+
+    <!-- What a planet holds, on hover or once clicked. Drawn near the end so it sits above the
+         board; the blockades below are drawn after it only because they are part of the map. -->
+    {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
+        {@const width = 300}
+        {@const lines = wrap(technologyAbility(shown.card), 34)}
+        {@const height = 52 + lines.length * 20}
+        {@const x = shown.center.x + 40}
+        {@const y = shown.center.y - height / 2}
+        <g pointer-events="none">
+            <rect
+                {x}
+                {y}
+                {width}
+                {height}
+                rx="10"
+                fill="#0d1424"
+                fill-opacity="0.97"
+                stroke="#8fb6ff"
+                stroke-width="2"
+            />
+            <text x={x + 16} y={y + 30} class="fill-white text-[19px] font-bold">
+                {technologyName(shown.card)}
+            </text>
+            {#each lines as line, index (index)}
+                <text x={x + 16} y={y + 56 + index * 20} class="fill-white/80 text-[15px]">
+                    {line}
+                </text>
             {/each}
         </g>
     {/each}

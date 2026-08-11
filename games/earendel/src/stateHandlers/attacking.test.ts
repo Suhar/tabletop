@@ -4,6 +4,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
+import { TechnologyTier } from '../model/technology.js'
 import { destroyableTargets } from '../util/attack.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DestroyPiece } from '../actions/destroyPiece.js'
@@ -30,7 +31,16 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
                 ? {
                       kind: HexKind.Planet,
                       color: planet,
-                      ...(technologyId ? { technologyId, explored: true } : {})
+                      ...(technologyId
+                          ? {
+                                technology: {
+                                    id: technologyId,
+                                    colors: [planet],
+                                    tier: TechnologyTier.Standard
+                                },
+                                explored: true
+                            }
+                          : {})
                   }
                 : { kind: HexKind.Open, ...(piece ? { piece } : {}) })
         }
