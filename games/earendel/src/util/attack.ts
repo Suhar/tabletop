@@ -35,13 +35,13 @@ export function attackOutcome(attacker: Piece, target: Piece): AttackOutcome | u
         : AttackOutcome.Destroyed
 }
 
-export function canDestroy(attacker: Piece, target: Piece): boolean {
+export function canAttack(attacker: Piece, target: Piece): boolean {
     return attackOutcome(attacker, target) !== undefined
 }
 
 // What a fighter that just landed here could fire on: adjacent pieces belonging to someone
 // else that it can reach. Some it destroys, some it merely damages - see attackOutcome.
-export function destroyableTargets(
+export function attackableTargets(
     board: EarendelBoard,
     coords: AxialCoordinates,
     playerId: string
@@ -51,6 +51,6 @@ export function destroyableTargets(
 
     return neighborsOf(coords).filter((neighbor) => {
         const piece = getHex(board, neighbor)?.piece
-        return piece !== undefined && canDestroy(attacker, piece)
+        return piece !== undefined && canAttack(attacker, piece)
     })
 }

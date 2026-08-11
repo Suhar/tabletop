@@ -15,7 +15,7 @@ import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
 import { stationGroupPoints } from '../util/stations.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
-import { destroyableTargets } from '../util/attack.js'
+import { attackableTargets } from '../util/attack.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 
@@ -157,7 +157,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         // A fighter arrives shooting: it may destroy one adjacent piece weaker than itself.
         // Optional, and the target is the player's choice, so it parks a decision rather
         // than resolving here.
-        const targets = destroyableTargets(state.board, this.coords, this.playerId)
+        const targets = attackableTargets(state.board, this.coords, this.playerId)
         if (targets.length > 0) {
             state.pendingAttack = {
                 playerId: this.playerId,

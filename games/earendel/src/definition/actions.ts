@@ -6,7 +6,7 @@ export enum ActionType {
     DiscardPiece = 'discardPiece',
     PlaceTile = 'placeTile',
     MovePiece = 'movePiece',
-    DestroyPiece = 'destroyPiece',
+    AttackPiece = 'attackPiece',
     ChooseTechnology = 'chooseTechnology',
     ChoosePlanet = 'choosePlanet',
     PlacePiece = 'placePiece',

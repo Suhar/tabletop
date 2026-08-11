@@ -4,13 +4,13 @@ import {
     ActionType,
     ChoosePlanet,
     ChooseTechnology,
-    DestroyPiece,
+    AttackPiece,
     destinationsFrom,
     DiscardPiece,
     drawCountForPlayer,
     DrawPieces,
     TechnologyEffectKind,
-    destroyableTargets,
+    attackableTargets,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
@@ -279,7 +279,7 @@ export class EarendelGameSession extends GameSession<
         const hex = board.hexes[hexKey(coords)]
         if (!hex) return []
         hex.piece = piece
-        return destroyableTargets(board, coords, piece.playerId)
+        return attackableTargets(board, coords, piece.playerId)
     }
 
     isHighlighted(coords: AxialCoordinates): boolean {
@@ -411,13 +411,13 @@ export class EarendelGameSession extends GameSession<
 
     async destroy(coords: AxialCoordinates) {
         await this.applyAction(
-            this.createPlayerAction(DestroyPiece, { type: ActionType.DestroyPiece, coords })
+            this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece, coords })
         )
     }
 
     async holdFire() {
         await this.applyAction(
-            this.createPlayerAction(DestroyPiece, { type: ActionType.DestroyPiece })
+            this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece })
         )
     }
 

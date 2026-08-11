@@ -4,7 +4,7 @@ import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { HydratedChooseTechnology, isChooseTechnology } from '../actions/chooseTechnology.js'
 import { HydratedPass, isPass } from '../actions/pass.js'
-import { HydratedDestroyPiece, isDestroyPiece } from '../actions/destroyPiece.js'
+import { HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { HydratedMovePiece, isMovePiece } from '../actions/movePiece.js'
 import { HydratedPlaceTile, isPlaceTile } from '../actions/placeTile.js'
 import { HydratedDiscardPiece, isDiscardPiece } from '../actions/discardPiece.js'
@@ -45,8 +45,8 @@ export class EarendelHydrator
             case isMovePiece(data): {
                 return new HydratedMovePiece(data)
             }
-            case isDestroyPiece(data): {
-                return new HydratedDestroyPiece(data)
+            case isAttackPiece(data): {
+                return new HydratedAttackPiece(data)
             }
             case isPass(data): {
                 return new HydratedPass(data)

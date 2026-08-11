@@ -4,7 +4,7 @@ import { HexKind } from '../model/board.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
-import { DestroyPiece } from '../actions/destroyPiece.js'
+import { AttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
 import { Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
@@ -242,15 +242,15 @@ export function playRandomGame(
             const pending = game.state.pendingAttack!
             // Fires two times in three, so both branches get exercised.
             const fire = random() < 0.67
-            const [shot] = game.run(DestroyPiece, {
-                type: ActionType.DestroyPiece,
+            const [shot] = game.run(AttackPiece, {
+                type: ActionType.AttackPiece,
                 playerId,
                 ...(fire ? { coords: pick(pending.targets) } : {})
             })
             // Only an actual removal takes a piece off the count - a damaged fighter is still
             // standing, just weaker.
-            if (fire && !(shot as DestroyPiece).metadata?.damaged) piecesDestroyed++
-            if ((shot as DestroyPiece).metadata?.damaged) piecesDamaged++
+            if (fire && !(shot as AttackPiece).metadata?.damaged) piecesDestroyed++
+            if ((shot as AttackPiece).metadata?.damaged) piecesDamaged++
         } else {
             stoppedBecause = `stuck in ${game.state.machineState}`
             break

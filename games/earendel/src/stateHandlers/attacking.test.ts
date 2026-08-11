@@ -5,9 +5,9 @@ import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
 import { TechnologyTier } from '../model/technology.js'
-import { destroyableTargets } from '../util/attack.js'
+import { attackableTargets } from '../util/attack.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { DestroyPiece } from '../actions/destroyPiece.js'
+import { AttackPiece } from '../actions/attackPiece.js'
 import { TestGame } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
@@ -60,7 +60,7 @@ describe('powerOf', () => {
     })
 })
 
-describe('destroyableTargets', () => {
+describe('attackableTargets', () => {
     it('offers everything adjacent it can remove that belongs to someone else', () => {
         const board = boardOf([
             [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
@@ -68,7 +68,7 @@ describe('destroyableTargets', () => {
             [at(1, -1), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
         ])
 
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toHaveLength(2)
+        expect(attackableTargets(board, at(0, 0), 'p1')).toHaveLength(2)
     })
 
     it('never offers a station, whatever the fighter’s level', () => {
@@ -79,7 +79,7 @@ describe('destroyableTargets', () => {
             [at(1, 0), { ship: ship('p2', PieceType.Station) }]
         ])
 
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
     })
 
     it('spares an equal, a stronger, and the fighter’s own side', () => {
@@ -93,7 +93,7 @@ describe('destroyableTargets', () => {
             [at(1, -1), { ship: ship('p1', PieceType.Probe, PieceLevel.Two) }]
         ])
 
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
     })
 
     it('offers nothing to a piece that isn’t a fighter', () => {
@@ -102,7 +102,7 @@ describe('destroyableTargets', () => {
             [at(1, 0), { ship: ship('p2', PieceType.Station) }]
         ])
 
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
     })
 })
 
@@ -134,16 +134,16 @@ describe('a fighter arriving', () => {
         // it is never taken for them the way a lone exploration choice is.
         expect(game.state.machineState).toBe(MachineState.Attacking)
         expect(game.activePlayerId).toBe(mover)
-        expect(game.validActionsFor(mover)).toEqual([ActionType.DestroyPiece])
+        expect(game.validActionsFor(mover)).toEqual([ActionType.AttackPiece])
 
-        const [shot] = game.run(DestroyPiece, {
-            type: ActionType.DestroyPiece,
+        const [shot] = game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
             playerId: mover,
             coords: at(1, 0)
         })
 
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
-        expect((shot as DestroyPiece).metadata?.destroyed?.playerId).toBe(other)
+        expect((shot as AttackPiece).metadata?.target?.playerId).toBe(other)
         // Out of the game entirely, not back into its owner's bag - which still holds exactly
         // the two it started with, since that player has not opened their turn yet.
         expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(2)
@@ -174,8 +174,8 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        const [shot] = game.run(DestroyPiece, {
-            type: ActionType.DestroyPiece,
+        const [shot] = game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
             playerId: mover,
             coords: at(1, 0)
         })
@@ -185,8 +185,8 @@ describe('a fighter arriving', () => {
         const hit = game.state.board.hexes[hexKey(at(1, 0))].piece!
         expect(hit.level).toBe(PieceLevel.One)
         expect(powerOf(hit)).toBe(1)
-        expect((shot as DestroyPiece).metadata?.damaged).toBe(true)
-        expect((shot as DestroyPiece).metadata?.levelAfter).toBe(1)
+        expect((shot as AttackPiece).metadata?.damaged).toBe(true)
+        expect((shot as AttackPiece).metadata?.levelAfter).toBe(1)
     })
 
     it('destroys a fighter already worn down to level 1', () => {
@@ -212,14 +212,14 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        const [shot] = game.run(DestroyPiece, {
-            type: ActionType.DestroyPiece,
+        const [shot] = game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
             playerId: mover,
             coords: at(1, 0)
         })
 
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
-        expect((shot as DestroyPiece).metadata?.damaged).toBeUndefined()
+        expect((shot as AttackPiece).metadata?.damaged).toBeUndefined()
     })
 
     it('still needs a bigger fighter to touch one at all', () => {
@@ -232,8 +232,8 @@ describe('a fighter arriving', () => {
 
         // Equal levels: nothing happens either way. And a station out-powers it but is not a
         // fighter, so it never fires at all.
-        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
-        expect(destroyableTargets(board, at(1, 0), 'p2')).toEqual([])
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
+        expect(attackableTargets(board, at(1, 0), 'p2')).toEqual([])
     })
 
     it('may decline, and the turn ends just the same', () => {
@@ -259,12 +259,12 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        const [declined] = game.run(DestroyPiece, {
-            type: ActionType.DestroyPiece,
+        const [declined] = game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
             playerId: mover
         })
 
-        expect((declined as DestroyPiece).metadata?.declined).toBe(true)
+        expect((declined as AttackPiece).metadata?.declined).toBe(true)
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeDefined()
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
@@ -327,8 +327,8 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        const [shot] = game.run(DestroyPiece, {
-            type: ActionType.DestroyPiece,
+        const [shot] = game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
             playerId: mover,
             coords: at(1, 0)
         })
@@ -339,7 +339,7 @@ describe('a fighter arriving', () => {
             'tech-a'
         ])
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([])
-        expect((shot as DestroyPiece).metadata?.technologiesGained).toEqual({
+        expect((shot as AttackPiece).metadata?.technologiesGained).toEqual({
             [bystander]: ['tech-a']
         })
     })
@@ -369,15 +369,15 @@ describe('a fighter arriving', () => {
         })
 
         expect(() =>
-            game.run(DestroyPiece, {
-                type: ActionType.DestroyPiece,
+            game.run(AttackPiece, {
+                type: ActionType.AttackPiece,
                 playerId: mover,
                 coords: at(4, 4)
             })
         ).toThrow()
         expect(() =>
-            game.run(DestroyPiece, {
-                type: ActionType.DestroyPiece,
+            game.run(AttackPiece, {
+                type: ActionType.AttackPiece,
                 playerId: other,
                 coords: at(1, 0)
             })

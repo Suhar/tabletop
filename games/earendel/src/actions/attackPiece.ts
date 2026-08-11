@@ -13,11 +13,11 @@ import { Piece, PieceLevel } from '../model/pieces.js'
 import { AttackOutcome, attackOutcome } from '../util/attack.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
 
-export type DestroyPieceMetadata = Type.Static<typeof DestroyPieceMetadata>
-export const DestroyPieceMetadata = Type.Object({
-    // What was hit, so history can name it - after it has left the board for good, or been
-    // worn down a level.
-    destroyed: Type.Optional(Piece),
+export type AttackPieceMetadata = Type.Static<typeof AttackPieceMetadata>
+export const AttackPieceMetadata = Type.Object({
+    // The piece that was hit, so history can name it - whether it left the board for good or
+    // was only worn down a level.
+    target: Type.Optional(Piece),
     // True when the shot only cost the target a level rather than removing it.
     damaged: Type.Optional(Type.Boolean()),
     // The level it was left on, when damaged.
@@ -29,24 +29,24 @@ export const DestroyPieceMetadata = Type.Object({
     technologiesGained: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String())))
 })
 
-export type DestroyPiece = Type.Static<typeof DestroyPiece>
-export const DestroyPiece = Type.Evaluate(
+export type AttackPiece = Type.Static<typeof AttackPiece>
+export const AttackPiece = Type.Evaluate(
     Type.Intersect([
         Type.Omit(GameAction, ['playerId']),
         Type.Object({
-            type: Type.Literal(ActionType.DestroyPiece),
+            type: Type.Literal(ActionType.AttackPiece),
             playerId: Type.String(),
-            // Absent means declining - destroying is always optional.
+            // Absent means declining - firing is always optional.
             coords: Type.Optional(AxialCoordinates),
-            metadata: Type.Optional(DestroyPieceMetadata)
+            metadata: Type.Optional(AttackPieceMetadata)
         })
     ])
 )
 
-export const DestroyPieceValidator = Compile(DestroyPiece)
+export const AttackPieceValidator = Compile(AttackPiece)
 
-export function isDestroyPiece(action?: GameAction): action is DestroyPiece {
-    return action?.type === ActionType.DestroyPiece
+export function isAttackPiece(action?: GameAction): action is AttackPiece {
+    return action?.type === ActionType.AttackPiece
 }
 
 // Resolves the shot a newly placed fighter is entitled to.
@@ -54,26 +54,23 @@ export function isDestroyPiece(action?: GameAction): action is DestroyPiece {
 // An enemy fighter is worn down a level rather than removed; anything else in reach is
 // destroyed, and leaves the game entirely rather than going back to its owner's bag - which
 // makes this the only way a hex is ever freed once occupied.
-//
-// The action is still called DestroyPiece: renaming it would break games already in progress,
-// and it is the same decision either way - which of the pieces in reach to fire on.
-export class HydratedDestroyPiece
-    extends HydratableAction<typeof DestroyPiece>
-    implements DestroyPiece
+export class HydratedAttackPiece
+    extends HydratableAction<typeof AttackPiece>
+    implements AttackPiece
 {
-    declare type: ActionType.DestroyPiece
+    declare type: ActionType.AttackPiece
     declare playerId: string
     declare coords?: AxialCoordinates
-    declare metadata?: DestroyPieceMetadata
+    declare metadata?: AttackPieceMetadata
 
-    constructor(data: DestroyPiece) {
-        super(data, DestroyPieceValidator)
+    constructor(data: AttackPiece) {
+        super(data, AttackPieceValidator)
     }
 
     apply(state: HydratedEarendelGameState, _context?: MachineContext) {
-        const invalidReason = this.invalidDestroyPieceReason(state)
+        const invalidReason = this.invalidAttackPieceReason(state)
         if (invalidReason) {
-            throw Error(`Invalid DestroyPiece action: ${invalidReason}`)
+            throw Error(`Invalid AttackPiece action: ${invalidReason}`)
         }
 
         const pending = state.pendingAttack!
@@ -105,7 +102,7 @@ export class HydratedDestroyPiece
 
         state.pendingAttack = undefined
         this.metadata = {
-            destroyed: target,
+            target,
             ...(damaged
                 ? { damaged: true, levelAfter: (target.level ?? PieceLevel.Two) - 1 }
                 : {}),
@@ -113,11 +110,11 @@ export class HydratedDestroyPiece
         }
     }
 
-    isValidDestroyPiece(state: HydratedEarendelGameState): boolean {
-        return this.invalidDestroyPieceReason(state) === undefined
+    isValidAttackPiece(state: HydratedEarendelGameState): boolean {
+        return this.invalidAttackPieceReason(state) === undefined
     }
 
-    invalidDestroyPieceReason(state: HydratedEarendelGameState): string | undefined {
+    invalidAttackPieceReason(state: HydratedEarendelGameState): string | undefined {
         const pending = state.pendingAttack
         if (!pending) return 'No fighter of yours is waiting to fire.'
         if (pending.playerId !== this.playerId) return "That fighter isn't yours."

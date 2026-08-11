@@ -4,10 +4,10 @@
     import {
         type ChoosePlanet,
         type ChooseTechnology,
-        type DestroyPiece,
+        type AttackPiece,
         isChoosePlanet,
         isChooseTechnology,
-        isDestroyPiece,
+        isAttackPiece,
         isPass,
         isDiscardPiece,
         type DiscardPiece,
@@ -70,13 +70,13 @@
                 ? 'found nothing the planet could hold'
                 : `housed ${techName(chosen.metadata?.technologyId)} on the planet`
         }
-        if (isDestroyPiece(action)) {
-            const shot = action as DestroyPiece
+        if (isAttackPiece(action)) {
+            const shot = action as AttackPiece
             if (shot.metadata?.declined) return 'held fire'
             if (shot.metadata?.damaged) {
                 return `damaged a fighter down to level ${shot.metadata.levelAfter ?? 1}`
             }
-            return `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+            return `destroyed a ${shot.metadata?.target?.type ?? 'ship'}`
         }
         if (isDrawPieces(action)) {
             const drew = action as DrawPieces
