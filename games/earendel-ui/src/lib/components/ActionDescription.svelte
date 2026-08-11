@@ -101,9 +101,9 @@
         }
         if (isMovePiece(action)) {
             const moved = action as MovePiece
-            return moved.metadata?.noMoveAvailable
-                ? 'had nothing the technology could move'
-                : `moved a ${moved.metadata?.piece?.type ?? 'ship'} one space`
+            if (moved.metadata?.noMoveAvailable) return 'had nothing the technology could move'
+            if (moved.metadata?.declined) return 'held position rather than moving'
+            return `moved a ${moved.metadata?.piece?.type ?? 'ship'} one space`
         }
         if (isPass(action)) return 'could not place, ending the game'
         return action.type

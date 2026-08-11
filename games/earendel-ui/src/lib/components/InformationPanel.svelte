@@ -172,4 +172,13 @@
             Hold fire
         </button>
     {/if}
+
+    {#if gameSession.isMovingForTechnology}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+            onclick={() => gameSession.holdPosition()}
+        >
+            Hold position
+        </button>
+    {/if}
 </div>

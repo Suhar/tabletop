@@ -162,8 +162,9 @@ The first one is **Tactical Shift**: *move any friendly piece into any adjacent 
   which can hand a technology to a player who had nothing to do with it.
 - A probe still cannot step into a space closed by an enemy station blockade. That rule closes
   the space itself, not the act of placing.
-- The move is **not optional** — it is the technology's whole effect, not a bonus alongside
-  it. If no friendly piece can step anywhere, it simply fizzles.
+- The move is **optional**: the player may hold position. A forced step could only hurt —
+  breaking your own blockade, or stepping off a planet you hold — so compelling it would turn a
+  reward into a penalty. If no friendly piece can step anywhere, it simply fizzles.
 
 The second is **Beyond the Frontier**: *draw a tile from the supply and lay it, then draw a
 ship and place it on that tile.*

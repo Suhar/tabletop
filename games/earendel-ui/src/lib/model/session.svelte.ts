@@ -313,8 +313,8 @@ export class EarendelGameSession extends GameSession<
         }
         if (this.isMovingForTechnology) {
             return this.movingFrom
-                ? 'Now choose where it steps.'
-                : 'That technology moves one of your pieces — choose which.'
+                ? 'Now choose where it steps, or hold position.'
+                : 'That technology may move one of your pieces — choose which, or hold position.'
         }
         if (this.canDraw) {
             return `Your turn — draw ${this.drawCount} ${this.drawCount === 1 ? 'ship' : 'ships'} when you are ready.`
@@ -418,6 +418,14 @@ export class EarendelGameSession extends GameSession<
     async holdFire() {
         await this.applyAction(
             this.createPlayerAction(DestroyPiece, { type: ActionType.DestroyPiece })
+        )
+    }
+
+    // Holding position rather than stepping. Always allowed: a forced move could only hurt.
+    async holdPosition() {
+        this.movingFrom = undefined
+        await this.applyAction(
+            this.createPlayerAction(MovePiece, { type: ActionType.MovePiece })
         )
     }
 

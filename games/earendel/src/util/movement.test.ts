@@ -210,10 +210,27 @@ describe('an immediate technology', () => {
             })
         ).toThrow()
 
-        // And it cannot be skipped while a move exists.
-        expect(() =>
-            game.run(MovePiece, { type: ActionType.MovePiece, playerId: mover })
-        ).toThrow()
+    })
+
+    it('may be passed up, even with somewhere to step', () => {
+        const { game, mover } = scenario()
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+        expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
+
+        // A forced step could only hurt - breaking your own blockade, or stepping off a planet
+        // you hold - so holding position is always allowed.
+        const [held] = game.run(MovePiece, { type: ActionType.MovePiece, playerId: mover })
+
+        expect((held as MovePiece).metadata?.declined).toBe(true)
+        expect(game.state.board.hexes[hexKey(at(5, 5))].piece?.playerId).toBe(mover)
+        expect(game.state.pendingTechnology).toBeUndefined()
+        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
 
     it('fizzles by itself when no friendly piece can step anywhere', () => {
