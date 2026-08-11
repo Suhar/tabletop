@@ -1,0 +1,202 @@
+import { describe, expect, it } from 'vitest'
+import type { AxialCoordinates } from '@tabletop/common'
+import { ActionType } from '../definition/actions.js'
+import { MachineState } from '../definition/states.js'
+import { TurnStyle } from '../definition/config.js'
+import { type EarendelBoard, HexKind, hexKey } from '../model/board.js'
+import { type Piece, PieceType } from '../model/pieces.js'
+import { PieceSource, PlacePiece } from '../actions/placePiece.js'
+import { DiscardPiece } from '../actions/discardPiece.js'
+import { TestGame } from '../util/testHarness.js'
+
+const at = (q: number, r: number): AxialCoordinates => ({ q, r })
+
+let ids = 0
+const station = (playerId: string): Piece => ({
+    id: `${playerId}-station-${ids++}`,
+    playerId,
+    type: PieceType.Station
+})
+
+// Plenty of open space and no planets, so nothing but the draft is under test.
+function emptyBoard(hexes = 30): EarendelBoard {
+    const board: EarendelBoard = { hexes: {} }
+    for (let q = 0; q < hexes; q++) {
+        board.hexes[hexKey(at(q, 0))] = { coords: at(q, 0), tileId: 't1', kind: HexKind.Open }
+        board.hexes[hexKey(at(q, 3))] = { coords: at(q, 3), tileId: 't1', kind: HexKind.Open }
+    }
+    return board
+}
+
+function draftGame(bagSize = 9) {
+    const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
+    game.state.board = emptyBoard()
+    game.state.technologyDeck = []
+    game.state.tileSupply = []
+    game.stackBags((playerId) => Array.from({ length: bagSize }, () => station(playerId)))
+    return game
+}
+
+describe('a drafted turn', () => {
+    it('opens by drawing three and asking for one to be thrown away', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        expect(game.state.heldPieces).toHaveLength(3)
+        expect(game.validActionsFor(mover)).toEqual([ActionType.DiscardPiece])
+
+        const discarded = game.state.heldPieces[1]
+        const bagBefore = game.state.players.find((p) => p.playerId === mover)!.bag.length
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: discarded.id
+        })
+
+        // Out of the game, not back to the bag: that is what makes a draft cost something.
+        expect(game.state.heldPieces).toHaveLength(2)
+        expect(game.state.heldPieces.map((piece) => piece.id)).not.toContain(discarded.id)
+        expect(game.state.players.find((p) => p.playerId === mover)!.bag).toHaveLength(bagBefore)
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+    })
+
+    it('keeps the turn for a second placement, then hands it on', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(0, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        // Still their turn: one ship left in hand.
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.activePlayerId).toBe(mover)
+        expect(game.state.heldPieces).toHaveLength(1)
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(5, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        // Hand empty, so the turn passes - and the next one opens with its own draft.
+        expect(game.state.heldPieces).toHaveLength(3)
+        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        expect(game.activePlayerId).not.toBe(mover)
+    })
+
+    it('scores each placement in its own right', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        const scoreOf = () => game.state.players.find((p) => p.playerId === mover)!.score
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(0, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.heldPieces[0].id
+        })
+        expect(scoreOf()).toBe(1)
+
+        // The second station joins the first, so the two placements build on each other inside
+        // one turn - which is the point of the style.
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.heldPieces[0].id
+        })
+        expect(scoreOf()).toBe(3)
+    })
+
+    it('insists on being told which ship, while more than one is held', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        expect(() =>
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId: mover,
+                coords: at(0, 0),
+                pieceSource: PieceSource.Bag
+            })
+        ).toThrow()
+    })
+
+    it('refuses to discard a ship that isn’t in hand, or none at all', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+
+        expect(() =>
+            game.run(DiscardPiece, {
+                type: ActionType.DiscardPiece,
+                playerId: mover,
+                pieceId: 'not-mine'
+            })
+        ).toThrow()
+        expect(() =>
+            game.run(DiscardPiece, { type: ActionType.DiscardPiece, playerId: mover })
+        ).toThrow()
+    })
+
+    it('throws nothing away when the bag could not fill the draft', () => {
+        // A hand of one is what a nearly-empty bag leaves. There is nothing to choose between,
+        // so the discard takes no ship and the turn goes straight on to placing.
+        const game = draftGame()
+        const mover = game.activePlayerId
+        game.state.heldPieces = [game.state.heldPieces[0]]
+
+        const [discard] = game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover
+        })
+
+        expect((discard as DiscardPiece).metadata?.nothingToDiscard).toBe(true)
+        expect(game.state.heldPieces).toHaveLength(1)
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+    })
+
+    it('burns the bag half again as fast as the simple turn', () => {
+        const draft = draftGame(9)
+        const mover = draft.activePlayerId
+        const bagOf = (game: TestGame, playerId: string) =>
+            game.state.players.find((p) => p.playerId === playerId)!.bag.length
+
+        // Three gone from the bag for two placements.
+        expect(bagOf(draft, mover)).toBe(6)
+
+        const simple = new TestGame(2, 1, { turnStyle: TurnStyle.SinglePiece })
+        simple.state.board = emptyBoard()
+        simple.stackBags((playerId) => Array.from({ length: 9 }, () => station(playerId)))
+        expect(bagOf(simple, simple.activePlayerId)).toBe(8)
+    })
+})

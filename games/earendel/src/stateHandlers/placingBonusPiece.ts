@@ -45,9 +45,12 @@ export class PlacingBonusPieceStateHandler
         switch (true) {
             case isPlacePiece(action): {
                 gameState.bonusPlacementTileId = undefined
+                gameState.bonusPlacementPieceId = undefined
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
-                return endTurn(gameState)
+                // A drafted turn may still be holding a ship of its own.
+                if (gameState.heldPieces.length > 0) return MachineState.PlacingPiece
+                return endTurn(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')
@@ -63,6 +66,6 @@ export class PlacingBonusPieceStateHandler
         const gameState = context.gameState
         if (!gameState.bonusPlacementTileId) return false
         if (!gameState.activePlayerIds.includes(playerId)) return false
-        return actionType === ActionType.PlacePiece && gameState.drawnPiece !== undefined
+        return actionType === ActionType.PlacePiece && gameState.heldPieces.length > 0
     }
 }

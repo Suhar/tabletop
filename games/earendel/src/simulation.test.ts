@@ -52,15 +52,15 @@ describe('a whole game, played at random', () => {
             ).length
             expect(byEmptyBag / summaries.length).toBeGreaterThan(0.85)
 
-            // Measured on what is LEFT rather than on what the slowest player placed, because
-            // a player who leans on the board-growing technology gets a second placement each
-            // time and empties their bag while others still hold pieces. That asymmetry is the
-            // rule working; a board too small for the bags would show up as everyone stopping
-            // early.
+            // Measured on what is LEFT rather than on what the slowest player placed. A
+            // drafted turn takes three from the bag and plays two, and the board-growing
+            // technology adds a placement on top, so players finish at noticeably different
+            // depths. That asymmetry is the rules working; a board too small for the bags
+            // would instead show up as everyone stopping early at once.
             const mostLeftBehind = Math.max(
                 ...summaries.flatMap((summary) => summary.piecesLeftInBags)
             )
-            expect(mostLeftBehind).toBeLessThan(9)
+            expect(mostLeftBehind).toBeLessThan(14)
         }
     )
 

@@ -34,11 +34,15 @@ export const EarendelGameState = Type.Evaluate(
             // (when it reached more than one), and then which revealed technology to keep.
             // Cleared once the exploration resolves. Its presence is what holds the turn open.
             pendingExploration: Type.Optional(PendingExploration),
-            // The ship drawn at the start of the current turn, waiting to be placed. Drawn
-            // before the player chooses a hex, because knowing what you got is what makes
-            // the placement a decision. Public: the platform sends state to every client
-            // whole, so there is nowhere to hide it.
-            drawnPiece: Type.Optional(Piece),
+            // The ships drawn for the current turn and not yet placed. Drawn before any hex
+            // is chosen, because knowing what you have is what makes the placement a
+            // decision. Public: the platform sends state to every client whole, so there is
+            // nowhere to hide it.
+            //
+            // One piece in the simple turn style, two after a draft, and briefly three while
+            // the player decides which to throw away. The turn ends when it empties, which is
+            // what lets both styles share one path.
+            heldPieces: Type.Array(Piece),
             // Tiles held back from the starting map, drawn by the technology that grows the
             // board.
             tileSupply: Type.Array(Tile),
@@ -46,9 +50,11 @@ export const EarendelGameState = Type.Evaluate(
             pendingTile: Type.Optional(
                 Type.Object({ playerId: Type.String(), tile: Tile })
             ),
-            // Set between laying a tile and placing the ship that follows it: the ship must
-            // land on this tile, so the placement is restricted while it is set.
+            // Set between laying a tile and placing the ship that follows it: that ship, and
+            // only that ship, must land on this tile. The piece is named as well as the tile
+            // because a drafted turn may still be holding a piece of its own.
             bonusPlacementTileId: Type.Optional(Type.String()),
+            bonusPlacementPieceId: Type.Optional(Type.String()),
             // Set while an immediate technology effect is owed to the player who chose it.
             pendingTechnology: Type.Optional(PendingTechnology),
             // Set while a newly placed fighter's owner decides whether to fire. Like
@@ -82,12 +88,13 @@ export class HydratedEarendelGameState
     declare technologyDeck: TechnologyCard[]
     declare technologyDiscard: TechnologyCard[]
     declare pendingExploration?: PendingExploration
-    declare drawnPiece?: Piece
+    declare heldPieces: Piece[]
     declare pendingAttack?: PendingAttack
     declare pendingTechnology?: PendingTechnology
     declare tileSupply: Tile[]
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string
+    declare bonusPlacementPieceId?: string
     declare scoredPlanetPairs: string[]
     declare result?: GameResult
     declare winningPlayerIds: string[]

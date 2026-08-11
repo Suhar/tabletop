@@ -46,8 +46,10 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         scoredPlanetPairs: [],
         tileSupply: [],
         // The turn's draw happens when the turn opens, so a placement always arrives with
-        // something already face up.
-        drawnPiece: { id: 'p1-probe', playerId: 'p1', type: PieceType.Probe, level: PieceLevel.Two },
+        // something already in hand.
+        heldPieces: [
+            { id: 'p1-probe', playerId: 'p1', type: PieceType.Probe, level: PieceLevel.Two }
+        ],
         ...overrides
     } as EarendelGameState
 
@@ -83,13 +85,13 @@ describe('HydratedPlacePiece', () => {
 
         // The piece was already face up: the player chose this hex knowing what they had.
         expect(state.board.hexes[hexKey(target)].piece?.id).toBe('p1-probe')
-        expect(state.drawnPiece).toBeUndefined()
+        expect(state.heldPieces).toEqual([])
         expect(state.getPlayerState('p1').bag.map((p) => p.id)).toEqual(['p1-fighter'])
         expect(action.metadata?.pieceType).toBe(PieceType.Probe)
     })
 
     it('refuses a bag placement when nothing has been drawn', () => {
-        const state = buildState({ drawnPiece: undefined })
+        const state = buildState({ heldPieces: [] })
 
         expect(makePlacePiece('p1', neighborsOf(ORIGIN)[0]).invalidPlacePieceReason(state)).toBe(
             'Nothing has been drawn to place.'
@@ -123,7 +125,7 @@ describe('HydratedPlacePiece', () => {
 
     it('does not explore when the ship drawn is not a probe', () => {
         const state = buildState({
-            drawnPiece: { id: 'p1-fighter', playerId: 'p1', type: PieceType.Fighter }
+            heldPieces: [{ id: 'p1-fighter', playerId: 'p1', type: PieceType.Fighter }]
         })
         const target = neighborsOf(ORIGIN)[0]
 
@@ -190,7 +192,7 @@ describe('HydratedPlacePiece', () => {
             'p1-fighter',
             'p1-probe'
         ])
-        expect(state.drawnPiece).toBeUndefined()
+        expect(state.heldPieces).toEqual([])
         expect(action.metadata?.returnedToBag?.id).toBe('p1-probe')
     })
 

@@ -64,8 +64,9 @@ export const PlacePiece = Type.Evaluate(
             playerId: Type.String(),
             coords: AxialCoordinates,
             pieceSource: Type.Enum(PieceSource),
-            // Only meaningful when source is Special - which face-up piece is being spent.
-            // A bag draw has no choice to express.
+            // Which ship: one of the pieces in hand, or - when the source is Special - which
+            // face-up piece is being spent. Optional only because a hand of one has nothing
+            // to express.
             pieceId: Type.Optional(Type.String()),
             metadata: Type.Optional(PlacePieceMetadata)
         })
@@ -107,23 +108,24 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         let returnedToBag: Piece | undefined
 
         if (this.pieceSource === PieceSource.Bag) {
-            piece = state.drawnPiece!
+            const index = heldIndex(state, this.pieceId)
+            piece = state.heldPieces.splice(index, 1)[0]
         } else {
             piece = playerState.specialPieces.splice(
                 playerState.specialPieces.findIndex((candidate) => candidate.id === this.pieceId),
                 1
             )[0]
 
-            returnedToBag = state.drawnPiece
-            if (returnedToBag) {
-                // Back in and reshuffled, so putting one back tells the player nothing about
-                // what comes next.
-                playerState.bag.push(returnedToBag)
+            // The hand goes back in the bag, since a special piece is played instead of it.
+            returnedToBag = state.heldPieces[0]
+            if (state.heldPieces.length > 0) {
+                playerState.bag.push(...state.heldPieces)
+                state.heldPieces = []
+                // Reshuffled, so putting one back tells the player nothing about what is next.
                 shuffle(playerState.bag, state.getPrng().random)
             }
         }
 
-        state.drawnPiece = undefined
         state.board.hexes[hexKey(this.coords)].piece = piece
 
         // A station pays for the company it keeps: one for itself, one for each station
@@ -214,10 +216,16 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         let piece: Piece | undefined
 
         if (this.pieceSource === PieceSource.Bag) {
-            // The draw happens when the turn opens, so there is always something face up by
+            // The draw happens when the turn opens, so there is always something in hand by
             // the time a placement arrives - unless the turn has gone wrong elsewhere.
-            if (!state.drawnPiece) return 'Nothing has been drawn to place.'
-            piece = state.drawnPiece
+            if (state.heldPieces.length === 0) return 'Nothing has been drawn to place.'
+            if (!this.pieceId && state.heldPieces.length > 1) {
+                return 'Choose which of your ships to place.'
+            }
+            piece = this.pieceId
+                ? state.heldPieces.find((candidate) => candidate.id === this.pieceId)
+                : state.heldPieces[0]
+            if (!piece) return "That ship isn't one of the ones you are holding."
         } else {
             if (!this.pieceId) return 'No special piece was chosen.'
             piece = playerState.specialPieces.find((candidate) => candidate.id === this.pieceId)
@@ -234,6 +242,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             if (this.pieceSource === PieceSource.Special) {
                 return 'The ship that follows a tile is the one drawn with it.'
             }
+            if (state.bonusPlacementPieceId && piece.id !== state.bonusPlacementPieceId) {
+                return 'The ship drawn with the tile is the one that goes on it.'
+            }
         }
 
         // Two of a player's stations with clear space between them close that space to
@@ -246,4 +257,11 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         return undefined
     }
+}
+
+// Which held ship a placement refers to. A hand of one needs no id; a drafted hand does, and
+// validation has already insisted on it by the time this runs.
+function heldIndex(state: HydratedEarendelGameState, pieceId?: string): number {
+    if (!pieceId) return 0
+    return state.heldPieces.findIndex((piece) => piece.id === pieceId)
 }

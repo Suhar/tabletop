@@ -234,7 +234,7 @@ describe('growing the board in play', () => {
         // A ship is drawn and owed to the new tile, and nowhere else.
         expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
         expect(game.state.bonusPlacementTileId).toBe('spare-0')
-        expect(game.state.drawnPiece).toBeDefined()
+        expect(game.state.heldPieces.length).toBeGreaterThan(0)
 
         const onTile = openHexesOfTile(game.state.board, 'spare-0')
         game.run(PlacePiece, {

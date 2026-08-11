@@ -9,6 +9,8 @@
         isChooseTechnology,
         isDestroyPiece,
         isPass,
+        isDiscardPiece,
+        type DiscardPiece,
         isMovePiece,
         isPlacePiece,
         isPlaceTile,
@@ -69,6 +71,12 @@
             return shot.metadata?.declined
                 ? 'held fire'
                 : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+        }
+        if (isDiscardPiece(action)) {
+            const discard = action as DiscardPiece
+            return discard.metadata?.nothingToDiscard
+                ? 'drew the last of the bag, with nothing to discard'
+                : `drafted three and discarded a ${discard.metadata?.discarded?.type ?? 'ship'}`
         }
         if (isPlaceTile(action)) {
             const laid = action as PlaceTile

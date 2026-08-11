@@ -56,7 +56,7 @@ export class PlacingTileStateHandler
                 if (gameState.bonusPlacementTileId) {
                     return MachineState.PlacingBonusPiece
                 }
-                return endTurn(gameState)
+                return endTurn(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

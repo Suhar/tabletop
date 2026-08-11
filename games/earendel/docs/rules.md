@@ -87,22 +87,28 @@ sweep to find out how much smaller.
 
 ## A turn
 
-A turn is **exactly one placement**, plus resolving whatever that placement triggered. There
-is no action phase, no second placement, and nothing to do between turns.
+A turn is a **draft and two placements**, each placement resolving whatever it triggered
+before the next. There is no action phase and nothing to do between turns.
 
-A turn opens with a **draw**: the player takes a ship blind from their own bag and turns it
-face up. Knowing what they have is what makes the placement a decision, so the draw always
-comes first.
+A turn opens with a **draft**: the player takes **three** ships blind from their own bag,
+turns them face up, and **throws one out of the game**. They then place the remaining **two**,
+one at a time, each resolving everything it triggers before the next is placed.
 
-They then either:
+Knowing what you hold is what makes a placement a decision, so the draw always comes first.
+The hand is **public**: everyone sees what was drawn and what was thrown away.
 
-1. **Place the ship they drew**, or
-2. **Put it back in the bag** — which is reshuffled — and **place a special piece** from the
-   face-up pieces in front of them instead.
+The discarded ship is gone for good — not back to the bag. So a drafted turn spends three
+pieces to make two placements, and a player's own ending arrives half again as fast. That is
+the price of choosing.
 
-Putting a draw back costs nothing but the turn's placement, and leaves the bag one turn
-further from running out. Note the drawn ship is **public**: everyone sees what was drawn,
-including what was put back.
+If the bag cannot fill the draft, the player takes what is left and discards nothing.
+
+Instead of placing a drafted ship, a player may **put the whole hand back in the bag** — which
+is reshuffled — and **place a special piece** from the face-up pieces in front of them.
+
+> **The simpler turn — one draw, one placement — is available as a setup option.** It is the
+> style the engine's rule tests run on, so that a test about chains or blockades exercises one
+> mechanic rather than two.
 
 A ship may be placed on **any open hex** — never on a planet, never on an occupied hex.
 

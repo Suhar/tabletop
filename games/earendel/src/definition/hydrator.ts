@@ -7,6 +7,7 @@ import { HydratedPass, isPass } from '../actions/pass.js'
 import { HydratedDestroyPiece, isDestroyPiece } from '../actions/destroyPiece.js'
 import { HydratedMovePiece, isMovePiece } from '../actions/movePiece.js'
 import { HydratedPlaceTile, isPlaceTile } from '../actions/placeTile.js'
+import { HydratedDiscardPiece, isDiscardPiece } from '../actions/discardPiece.js'
 
 // This is essentially a factory that knows how to take raw action and state data
 // and return the correct hydrated class instances for Earendel. Used by the game engine
@@ -23,6 +24,9 @@ export class EarendelHydrator
             }
             case isChooseTechnology(data): {
                 return new HydratedChooseTechnology(data)
+            }
+            case isDiscardPiece(data): {
+                return new HydratedDiscardPiece(data)
             }
             case isPlaceTile(data): {
                 return new HydratedPlaceTile(data)

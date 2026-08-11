@@ -97,8 +97,8 @@ describe('the turn spine', () => {
 
         // Face up before any hex is chosen - knowing what you drew is what makes the
         // placement a decision.
-        expect(game.state.drawnPiece).toBeDefined()
-        const drawnId = game.state.drawnPiece!.id
+        expect(game.state.heldPieces.length).toBeGreaterThan(0)
+        const drawnId = game.state.heldPieces[0]!.id
 
         const special = { id: `${mover}-special`, playerId: mover, type: PieceType.Station }
         game.state.players.find((p) => p.playerId === mover)!.specialPieces = [special]
@@ -119,7 +119,7 @@ describe('the turn spine', () => {
         expect(moverState.bag).toHaveLength(2)
         expect(moverState.bag.map((piece) => piece.id)).toContain(drawnId)
         // The turn has passed, so what is face up now is the next player's own draw.
-        expect(game.state.drawnPiece?.playerId).toBe(game.activePlayerId)
+        expect(game.state.heldPieces[0]?.playerId).toBe(game.activePlayerId)
     })
 
     it('holds the turn open when a probe finds a planet, and hands it on when the choice is made', () => {

@@ -65,6 +65,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         technologyDiscard: [],
         scoredPlanetPairs: [],
         tileSupply: [],
+        heldPieces: [],
         ...(pending ? { pendingExploration: pending } : {})
     } as EarendelGameState
 

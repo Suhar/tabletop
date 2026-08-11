@@ -86,8 +86,11 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         const room = openHexesOfTile(state.board, pending.tile.id).length > 0
 
         if (drawn && room) {
-            state.drawnPiece = drawn
+            // Into the same hand as anything else the turn is still holding, but pinned: only
+            // this ship may go on the new tile, and it must.
+            state.heldPieces.push(drawn)
             state.bonusPlacementTileId = pending.tile.id
+            state.bonusPlacementPieceId = drawn.id
         } else if (drawn) {
             playerState.bag.push(drawn)
         }

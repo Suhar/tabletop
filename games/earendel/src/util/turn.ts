@@ -1,5 +1,13 @@
+import type { MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
+import { isDraftThree, type EarendelGameConfig } from '../definition/config.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+
+// Where a turn begins: the draft, or straight to a placement. Both then run through
+// PlacingPiece until the hand is empty, which is what lets the two styles share a path.
+export function turnStartState(config?: EarendelGameConfig): MachineState {
+    return isDraftThree(config) ? MachineState.DraftingPieces : MachineState.PlacingPiece
+}
 
 // Whether the game is over on the bag count: the moment ANY player has played the last piece
 // from theirs.
@@ -17,12 +25,15 @@ export function isEndOfGame(state: HydratedEarendelGameState): boolean {
 
 // Closes out a turn: hand the turn on, or end the game. Every path that finishes a placement
 // goes through here, so the end condition is checked in exactly one place.
-export function endTurn(state: HydratedEarendelGameState): MachineState {
+export function endTurn(
+    state: HydratedEarendelGameState,
+    context?: MachineContext<HydratedEarendelGameState>
+): MachineState {
     state.turnManager.endTurn(state.actionCount)
 
     if (isEndOfGame(state)) {
         return MachineState.EndOfGame
     }
 
-    return MachineState.PlacingPiece
+    return turnStartState(context?.gameConfig as EarendelGameConfig)
 }

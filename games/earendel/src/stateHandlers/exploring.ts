@@ -90,7 +90,7 @@ export class ExploringStateHandler
                 if (gameState.pendingTechnology) {
                     return MachineState.ResolvingTechnology
                 }
-                return endTurn(gameState)
+                return endTurn(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

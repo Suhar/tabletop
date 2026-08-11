@@ -45,7 +45,7 @@ export class AttackingStateHandler
     ): MachineState {
         switch (true) {
             case isDestroyPiece(action): {
-                return endTurn(context.gameState)
+                return endTurn(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

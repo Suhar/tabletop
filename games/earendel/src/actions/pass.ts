@@ -40,13 +40,14 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
             throw Error('Invalid Pass action')
         }
 
-        // A turn that places nothing must still put its draw back, or the piece simply
-        // vanishes - and the bag is the game's clock, so pieces quietly leaving it would
+        // A turn that places nothing must still put its hand back, or the pieces simply
+        // vanish - and the bag is the game's clock, so pieces quietly leaving it would
         // shorten the game for reasons no one could see.
-        if (state.drawnPiece) {
-            state.getPlayerState(this.playerId).bag.push(state.drawnPiece)
-            shuffle(state.getPlayerState(this.playerId).bag, state.getPrng().random)
-            state.drawnPiece = undefined
+        if (state.heldPieces.length > 0) {
+            const playerState = state.getPlayerState(this.playerId)
+            playerState.bag.push(...state.heldPieces)
+            state.heldPieces = []
+            shuffle(playerState.bag, state.getPrng().random)
         }
 
         this.metadata = {}

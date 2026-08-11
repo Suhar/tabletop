@@ -22,15 +22,16 @@ export function legalPlacementsFor(
     return open.filter((coords) => probeBlockedBy(board, coords, playerId) === undefined)
 }
 
-// Whether this player has any legal placement at all, counting the piece they drew and every
-// special piece in front of them. False is the one case where a turn has nothing to do -
-// holding a probe while every open hex is closed to it - and is what Pass exists for.
+// Whether this player has any legal placement at all, counting everything they are holding and
+// every special piece in front of them. False is the one case where a turn has nothing to do -
+// holding only probes while every open hex is closed to them - and it ends the game.
 export function hasAnyPlacement(
     board: EarendelBoard,
     playerId: string,
-    drawn: Piece | undefined,
+    held: Piece[],
     specials: Piece[]
 ): boolean {
-    const candidates = [...(drawn ? [drawn] : []), ...specials]
-    return candidates.some((piece) => legalPlacementsFor(board, playerId, piece).length > 0)
+    return [...held, ...specials].some(
+        (piece) => legalPlacementsFor(board, playerId, piece).length > 0
+    )
 }

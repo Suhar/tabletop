@@ -36,29 +36,52 @@ export class PlacingPieceStateHandler
 
     enter(context: MachineContext<HydratedEarendelGameState>) {
         const gameState = context.gameState
+
+        // A hand already in play means this is the same turn continuing - a drafted turn has
+        // two placements in it - so the turn is neither handed on nor drawn for again.
+        if (gameState.heldPieces.length > 0) {
+            const current = gameState.turnManager.currentTurn()
+            if (current) gameState.activePlayerIds = [current.playerId]
+            this.endGameIfStuck(context, gameState.activePlayerIds[0])
+            return
+        }
+
+        // Otherwise this is the start of a simple turn: hand it on and draw the one ship.
+        // Knowing what you drew before choosing a hex is what makes the placement a decision,
+        // and a player who doesn't like it may put it back for a special piece instead.
         const nextPlayerId = gameState.turnManager.startNextTurn(gameState.actionCount)
         gameState.activePlayerIds = [nextPlayerId]
 
-        // The draw opens the turn, before any hex is chosen. Knowing what you drew is what
-        // makes the placement a decision at all - and a player who doesn't like it may put
-        // it back and spend a special piece instead (see PlacePiece).
         const playerState = gameState.getPlayerState(nextPlayerId)
-        gameState.drawnPiece = playerState.drawFromBag()
+        const drawn = playerState.drawFromBag()
+        gameState.heldPieces = drawn ? [drawn] : []
 
-        // A player who cannot legally place what they drew, and has no special piece they
-        // could place instead, ends the game. This can only be judged here, after the draw:
-        // a hex closed to a probe is wide open to a fighter, so the answer depends on what
-        // came out of the bag. Passing is not an option and never was - the Pass is a system
-        // action so that the ending is recorded rather than silently arrived at.
-        if (
-            !hasAnyPlacement(
-                gameState.board,
-                nextPlayerId,
-                gameState.drawnPiece,
-                playerState.specialPieces
-            )
-        ) {
-            context.addSystemAction(Pass, { playerId: nextPlayerId })
+        this.endGameIfStuck(context, nextPlayerId)
+    }
+
+    // A player who cannot legally place anything they hold, and has no special piece they could
+    // place instead, ends the game. This can only be judged once there is a hand: a hex closed
+    // to a probe is wide open to a fighter, so the answer depends on what came out of the bag.
+    //
+    // Checked on a continuing turn too, not just at the start of one - a drafted turn can place
+    // its first ship into the last hex its second ship could have used. The Pass is a system
+    // action so the ending is recorded rather than silently arrived at.
+    private endGameIfStuck(
+        context: MachineContext<HydratedEarendelGameState>,
+        playerId: string | undefined
+    ) {
+        if (!playerId) return
+        const gameState = context.gameState
+
+        const stuck = !hasAnyPlacement(
+            gameState.board,
+            playerId,
+            gameState.heldPieces,
+            gameState.getPlayerState(playerId).specialPieces
+        )
+
+        if (stuck) {
+            context.addSystemAction(Pass, { playerId })
         }
     }
 
@@ -79,7 +102,11 @@ export class PlacingPieceStateHandler
                 if (gameState.pendingAttack) {
                     return MachineState.Attacking
                 }
-                return endTurn(gameState)
+                // A drafted turn has a second ship to place, and stays with the same player.
+                if (gameState.heldPieces.length > 0) {
+                    return MachineState.PlacingPiece
+                }
+                return endTurn(gameState, context)
             }
             case isPass(action): {
                 // Only ever reached when the player had nothing they could legally place,
@@ -106,7 +133,7 @@ export class PlacingPieceStateHandler
         const canPlace = hasAnyPlacement(
             gameState.board,
             playerId,
-            gameState.drawnPiece,
+            gameState.heldPieces,
             playerState.specialPieces
         )
 

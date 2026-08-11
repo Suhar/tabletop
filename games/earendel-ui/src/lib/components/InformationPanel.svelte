@@ -17,7 +17,6 @@
     let planetColor = $derived(gameSession.exploringPlanetColor)
     let anyElevated = $derived(gameSession.technologyChoices.some(isElevated))
 
-    let drawn = $derived(gameSession.drawnPiece)
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
 
     const SHAPE: Record<string, string> = {
@@ -43,19 +42,32 @@
     </div>
 
     <div class="flex flex-wrap items-center justify-center gap-3">
-        {#if drawn && gameSession.isMyTurn}
-            <!-- The draw sits face up before any hex is chosen, which is the whole point of
-                 drawing first: the placement is a decision made with knowledge. -->
-            <div
-                class="flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {gameSession.chosenSpecialId
-                    ? 'border-transparent opacity-50'
-                    : 'border-white'}"
-                style="background-color: {gameSession.colors.getPlayerUiColor(drawn.playerId)}"
+        {#each gameSession.isMyTurn ? gameSession.heldPieces : [] as piece (piece.id)}
+            <!-- The hand sits face up before any hex is chosen, which is the whole point of
+                 drawing first: the placement is a decision made with knowledge. While a discard
+                 is owed, clicking throws that ship out; otherwise clicking picks it up. -->
+            {@const chosen = gameSession.drawnPiece?.id === piece.id
+                && !gameSession.chosenSpecialId}
+            {@const stuck = !gameSession.isDiscarding && !gameSession.canPlaceHeld(piece)}
+            <button
+                disabled={stuck && !gameSession.isDiscarding}
+                title={stuck ? 'Nowhere legal for this ship to go' : ''}
+                class="flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {chosen
+                    ? 'border-white'
+                    : 'border-transparent opacity-60'} {stuck ? 'line-through opacity-40' : ''}"
+                style="background-color: {gameSession.colors.getPlayerUiColor(piece.playerId)}"
+                onclick={() =>
+                    gameSession.isDiscarding
+                        ? gameSession.discard(piece.id)
+                        : gameSession.chooseHeld(piece.id)}
             >
-                <span class="text-xl leading-none">{SHAPE[drawn.type]}</span>
-                <span class="text-sm font-semibold">You drew: {describePiece(drawn)}</span>
-            </div>
-        {/if}
+                <span class="text-xl leading-none">{SHAPE[piece.type]}</span>
+                <span class="text-sm font-semibold">
+                    {gameSession.isDiscarding ? 'Discard' : ''}
+                    {describePiece(piece)}
+                </span>
+            </button>
+        {/each}
 
         {#each gameSession.canPlaySpecial ? specials : [] as special (special.id)}
             <button

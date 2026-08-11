@@ -6,6 +6,7 @@ import {
     ChooseTechnology,
     DestroyPiece,
     destinationsFrom,
+    DiscardPiece,
     destroyableTargets,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -16,6 +17,7 @@ import {
     isElevated,
     isOpenHex,
     legalMovesFor,
+    legalPlacementsFor,
     legalTilePlacements,
     MovePiece,
     openHexesOfTile,
@@ -49,12 +51,35 @@ export class EarendelGameSession extends GameSession<
     // Held here rather than in game state because until it lands it is only an intention.
     chosenSpecialId: string | undefined = $state(undefined)
 
+    // Which of the ships in hand the player has picked up to place. Only a decision when the
+    // hand has more than one, which is what a drafted turn leaves.
+    chosenHeldId: string | undefined = $state(undefined)
+
     myPlayerState: HydratedEarendelPlayerState | undefined = $derived.by(() => {
         const playerId = this.myPlayer?.id
         return playerId ? this.gameState.findPlayerState(playerId) : undefined
     })
 
-    drawnPiece: Piece | undefined = $derived(this.gameState.drawnPiece)
+    heldPieces: Piece[] = $derived(this.gameState.heldPieces)
+
+    // The ship a click on the board would place: the one picked up, or the only one held.
+    drawnPiece: Piece | undefined = $derived.by(() => {
+        const held = this.gameState.heldPieces
+        if (held.length === 0) return undefined
+        if (held.length === 1) return held[0]
+        return held.find((piece) => piece.id === this.chosenHeldId)
+    })
+
+    // Set while this player owes a discard, at the opening of a drafted turn.
+    isDiscarding: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.DiscardPiece)
+    )
+
+    // While a laid tile owes a ship, only that ship may be placed - so the rest of the hand is
+    // not selectable.
+    private get pinnedHeldId(): string | undefined {
+        return this.gameState.bonusPlacementPieceId
+    }
 
     // The piece that would land if the player clicked a hex right now.
     // The ship owed after a tile is laid is the one drawn with it - a special piece is not an
@@ -265,9 +290,16 @@ export class EarendelGameSession extends GameSession<
                 ? 'Now choose where it steps.'
                 : 'That technology moves one of your pieces — choose which.'
         }
+        if (this.isDiscarding) {
+            return 'Three drawn — throw one out of the game, then place the other two.'
+        }
         if (this.isPlacing) {
             const piece = this.pieceToPlace
-            if (!piece) return 'Nothing to place.'
+            if (!piece) {
+                return this.heldPieces.length > 1
+                    ? 'Choose which ship to place.'
+                    : 'Nothing to place.'
+            }
             if (piece.type === PieceType.Probe && this.hexesClosedToMe.length > 0) {
                 return `You drew a ${describePiece(piece)}. The wavy lines are closed to it — anything else may pass.`
             }
@@ -282,15 +314,39 @@ export class EarendelGameSession extends GameSession<
         if (!this.isPlacing) return
 
         const specialId = this.chosenSpecialId
+        const pieceId = specialId ?? this.pinnedHeldId ?? this.drawnPiece?.id
         const action = this.createPlayerAction(PlacePiece, {
             type: ActionType.PlacePiece,
             coords,
             pieceSource: specialId ? PieceSource.Special : PieceSource.Bag,
-            ...(specialId ? { pieceId: specialId } : {})
+            ...(pieceId ? { pieceId } : {})
         })
 
         this.chosenSpecialId = undefined
+        this.chosenHeldId = undefined
         await this.applyAction(action)
+    }
+
+    async discard(pieceId: string) {
+        await this.applyAction(
+            this.createPlayerAction(DiscardPiece, { type: ActionType.DiscardPiece, pieceId })
+        )
+    }
+
+    // Picking up one of the ships in hand. The pinned ship after a laid tile cannot be swapped
+    // away from, so there is nothing to choose then.
+    chooseHeld(pieceId: string) {
+        if (this.pinnedHeldId) return
+        this.chosenSpecialId = undefined
+        this.chosenHeldId = this.chosenHeldId === pieceId ? undefined : pieceId
+    }
+
+    // Whether this held ship has anywhere legal to go, so the panel can grey out one that is
+    // stuck rather than letting the player wonder why the board stays dark.
+    canPlaceHeld(piece: Piece): boolean {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return false
+        return legalPlacementsFor(this.gameState.board, playerId, piece).length > 0
     }
 
     async choosePlanet(coords: AxialCoordinates) {
@@ -405,6 +461,7 @@ export class EarendelGameSession extends GameSession<
     async undoLastAction() {
         this.movingFrom = undefined
         this.chosenSpecialId = undefined
+        this.chosenHeldId = undefined
         this.tilePreviewOrigin = undefined
         await this.undo()
     }

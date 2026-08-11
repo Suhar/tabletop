@@ -10,16 +10,20 @@ import { Prng } from '@tabletop/common'
 import { PieceType } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
+import { TurnStyle } from '../definition/config.js'
 import { legalPlacementsFor } from './placement.js'
 import { legalMovesFor } from './movement.js'
 import { MovePiece } from '../actions/movePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
+import { DiscardPiece } from '../actions/discardPiece.js'
 import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
 export type SetupOverrides = BoardSetupOptions & {
     piecesPerType?: number
+    // Defaults to the game's own default turn style, so simulations measure what ships.
+    turnStyle?: TurnStyle
 }
 
 export type GameSummary = {
@@ -42,6 +46,8 @@ export type GameSummary = {
     technologiesResolved: number
     // Tiles laid during play by the board-growing technology.
     tilesPlaced: number
+    // Ships thrown out of the game by the draft.
+    discards: number
 }
 
 // A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
@@ -64,7 +70,9 @@ export function playRandomGame(
     overrides: SetupOverrides = {},
     maxTurns = 2000
 ): GameSummary {
-    const game = new TestGame(playerCount, seed)
+    const game = new TestGame(playerCount, seed, {
+        turnStyle: overrides.turnStyle ?? TurnStyle.DraftThree
+    })
 
     if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
         game.state.board = buildStartingBoard(playerCount, new Prng({ seed, invocations: 0 }), overrides)
@@ -91,6 +99,7 @@ export function playRandomGame(
     let piecesDestroyed = 0
     let technologiesResolved = 0
     let tilesPlaced = 0
+    let discards = 0
     let chainsScored = 0
     let stoppedBecause: string | undefined
 
@@ -103,22 +112,39 @@ export function playRandomGame(
 
         const playerId = game.activePlayerId
 
-        if (game.state.machineState === MachineState.PlacingPiece) {
-            const drawn = game.state.drawnPiece
-            const open = drawn ? legalPlacementsFor(game.state.board, playerId, drawn) : []
+        if (game.state.machineState === MachineState.DraftingPieces) {
+            // Throw away a random one of the three.
+            const held = game.state.heldPieces
+            game.run(DiscardPiece, {
+                type: ActionType.DiscardPiece,
+                playerId,
+                pieceId: pick(held).id
+            })
+            discards++
+        } else if (game.state.machineState === MachineState.PlacingPiece) {
+            // Any held ship with somewhere legal to go. A drafted hand may hold one that is
+            // stuck and one that isn't, so the choice of ship is part of the move.
+            const options = game.state.heldPieces.flatMap((piece) =>
+                legalPlacementsFor(game.state.board, playerId, piece).map((coords) => ({
+                    piece,
+                    coords
+                }))
+            )
 
-            if (open.length === 0) {
-                // Shouldn't happen: the engine ends the game in enter() when the player who
-                // has just drawn cannot place. Reaching here means that check has a hole.
+            if (options.length === 0) {
+                // Shouldn't happen: the engine ends the game in enter() when nothing in hand
+                // can be placed. Reaching here means that check has a hole.
                 stoppedBecause = 'no legal placement, but the game did not end'
                 break
             }
 
+            const choice = pick(options)
             const placed = game.run(PlacePiece, {
                 type: ActionType.PlacePiece,
                 playerId,
-                coords: pick(open),
-                pieceSource: PieceSource.Bag
+                coords: choice.coords,
+                pieceSource: PieceSource.Bag,
+                pieceId: choice.piece.id
             })
             chainsScored += placed.reduce(
                 (total, action) =>
@@ -166,7 +192,8 @@ export function playRandomGame(
                 type: ActionType.PlacePiece,
                 playerId,
                 coords: pick(open),
-                pieceSource: PieceSource.Bag
+                pieceSource: PieceSource.Bag,
+                pieceId: game.state.bonusPlacementPieceId
             })
         } else if (game.state.machineState === MachineState.ResolvingTechnology) {
             const moves = legalMovesFor(game.state.board, playerId)
@@ -226,7 +253,8 @@ export function playRandomGame(
         piecesDestroyed,
         chainsScored,
         technologiesResolved,
-        tilesPlaced
+        tilesPlaced,
+        discards
     }
 }
 

@@ -9,6 +9,7 @@ import {
 } from '@tabletop/common'
 import type * as Type from 'typebox'
 import { EarendelRuntime } from '../definition/runtime.js'
+import { type EarendelGameConfig, TurnStyle } from '../definition/config.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
 import type { Piece } from '../model/pieces.js'
 
@@ -21,7 +22,14 @@ export class TestGame {
     state: EarendelGameState
     readonly processed: GameAction[] = []
 
-    constructor(playerCount = 2, seed = 1) {
+    // Defaults to the simple one-draw turn, so a test about chains or blockades exercises one
+    // mechanic rather than two. Tests about the drafted turn ask for it explicitly, and the
+    // simulation runs the real default.
+    constructor(
+        playerCount = 2,
+        seed = 1,
+        config: EarendelGameConfig = { turnStyle: TurnStyle.SinglePiece }
+    ) {
         const players: Player[] = Array.from({ length: playerCount }, (_, index) => ({
             id: `p${index + 1}`,
             isHuman: true,
@@ -38,7 +46,7 @@ export class TestGame {
             ownerId: 'p1',
             name: 'Test',
             players,
-            config: {},
+            config,
             hotseat: true,
             createdAt: new Date(),
             winningPlayerIds: [],
@@ -58,10 +66,18 @@ export class TestGame {
         for (const player of this.state.players) {
             player.bag = bag(player.playerId)
         }
+        // Redraw whatever the opening of the turn had already taken, so the hand comes from
+        // the stack just set rather than from the generated bag.
         const active = this.state.players.find(
             (player) => player.playerId === this.activePlayerId
         )!
-        this.state.drawnPiece = active.bag.shift()
+        const wanted = Math.max(1, this.state.heldPieces.length)
+        this.state.heldPieces = []
+        for (let drawn = 0; drawn < wanted; drawn++) {
+            const piece = active.bag.shift()
+            if (!piece) break
+            this.state.heldPieces.push(piece)
+        }
     }
 
     get hydrated(): HydratedEarendelGameState {

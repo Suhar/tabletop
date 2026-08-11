@@ -52,7 +52,7 @@ export class ResolvingTechnologyStateHandler
     ): MachineState {
         switch (true) {
             case isMovePiece(action): {
-                return endTurn(context.gameState)
+                return endTurn(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

@@ -8,7 +8,7 @@ import { Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
 import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState.js'
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
-import { MachineState } from './states.js'
+import { turnStartState } from '../util/turn.js'
 import type { Piece } from '../model/pieces.js'
 import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
@@ -67,7 +67,8 @@ export class EarendelGameInitializer
 
         const earendelGameState: EarendelGameState = Object.assign(state, {
             players: orderedPlayers,
-            machineState: MachineState.PlacingPiece,
+            machineState: turnStartState(config),
+            heldPieces: [],
             turnManager: turnManager,
             // Two tiles per player, each with its own planet layout (see buildStartingBoard).
             board: buildStartingBoard(game.players.length, prng),
