@@ -72,9 +72,11 @@
         }
         if (isDestroyPiece(action)) {
             const shot = action as DestroyPiece
-            return shot.metadata?.declined
-                ? 'held fire'
-                : `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
+            if (shot.metadata?.declined) return 'held fire'
+            if (shot.metadata?.damaged) {
+                return `damaged a fighter down to level ${shot.metadata.levelAfter ?? 1}`
+            }
+            return `destroyed a ${shot.metadata?.destroyed?.type ?? 'ship'}`
         }
         if (isDrawPieces(action)) {
             const drew = action as DrawPieces

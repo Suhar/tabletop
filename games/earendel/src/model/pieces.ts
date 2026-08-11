@@ -14,6 +14,9 @@ export enum PieceType {
 // many technology cards it reveals, a fighter's level IS its power, and so also decides what
 // it can destroy on arrival.
 export enum PieceLevel {
+    // Only ever reached by damage: nothing is drawn at level 1. A fighter worn down this far is
+    // one more hit from destruction, and contributes only as much power as a station.
+    One = 1,
     Two = 2,
     Three = 3
 }

@@ -52,6 +52,8 @@ export type GameSummary = {
     discards: number
     // Logistics Upgrades actually spent.
     upgradesSpent: number
+    // Fighters worn down a level rather than removed.
+    piecesDamaged: number
     // Pieces that started in a bag and ended up nowhere. Always zero if the rules are honest:
     // a piece is on the board, in a bag, in a hand, discarded, or destroyed. This is the check
     // that catches a turn ending while its player still held a ship - the ship just disappears,
@@ -110,6 +112,7 @@ export function playRandomGame(
     let tilesPlaced = 0
     let discards = 0
     let upgradesSpent = 0
+    let piecesDamaged = 0
     let chainsScored = 0
     let stoppedBecause: string | undefined
 
@@ -239,12 +242,15 @@ export function playRandomGame(
             const pending = game.state.pendingAttack!
             // Fires two times in three, so both branches get exercised.
             const fire = random() < 0.67
-            game.run(DestroyPiece, {
+            const [shot] = game.run(DestroyPiece, {
                 type: ActionType.DestroyPiece,
                 playerId,
                 ...(fire ? { coords: pick(pending.targets) } : {})
             })
-            if (fire) piecesDestroyed++
+            // Only an actual removal takes a piece off the count - a damaged fighter is still
+            // standing, just weaker.
+            if (fire && !(shot as DestroyPiece).metadata?.damaged) piecesDestroyed++
+            if ((shot as DestroyPiece).metadata?.damaged) piecesDamaged++
         } else {
             stoppedBecause = `stuck in ${game.state.machineState}`
             break
@@ -298,6 +304,7 @@ export function playRandomGame(
         tilesPlaced,
         discards,
         upgradesSpent,
+        piecesDamaged,
         piecesUnaccounted: playerCount * bagSize - accountedFor
     }
 }

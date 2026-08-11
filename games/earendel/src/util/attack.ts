@@ -1,6 +1,6 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, neighborsOf } from '../model/board.js'
-import { type Piece, PieceType, powerOf } from '../model/pieces.js'
+import { type Piece, PIECE_POWER, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
 
 // Piece types that can remove a station. Empty on purpose: a station is a structure, not a
 // ship, and no fighter is going to shift one whatever its level. Station-killing is meant to
@@ -8,20 +8,39 @@ import { type Piece, PieceType, powerOf } from '../model/pieces.js'
 // piece type with its own entry, not a change to what fighters can do.
 const STATION_KILLERS: PieceType[] = []
 
-// The whole of who-can-destroy-what, in one place.
+// What a shot does, or nothing if it cannot be taken at all.
 //
-// Power decides the contest and nothing destroys its equal, so a fighter is safe from
-// anything but a bigger one. The station exception sits on top of that: stations are immune
-// regardless of power, which is why a level 2 fighter can only clear probes.
-export function canDestroy(attacker: Piece, target: Piece): boolean {
-    if (attacker.playerId === target.playerId) return false
-    if (powerOf(target) >= powerOf(attacker)) return false
-    if (target.type === PieceType.Station && !STATION_KILLERS.includes(attacker.type)) return false
-    return true
+// Power decides the contest and nothing touches its equal, so a fighter is safe from anything
+// but a bigger one. Stations are immune regardless of power, which is why a level 2 fighter
+// can only reach probes.
+//
+// A fighter that IS reachable is worn down rather than removed: one hit costs it a level, and
+// since a fighter's level is its power, a damaged fighter is a weaker claim on the planets
+// around it as well as easier to finish off. Anything else in reach is destroyed outright.
+export enum AttackOutcome {
+    Destroyed = 'destroyed',
+    Damaged = 'damaged'
 }
 
-// What a fighter that just landed here could destroy: adjacent pieces belonging to someone
-// else that it is able to remove.
+export function attackOutcome(attacker: Piece, target: Piece): AttackOutcome | undefined {
+    if (attacker.playerId === target.playerId) return undefined
+    if (powerOf(target) >= powerOf(attacker)) return undefined
+    if (target.type === PieceType.Station && !STATION_KILLERS.includes(attacker.type)) {
+        return undefined
+    }
+
+    const level = target.level ?? PIECE_POWER[PieceType.Fighter]
+    return target.type === PieceType.Fighter && level > PieceLevel.One
+        ? AttackOutcome.Damaged
+        : AttackOutcome.Destroyed
+}
+
+export function canDestroy(attacker: Piece, target: Piece): boolean {
+    return attackOutcome(attacker, target) !== undefined
+}
+
+// What a fighter that just landed here could fire on: adjacent pieces belonging to someone
+// else that it can reach. Some it destroys, some it merely damages - see attackOutcome.
 export function destroyableTargets(
     board: EarendelBoard,
     coords: AxialCoordinates,

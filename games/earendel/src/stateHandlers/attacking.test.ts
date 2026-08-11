@@ -151,6 +151,91 @@ describe('a fighter arriving', () => {
         expect(game.activePlayerId).not.toBe(mover)
     })
 
+    it('wears an enemy fighter down a level instead of removing it', () => {
+        const game = new TestGame()
+        const mover = game.activePlayerId
+        const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
+
+        game.state.board = boardOf([
+            [at(0, 0), {}],
+            [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
+            [at(5, 5), {}]
+        ])
+        game.state.technologyDeck = []
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Three),
+            ship(playerId, PieceType.Station)
+        ])
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(0, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        const [shot] = game.run(DestroyPiece, {
+            type: ActionType.DestroyPiece,
+            playerId: mover,
+            coords: at(1, 0)
+        })
+
+        // Still standing, but at level 1 - and since a fighter's level is its power, it now
+        // holds the planets around it no harder than a station would.
+        const hit = game.state.board.hexes[hexKey(at(1, 0))].piece!
+        expect(hit.level).toBe(PieceLevel.One)
+        expect(powerOf(hit)).toBe(1)
+        expect((shot as DestroyPiece).metadata?.damaged).toBe(true)
+        expect((shot as DestroyPiece).metadata?.levelAfter).toBe(1)
+    })
+
+    it('destroys a fighter already worn down to level 1', () => {
+        const game = new TestGame()
+        const mover = game.activePlayerId
+        const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
+
+        game.state.board = boardOf([
+            [at(0, 0), {}],
+            [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.One) }],
+            [at(5, 5), {}]
+        ])
+        game.state.technologyDeck = []
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
+            ship(playerId, PieceType.Station)
+        ])
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(0, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        const [shot] = game.run(DestroyPiece, {
+            type: ActionType.DestroyPiece,
+            playerId: mover,
+            coords: at(1, 0)
+        })
+
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
+        expect((shot as DestroyPiece).metadata?.damaged).toBeUndefined()
+    })
+
+    it('still needs a bigger fighter to touch one at all', () => {
+        // A level 1 fighter has power 1, so a level 2 can reach it but an equal cannot.
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.One) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.One) }],
+            [at(0, 1), { ship: ship('p2', PieceType.Station) }]
+        ])
+
+        // Equal levels: nothing happens either way. And a station out-powers it but is not a
+        // fighter, so it never fires at all.
+        expect(destroyableTargets(board, at(0, 0), 'p1')).toEqual([])
+        expect(destroyableTargets(board, at(1, 0), 'p2')).toEqual([])
+    })
+
     it('may decline, and the turn ends just the same', () => {
         const game = new TestGame()
         const mover = game.activePlayerId

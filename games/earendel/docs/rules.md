@@ -24,8 +24,9 @@ planets. Each contributes *power* toward controlling adjacent planets:
 | --- | --- | --- |
 | Probe | 0 | An explorer, not a claim. Its **level** (2 or 3) is how many technology cards it reveals. |
 | Station | 1 | |
-| Fighter (level 2) | 2 | Destroys an enemy probe on arrival. |
-| Fighter (level 3) | 3 | Destroys an enemy probe or level 2 fighter on arrival. |
+| Fighter (level 1) | 1 | Only reached by damage. Destroys an enemy probe on arrival. |
+| Fighter (level 2) | 2 | Destroys an enemy probe; damages a level 1 fighter to destruction. |
+| Fighter (level 3) | 3 | Destroys an enemy probe; damages a level 2 fighter, or finishes a level 1. |
 
 Probes and fighters come in two **levels**, 2 and 3, visually distinct and known to the
 player the moment the piece is drawn. The number means something different for each: a
@@ -259,9 +260,19 @@ Other piece types resolve their own effects on placement; only probes explore.
 
 ### Fighters destroy
 
-A fighter arrives shooting. On being placed, it **may destroy one adjacent piece with
-strictly less power than itself**. Nothing destroys its equal, which makes a level 3 fighter
-untouchable.
+A fighter arrives shooting. On being placed, it **may fire on one adjacent piece with strictly
+less power than itself**. Nothing touches its equal, which makes a level 3 fighter untouchable
+until something wears it down.
+
+What the shot does depends on the target:
+
+- An enemy **fighter** takes **1 damage**, losing a level. At **level 1** it is destroyed by the
+  next hit instead. Since a fighter's level *is* its power, a damaged fighter is a weaker claim
+  on the planets around it as well as being easier to finish — and a level 1 fighter holds a
+  planet no harder than a station.
+- Anything else in reach is **destroyed** outright.
+
+Fighters are drawn at level 2 or 3; level 1 is only ever reached by damage.
 
 **Stations are immune.** A station is a structure, not a ship, and no fighter shifts one
 whatever its level. So a level 2 fighter can only clear probes, and a level 3 fighter clears

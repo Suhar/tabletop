@@ -9,13 +9,19 @@ import {
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey, sameHex } from '../model/board.js'
-import { Piece } from '../model/pieces.js'
+import { Piece, PieceLevel } from '../model/pieces.js'
+import { AttackOutcome, attackOutcome } from '../util/attack.js'
 import { applyTechnologyGains } from '../util/technologyGrants.js'
 
 export type DestroyPieceMetadata = Type.Static<typeof DestroyPieceMetadata>
 export const DestroyPieceMetadata = Type.Object({
-    // What was destroyed, so history can name it after it has left the board for good.
+    // What was hit, so history can name it - after it has left the board for good, or been
+    // worn down a level.
     destroyed: Type.Optional(Piece),
+    // True when the shot only cost the target a level rather than removing it.
+    damaged: Type.Optional(Type.Boolean()),
+    // The level it was left on, when damaged.
+    levelAfter: Type.Optional(Type.Number()),
     // The fighter's owner passed up the shot.
     declined: Type.Optional(Type.Boolean()),
     // Removing a piece can change who holds a nearby planet outright - including handing it
@@ -43,9 +49,14 @@ export function isDestroyPiece(action?: GameAction): action is DestroyPiece {
     return action?.type === ActionType.DestroyPiece
 }
 
-// Resolves the shot a newly placed fighter is entitled to. The destroyed piece leaves the
-// game entirely - it does not go back to its owner's bag - which makes this the only way a
-// hex is ever freed once occupied.
+// Resolves the shot a newly placed fighter is entitled to.
+//
+// An enemy fighter is worn down a level rather than removed; anything else in reach is
+// destroyed, and leaves the game entirely rather than going back to its owner's bag - which
+// makes this the only way a hex is ever freed once occupied.
+//
+// The action is still called DestroyPiece: renaming it would break games already in progress,
+// and it is the same decision either way - which of the pieces in reach to fire on.
 export class HydratedDestroyPiece
     extends HydratableAction<typeof DestroyPiece>
     implements DestroyPiece
@@ -65,6 +76,8 @@ export class HydratedDestroyPiece
             throw Error(`Invalid DestroyPiece action: ${invalidReason}`)
         }
 
+        const pending = state.pendingAttack!
+
         if (!this.coords) {
             state.pendingAttack = undefined
             this.metadata = { declined: true }
@@ -72,17 +85,30 @@ export class HydratedDestroyPiece
         }
 
         const hex = state.board.hexes[hexKey(this.coords)]
-        const destroyed = hex.piece!
-        hex.piece = undefined
+        const target = hex.piece!
+        const attacker = state.board.hexes[hexKey(pending.fighterCoords)].piece!
+        const outcome = attackOutcome(attacker, target)
 
-        // The hex is empty now, so whoever is left may hold the neighbouring planets outright
-        // where they didn't before - and that need not be the attacker. Knocking out the
+        const damaged = outcome === AttackOutcome.Damaged
+        if (damaged) {
+            // A level is a fighter's power as well as its staying power, so this weakens its
+            // hold on the planets around it at the same time as it wears it down.
+            hex.piece = { ...target, level: (target.level ?? PieceLevel.Two) - 1 }
+        } else {
+            hex.piece = undefined
+        }
+
+        // The target is gone or weaker, so whoever is left may hold the neighbouring planets
+        // outright where they didn't before - and that need not be the attacker. Clearing the
         // player who was blocking a planet can hand its technology to a bystander.
         const technologiesGained = applyTechnologyGains(state, this.coords)
 
         state.pendingAttack = undefined
         this.metadata = {
-            destroyed,
+            destroyed: target,
+            ...(damaged
+                ? { damaged: true, levelAfter: (target.level ?? PieceLevel.Two) - 1 }
+                : {}),
             ...(Object.keys(technologiesGained).length > 0 ? { technologiesGained } : {})
         }
     }
@@ -100,7 +126,7 @@ export class HydratedDestroyPiece
         if (!this.coords) return undefined
 
         if (!pending.targets.some((target) => sameHex(target, this.coords!))) {
-            return "That piece is out of reach, or too strong for this fighter to destroy."
+            return "That piece is out of reach, or too strong for this fighter to touch."
         }
         return undefined
     }
