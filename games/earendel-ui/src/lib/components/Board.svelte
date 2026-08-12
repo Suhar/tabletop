@@ -265,11 +265,9 @@
             y: (start.y + end.y) / 2 + ny * ARC_BOW
         }
 
-        // Stop a little short so the head sits on the planet's edge rather than its middle.
-        const inset = 26
-        const tip = { x: end.x - (dx / length) * inset, y: end.y - (dy / length) * inset }
-
-        return `M${start.x},${start.y} Q${control.x},${control.y} ${tip.x},${tip.y}`
+        // Right to the middle of the target hex: the missile is aimed at the piece, not at the
+        // edge of the space it stands in.
+        return `M${start.x},${start.y} Q${control.x},${control.y} ${end.x},${end.y}`
     }
 
     // A triangle pointing from a probe at a planet it could explore, with the vector to nudge it
