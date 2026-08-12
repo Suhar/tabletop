@@ -22,7 +22,9 @@ export const DrawPieces = Type.Evaluate(
             // Turning ships face up is the moment hidden information becomes public, so undo
             // cannot reach back past it. That is what gives the previous player a window to
             // take their turn back: it closes when the next player draws, and not before.
-            revealsInfo: Type.Literal(true),
+            //
+            // Set from what was actually drawn - an empty bag reveals nothing.
+            revealsInfo: Type.Optional(Type.Boolean()),
             metadata: Type.Optional(DrawPiecesMetadata)
         })
     ])
@@ -40,7 +42,7 @@ export function isDrawPieces(action?: GameAction): action is DrawPieces {
 export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> implements DrawPieces {
     declare type: ActionType.DrawPieces
     declare playerId: string
-    declare revealsInfo: true
+    declare revealsInfo?: boolean
     declare metadata?: DrawPiecesMetadata
 
     constructor(data: DrawPieces) {
@@ -67,6 +69,7 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             state.heldPieces.push(piece)
         }
 
+        this.revealsInfo = state.heldPieces.length > 0
         this.metadata = { drawn: [...state.heldPieces] }
     }
 

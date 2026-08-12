@@ -29,9 +29,9 @@ export const PlaceTile = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.PlaceTile),
             playerId: Type.String(),
-            // Draws from the shared tile supply, so undo stops here for the same reason it
-            // stops at a technology reveal.
-            revealsInfo: Type.Literal(true),
+            // Set when a ship was drawn with the tile. The tile itself became public when the
+            // technology was chosen, so this action only reveals if the bag gave up a ship.
+            revealsInfo: Type.Optional(Type.Boolean()),
             // The tile's origin hex. Absent only when no tile could be laid at all.
             coords: Type.Optional(AxialCoordinates),
             // How far the tile is turned, 0-5. A sixth of a turn each.
@@ -53,7 +53,7 @@ export function isPlaceTile(action?: GameAction): action is PlaceTile {
 export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implements PlaceTile {
     declare type: ActionType.PlaceTile
     declare playerId: string
-    declare revealsInfo: true
+    declare revealsInfo?: boolean
     declare coords?: AxialCoordinates
     declare rotation?: number
     declare metadata?: PlaceTileMetadata
@@ -96,6 +96,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         }
 
         state.pendingTile = undefined
+        this.revealsInfo = drawn !== undefined
         this.metadata = {
             tile: pending.tile,
             rotation: this.rotation ?? 0,

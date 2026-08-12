@@ -309,6 +309,42 @@ describe('the turn spine', () => {
         expect(game.activePlayerId).not.toBe(mover)
     })
 
+    it('claims no reveal when both piles are spent, so the placement can still be undone', () => {
+        // Nothing to flip means nothing became public, so there is no knowledge to protect and
+        // the player is entitled to take the placement back.
+        const game = scenario({
+            bag: (playerId) => [probe(playerId), fighter(playerId)],
+            deck: []
+        })
+        const mover = game.activePlayerId
+
+        const processed = game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: APPROACH,
+            pieceSource: PieceSource.Bag
+        })
+
+        const choice = processed.find((action) => action.type === ActionType.ChoosePlanet)!
+        expect(choice.revealsInfo).toBeFalsy()
+
+        // Whereas a flip that did turn something over does claim one.
+        const seen = scenario({
+            bag: (playerId) => [probe(playerId), fighter(playerId)],
+            deck: [card('azure-1', PlanetColor.Azure), card('azure-2', PlanetColor.Azure)]
+        })
+        const seenMover = seen.activePlayerId
+        const seenProcessed = seen.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: seenMover,
+            coords: APPROACH,
+            pieceSource: PieceSource.Bag
+        })
+        expect(
+            seenProcessed.find((action) => action.type === ActionType.ChoosePlanet)!.revealsInfo
+        ).toBe(true)
+    })
+
     it('explores with nothing to house when the deck has no card of the planet’s colour', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],

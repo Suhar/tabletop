@@ -26,9 +26,11 @@ export const ChoosePlanet = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.ChoosePlanet),
             playerId: Type.String(),
-            // Flips cards off the shared deck, so undo must not reach back past it: a player
-            // who could look and then choose differently would be reading the deck.
-            revealsInfo: Type.Literal(true),
+            // Set when the flip actually turned something over, which is what undo must not
+            // reach back past: a player who could look and then choose differently would be
+            // reading the deck. When both piles are spent nothing becomes public, so there is
+            // nothing to protect and the placement stays takeable back.
+            revealsInfo: Type.Optional(Type.Boolean()),
             coords: AxialCoordinates,
             metadata: Type.Optional(ChoosePlanetMetadata)
         })
@@ -48,7 +50,7 @@ export function isChoosePlanet(action?: GameAction): action is ChoosePlanet {
 export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> implements ChoosePlanet {
     declare type: ActionType.ChoosePlanet
     declare playerId: string
-    declare revealsInfo: true
+    declare revealsInfo?: boolean
     declare coords: AxialCoordinates
     declare metadata?: ChoosePlanetMetadata
 
@@ -81,6 +83,7 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         pending.revealed = result.flipped
         pending.candidates = choosable
 
+        this.revealsInfo = result.flipped.length > 0
         this.metadata = { flipped: result.flipped, candidates: choosable }
     }
 

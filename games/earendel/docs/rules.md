@@ -474,7 +474,11 @@ Two actions reveal, and undo cannot reach back past either:
   next player draws, and not after.
 - **Choosing which planet to explore**, which turns cards off the shared technology deck. A
   player who could look and then place elsewhere would be reading the deck.
-- **Laying a tile**, which draws from the shared tile supply.
+- **Laying a tile**, which draws a ship from the bag to go on it.
+
+Each of those claims a reveal only when something *actually* became public. If the technology
+deck and its discard are both spent, an exploration turns nothing over — so there is no
+knowledge to protect, and the placement that triggered it can still be taken back.
 
 Everything else is undoable: a placement that revealed nothing, a shot, a technology's move.
 Note that undo restores the bag order and the random seed exactly, so taking back a turn and
