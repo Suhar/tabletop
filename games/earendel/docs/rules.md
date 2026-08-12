@@ -225,7 +225,9 @@ unavailable on the owner's next two turns and ready again on the third.
 - It changes what a hit **does**, not what can be **hit**. A fighter still needs strictly more
   power to touch anything, so an equal or bigger fighter remains out of reach.
 - It cannot be spent on a shot that would destroy the target anyway — that would start the timer
-  for nothing, so the game refuses rather than letting it be wasted.
+  for nothing, so the game refuses rather than letting it be wasted. Arming it therefore means
+  *use it if it helps*: fire on a probe with the Railgun armed and the probe simply dies to the
+  ordinary shot, timer untouched.
 
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
 far stronger effect; this is the conservative reading.

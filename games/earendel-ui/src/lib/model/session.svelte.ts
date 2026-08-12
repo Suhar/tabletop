@@ -6,6 +6,8 @@ import {
     ChooseTechnology,
     AttackPiece,
     destinationsFrom,
+    AttackOutcome,
+    attackOutcome,
     canUseCooldownEffect,
     DiscardPiece,
     drawCountForPlayer,
@@ -103,6 +105,26 @@ export class EarendelGameSession extends GameSession<
         if (!playerId || this.attackTargets.length === 0) return false
         return canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.Railgun)
     })
+
+    // The targets a Railgun would actually change: the ones a plain shot would only wear down.
+    // Anything else in reach dies to an ordinary shot, so spending a three-turn power on it buys
+    // nothing - and the engine refuses it rather than letting it be wasted.
+    railgunTargets: AxialCoordinates[] = $derived.by(() => {
+        const pending = this.gameState.pendingAttack
+        if (!pending || this.attackTargets.length === 0) return []
+
+        const attacker = getHex(this.gameState.board, pending.fighterCoords)?.piece
+        if (!attacker) return []
+
+        return this.attackTargets.filter((coords) => {
+            const target = getHex(this.gameState.board, coords)?.piece
+            return target !== undefined && attackOutcome(attacker, target) === AttackOutcome.Damaged
+        })
+    })
+
+    railgunWouldMatter(coords: AxialCoordinates): boolean {
+        return this.railgunTargets.some((target) => sameHex(target, coords))
+    }
 
     // Turns of this player's own that a power still has to sit out, for the panel.
     railgunTurnsLeft: number = $derived.by(() => {
@@ -337,7 +359,9 @@ export class EarendelGameSession extends GameSession<
         }
         if (this.attackTargets.length > 0) {
             if (this.railgunArmed) {
-                return 'Railgun armed — the piece you pick is destroyed outright.'
+                return this.railgunTargets.length > 0
+                    ? 'Railgun armed — ringed targets are destroyed outright rather than damaged.'
+                    : 'Railgun armed, but nothing here needs it — every target dies to a plain shot.'
             }
             return this.canArmRailgun
                 ? 'Your fighter may attack one adjacent piece, arm the Railgun first, or hold fire.'
@@ -457,7 +481,9 @@ export class EarendelGameSession extends GameSession<
     }
 
     async attack(coords: AxialCoordinates) {
-        const useRailgun = this.railgunArmed
+        // Armed means "use it if it helps", not "use it regardless": firing on a target that dies
+        // to an ordinary shot spends nothing, so the flag is dropped rather than sent and refused.
+        const useRailgun = this.railgunArmed && this.railgunWouldMatter(coords)
         this.railgunArmed = false
         await this.applyAction(
             this.createPlayerAction(AttackPiece, {

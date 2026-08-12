@@ -485,6 +485,18 @@
                 />
             {/if}
 
+            {#if gameSession.railgunArmed && gameSession.railgunWouldMatter(hex.coords)}
+                <!-- Where the Railgun changes the outcome. Everything else in reach dies to an
+                     ordinary shot, so it is not worth a three-turn power. -->
+                <polygon
+                    points={entry.points}
+                    fill="none"
+                    stroke="#ff2f2f"
+                    stroke-width="6"
+                    class="pulse"
+                />
+            {/if}
+
             {#if gameSession.movingFrom && sameHex(gameSession.movingFrom, hex.coords)}
                 <!-- Picked up, waiting for a destination. Click it again to put it back down. -->
                 <polygon
