@@ -6,10 +6,12 @@ import {
     ChooseTechnology,
     AttackPiece,
     destinationsFrom,
+    canUseCooldownEffect,
     DiscardPiece,
     drawCountForPlayer,
     DrawPieces,
     TechnologyEffectKind,
+    turnsUntilReady,
     attackableTargets,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -90,6 +92,23 @@ export class EarendelGameSession extends GameSession<
         const playerId = this.myPlayer?.id
         if (!playerId) return 0
         return drawCountForPlayer(this.gameState, playerId, this.primaryGame.config)
+    })
+
+    // Armed for the next shot. Held here rather than in game state because until the target is
+    // clicked it is only an intention.
+    railgunArmed: boolean = $state(false)
+
+    canArmRailgun: boolean = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || this.attackTargets.length === 0) return false
+        return canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.Railgun)
+    })
+
+    // Turns of this player's own that a power still has to sit out, for the panel.
+    railgunTurnsLeft: number = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return 0
+        return turnsUntilReady(this.gameState, playerId, TechnologyEffectKind.Railgun)
     })
 
     // Whether a Logistics Upgrade could be spent right now, in place of discarding.
@@ -317,7 +336,12 @@ export class EarendelGameSession extends GameSession<
                 : 'Choose the technology this planet will hold.'
         }
         if (this.attackTargets.length > 0) {
-            return 'Your fighter may attack one adjacent piece, or hold fire.'
+            if (this.railgunArmed) {
+                return 'Railgun armed — the piece you pick is destroyed outright.'
+            }
+            return this.canArmRailgun
+                ? 'Your fighter may attack one adjacent piece, arm the Railgun first, or hold fire.'
+                : 'Your fighter may attack one adjacent piece, or hold fire.'
         }
         if (this.isPlacingTile) {
             return this.tileOrigins.length === 0
@@ -428,13 +452,24 @@ export class EarendelGameSession extends GameSession<
         )
     }
 
+    toggleRailgun() {
+        this.railgunArmed = !this.railgunArmed
+    }
+
     async attack(coords: AxialCoordinates) {
+        const useRailgun = this.railgunArmed
+        this.railgunArmed = false
         await this.applyAction(
-            this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece, coords })
+            this.createPlayerAction(AttackPiece, {
+                type: ActionType.AttackPiece,
+                coords,
+                ...(useRailgun ? { useRailgun } : {})
+            })
         )
     }
 
     async holdFire() {
+        this.railgunArmed = false
         await this.applyAction(
             this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece })
         )
@@ -535,6 +570,7 @@ export class EarendelGameSession extends GameSession<
         this.chosenSpecialId = undefined
         this.chosenHeldId = undefined
         this.tilePreviewOrigin = undefined
+        this.railgunArmed = false
         await this.undo()
     }
 

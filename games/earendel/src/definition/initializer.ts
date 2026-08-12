@@ -101,6 +101,8 @@ export class EarendelGameInitializer
                 specialPieces: [],
                 technologies: [],
                 storedEffects: [],
+                cooldownEffects: [],
+                cooldowns: {},
                 score: 0
             })
         })

@@ -1,7 +1,7 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
-import { storedEffectOf, type TechnologyCard } from '../model/technology.js'
+import { cooldownEffectOf, storedEffectOf, type TechnologyCard } from '../model/technology.js'
 
 // Technologies a placement just handed its owner: those on explored planets the placement
 // gave them OUTRIGHT hold of, and which they don't already hold.
@@ -61,6 +61,11 @@ export function grantTechnology(
 
     const stored = storedEffectOf(card)
     if (stored) playerState.storedEffects.push(stored)
+
+    const repeatable = cooldownEffectOf(card)
+    if (repeatable && !playerState.cooldownEffects.includes(repeatable)) {
+        playerState.cooldownEffects.push(repeatable)
+    }
 }
 
 // Credits every player who now holds a neighbouring planet outright, and reports what each

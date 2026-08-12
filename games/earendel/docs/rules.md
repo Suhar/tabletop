@@ -207,6 +207,26 @@ empty.
 
 Note it does nothing in the simpler one-draw turn style, where there is no discard to save.
 
+### Cooldown effects
+
+A technology may be **repeatable but rationed**: kept for good, usable again and again, but only
+so often. Using it starts a timer counted in the **owner's own turns**, so the wait is the same
+stretch of their game whatever the player count and whatever anyone else does in between.
+
+Holding two copies of the same cooldown technology confers nothing extra — the timer belongs to
+the power, not to the card.
+
+The first is **Railgun**, timer **3 turns**: *a fighter's attack destroys its target outright,
+whatever its health.*
+
+Armed before a shot, it turns what would have been damage into a kill. Used on a turn, it is
+unavailable on the owner's next two turns and ready again on the third.
+
+- It changes what a hit **does**, not what can be **hit**. A fighter still needs strictly more
+  power to touch anything, so an equal or bigger fighter remains out of reach.
+- It cannot be spent on a shot that would destroy the target anyway — that would start the timer
+  for nothing, so the game refuses rather than letting it be wasted.
+
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
 far stronger effect; this is the conservative reading.
 

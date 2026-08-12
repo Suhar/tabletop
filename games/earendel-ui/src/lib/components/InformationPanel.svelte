@@ -164,6 +164,17 @@
         </div>
     {/if}
 
+    {#if gameSession.canArmRailgun}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.railgunArmed
+                ? 'bg-red-400/30 border-red-300'
+                : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+            onclick={() => gameSession.toggleRailgun()}
+        >
+            {gameSession.railgunArmed ? 'Railgun armed' : 'Arm Railgun'}
+        </button>
+    {/if}
+
     {#if gameSession.attackTargets.length > 0}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"

@@ -27,6 +27,12 @@ export const EarendelPlayerState = Type.Evaluate(
             // usable a single time. A player can hold several, including two of the same kind
             // from two different planets.
             storedEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
+            // Repeatable powers this player holds, each usable again and again but only so
+            // often. Deduplicated: a second copy of the same card adds nothing.
+            cooldownEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
+            // For each of those, the player's own turn count when it was last used. Absent means
+            // never used, so ready.
+            cooldowns: Type.Record(Type.String(), Type.Number()),
             // A running total that only ever goes up: control scored during the game is kept
             // even if the planet is later lost.
             score: Type.Number()
@@ -46,12 +52,18 @@ export class HydratedEarendelPlayerState
     declare specialPieces: Piece[]
     declare technologies: string[]
     declare storedEffects: TechnologyEffectKind[]
+    declare cooldownEffects: TechnologyEffectKind[]
+    declare cooldowns: Record<string, number>
     declare score: number
 
     // The game ends the moment any player's bag runs out (see EndOfGame), so this is the
     // clock everything else is measured against.
     get bagIsEmpty(): boolean {
         return this.bag.length === 0
+    }
+
+    hasCooldownEffect(kind: TechnologyEffectKind): boolean {
+        return this.cooldownEffects.includes(kind)
     }
 
     hasStoredEffect(kind: TechnologyEffectKind): boolean {

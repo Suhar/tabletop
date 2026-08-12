@@ -32,6 +32,8 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
             specialPieces: [],
             technologies: [],
             storedEffects: [],
+            cooldownEffects: [],
+            cooldowns: {},
             score: 0
         })),
         activePlayerIds: ['p1'],

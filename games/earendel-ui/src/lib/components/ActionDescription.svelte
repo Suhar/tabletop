@@ -73,6 +73,9 @@
         if (isAttackPiece(action)) {
             const shot = action as AttackPiece
             if (shot.metadata?.declined) return 'held fire'
+            if (shot.metadata?.railgun) {
+                return `railgunned a ${shot.metadata?.target?.type ?? 'ship'} out of existence`
+            }
             if (shot.metadata?.damaged) {
                 return `damaged a fighter down to level ${shot.metadata.levelAfter ?? 1}`
             }

@@ -4,7 +4,8 @@
         EarendelPlayerState,
         planetPointsByPlayer,
         TECHNOLOGY_EFFECT_INFO,
-        technologyName
+        technologyName,
+        turnsUntilReady
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
@@ -63,6 +64,17 @@
                 unspent: {playerState.storedEffects
                     .map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
                     .join(', ')}
+            </div>
+        {/if}
+
+        {#if playerState.cooldownEffects.length > 0}
+            <div class="text-xs opacity-90" title="Repeatable powers, and how long until ready">
+                {#each playerState.cooldownEffects as kind (kind)}
+                    {@const left = turnsUntilReady(gameSession.gameState, playerState.playerId, kind)}
+                    <span class="mr-2">
+                        {TECHNOLOGY_EFFECT_INFO[kind].name}{left > 0 ? ` (${left})` : ' ✓'}
+                    </span>
+                {/each}
             </div>
         {/if}
 
