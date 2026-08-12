@@ -115,6 +115,10 @@ If the bag cannot fill the draft, the player takes what is left and discards not
 Instead of placing a drafted ship, a player may **put the whole hand back in the bag** — which
 is reshuffled — and **place a special piece** from the face-up pieces in front of them.
 
+The whole hand, not one of it: playing a special **costs the rest of the turn**. Settled
+deliberately, so that a special piece is a real decision rather than a free extra — and the
+better the special, the more that matters.
+
 > **The simpler turn — one draw, one placement — is available as a setup option.** It is the
 > style the engine's rule tests run on, so that a test about chains or blockades exercises one
 > mechanic rather than two.
