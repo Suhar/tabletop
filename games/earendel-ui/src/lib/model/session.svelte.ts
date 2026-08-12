@@ -606,6 +606,7 @@ export class EarendelGameSession extends GameSession<
 }
 
 export function describePiece(piece: Piece): string {
+    if (piece.hub) return 'Station Hub'
     const name = piece.type === PieceType.Probe ? 'probe' : piece.type
     return piece.level ? `level ${piece.level} ${name}` : name
 }

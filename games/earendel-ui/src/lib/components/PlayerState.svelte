@@ -79,8 +79,10 @@
         {/if}
 
         {#if playerState.specialPieces.length > 0}
-            <div class="text-xs opacity-90">
-                specials: {playerState.specialPieces.length}
+            <div class="text-xs opacity-90" title="Special pieces waiting to be placed">
+                {playerState.specialPieces
+                    .map((piece) => (piece.hub ? '▣ Station Hub' : `▢ ${piece.type}`))
+                    .join(', ')}
             </div>
         {/if}
 

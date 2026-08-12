@@ -54,6 +54,8 @@ export type GameSummary = {
     upgradesSpent: number
     // Fighters worn down a level rather than removed.
     piecesDamaged: number
+    // Station Hubs handed out by technologies - pieces that never came from a bag.
+    hubsGranted: number
     // Pieces that started in a bag and ended up nowhere. Always zero if the rules are honest:
     // a piece is on the board, in a bag, in a hand, discarded, or destroyed. This is the check
     // that catches a turn ending while its player still held a ship - the ship just disappears,
@@ -269,14 +271,24 @@ export function playRandomGame(
         overrides.piecesPerType !== undefined
             ? 3 * overrides.piecesPerType
             : Object.values(STARTING_BAG).reduce((total, count) => total + count, 0)
-    const onBoard = Object.values(game.state.board.hexes).filter((hex) => hex.piece).length
+
+    // Pieces granted by technologies were never in a bag, so they are not part of what the count
+    // has to balance. Any future granted kind belongs in this predicate too, or it will read as a
+    // piece appearing out of nowhere - which, from the bags' point of view, it is.
+    const granted = (piece: { hub?: boolean }) => piece.hub === true
+    const onBoard = Object.values(game.state.board.hexes)
+        .map((hex) => hex.piece)
+        .filter((piece) => piece !== undefined && !granted(piece)).length
     const accountedFor =
         onBoard +
-        game.state.heldPieces.length +
+        game.state.heldPieces.filter((piece) => !granted(piece)).length +
         piecesDestroyed +
         discards +
         game.state.players.reduce(
-            (total, player) => total + player.bag.length + player.specialPieces.length,
+            (total, player) =>
+                total +
+                player.bag.length +
+                player.specialPieces.filter((piece) => !granted(piece)).length,
             0
         )
 
@@ -305,6 +317,13 @@ export function playRandomGame(
         discards,
         upgradesSpent,
         piecesDamaged,
+        hubsGranted:
+            Object.values(game.state.board.hexes).filter((hex) => hex.piece?.hub).length +
+            game.state.players.reduce(
+                (total, player) =>
+                    total + player.specialPieces.filter((piece) => piece.hub).length,
+                0
+            ),
         piecesUnaccounted: playerCount * bagSize - accountedFor
     }
 }

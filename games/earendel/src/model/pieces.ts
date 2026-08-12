@@ -35,8 +35,16 @@ export const Piece = Type.Object({
     playerId: Type.String(),
     type: Type.Enum(PieceType),
     // Probes and fighters. Absent on anything else.
-    level: Type.Optional(Type.Enum(PieceLevel))
+    level: Type.Optional(Type.Enum(PieceLevel)),
+    // A Station Hub: a station with an upgrade, won from a technology. Deliberately a flag on a
+    // station rather than a type of its own - it IS a station for every other rule, so a new type
+    // would mean teaching complexes, blockades, power and immunity about it one by one.
+    hub: Type.Optional(Type.Boolean())
 })
+
+export function isStationHub(piece: Piece): boolean {
+    return piece.type === PieceType.Station && piece.hub === true
+}
 
 // How much this piece contributes toward controlling an adjacent planet, and - for a fighter -
 // how much it has to beat to destroy something. A probe contributes nothing: it's an

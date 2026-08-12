@@ -1,6 +1,6 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, hexKey, neighborsOf } from '../model/board.js'
-import { PieceType } from '../model/pieces.js'
+import { isStationHub, PieceType } from '../model/pieces.js'
 import { sightLinkedStations } from './lineOfSight.js'
 
 // The station complex this station belongs to: every station of the same player reachable
@@ -48,8 +48,26 @@ export function stationComplex(
     return complex
 }
 
+// How much a complex's score is multiplied by: each Station Hub standing in it doubles the
+// payout, from the moment it is placed and every time the complex is scored afterwards.
+//
+// ASSUMED: hubs multiply, so two in one complex quadruple it. That is what "doubles the score of
+// its station cluster" says of each hub taken on its own, but it climbs fast - see rules.md.
+export function hubMultiplier(
+    board: EarendelBoard,
+    playerId: string,
+    coords: AxialCoordinates
+): number {
+    const hubs = stationComplex(board, playerId, coords).filter((at) => {
+        const piece = getHex(board, at)?.piece
+        return piece !== undefined && isStationHub(piece)
+    }).length
+
+    return 2 ** hubs
+}
+
 // What placing a station on this hex pays: one for itself, and one for every other station in
-// the complex it joins.
+// the complex it joins, doubled for each Station Hub standing in it.
 //
 // Because it is scored on every placement, a complex built up one station at a time pays 1, 2,
 // 3, ... - the same triangular total a chain pays, but earned incrementally. Sight lines make
@@ -60,5 +78,6 @@ export function stationGroupPoints(
     playerId: string,
     coords: AxialCoordinates
 ): number {
-    return stationComplex(board, playerId, coords).length
+    const complex = stationComplex(board, playerId, coords)
+    return complex.length * hubMultiplier(board, playerId, coords)
 }

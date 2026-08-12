@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { PieceLevel, type Piece, PieceType } from '../model/pieces.js'
-import { stationGroupPoints } from './stations.js'
+import { hubMultiplier, stationGroupPoints } from './stations.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame } from './testHarness.js'
@@ -160,6 +160,89 @@ describe('stationGroupPoints', () => {
 
         // The middle station sees the whole run, both sides at once.
         expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(5)
+    })
+})
+
+describe('Station Hub', () => {
+    const hub = (playerId: string): Piece => ({
+        id: `${playerId}-hub-${Math.random()}`,
+        playerId,
+        type: PieceType.Station,
+        hub: true
+    })
+
+    it('doubles the complex it stands in', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), { ship: hub('p1') }]
+        ])
+
+        // Three stations, doubled by the hub among them - whichever one is asked about.
+        expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(6)
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(6)
+    })
+
+    it('is a station for everything else', () => {
+        // Links by adjacency and by wavy line, and counts itself in the complex.
+        const board = boardOf([
+            [at(0, 0), { ship: hub('p1') }],
+            [at(1, 0), {}],
+            [at(2, 0), { ship: station('p1') }]
+        ])
+
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(4)
+    })
+
+    it('leaves a complex it is not part of alone', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: hub('p1') }],
+            [at(1, 0), { ship: ship('p2', PieceType.Probe, PieceLevel.Two) }],
+            [at(2, 0), { ship: station('p1') }],
+            [at(3, 0), { ship: station('p1') }]
+        ])
+
+        // The probe breaks both kinds of link, so the far pair is an ordinary complex of two.
+        expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(2)
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(2)
+    })
+
+    it('doubles again for a second hub in the same complex', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: hub('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), { ship: hub('p1') }]
+        ])
+
+        // ASSUMED: each hub doubles, so two make it fourfold. See rules.md - the alternative is
+        // one doubling however many are present.
+        expect(hubMultiplier(board, 'p1', at(1, 0))).toBe(4)
+        expect(stationGroupPoints(board, 'p1', at(1, 0))).toBe(12)
+    })
+
+    it('goes on paying for stations added later', () => {
+        const game = new TestGame()
+        const mover = game.activePlayerId
+
+        game.state.board = boardOf([
+            [at(0, 0), { ship: hub(mover) }],
+            [at(1, 0), {}],
+            [at(9, 9), {}]
+        ])
+        game.state.technologyDeck = []
+        game.stackBags((playerId) => [station(playerId), station(playerId)])
+
+        const before = game.state.players.find((p) => p.playerId === mover)!.score
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        // A complex of two, doubled: the hub keeps paying long after it was placed.
+        expect(game.state.players.find((p) => p.playerId === mover)!.score - before).toBe(4)
     })
 })
 

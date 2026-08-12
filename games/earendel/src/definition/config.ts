@@ -47,7 +47,8 @@ const technologyDeckOption: ListConfigOption = {
         { name: 'Only: move a friendly piece', value: TechnologyEffectKind.MoveFriendlyPiece },
         { name: 'Only: grow the board', value: TechnologyEffectKind.GrowBoard },
         { name: 'Only: logistics upgrade', value: TechnologyEffectKind.LogisticsUpgrade },
-        { name: 'Only: railgun', value: TechnologyEffectKind.Railgun }
+        { name: 'Only: railgun', value: TechnologyEffectKind.Railgun },
+        { name: 'Only: station upgrade', value: TechnologyEffectKind.StationUpgrade }
     ]
 }
 

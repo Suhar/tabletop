@@ -24,6 +24,10 @@
         [PieceType.Station]: '▢',
         [PieceType.Fighter]: '▲'
     }
+
+    // A hub is a station with a ring around it on the board, and a nested square here.
+    const glyph = (piece: { type: string; hub?: boolean }) =>
+        piece.hub ? '▣' : (SHAPE[piece.type] ?? '?')
 </script>
 
 <div class="flex flex-col items-center gap-2 py-2 text-white">
@@ -61,7 +65,7 @@
                         ? gameSession.discard(piece.id)
                         : gameSession.chooseHeld(piece.id)}
             >
-                <span class="text-xl leading-none">{SHAPE[piece.type]}</span>
+                <span class="text-xl leading-none">{glyph(piece)}</span>
                 <span class="text-sm font-semibold">
                     {gameSession.isDiscarding ? 'Discard' : ''}
                     {describePiece(piece)}
@@ -78,8 +82,8 @@
                 style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
                 onclick={() => gameSession.toggleSpecial(special.id)}
             >
-                <span class="text-xl leading-none">{SHAPE[special.type]}</span>
-                <span class="text-sm font-semibold">Special: {describePiece(special)}</span>
+                <span class="text-xl leading-none">{glyph(special)}</span>
+                <span class="text-sm font-semibold">{describePiece(special)}</span>
             </button>
         {/each}
     </div>

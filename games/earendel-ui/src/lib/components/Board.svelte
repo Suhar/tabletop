@@ -449,6 +449,20 @@
                         rx="7"
                         fill={color}
                     />
+                    {#if hex.piece.hub}
+                        <!-- A Station Hub: the same square with a thin ring standing off it, so it
+                             reads as a station with something added rather than a different piece. -->
+                        <rect
+                            x={entry.center.x - 26}
+                            y={entry.center.y - 26}
+                            width="52"
+                            height="52"
+                            rx="10"
+                            fill="none"
+                            stroke={color}
+                            stroke-width="3"
+                        />
+                    {/if}
                 {:else}
                     <polygon
                         points="{entry.center.x},{entry.center.y - 24} {entry.center.x +

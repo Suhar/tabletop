@@ -26,7 +26,9 @@ export enum TechnologyEffectKind {
     // Stored: once, on a later turn, keep the ship a draft would have thrown away.
     LogisticsUpgrade = 'logisticsUpgrade',
     // Cooldown: a fighter's shot destroys its target outright rather than damaging it.
-    Railgun = 'railgun'
+    Railgun = 'railgun',
+    // Grant: hands over a Station Hub to keep in front of the player until they place it.
+    StationUpgrade = 'stationUpgrade'
 }
 
 // When an effect happens. Immediate ones resolve the moment the technology is chosen; stored
@@ -36,7 +38,10 @@ export enum TechnologyTiming {
     Stored = 'stored',
     // Kept for good and usable again and again, but only so often: using it starts a timer,
     // counted in the owner's own turns, and it cannot be used again until that runs out.
-    Cooldown = 'cooldown'
+    Cooldown = 'cooldown',
+    // Hands over a piece the moment the technology is gained. Nothing to decide and nothing to
+    // spend: the reward is the piece, and what it does is the piece's business.
+    Grant = 'grant'
 }
 
 // How many of the owner's own turns a cooldown power sits idle. Used on a turn, it comes back on
@@ -91,6 +96,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         name: 'Railgun',
         ability: "A fighter's attack destroys its target outright, whatever its health.",
         timing: TechnologyTiming.Cooldown
+    },
+    [TechnologyEffectKind.StationUpgrade]: {
+        name: 'Station Upgrade',
+        ability:
+            'Gain a Station Hub: a station that doubles the score of its cluster, when placed and thereafter.',
+        timing: TechnologyTiming.Grant
     }
 }
 
@@ -103,6 +114,11 @@ export function timingOf(card: TechnologyCard): TechnologyTiming | undefined {
 // The effect this card puts in front of its new owner to spend later, if any.
 export function storedEffectOf(card: TechnologyCard): TechnologyEffectKind | undefined {
     return timingOf(card) === TechnologyTiming.Stored ? card.effect!.kind : undefined
+}
+
+// The kind of piece this card hands over on being gained, if any.
+export function grantedPieceOf(card: TechnologyCard): TechnologyEffectKind | undefined {
+    return timingOf(card) === TechnologyTiming.Grant ? card.effect!.kind : undefined
 }
 
 // The repeatable-but-rationed power this card confers, if any. Held for good rather than spent,

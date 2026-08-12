@@ -49,8 +49,12 @@ passed over: see *Exploration* below.
 
 **Special pieces** — kept face-up in front of their owner, and playable instead of drawing
 from the bag. They come *from technologies*: a technology may grant one or more special
-pieces, or instead a continuous power. Technology is the reward; a special piece is one form
-it takes.
+pieces, or instead a power. Technology is the reward; a special piece is one form it takes.
+
+The first is the **Station Hub**, from *Station Upgrade*. It is a **station in every respect** —
+power 1, immune to fighters, links complexes by touch and by sight line, projects a blockade —
+with one addition: it **doubles the score of its complex**, when placed and every time that
+complex is scored afterwards.
 
 ---
 
@@ -206,6 +210,20 @@ Spent at the opening of a drafted turn, in place of the discard, so that turn pl
 empty.
 
 Note it does nothing in the simpler one-draw turn style, where there is no discard to save.
+
+### Granted pieces
+
+A technology may hand over a **piece** the moment it is gained, rather than an effect to resolve
+or a power to spend. There is nothing to decide: the reward is the piece, and what it does is the
+piece's business.
+
+**Station Upgrade** grants a **Station Hub** (see *Components*). Like every technology it is gained
+by the explorer and by anyone who later holds the planet outright, so one card can hand a hub to
+several players over a game — each getting their own.
+
+**ASSUMED:** hubs multiply. Two in one complex make it fourfold, which is what "doubles the score
+of its cluster" says of each hub taken on its own. It climbs fast, and a single doubling however
+many are present is the obvious alternative.
 
 ### Cooldown effects
 

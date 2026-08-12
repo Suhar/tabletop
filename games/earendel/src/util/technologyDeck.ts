@@ -81,7 +81,8 @@ const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
     TechnologyEffectKind.MoveFriendlyPiece,
     TechnologyEffectKind.GrowBoard,
     TechnologyEffectKind.LogisticsUpgrade,
-    TechnologyEffectKind.Railgun
+    TechnologyEffectKind.Railgun,
+    TechnologyEffectKind.StationUpgrade
 ]
 // A deck of nothing but the named effect, one card per planet colour so that whatever a probe
 // reaches, the effect comes up. A testing aid - see the technologyDeck config option.
