@@ -6,6 +6,8 @@
         type Hex,
         PieceType,
         PlanetColor,
+        type AttackPiece,
+        isAttackPiece,
         isPlacePiece,
         type PlacePiece,
         sameHex,
@@ -169,6 +171,35 @@
         }, FLOAT_MS)
     }
 
+    // A shot landing. Destroyed and damaged look different on purpose: the same action does
+    // both, and the board is where the difference should be legible.
+    type Blast = { id: number; x: number; y: number; destroyed: boolean }
+
+    let blasts: Blast[] = $state([])
+    let nextBlastId = 0
+
+    const BLAST_MS = 900
+
+    function blast(coords: AxialCoordinates, destroyed: boolean) {
+        const center = hexGeometry(coords).center
+        const id = nextBlastId++
+
+        blasts.push({ id, x: center.x, y: center.y, destroyed })
+        setTimeout(() => {
+            blasts = blasts.filter((entry) => entry.id !== id)
+        }, BLAST_MS)
+    }
+
+    function showAttack(action: GameAction) {
+        if (!isAttackPiece(action)) return
+
+        const shot = action as AttackPiece
+        // Nothing to show for a shot that was passed up.
+        if (!shot.coords || shot.metadata?.declined) return
+
+        blast(shot.coords, !shot.metadata?.damaged)
+    }
+
     // Scoring is reported per source rather than as one total: a placement can be paid for its
     // station complex AND for a chain, and rolling those into a single number is exactly what
     // makes the jump hard to account for.
@@ -188,8 +219,10 @@
 
     onMount(() => {
         const listener = async ({ action }: { action?: GameAction }) => {
-            // Not while scrubbing history: those points were scored long ago.
-            if (!gameSession.isViewingHistory) showScoring(action)
+            // Not while scrubbing history: all of this happened long ago.
+            if (!action || gameSession.isViewingHistory) return
+            showScoring(action)
+            showAttack(action)
         }
 
         gameSession.addGameStateChangeListener(listener)
@@ -605,6 +638,43 @@
         </g>
     {/each}
 
+    <!-- A shot landing. Everything is drawn centred on the origin and moved into place by the
+         group's transform, so a CSS scale expands about the blast rather than about the board's
+         top-left corner. -->
+    {#each blasts as entry (entry.id)}
+        <g transform="translate({entry.x} {entry.y})" pointer-events="none">
+            <circle
+                r="16"
+                fill={entry.destroyed ? '#ffd166' : '#ffe9a8'}
+                class={entry.destroyed ? 'blast-flash' : 'blast-flash blast-small'}
+            />
+            <circle
+                r="24"
+                fill="none"
+                stroke="#ff2f2f"
+                stroke-width="5"
+                class={entry.destroyed ? 'blast-ring' : 'blast-ring blast-small'}
+            />
+            {#if entry.destroyed}
+                <!-- Sparks only for a kill: a fighter that merely lost a level is still there. -->
+                <g class="blast-sparks">
+                    {#each [0, 45, 90, 135, 180, 225, 270, 315] as angle (angle)}
+                        <line
+                            x1="14"
+                            y1="0"
+                            x2="30"
+                            y2="0"
+                            stroke="#ffd166"
+                            stroke-width="4"
+                            stroke-linecap="round"
+                            transform="rotate({angle})"
+                        />
+                    {/each}
+                </g>
+            {/if}
+        </g>
+    {/each}
+
     <!-- Points drifting up from where they were earned. -->
     {#each floats as entry (entry.id)}
         <g class="score-float" pointer-events="none">
@@ -745,6 +815,61 @@
 
     .missile {
         animation: fly-missile 1.6s linear infinite;
+    }
+
+    /* One multiplier drives how big a blast gets, so the two sizes share the keyframes rather
+       than relying on a static scale composing with an animated transform. */
+    @keyframes flash {
+        0% {
+            transform: scale(calc(0.3 * var(--boom)));
+            opacity: 1;
+        }
+        100% {
+            transform: scale(calc(1.7 * var(--boom)));
+            opacity: 0;
+        }
+    }
+
+    @keyframes shock {
+        0% {
+            transform: scale(calc(0.25 * var(--boom)));
+            opacity: 0.95;
+        }
+        100% {
+            transform: scale(calc(2.3 * var(--boom)));
+            opacity: 0;
+        }
+    }
+
+    @keyframes sparks {
+        0% {
+            transform: scale(0.4);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1.9);
+            opacity: 0;
+        }
+    }
+
+    .blast-flash {
+        --boom: 1;
+        animation: flash 380ms ease-out forwards;
+    }
+
+    .blast-ring {
+        --boom: 1;
+        animation: shock 780ms ease-out forwards;
+    }
+
+    .blast-sparks {
+        animation: sparks 620ms ease-out forwards;
+    }
+
+    /* A fighter knocked down a level gets a smaller, shorter blast than one destroyed. */
+    .blast-small {
+        --boom: 0.55;
+        animation-duration: 320ms;
     }
 
     /* Nudged along its own direction, so the movement itself says which way it points. */
