@@ -367,6 +367,16 @@ make reaching that far easier than adjacency alone would.
 
 This gives each piece type a job: probes explore, fighters destroy, stations score.
 
+**A station can be paid twice for one placement.** Station complexes and chains are separate
+rules, and a station is a ship like any other where chains are concerned - so a station that
+joins a complex *and* completes a run between two planets of one colour collects under both. A
+third station joining a pair, on a hex that also bridges two same-coloured planets, is 3 for
+the complex plus 3 for the chain.
+
+**OPEN:** whether that overlap should stand. It rewards a placement that does two jobs, which
+reads well, but it makes station-and-planet geometry the single most valuable thing to look for
+and can produce a jump that surprises the player who made it.
+
 ### Station blockades
 
 Two of one player's stations with **clear empty space between them along a straight line**

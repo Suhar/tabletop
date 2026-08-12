@@ -164,6 +164,42 @@ describe('stationGroupPoints', () => {
 })
 
 describe('scoring stations in play', () => {
+    it('pays the complex AND a chain when one station does both jobs', () => {
+        // Two stations already linked by a wavy line, and two planets of one colour waiting to
+        // be joined. The new station lands where it does both at once, and is paid under both
+        // rules - they are separate rules, and a station is a ship like any other for chains.
+        const game = new TestGame()
+        const mover = game.activePlayerId
+
+        game.state.board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(1, 0), {}],
+            [at(2, 0), { ship: station(mover) }],
+            [at(3, 0), { planet: PlanetColor.Azure }],
+            [at(2, -1), {}],
+            [at(2, -2), { ship: station(mover) }],
+            [at(9, 9), {}]
+        ])
+        game.state.technologyDeck = []
+        game.stackBags((playerId) => [station(playerId), station(playerId)])
+
+        const scoreOf = () => game.state.players.find((p) => p.playerId === mover)!.score
+        const before = scoreOf()
+
+        const [placed] = game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        // 3 for a complex of three, and 3 more for a two-ship chain between the planets.
+        expect((placed as PlacePiece).metadata?.stationGroupPoints).toBe(3)
+        expect((placed as PlacePiece).metadata?.chains?.[0].points).toBe(3)
+        expect(scoreOf() - before).toBe(6)
+    })
+
+
     it('pays 1, then 2, then 3 as a cluster grows', () => {
         const game = new TestGame()
         game.state.board = boardOf([
