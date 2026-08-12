@@ -1,10 +1,13 @@
 <script lang="ts">
-    import type { AxialCoordinates } from '@tabletop/common'
+    import { onMount } from 'svelte'
+    import type { AxialCoordinates, GameAction } from '@tabletop/common'
     import {
         HexKind,
         type Hex,
         PieceType,
         PlanetColor,
+        isPlacePiece,
+        type PlacePiece,
         sameHex,
         technologyAbility,
         technologyName,
@@ -130,6 +133,68 @@
         }
         return path.trim()
     }
+
+    // Points floating up from where they were earned. Each is removed when its animation has
+    // run, so the list only ever holds what is on screen.
+    type ScoreFloat = {
+        id: number
+        x: number
+        y: number
+        points: number
+        caption: string
+        color: string
+    }
+
+    let floats: ScoreFloat[] = $state([])
+    let nextFloatId = 0
+
+    const FLOAT_MS = 1700
+
+    function float(coords: AxialCoordinates, points: number, caption: string, playerId: string) {
+        const center = hexGeometry(coords).center
+        const id = nextFloatId++
+
+        floats.push({
+            id,
+            x: center.x,
+            // Stacked, so two sources scored by one placement don't land on top of each other.
+            y: center.y - floats.length * 30,
+            points,
+            caption,
+            color: gameSession.colors.getPlayerUiColor(playerId)
+        })
+
+        setTimeout(() => {
+            floats = floats.filter((entry) => entry.id !== id)
+        }, FLOAT_MS)
+    }
+
+    // Scoring is reported per source rather than as one total: a placement can be paid for its
+    // station complex AND for a chain, and rolling those into a single number is exactly what
+    // makes the jump hard to account for.
+    function showScoring(action?: GameAction) {
+        if (!action || !isPlacePiece(action)) return
+
+        const placed = action as PlacePiece
+        const playerId = placed.playerId
+
+        if (placed.metadata?.stationGroupPoints) {
+            float(placed.coords, placed.metadata.stationGroupPoints, 'complex', playerId)
+        }
+        for (const chain of placed.metadata?.chains ?? []) {
+            float(placed.coords, chain.points, 'chain', playerId)
+        }
+    }
+
+    onMount(() => {
+        const listener = async ({ action }: { action?: GameAction }) => {
+            // Not while scrubbing history: those points were scored long ago.
+            if (!gameSession.isViewingHistory) showScoring(action)
+        }
+
+        gameSession.addGameStateChangeListener(listener)
+        return () => gameSession.removeGameStateChangeListener(listener)
+    })
 
     // Which planet's technology to show: the pinned one, else whatever is under the cursor.
     let shownTechnology = $derived.by(() => {
@@ -424,6 +489,32 @@
         </g>
     {/each}
 
+    <!-- Points drifting up from where they were earned. -->
+    {#each floats as entry (entry.id)}
+        <g class="score-float" pointer-events="none">
+            <text
+                x={entry.x}
+                y={entry.y}
+                text-anchor="middle"
+                class="text-[34px] font-bold"
+                fill={entry.color}
+                stroke="#0a0f1c"
+                stroke-width="6"
+                paint-order="stroke"
+            >
+                +{entry.points}
+            </text>
+            <text
+                x={entry.x}
+                y={entry.y + 20}
+                text-anchor="middle"
+                class="text-[15px] font-semibold fill-white/80"
+            >
+                {entry.caption}
+            </text>
+        </g>
+    {/each}
+
     <!-- Station blockades, drawn last so they read above the hexes they cross. Two stations
          of one player with clear space between them shut that space to everyone else's
          probes; anything else may be placed there, and doing so breaks the line. -->
@@ -473,5 +564,26 @@
     /* Light travelling along the wave, so a live blockade reads as active rather than drawn on. */
     .beam {
         animation: flow 1.6s linear infinite;
+    }
+
+    @keyframes rise {
+        0% {
+            transform: translateY(0);
+            opacity: 0;
+        }
+        15% {
+            opacity: 1;
+        }
+        70% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-70px);
+            opacity: 0;
+        }
+    }
+
+    .score-float {
+        animation: rise 1.7s ease-out forwards;
     }
 </style>
