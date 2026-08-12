@@ -179,6 +179,15 @@ export class EarendelGameSession extends GameSession<
         return planet ? getHex(this.gameState.board, planet)?.color : undefined
     })
 
+    // Which fighter is firing, and at what. Only while the shot is this player's.
+    attackChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
+        () => {
+            const pending = this.gameState.pendingAttack
+            if (this.attackTargets.length === 0 || !pending) return undefined
+            return { from: pending.fighterCoords, to: this.attackTargets }
+        }
+    )
+
     attackTargets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingAttack
         if (!this.isMyTurn || !pending) return []

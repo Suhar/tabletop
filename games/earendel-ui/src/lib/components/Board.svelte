@@ -233,17 +233,18 @@
         }
     }
 
-    // An arc from the probe to a planet it could explore.
+    // An arc from a fighter to something it could attack: the flight path of a missile.
     //
-    // Probe and planet are always adjacent - exploration reaches one hex - so every arc spans
-    // the same short distance and bows the same amount. The bow is biased towards the top of
-    // the screen, which reads as lifting off the board rather than sliding across it.
+    // Attacker and target are always adjacent, so every arc spans the same short distance and
+    // bows the same amount. The bow is biased towards the top of the screen, which reads as
+    // lifting off the board rather than sliding across it.
     //
-    // pathLength normalises the path to 100 units, so one dash animation draws any of them at
-    // the same rate whichever way they point.
+    // pathLength normalises the path to 100 units, so one dash animation flies any of them at
+    // the same rate whichever way they point - and lets the missile and its trail be two dash
+    // patterns on the same curve, which is what keeps the head exactly at the front.
     const ARC_BOW = 34
 
-    function explorationArc(from: AxialCoordinates, to: AxialCoordinates) {
+    function attackArc(from: AxialCoordinates, to: AxialCoordinates) {
         const start = hexGeometry(from).center
         const end = hexGeometry(to).center
 
@@ -268,29 +269,39 @@
         const inset = 26
         const tip = { x: end.x - (dx / length) * inset, y: end.y - (dy / length) * inset }
 
-        return {
-            path: `M${start.x},${start.y} Q${control.x},${control.y} ${tip.x},${tip.y}`,
-            // The head points along the last leg of the curve, from the control point in.
-            head: headPoints(control, tip)
-        }
+        return `M${start.x},${start.y} Q${control.x},${control.y} ${tip.x},${tip.y}`
     }
 
-    function headPoints(from: { x: number; y: number }, tip: { x: number; y: number }): string {
-        const dx = tip.x - from.x
-        const dy = tip.y - from.y
+    // A triangle pointing from a probe at a planet it could explore, with the vector to nudge it
+    // along as it pulses. Quieter than the missiles on purpose: exploring is an invitation,
+    // firing is a threat.
+    function reachPointer(from: AxialCoordinates, to: AxialCoordinates) {
+        const start = hexGeometry(from).center
+        const end = hexGeometry(to).center
+
+        const dx = end.x - start.x
+        const dy = end.y - start.y
         const length = Math.hypot(dx, dy) || 1
         const ux = dx / length
         const uy = dy / length
-        const size = 16
 
-        const base = { x: tip.x - ux * size, y: tip.y - uy * size }
-        const wing = { x: -uy * (size * 0.55), y: ux * (size * 0.55) }
+        // Sat between the two, closer to the planet it is pointing at.
+        const at = { x: start.x + ux * length * 0.58, y: start.y + uy * length * 0.58 }
+        const size = 15
 
-        return [
-            `${tip.x},${tip.y}`,
-            `${base.x + wing.x},${base.y + wing.y}`,
-            `${base.x - wing.x},${base.y - wing.y}`
-        ].join(' ')
+        const tip = { x: at.x + ux * size, y: at.y + uy * size }
+        const base = { x: at.x - ux * size * 0.6, y: at.y - uy * size * 0.6 }
+        const wing = { x: -uy * size * 0.7, y: ux * size * 0.7 }
+
+        return {
+            points: [
+                `${tip.x},${tip.y}`,
+                `${base.x + wing.x},${base.y + wing.y}`,
+                `${base.x - wing.x},${base.y - wing.y}`
+            ].join(' '),
+            // Pulses along its own direction, so the movement says which way it is pointing.
+            nudge: { x: ux * 9, y: uy * 9 }
+        }
     }
 
     // SVG has no text wrapping, so the ability is broken into lines here.
@@ -549,27 +560,48 @@
         </g>
     {/each}
 
-    <!-- Arcs from a probe to the planets it could explore, drawn over and over until one is
-         chosen. Every candidate is adjacent to the probe, so these are all one hex long. -->
+    <!-- Where a probe could explore: a triangle per planet, pulsing the way it points. -->
     {#each gameSession.explorationChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
-        {@const arc = explorationArc(gameSession.explorationChoice!.from, target)}
-        {@const delay = `${index * 160}ms`}
+        {@const pointer = reachPointer(gameSession.explorationChoice!.from, target)}
+        <polygon
+            points={pointer.points}
+            fill="#e8f0ff"
+            class="reach-pointer"
+            style="--nudge-x: {pointer.nudge.x}px; --nudge-y: {pointer.nudge.y}px; animation-delay: {index *
+                180}ms"
+            pointer-events="none"
+        />
+    {/each}
+
+    <!-- Where a fighter could fire: a missile flying the arc, trail behind it, over and over
+         until a target is picked or the shot is passed up. The missile and the trail are two
+         dash patterns on the SAME curve, which is what keeps the head exactly at the front of
+         what has been drawn - and follows the bend without any rotation maths. -->
+    {#each gameSession.attackChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
+        {@const path = attackArc(gameSession.attackChoice!.from, target)}
+        {@const delay = `${index * 200}ms`}
         <g pointer-events="none">
             <path
-                d={arc.path}
+                d={path}
                 pathLength="100"
                 fill="none"
-                stroke="#e8f0ff"
-                stroke-width="6"
+                stroke="#ff2f2f"
+                stroke-opacity="0.45"
+                stroke-width="5"
                 stroke-linecap="round"
                 stroke-dasharray="100"
-                class="reach-line"
+                class="missile-trail"
                 style="animation-delay: {delay}"
             />
-            <polygon
-                points={arc.head}
-                fill="#e8f0ff"
-                class="reach-head"
+            <path
+                d={path}
+                pathLength="100"
+                fill="none"
+                stroke="#ff2f2f"
+                stroke-width="11"
+                stroke-linecap="round"
+                stroke-dasharray="13 200"
+                class="missile"
                 style="animation-delay: {delay}"
             />
         </g>
@@ -673,43 +705,64 @@
         animation: rise 1.7s ease-out forwards;
     }
 
-    /* Drawn from the probe outward, held a moment, then gone and drawn again - so the board
-       keeps asking rather than stating. */
-    @keyframes draw {
+    /* The trail is drawn as the missile flies, then both clear and it fires again. */
+    @keyframes fly-trail {
         0% {
             stroke-dashoffset: 100;
-        }
-        45% {
-            stroke-dashoffset: 0;
-        }
-        80% {
-            stroke-dashoffset: 0;
-        }
-        100% {
-            stroke-dashoffset: -100;
-        }
-    }
-
-    @keyframes tip {
-        0%,
-        40% {
-            opacity: 0;
-        }
-        50%,
-        78% {
             opacity: 1;
         }
+        70% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+        }
+        88%,
         100% {
+            stroke-dashoffset: 0;
             opacity: 0;
         }
     }
 
-    /* Staggered per arrow by an inline delay, so several candidates don't pulse in lockstep. */
-    .reach-line {
-        animation: draw 1.9s ease-in-out infinite;
+    /* A single short dash sliding along the same curve: at 13 it sits just before the start, at
+       -87 it has just arrived, so it is always at the head of the trail. */
+    @keyframes fly-missile {
+        0% {
+            stroke-dashoffset: 13;
+            opacity: 1;
+        }
+        70% {
+            stroke-dashoffset: -87;
+            opacity: 1;
+        }
+        75%,
+        100% {
+            stroke-dashoffset: -87;
+            opacity: 0;
+        }
     }
 
-    .reach-head {
-        animation: tip 1.9s ease-in-out infinite;
+    /* Staggered per target by an inline delay, so several shots don't fire in lockstep. */
+    .missile-trail {
+        animation: fly-trail 1.6s linear infinite;
+    }
+
+    .missile {
+        animation: fly-missile 1.6s linear infinite;
+    }
+
+    /* Nudged along its own direction, so the movement itself says which way it points. */
+    @keyframes point {
+        0%,
+        100% {
+            transform: translate(0, 0);
+            opacity: 0.5;
+        }
+        50% {
+            transform: translate(var(--nudge-x), var(--nudge-y));
+            opacity: 1;
+        }
+    }
+
+    .reach-pointer {
+        animation: point 1.4s ease-in-out infinite;
     }
 </style>
