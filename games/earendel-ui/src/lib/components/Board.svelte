@@ -92,7 +92,7 @@
 
     let hovered: AxialCoordinates | undefined = $state(undefined)
 
-    // Where the fighter being placed could shoot if it landed on the hovered hex. Shown before
+    // What the fighter being placed could attack if it landed on the hovered hex. Shown before
     // the placement so the shot can be aimed rather than discovered afterwards.
     let previewTargets: AxialCoordinates[] = $derived(
         hovered ? gameSession.previewTargetsFor(hovered) : []

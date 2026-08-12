@@ -298,7 +298,7 @@ export class EarendelGameSession extends GameSession<
                 : 'Choose the technology this planet will hold.'
         }
         if (this.attackTargets.length > 0) {
-            return 'Your fighter may destroy one adjacent piece, or hold fire.'
+            return 'Your fighter may attack one adjacent piece, or hold fire.'
         }
         if (this.isPlacingTile) {
             return this.tileOrigins.length === 0
@@ -409,7 +409,7 @@ export class EarendelGameSession extends GameSession<
         )
     }
 
-    async destroy(coords: AxialCoordinates) {
+    async attack(coords: AxialCoordinates) {
         await this.applyAction(
             this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece, coords })
         )
@@ -486,7 +486,7 @@ export class EarendelGameSession extends GameSession<
             return
         }
         if (this.attackTargets.some((target) => sameHex(target, coords))) {
-            await this.destroy(coords)
+            await this.attack(coords)
             return
         }
 
