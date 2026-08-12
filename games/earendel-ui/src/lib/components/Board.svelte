@@ -233,6 +233,66 @@
         }
     }
 
+    // An arc from the probe to a planet it could explore.
+    //
+    // Probe and planet are always adjacent - exploration reaches one hex - so every arc spans
+    // the same short distance and bows the same amount. The bow is biased towards the top of
+    // the screen, which reads as lifting off the board rather than sliding across it.
+    //
+    // pathLength normalises the path to 100 units, so one dash animation draws any of them at
+    // the same rate whichever way they point.
+    const ARC_BOW = 34
+
+    function explorationArc(from: AxialCoordinates, to: AxialCoordinates) {
+        const start = hexGeometry(from).center
+        const end = hexGeometry(to).center
+
+        const dx = end.x - start.x
+        const dy = end.y - start.y
+        const length = Math.hypot(dx, dy) || 1
+
+        // Perpendicular, flipped so it always leans upward.
+        let nx = -dy / length
+        let ny = dx / length
+        if (ny > 0) {
+            nx = -nx
+            ny = -ny
+        }
+
+        const control = {
+            x: (start.x + end.x) / 2 + nx * ARC_BOW,
+            y: (start.y + end.y) / 2 + ny * ARC_BOW
+        }
+
+        // Stop a little short so the head sits on the planet's edge rather than its middle.
+        const inset = 26
+        const tip = { x: end.x - (dx / length) * inset, y: end.y - (dy / length) * inset }
+
+        return {
+            path: `M${start.x},${start.y} Q${control.x},${control.y} ${tip.x},${tip.y}`,
+            // The head points along the last leg of the curve, from the control point in.
+            head: headPoints(control, tip)
+        }
+    }
+
+    function headPoints(from: { x: number; y: number }, tip: { x: number; y: number }): string {
+        const dx = tip.x - from.x
+        const dy = tip.y - from.y
+        const length = Math.hypot(dx, dy) || 1
+        const ux = dx / length
+        const uy = dy / length
+        const size = 16
+
+        const base = { x: tip.x - ux * size, y: tip.y - uy * size }
+        const wing = { x: -uy * (size * 0.55), y: ux * (size * 0.55) }
+
+        return [
+            `${tip.x},${tip.y}`,
+            `${base.x + wing.x},${base.y + wing.y}`,
+            `${base.x - wing.x},${base.y - wing.y}`
+        ].join(' ')
+    }
+
     // SVG has no text wrapping, so the ability is broken into lines here.
     function wrap(text: string, limit: number): string[] {
         const lines: string[] = []
@@ -489,6 +549,32 @@
         </g>
     {/each}
 
+    <!-- Arcs from a probe to the planets it could explore, drawn over and over until one is
+         chosen. Every candidate is adjacent to the probe, so these are all one hex long. -->
+    {#each gameSession.explorationChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
+        {@const arc = explorationArc(gameSession.explorationChoice!.from, target)}
+        {@const delay = `${index * 160}ms`}
+        <g pointer-events="none">
+            <path
+                d={arc.path}
+                pathLength="100"
+                fill="none"
+                stroke="#e8f0ff"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-dasharray="100"
+                class="reach-line"
+                style="animation-delay: {delay}"
+            />
+            <polygon
+                points={arc.head}
+                fill="#e8f0ff"
+                class="reach-head"
+                style="animation-delay: {delay}"
+            />
+        </g>
+    {/each}
+
     <!-- Points drifting up from where they were earned. -->
     {#each floats as entry (entry.id)}
         <g class="score-float" pointer-events="none">
@@ -585,5 +671,45 @@
 
     .score-float {
         animation: rise 1.7s ease-out forwards;
+    }
+
+    /* Drawn from the probe outward, held a moment, then gone and drawn again - so the board
+       keeps asking rather than stating. */
+    @keyframes draw {
+        0% {
+            stroke-dashoffset: 100;
+        }
+        45% {
+            stroke-dashoffset: 0;
+        }
+        80% {
+            stroke-dashoffset: 0;
+        }
+        100% {
+            stroke-dashoffset: -100;
+        }
+    }
+
+    @keyframes tip {
+        0%,
+        40% {
+            opacity: 0;
+        }
+        50%,
+        78% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
+    }
+
+    /* Staggered per arrow by an inline delay, so several candidates don't pulse in lockstep. */
+    .reach-line {
+        animation: draw 1.9s ease-in-out infinite;
+    }
+
+    .reach-head {
+        animation: tip 1.9s ease-in-out infinite;
     }
 </style>

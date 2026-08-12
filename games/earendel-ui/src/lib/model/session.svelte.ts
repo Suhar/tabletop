@@ -162,6 +162,16 @@ export class EarendelGameSession extends GameSession<
         this.gameState.pendingExploration?.revealed ?? []
     )
 
+    // Which probe is choosing, and between which planets. Only while the choice is this
+    // player's - the arrows are an invitation to click, not a report.
+    explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
+        () => {
+            const pending = this.gameState.pendingExploration
+            if (this.choosablePlanets.length === 0 || !pending) return undefined
+            return { from: pending.probeCoords, to: this.choosablePlanets }
+        }
+    )
+
     // The colour of the planet being explored, so the panel can tell a card that missed the
     // colour from one that matched but was outranked by an elevated card.
     exploringPlanetColor: PlanetColor | undefined = $derived.by(() => {
