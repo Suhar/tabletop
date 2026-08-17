@@ -306,9 +306,11 @@ therefore hold the same planet's technology, and over a game technologies only a
 A planet pays each player **once and once only**. Losing a planet and taking it back gains
 nothing the second time, so a planet can't be farmed by control passing back and forth.
 
-**A technology that acts at once acts when it is claimed**, at the top of the claiming player's
-turn, after any draft discard and before their placement. A turn that claims two such
-technologies carries both out, in turn, before placing anything.
+**A technology that acts at once acts when it is claimed**, at the very top of the claiming
+player's turn — *before* the draft discard as well as before the placement. A tile, a Station Hub
+or a free move all change what the hand is worth, and being asked to throw a ship away before
+seeing what the turn has brought is choosing blind. A turn that claims two such technologies
+carries both out, in turn, before anything else happens.
 
 **Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
 the planet will hold — picking a technology that suits their position, from cards nobody

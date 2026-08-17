@@ -250,12 +250,12 @@ describe('a drafted turn', () => {
         ).toThrow()
     })
 
-    it('keeps the turn through a claimed technology, and discards before it', () => {
-        // The reported bug this guards: a technology interrupting a drafted turn must not drop
-        // the ships still in hand. The interruption now happens at the TOP of the turn - a
-        // planet held since last turn pays as the player draws - which makes the order matter
-        // twice over: the discard has to come first, and both kept ships must survive the
-        // effect. Resolving the effect straight after the draw would do neither.
+    it('resolves a claimed technology BEFORE asking for a discard', () => {
+        // Order matters here twice over. A technology claimed at the top of the turn acts first,
+        // because it can hand over a tile, a hub or a move - any of which changes what the hand
+        // is worth, and being made to throw a ship away before seeing that is choosing blind.
+        // And both kept ships must survive the effect: the reported bug this still guards is a
+        // technology interrupting a drafted turn and the held ships going missing.
         const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
         const mover = game.activePlayerId
 
@@ -290,23 +290,17 @@ describe('a drafted turn', () => {
             { id: `${playerId}-spare`, playerId, type: PieceType.Station }
         ])
 
-        // The draw happens inside this call, and with it the claim - so the technology is owed
-        // while there are still three ships in hand.
-        game.run(DiscardPiece, {
-            type: ActionType.DiscardPiece,
-            playerId: mover,
-            pieceId: `${mover}-spare`
-        })
-
-        // Discarded first, THEN the effect: two ships kept, and the effect waiting on them.
+        // No explicit draw: stackBags opens the turn through the engine, so the draw - and with
+        // it the claim - has already happened by this point.
+        //
+        // The technology is claimed and owed straight away, with all three ships still in hand
+        // and the discard still to come.
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
             'shift'
         ])
         expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
-        expect(game.state.heldPieces.map((piece) => piece.id).sort()).toEqual([
-            `${mover}-fighter`,
-            `${mover}-probe`
-        ])
+        expect(game.state.heldPieces).toHaveLength(3)
+        expect(game.state.draftPending).toBe(true)
 
         game.run(MovePiece, {
             type: ActionType.MovePiece,
@@ -315,8 +309,18 @@ describe('a drafted turn', () => {
             to: at(1, 3)
         })
 
-        // Still their turn, both ships still in hand. Ending it here would drop them.
-        expect(game.activePlayerId).toBe(mover)
+        // Only now is the player asked to give one up - and all three are still there to choose
+        // between.
+        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        expect(game.state.heldPieces).toHaveLength(3)
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: `${mover}-spare`
+        })
+
+        expect(game.state.draftPending).toBe(false)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.state.heldPieces.map((piece) => piece.id).sort()).toEqual([
             `${mover}-fighter`,

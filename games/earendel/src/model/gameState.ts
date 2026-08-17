@@ -63,6 +63,10 @@ export const EarendelGameState = Type.Evaluate(
             // one in hand lives in pendingTechnology/pendingTile as it always has; this is the
             // rest of the line behind it, drained one at a time.
             queuedTechnologyEffects: Type.Array(PendingTechnology),
+            // Whether this turn still owes its draft discard. The count in hand can't answer
+            // that on its own: a turn that lays a tile draws an extra ship for it, so "more than
+            // one held" stops meaning "hasn't discarded yet" the moment a technology intervenes.
+            draftPending: Type.Optional(Type.Boolean()),
             // Set while a newly placed fighter's owner decides whether to fire. Like
             // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
@@ -98,6 +102,7 @@ export class HydratedEarendelGameState
     declare pendingAttack?: PendingAttack
     declare pendingTechnology?: PendingTechnology
     declare queuedTechnologyEffects: PendingTechnology[]
+    declare draftPending?: boolean
     declare tileSupply: Tile[]
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string

@@ -61,6 +61,7 @@ export class HydratedDiscardPiece
 
         const index = state.heldPieces.findIndex((piece) => piece.id === this.pieceId)
         const [discarded] = state.heldPieces.splice(index, 1)
+        state.draftPending = false
 
         this.metadata = { discarded }
     }

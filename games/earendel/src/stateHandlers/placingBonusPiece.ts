@@ -3,7 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
-import { endPlacement } from '../util/turn.js'
+import { afterDraw } from '../util/turn.js'
 
 type PlacingBonusPieceAction = HydratedPlacePiece
 
@@ -48,7 +48,10 @@ export class PlacingBonusPieceStateHandler
                 gameState.bonusPlacementPieceId = undefined
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
-                return endPlacement(gameState, context)
+                // afterDraw, not endPlacement: this whole detour can start at the top of a turn,
+                // from a technology claimed before the player has discarded, and the draft is
+                // still owed on the way out of it.
+                return afterDraw(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

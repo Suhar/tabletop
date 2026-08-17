@@ -82,6 +82,11 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             state.heldPieces.push(piece)
         }
 
+        // More than one ship means a discard is owed. Recorded now, because the technologies
+        // claimed above may send the turn through a tile or a move first, and what is in hand by
+        // the time it comes back no longer says whether the draft has happened.
+        state.draftPending = state.heldPieces.length > 1
+
         this.revealsInfo = state.heldPieces.length > 0
         this.metadata = {
             drawn: [...state.heldPieces],

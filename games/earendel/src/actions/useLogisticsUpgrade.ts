@@ -58,6 +58,7 @@ export class HydratedUseLogisticsUpgrade
         )
 
         this.metadata = { piecesKept: state.heldPieces.length }
+        state.draftPending = false
     }
 
     isValidUseLogisticsUpgrade(state: HydratedEarendelGameState): boolean {

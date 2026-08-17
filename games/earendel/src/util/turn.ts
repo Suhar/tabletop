@@ -44,14 +44,26 @@ export function pendingTechnologyEffectState(
     return undefined
 }
 
-// Where a turn goes once its hand is settled - drawn, and drafted down if the style drafts.
+// Where a turn goes once the draw has resolved. One function, used both when the ships are first
+// turned over and when a technology effect that interrupted them finishes.
 //
-// Technologies claimed at the top of the turn are granted during the draw, but an immediate
-// effect is not carried out until here, AFTER any discard. Resolving one straight after the
-// draw would strand a drafted hand: the effect's own exit runs through endPlacement, which
-// sees ships in hand and goes to PlacingPiece - skipping the discard the player still owed.
-export function beginPlacement(state: HydratedEarendelGameState): MachineState {
-    return pendingTechnologyEffectState(state) ?? MachineState.PlacingPiece
+// The order is: claimed technologies act FIRST, then the draft discard, then the placement. A
+// technology can hand over a tile, a Station Hub or a move, any of which changes what the hand is
+// worth - so being made to throw a ship away before seeing what the turn has brought is choosing
+// blind. The effects were resolved after the discard at first, for the mechanical reason that
+// they exit through endPlacement, which sees ships in hand and goes straight to PlacingPiece;
+// draftPending is what lets the discard be picked up again afterwards instead.
+export function afterDraw(
+    state: HydratedEarendelGameState,
+    context?: MachineContext<HydratedEarendelGameState>
+): MachineState {
+    const effect = pendingTechnologyEffectState(state)
+    if (effect) return effect
+    if (state.draftPending) return MachineState.DraftingPieces
+
+    // endPlacement rather than PlacingPiece outright: an empty bag can leave a turn with nothing
+    // in hand at all, and that turn is simply over.
+    return endPlacement(state, context)
 }
 
 // Where a turn goes when an owed technology effect has just been carried out: on to the next
@@ -63,7 +75,8 @@ export function afterTechnologyEffect(
     if (activateNextTechnologyEffect(state)) {
         return pendingTechnologyEffectState(state)!
     }
-    return endPlacement(state, context)
+    // Back to the top of the turn's own business - which may still be the discard.
+    return afterDraw(state, context)
 }
 
 // Closes out one placement.
