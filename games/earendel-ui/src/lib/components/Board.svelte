@@ -94,6 +94,26 @@
 
     let hovered: AxialCoordinates | undefined = $state(undefined)
 
+    // The ship about to be placed, previewed on the hex under the cursor rather than announced
+    // by lighting up every hex it could go on. Thirty pulsing hexes told the player where they
+    // MAY place; a single ghost tells them what they ARE placing and where it will land, which
+    // is the question actually being asked.
+    //
+    // Only while a ship is being placed: a tile placement, an exploration choice, a shot and a
+    // technology step are all choices BETWEEN hexes, where the hexes themselves are the thing
+    // to look at and there is no single piece to preview.
+    let ghostPiece = $derived(
+        gameSession.isPlacing ? gameSession.pieceToPlace : undefined
+    )
+    let showGhost = $derived(ghostPiece !== undefined)
+
+    // Locked to the hovered hex, and only when that hex would actually accept the piece - a
+    // ghost on an illegal hex would promise a placement the engine then refuses.
+    let ghostEntry = $derived.by(() => {
+        if (!showGhost || !hovered || !gameSession.isHighlighted(hovered)) return undefined
+        return placed.find((entry) => sameHex(entry.hex.coords, hovered!))
+    })
+
     // What the fighter being placed could attack if it landed on the hovered hex. Shown before
     // the placement so the shot can be aimed rather than discovered afterwards.
     let previewTargets: AxialCoordinates[] = $derived(
@@ -378,27 +398,142 @@
             onmouseleave={() => (hovered = undefined)}
             class={highlighted ? 'cursor-pointer' : ''}
         >
+            <!-- A planet's hex is tinted in its own colour. Raised from 0.28 to 0.42: the tint
+                 is doing real work now, saying which colour a hex belongs to from across the
+                 board, so it has to be legible against the dark field rather than merely
+                 present. -->
             <polygon
                 points={entry.points}
                 fill={hex.kind === HexKind.Planet ? planetColor : '#141c2e'}
-                fill-opacity={hex.kind === HexKind.Planet ? 0.28 : 1}
+                fill-opacity={hex.kind === HexKind.Planet ? 0.42 : 1}
                 stroke="#2b3752"
                 stroke-width="2"
             />
 
             {#if hex.kind === HexKind.Planet}
-                <!-- The planet body. Unexplored planets are ringed and marked; explored ones
-                     are solid and carry the technology they hold. -->
-                <circle
-                    cx={entry.center.x}
-                    cy={entry.center.y}
-                    r="27"
-                    fill={planetColor}
-                    fill-opacity={hex.explored ? 1 : 0.45}
-                    stroke={planetColor}
-                    stroke-width="3"
-                    stroke-dasharray={hex.explored ? '' : '5 4'}
-                />
+                <!-- Each colour gets its own silhouette, so a board can be read at a glance
+                     without matching hues: a ringed world, a binary pair, a haloed one, a moon,
+                     a crescent. Shape carries the colour, which is what makes five kinds of
+                     planet tell themselves apart at speed - and it survives a player who can't
+                     separate the reds from the greens.
+                     Unexplored planets stay dimmer and dashed, as before, whatever the shape. -->
+                {@const bodyOpacity = hex.explored ? 1 : 0.45}
+                {@const dash = hex.explored ? '' : '5 4'}
+                {@const spin = `transform-box: view-box; transform-origin: ${entry.center.x}px ${entry.center.y}px;`}
+
+                {#if hex.color === PlanetColor.Verdant}
+                    <!-- Ringed, like Saturn: a tilted ellipse cutting across the body. Drawn
+                         before the body so the near half of the ring reads as passing behind
+                         it, then again after at partial opacity for the front half. -->
+                    <ellipse
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        rx="43"
+                        ry="13"
+                        fill="none"
+                        stroke={planetColor}
+                        stroke-width="5"
+                        stroke-opacity={hex.explored ? 0.9 : 0.4}
+                        transform="rotate(-20 {entry.center.x} {entry.center.y})"
+                    />
+                {/if}
+
+                {#if hex.color === PlanetColor.Crimson}
+                    <!-- Binary: two bodies of equal weight turning about their common centre,
+                         so there is no single disc at all. -->
+                    <g class="planet-binary" style={spin}>
+                        <circle
+                            cx={entry.center.x - 15}
+                            cy={entry.center.y}
+                            r="16"
+                            fill={planetColor}
+                            fill-opacity={bodyOpacity}
+                            stroke={planetColor}
+                            stroke-width="3"
+                            stroke-dasharray={dash}
+                        />
+                        <circle
+                            cx={entry.center.x + 15}
+                            cy={entry.center.y}
+                            r="16"
+                            fill={planetColor}
+                            fill-opacity={bodyOpacity}
+                            stroke={planetColor}
+                            stroke-width="3"
+                            stroke-dasharray={dash}
+                        />
+                    </g>
+                {:else}
+                    <!-- The single disc every other kind is built around. -->
+                    <circle
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        r="27"
+                        fill={planetColor}
+                        fill-opacity={bodyOpacity}
+                        stroke={planetColor}
+                        stroke-width="3"
+                        stroke-dasharray={dash}
+                    />
+                {/if}
+
+                {#if hex.color === PlanetColor.Gold}
+                    <!-- Aura: two haloes breathing out of phase, so the glow reads as radiating
+                         rather than simply blinking. -->
+                    <circle
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        r="27"
+                        fill="none"
+                        stroke={planetColor}
+                        stroke-width="6"
+                        class="planet-aura"
+                        style={spin}
+                    />
+                    <circle
+                        cx={entry.center.x}
+                        cy={entry.center.y}
+                        r="27"
+                        fill="none"
+                        stroke={planetColor}
+                        stroke-width="3"
+                        class="planet-aura planet-aura-late"
+                        style={spin}
+                    />
+                {/if}
+
+                {#if hex.color === PlanetColor.Azure}
+                    <!-- A single moon, going round. One satellite rather than two, so it can't
+                         be mistaken for the binary. -->
+                    <g class="planet-moon" style={spin}>
+                        <circle
+                            cx={entry.center.x + 40}
+                            cy={entry.center.y}
+                            r="7"
+                            fill={planetColor}
+                            fill-opacity={hex.explored ? 1 : 0.5}
+                        />
+                    </g>
+                {/if}
+
+                {#if hex.color === PlanetColor.Violet}
+                    <!-- Crescent: a shadow drifting across the disc, so the planet shows a phase.
+                         Clipped to the body so the shadow can't spill onto the hex. -->
+                    <clipPath id="planet-clip-{hex.coords.q},{hex.coords.r}">
+                        <circle cx={entry.center.x} cy={entry.center.y} r="27" />
+                    </clipPath>
+                    <g clip-path="url(#planet-clip-{hex.coords.q},{hex.coords.r})">
+                        <g class="planet-phase" style={spin}>
+                            <circle
+                                cx={entry.center.x + 19}
+                                cy={entry.center.y}
+                                r="26"
+                                fill="#0d1424"
+                                fill-opacity={hex.explored ? 0.72 : 0.4}
+                            />
+                        </g>
+                    </g>
+                {/if}
                 {#if hex.technology}
                     <!-- A mark, not a label: the name and what it does are too much text for a
                          hex, so they go in a popup on hover or click instead. -->
@@ -540,17 +675,97 @@
             {/if}
 
             {#if highlighted}
-                <polygon
-                    points={entry.points}
-                    fill="#ffffff"
-                    fill-opacity="0.07"
-                    stroke="#e8f0ff"
-                    stroke-width="4"
-                    class="pulse"
-                />
+                <!-- While a SHIP is being placed the ghost following the cursor says both what
+                     is landing and where, so the pulse would be a second answer to a question
+                     already answered - and a board of thirty pulsing hexes is what made this
+                     hard to read. It stays for every other decision (a tile's origins, a
+                     planet to explore, a target to shoot, a piece to step), where there is no
+                     ghost and the hexes themselves are the choice. -->
+                {#if showGhost}
+                    <polygon
+                        points={entry.points}
+                        fill="#ffffff"
+                        fill-opacity="0.02"
+                        stroke="#e8f0ff"
+                        stroke-opacity="0.18"
+                        stroke-width="2"
+                    />
+                {:else}
+                    <polygon
+                        points={entry.points}
+                        fill="#ffffff"
+                        fill-opacity="0.07"
+                        stroke="#e8f0ff"
+                        stroke-width="4"
+                        class="pulse"
+                    />
+                {/if}
             {/if}
         </g>
     {/each}
+
+    <!-- The ship about to land, shown on the hex under the cursor. Drawn after every hex so it
+         is never painted over by a neighbour, and pointer-events: none so it can't eat the click
+         it is inviting. -->
+    {#if ghostEntry && ghostPiece}
+        {@const ghostColor = gameSession.colors.getPlayerUiColor(ghostPiece.playerId)}
+        <g class="place-ghost" style="pointer-events: none;">
+            {#if ghostPiece.type === PieceType.Probe}
+                <circle
+                    cx={ghostEntry.center.x}
+                    cy={ghostEntry.center.y}
+                    r="16"
+                    fill="none"
+                    stroke={ghostColor}
+                    stroke-width="6"
+                />
+            {:else if ghostPiece.type === PieceType.Station}
+                <rect
+                    x={ghostEntry.center.x - 19}
+                    y={ghostEntry.center.y - 19}
+                    width="38"
+                    height="38"
+                    rx="7"
+                    fill={ghostColor}
+                />
+                {#if ghostPiece.hub}
+                    <rect
+                        x={ghostEntry.center.x - 26}
+                        y={ghostEntry.center.y - 26}
+                        width="52"
+                        height="52"
+                        rx="10"
+                        fill="none"
+                        stroke={ghostColor}
+                        stroke-width="3"
+                    />
+                {/if}
+            {:else}
+                <polygon
+                    points="{ghostEntry.center.x},{ghostEntry.center.y - 24} {ghostEntry.center
+                        .x + 23},{ghostEntry.center.y + 16} {ghostEntry.center.x -
+                        23},{ghostEntry.center.y + 16}"
+                    fill={ghostColor}
+                />
+            {/if}
+            {#if ghostPiece.level}
+                <text
+                    x={ghostEntry.center.x}
+                    y={ghostEntry.center.y +
+                        (ghostPiece.type === PieceType.Fighter
+                            ? 14
+                            : ghostPiece.type === PieceType.Probe
+                              ? 6
+                              : 7)}
+                    text-anchor="middle"
+                    class="text-[17px] font-bold"
+                    fill={ghostPiece.type === PieceType.Probe ? ghostColor : '#10182a'}
+                >
+                    {ghostPiece.level}
+                </text>
+            {/if}
+        </g>
+    {/if}
 
     <!-- Places a new tile could go. Each marker is the tile's origin hex; hovering shows the
          whole four-hex footprint, so it is clear what is about to land and where. -->
@@ -753,6 +968,61 @@
 </svg>
 
 <style>
+    /* Planet motion. All of it is slow on purpose: a board with a dozen planets on it would be
+       exhausting if each one were busy, so these read as drift rather than as animation
+       competing with the pieces and the score floats for attention.
+       transform-box/transform-origin come in inline per planet, since each turns about its own
+       hex centre rather than the shared view box. */
+    @keyframes planet-revolve {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* The binary pair - the slowest of the lot, since both halves are large and a quick spin
+       looks like a machine part rather than two worlds falling around each other. */
+    .planet-binary {
+        animation: planet-revolve 28s linear infinite;
+    }
+
+    /* A moon has less mass to shift, so it goes round noticeably faster than the binary. */
+    .planet-moon {
+        animation: planet-revolve 14s linear infinite;
+    }
+
+    /* The crescent's terminator creeping round the disc - slowest of all, because a phase is
+       something you notice having changed rather than watch changing. */
+    .planet-phase {
+        animation: planet-revolve 44s linear infinite;
+    }
+
+    /* The aura breathes outward: growing and fading together, so it reads as light leaving the
+       planet rather than a ring changing size. */
+    @keyframes planet-breathe {
+        0%,
+        100% {
+            transform: scale(1);
+            stroke-opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.42);
+            stroke-opacity: 0;
+        }
+    }
+
+    .planet-aura {
+        animation: planet-breathe 4.2s ease-out infinite;
+    }
+
+    /* The second halo runs half a cycle behind, which is what turns one pulse into a steady
+       radiance rather than a blink with a gap in it. */
+    .planet-aura-late {
+        animation-delay: 2.1s;
+    }
+
     @keyframes glow {
         0%,
         100% {

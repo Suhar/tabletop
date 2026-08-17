@@ -258,8 +258,10 @@ unavailable on the owner's next two turns and ready again on the third.
 far stronger effect; this is the conservative reading.
 
 **OPEN:** what proportion of the deck is elevated. Provisionally one card in three, which is
-a placeholder standing in until the real technologies exist, since it depends on how much
-stronger an elevated one is.
+not currently dealt at all: **no elevated technology has been designed yet**, so the placeholder
+deck marks every card standard. That is deliberate rather than an oversight — an elevated card
+removes the explorer's choice, so minting them before they mean anything took the decision away
+about four explorations in nine for no gain.
 
 If the deck runs out mid-reveal, the discard pile is shuffled to form a new deck. If even
 that cannot produce enough matching cards, the planet is explored with **fewer** candidates
