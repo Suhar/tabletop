@@ -54,7 +54,11 @@
                  rather than as merely not-selected - they are perfectly playable, and one of them
                  is about to be played. The white border is what marks the selection, so the
                  dimming only has to be a whisper. A ship with nowhere legal to go stays visibly
-                 struck out, since that one genuinely cannot be used. -->
+                 struck out, since that one genuinely cannot be used.
+                 While a discard is owed, hovering a ship greys it out - a preview of what it
+                 will look like once it is gone. A red cross was tried here first and read as a
+                 warning about a mistake, where this reads as the outcome itself, which is what
+                 the player is actually choosing between. -->
             {@const chosen = gameSession.drawnPiece?.id === piece.id
                 && !gameSession.chosenSpecialId}
             {@const stuck = !gameSession.isDiscarding && !gameSession.canPlaceHeld(piece)}
@@ -72,21 +76,6 @@
                         ? gameSession.discard(piece.id)
                         : gameSession.chooseHeld(piece.id)}
             >
-                <!-- A red cross struck over the ship the cursor is on, but only while a discard
-                     is owed. The same click means "keep this one" at every other moment, so the
-                     cross is what separates the one destructive use of this row from the rest -
-                     and a discard cannot be undone, since the ship leaves the game rather than
-                     going back to the bag. Drawn over the whole button and inert to the mouse,
-                     so it cannot swallow the click it is warning about. -->
-                <svg
-                    class="discard-cross pointer-events-none absolute inset-0 h-full w-full"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
-                >
-                    <line x1="8" y1="8" x2="92" y2="92" />
-                    <line x1="92" y1="8" x2="8" y2="92" />
-                </svg>
                 <span class="text-xl leading-none">{glyph(piece)}</span>
                 <span class="text-sm font-semibold">
                     {gameSession.isDiscarding ? 'Discard' : ''}
@@ -221,24 +210,18 @@
 </div>
 
 <style>
-    /* Hidden until the button is hovered, and only ever rendered while a discard is owed. */
-    .discard-cross {
-        opacity: 0;
-        transition: opacity 120ms ease-out;
+    /* While a discard is owed, the hovered ship fades toward the background and loses its
+       colour - showing the player the result rather than warning them about it. */
+    .discardable {
+        transition:
+            opacity 120ms ease-out,
+            filter 120ms ease-out;
     }
 
-    .discardable:hover .discard-cross,
-    .discardable:focus-visible .discard-cross {
-        opacity: 1;
+    .discardable:hover,
+    .discardable:focus-visible {
+        opacity: 0.3;
+        filter: grayscale(1);
     }
 
-    .discard-cross line {
-        stroke: #ff3b30;
-        stroke-width: 9;
-        stroke-linecap: round;
-        /* Non-scaling so the cross keeps an even weight whatever the button's width - the
-           viewBox is stretched to the button by preserveAspectRatio="none". */
-        vector-effect: non-scaling-stroke;
-        filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
-    }
 </style>
