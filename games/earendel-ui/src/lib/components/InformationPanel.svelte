@@ -49,22 +49,44 @@
         {#each gameSession.isMyTurn ? gameSession.heldPieces : [] as piece (piece.id)}
             <!-- The hand sits face up before any hex is chosen, which is the whole point of
                  drawing first: the placement is a decision made with knowledge. While a discard
-                 is owed, clicking throws that ship out; otherwise clicking picks it up. -->
+                 is owed, clicking throws that ship out; otherwise clicking picks it up.
+                 The unchosen ships were dimmed to 60%, which read as greyed-out-and-unavailable
+                 rather than as merely not-selected - they are perfectly playable, and one of them
+                 is about to be played. The white border is what marks the selection, so the
+                 dimming only has to be a whisper. A ship with nowhere legal to go stays visibly
+                 struck out, since that one genuinely cannot be used. -->
             {@const chosen = gameSession.drawnPiece?.id === piece.id
                 && !gameSession.chosenSpecialId}
             {@const stuck = !gameSession.isDiscarding && !gameSession.canPlaceHeld(piece)}
             <button
                 disabled={stuck && !gameSession.isDiscarding}
                 title={stuck ? 'Nowhere legal for this ship to go' : ''}
-                class="flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {chosen
+                class="relative flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {chosen
                     ? 'border-white'
-                    : 'border-transparent opacity-60'} {stuck ? 'line-through opacity-40' : ''}"
+                    : 'border-transparent opacity-90'} {stuck
+                    ? 'line-through opacity-55'
+                    : ''} {gameSession.isDiscarding ? 'discardable' : ''}"
                 style="background-color: {gameSession.colors.getPlayerUiColor(piece.playerId)}"
                 onclick={() =>
                     gameSession.isDiscarding
                         ? gameSession.discard(piece.id)
                         : gameSession.chooseHeld(piece.id)}
             >
+                <!-- A red cross struck over the ship the cursor is on, but only while a discard
+                     is owed. The same click means "keep this one" at every other moment, so the
+                     cross is what separates the one destructive use of this row from the rest -
+                     and a discard cannot be undone, since the ship leaves the game rather than
+                     going back to the bag. Drawn over the whole button and inert to the mouse,
+                     so it cannot swallow the click it is warning about. -->
+                <svg
+                    class="discard-cross pointer-events-none absolute inset-0 h-full w-full"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                >
+                    <line x1="8" y1="8" x2="92" y2="92" />
+                    <line x1="92" y1="8" x2="8" y2="92" />
+                </svg>
                 <span class="text-xl leading-none">{glyph(piece)}</span>
                 <span class="text-sm font-semibold">
                     {gameSession.isDiscarding ? 'Discard' : ''}
@@ -78,7 +100,7 @@
                 class="flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {gameSession.chosenSpecialId ===
                 special.id
                     ? 'border-white'
-                    : 'border-transparent opacity-70'}"
+                    : 'border-transparent opacity-90'}"
                 style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
                 onclick={() => gameSession.toggleSpecial(special.id)}
             >
@@ -197,3 +219,26 @@
         </button>
     {/if}
 </div>
+
+<style>
+    /* Hidden until the button is hovered, and only ever rendered while a discard is owed. */
+    .discard-cross {
+        opacity: 0;
+        transition: opacity 120ms ease-out;
+    }
+
+    .discardable:hover .discard-cross,
+    .discardable:focus-visible .discard-cross {
+        opacity: 1;
+    }
+
+    .discard-cross line {
+        stroke: #ff3b30;
+        stroke-width: 9;
+        stroke-linecap: round;
+        /* Non-scaling so the cross keeps an even weight whatever the button's width - the
+           viewBox is stretched to the button by preserveAspectRatio="none". */
+        vector-effect: non-scaling-stroke;
+        filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+    }
+</style>

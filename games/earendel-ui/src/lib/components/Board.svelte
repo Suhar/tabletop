@@ -142,7 +142,7 @@
     // Dots marching from a controlling piece to the planet it holds. Spaced along the line
     // between the two hex centres, but inset at both ends so the run starts clear of the piece
     // and stops short of the planet's disc rather than disappearing under either.
-    const CONTROL_DOTS = 6
+    const CONTROL_DOTS = 9
     const CONTROL_DOT_CYCLE = 1.5 // seconds for one dot to travel the whole run
 
     function controlDots(from: AxialCoordinates, planet: AxialCoordinates) {
