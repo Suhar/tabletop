@@ -367,7 +367,17 @@ therefore a gift with a delay on it, and worth aiming carefully.
 ## Control and scoring
 
 A planet is controlled by whoever has the most **power** in the six hexes touching it. A
-planet touched only by probes (0 power) is controlled by nobody.
+planet touched by nothing at all is controlled by nobody.
+
+**A probe counts 1.** It counted 0 until a probe could be left unable to claim the very planet it
+had explored — the technology went to whoever first brought a real ship, which made exploring
+feel like work done for someone else. A lone unchallenged probe now holds what it found and can
+claim it on the following turn.
+
+The other edge of that is worth knowing: one point is enough to **tie a station**, so an enemy
+probe parked beside a planet stops a station holding it outright and neither player claims. The
+cheapest piece in the game cannot take a planet from a station, but it can stop the station
+having it.
 
 Ties are treated differently depending on what is at stake:
 

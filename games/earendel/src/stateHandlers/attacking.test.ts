@@ -53,8 +53,11 @@ describe('powerOf', () => {
     it('reads a fighter’s level as its power, and leaves the others alone', () => {
         expect(powerOf(ship('p1', PieceType.Fighter, PieceLevel.Two))).toBe(2)
         expect(powerOf(ship('p1', PieceType.Fighter, PieceLevel.Three))).toBe(3)
-        // A level 3 probe is still no claim at all - level means reveals, not power.
-        expect(powerOf(ship('p1', PieceType.Probe, PieceLevel.Three))).toBe(0)
+        // A probe counts 1 whatever its level: level decides how many cards it turns over, not
+        // how hard it holds a planet. So a level 3 probe is a better explorer than a level 2 one
+        // and no better a claim.
+        expect(powerOf(ship('p1', PieceType.Probe, PieceLevel.Three))).toBe(1)
+        expect(powerOf(ship('p1', PieceType.Probe, PieceLevel.Two))).toBe(1)
         expect(powerOf(ship('p1', PieceType.Station))).toBe(1)
         // A fighter won from a technology, carrying no level of its own.
         expect(powerOf(ship('p1', PieceType.Fighter))).toBe(2)

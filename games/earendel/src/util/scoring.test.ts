@@ -61,10 +61,21 @@ describe('planetPointsByPlayer', () => {
         expect(planetPointsByPlayer(board)).toEqual({ p1: 1, p2: 1 })
     })
 
-    it('pays nobody for a planet ringed only by probes', () => {
+    it('pays a planet held only by a probe', () => {
+        // A probe counts 1, so it both holds a planet and scores it - the point of raising it
+        // from 0 was that a probe which explores a planet can go on to keep it.
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure }],
             [at(1, 0), { ship: ['p1', PieceType.Probe] }]
+        ])
+
+        expect(planetPointsByPlayer(board)).toEqual({ p1: 1 })
+    })
+
+    it('pays nobody for a planet nothing touches', () => {
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(1, 0), {}]
         ])
 
         expect(planetPointsByPlayer(board)).toEqual({})

@@ -16,6 +16,8 @@ import {
     turnsUntilReady,
     attackableTargets,
     explorablePlanets,
+    dominantPlayerId,
+    planetCoordinates,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
@@ -354,6 +356,34 @@ export class EarendelGameSession extends GameSession<
         const piece = this.pieceToPlace
         if (!piece || piece.type !== PieceType.Probe || !this.isPlacing) return []
         return explorablePlanets(this.gameState.board, coords, piece.type)
+    }
+
+    // Planets where a claim is ticking: someone holds it outright, it holds a technology, and
+    // they don't have that technology yet - so it becomes theirs at the start of their next turn
+    // unless somebody breaks the hold first.
+    //
+    // Derived from the board rather than stored, because that is exactly what the rule is: there
+    // is no timer in state to read, only "who holds this right now", asked freshly. Which also
+    // means this cannot drift out of step with what the engine will actually pay out.
+    pendingClaims: { coords: AxialCoordinates; playerId: string }[] = $derived.by(() => {
+        const held = new Map(
+            this.gameState.players.map((player) => [player.playerId, player.technologies])
+        )
+
+        return planetCoordinates(this.gameState.board)
+            .map((coords) => {
+                const hex = getHex(this.gameState.board, coords)
+                if (!hex?.technology) return undefined
+                const playerId = dominantPlayerId(this.gameState.board, coords)
+                if (!playerId) return undefined
+                if ((held.get(playerId) ?? []).includes(hex.technology.id)) return undefined
+                return { coords, playerId }
+            })
+            .filter((claim): claim is { coords: AxialCoordinates; playerId: string } => !!claim)
+    })
+
+    claimOn(coords: AxialCoordinates): string | undefined {
+        return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
     }
 
     isHighlighted(coords: AxialCoordinates): boolean {

@@ -33,29 +33,44 @@ describe('planetControl', () => {
         expect(control.power).toBe(0)
     })
 
-    it('leaves a planet unclaimed when only probes surround it', () => {
-        // A probe is an explorer, not a claim - it contributes 0 power, so a ring of them
-        // controls nothing.
+    it('lets an unchallenged probe hold a planet on its own', () => {
+        // A probe counts 1. It used to count nothing, which left a probe able to explore a planet
+        // and then unable to claim what it found; a lone probe now holds what it discovered.
         const board = boardWithPlanetAtOrigin()
         place(board, 0, 'p1', PieceType.Probe)
         place(board, 1, 'p1', PieceType.Probe)
 
         const control = planetControl(board, ORIGIN)
 
-        expect(control.controllingPlayerIds).toEqual([])
-        expect(control.powerByPlayerId).toEqual({ p1: 0 })
+        expect(control.controllingPlayerIds).toEqual(['p1'])
+        expect(control.powerByPlayerId).toEqual({ p1: 2 })
+    })
+
+    it('lets a probe tie a station, so neither player holds the planet', () => {
+        // The other edge of counting probes: one point is enough to match a station, so the
+        // cheapest piece in the game can deny a claim without being able to take it.
+        const board = boardWithPlanetAtOrigin()
+        place(board, 0, 'p1', PieceType.Station)
+        place(board, 1, 'p2', PieceType.Probe)
+
+        const control = planetControl(board, ORIGIN)
+
+        expect(control.powerByPlayerId).toEqual({ p1: 1, p2: 1 })
+        expect(control.controllingPlayerIds).toEqual(['p1', 'p2'])
     })
 
     it('gives control to the most adjacent power', () => {
         const board = boardWithPlanetAtOrigin()
         place(board, 0, 'p1', PieceType.Fighter) // 2
         place(board, 1, 'p2', PieceType.Station) // 1
-        place(board, 2, 'p2', PieceType.Probe) // 0
+        place(board, 2, 'p2', PieceType.Probe) // 1
 
         const control = planetControl(board, ORIGIN)
 
-        expect(control.powerByPlayerId).toEqual({ p1: 2, p2: 1 })
-        expect(control.controllingPlayerIds).toEqual(['p1'])
+        // p2's station and probe now add to 2 and match the fighter, where the probe used to
+        // count nothing and leave the fighter ahead.
+        expect(control.powerByPlayerId).toEqual({ p1: 2, p2: 2 })
+        expect(control.controllingPlayerIds).toEqual(['p1', 'p2'])
         expect(control.power).toBe(2)
     })
 

@@ -540,6 +540,50 @@
                         </g>
                     </g>
                 {/if}
+                {@const claimant = gameSession.claimOn(hex.coords)}
+                {#if claimant}
+                    <!-- A claim ticking on this planet: whoever holds it outright takes its
+                         technology at the start of their next turn, unless somebody breaks the
+                         hold first. Drawn in that player's colour, so the board answers "whose
+                         timer?" and not merely "a timer".
+                         Tucked into the hex's lower-left, clear of the planet body in the middle
+                         and of the technology mark on top of it. -->
+                    {@const hx = entry.center.x - 30}
+                    {@const hy = entry.center.y + 20}
+                    {@const claimColor = gameSession.colors.getPlayerUiColor(claimant)}
+                    <g class="claim-glass" pointer-events="none">
+                        <!-- The frame: two bowls and the pinch between them. -->
+                        <path
+                            d="M {hx - 6} {hy - 9} L {hx + 6} {hy - 9} L {hx} {hy} Z"
+                            fill={claimColor}
+                            fill-opacity="0.9"
+                        />
+                        <path
+                            d="M {hx - 6} {hy + 9} L {hx + 6} {hy + 9} L {hx} {hy} Z"
+                            fill={claimColor}
+                            fill-opacity="0.45"
+                        />
+                        <line
+                            x1={hx - 7}
+                            y1={hy - 10}
+                            x2={hx + 7}
+                            y2={hy - 10}
+                            stroke={claimColor}
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+                        <line
+                            x1={hx - 7}
+                            y1={hy + 10}
+                            x2={hx + 7}
+                            y2={hy + 10}
+                            stroke={claimColor}
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+                    </g>
+                {/if}
+
                 {#if hex.technology}
                     <!-- A mark, not a label: the name and what it does are too much text for a
                          hex, so they go in a popup on hover or click instead. -->
@@ -572,7 +616,9 @@
             {:else if hex.piece}
                 {@const color = gameSession.colors.getPlayerUiColor(hex.piece.playerId)}
                 {#if hex.piece.type === PieceType.Probe}
-                    <!-- Probe: small and open. No power, so it never looks like a claim. -->
+                    <!-- Probe: small and open, so it reads as the lightest piece on the board.
+                         It counts 1 towards control now rather than 0, but it is still the piece
+                         you send to look rather than to hold. -->
                     <circle
                         cx={entry.center.x}
                         cy={entry.center.y}
