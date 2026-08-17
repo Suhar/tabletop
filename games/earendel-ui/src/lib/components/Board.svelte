@@ -130,9 +130,25 @@
     // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
     // so the wavelength stays constant however long or however angled the line is.
     function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
-        const start = hexGeometry(from).center
-        const end = hexGeometry(to).center
+        return waveBetween(hexGeometry(from).center, hexGeometry(to).center)
+    }
 
+    // The shared edge between two neighbouring hexes: the two vertices they have in common.
+    // Found by matching vertices rather than by mapping a direction to an edge index, so it
+    // cannot go wrong if the hex orientation ever changes.
+    function sharedEdge(a: AxialCoordinates, b: AxialCoordinates) {
+        const va = hexGeometry(a).vertices
+        const vb = hexGeometry(b).vertices
+        const shared = va.filter((pa) =>
+            vb.some((pb) => Math.abs(pa.x - pb.x) < 0.6 && Math.abs(pa.y - pb.y) < 0.6)
+        )
+        return shared.length === 2 ? { start: shared[0], end: shared[1] } : undefined
+    }
+
+    // Same sine sampling as wavePath, over two arbitrary points. A short edge needs a shorter
+    // wavelength and a smaller amplitude than a sight line spanning the board, so both scale
+    // with the distance instead of being fixed.
+    function waveBetween(start: { x: number; y: number }, end: { x: number; y: number }, amplitude = 9, wavelength = 46): string {
         const dx = end.x - start.x
         const dy = end.y - start.y
         const length = Math.hypot(dx, dy)
@@ -144,9 +160,8 @@
         const px = -uy
         const py = ux
 
-        const amplitude = 9
-        const samples = Math.max(24, Math.round(length / 4))
-        const waves = Math.max(2, Math.round(length / 46))
+        const samples = Math.max(24, Math.round(length / 3))
+        const waves = Math.max(2, Math.round(length / wavelength))
 
         let path = ''
         for (let i = 0; i <= samples; i++) {
@@ -876,6 +891,29 @@
                 </text>
             {/each}
         </g>
+    {/each}
+
+    <!-- Who holds each planet, drawn on the boundary itself: a wiggly line in the controller's
+         colour along every edge where one of their pieces meets the planet.
+         Only the controller's edges are drawn, so this says who is winning rather than showing
+         the whole contest - a planet with three enemy ships around it and one of mine gets one
+         line. A tie draws both players' lines, which is what a shared planet should look like,
+         since a tie pays both in full.
+         The wave is the same figure the station sight lines use, at a shorter wavelength and
+         smaller amplitude to suit an edge rather than a span of board. -->
+    {#each gameSession.controlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
+        {@const edgeLine = sharedEdge(edge.planet, edge.from)}
+        {#if edgeLine}
+            <path
+                d={waveBetween(edgeLine.start, edgeLine.end, 4.5, 15)}
+                fill="none"
+                stroke={gameSession.colors.getPlayerUiColor(edge.playerId)}
+                stroke-width="3.5"
+                stroke-linecap="round"
+                stroke-opacity="0.95"
+                pointer-events="none"
+            />
+        {/if}
     {/each}
 
     <!-- What the placement being considered WOULD do: the same marks as the live versions

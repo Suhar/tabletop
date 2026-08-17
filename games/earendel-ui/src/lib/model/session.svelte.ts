@@ -17,7 +17,9 @@ import {
     attackableTargets,
     explorablePlanets,
     dominantPlayerId,
+    planetControl,
     planetCoordinates,
+    neighborsOf,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
@@ -381,6 +383,36 @@ export class EarendelGameSession extends GameSession<
             })
             .filter((claim): claim is { coords: AxialCoordinates; playerId: string } => !!claim)
     })
+
+    // Every boundary where a CONTROLLING piece meets the planet it controls: the planet, the
+    // neighbouring hex the piece stands on, and whose it is.
+    //
+    // Only the controller's own edges, so the board shows the answer rather than the arithmetic -
+    // a planet with three enemy ships around it and one of mine draws one line, not four, and
+    // that line says who is winning.
+    //
+    // Control here is the INCLUSIVE kind, the one that pays end-game points, so a tie draws both
+    // players' edges and reads as genuinely shared. That is deliberately a different question
+    // from the hourglass, which tracks the strict hold a technology needs: the wiggle says who
+    // scores this planet, the hourglass says who is about to take what it holds.
+    controlEdges: { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] =
+        $derived.by(() => {
+            const edges: { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] =
+                []
+
+            for (const planet of planetCoordinates(this.gameState.board)) {
+                const { controllingPlayerIds } = planetControl(this.gameState.board, planet)
+                if (controllingPlayerIds.length === 0) continue
+
+                for (const neighbor of neighborsOf(planet)) {
+                    const piece = getHex(this.gameState.board, neighbor)?.piece
+                    if (!piece || !controllingPlayerIds.includes(piece.playerId)) continue
+                    edges.push({ planet, from: neighbor, playerId: piece.playerId })
+                }
+            }
+
+            return edges
+        })
 
     claimOn(coords: AxialCoordinates): string | undefined {
         return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
