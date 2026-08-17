@@ -2,6 +2,7 @@ import type { MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
 import { drawCountFor, type EarendelGameConfig } from '../definition/config.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { activateNextTechnologyEffect } from './technologyGrants.js'
 
 // Where a turn begins, in either style: waiting for the player to draw.
 export function turnStartState(_config?: EarendelGameConfig): MachineState {
@@ -31,6 +32,38 @@ export function drawCountForPlayer(
 // has taken the most turns, not the one who was luckiest with the order.
 export function isEndOfGame(state: HydratedEarendelGameState): boolean {
     return state.players.some((player) => player.bag.length === 0)
+}
+
+// The state an owed technology effect is waiting in, if one is owed at all. Both slots are
+// checked because GrowBoard waits on a tile and everything else on pendingTechnology.
+export function pendingTechnologyEffectState(
+    state: HydratedEarendelGameState
+): MachineState | undefined {
+    if (state.pendingTile) return MachineState.PlacingTile
+    if (state.pendingTechnology) return MachineState.ResolvingTechnology
+    return undefined
+}
+
+// Where a turn goes once its hand is settled - drawn, and drafted down if the style drafts.
+//
+// Technologies claimed at the top of the turn are granted during the draw, but an immediate
+// effect is not carried out until here, AFTER any discard. Resolving one straight after the
+// draw would strand a drafted hand: the effect's own exit runs through endPlacement, which
+// sees ships in hand and goes to PlacingPiece - skipping the discard the player still owed.
+export function beginPlacement(state: HydratedEarendelGameState): MachineState {
+    return pendingTechnologyEffectState(state) ?? MachineState.PlacingPiece
+}
+
+// Where a turn goes when an owed technology effect has just been carried out: on to the next
+// one if the turn claimed several, otherwise back to the placement it interrupted.
+export function afterTechnologyEffect(
+    state: HydratedEarendelGameState,
+    context?: MachineContext<HydratedEarendelGameState>
+): MachineState {
+    if (activateNextTechnologyEffect(state)) {
+        return pendingTechnologyEffectState(state)!
+    }
+    return endPlacement(state, context)
 }
 
 // Closes out one placement.

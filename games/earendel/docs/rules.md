@@ -204,7 +204,8 @@ fixed orientation cannot.
 A technology may instead be **stored**: it goes in front of its owner unused, and is spent
 later, **once**. A player can hold several, including two of the same kind gained from two
 different planets. Like every technology, it is gained by the explorer and by anyone who later
-holds the planet outright — so the same card can hand a charge to several players over a game.
+holds the planet outright from one turn to the next — so the same card can hand a charge to
+several players over a game.
 
 The first is **Logistics Upgrade**: *once, on a later turn, place the ship you would otherwise
 discard.*
@@ -221,13 +222,15 @@ A technology may hand over a **piece** the moment it is gained, rather than an e
 or a power to spend. There is nothing to decide: the reward is the piece, and what it does is the
 piece's business.
 
-**Station Upgrade** grants a **Station Hub** (see *Components*). Like every technology it is gained
-by the explorer and by anyone who later holds the planet outright, so one card can hand a hub to
+**Station Upgrade** grants a **Station Hub** (see *Components*). Like every technology it is
+claimed by holding the planet outright from one turn to the next, so one card can hand a hub to
 several players over a game — each getting their own.
 
-**ASSUMED:** hubs multiply. Two in one complex make it fourfold, which is what "doubles the score
-of its cluster" says of each hub taken on its own. It climbs fast, and a single doubling however
-many are present is the obvious alternative.
+**Hubs multiply.** Two in one complex make it fourfold, which is what "doubles the score of its
+cluster" says of each hub taken on its own. It climbs fast, deliberately: a hub is won from a
+technology rather than drawn from the bag, so a player who has collected several has already
+spent a great deal of the game earning them, and a second one landing in the same complex as
+the first should be worth more than spreading them thin.
 
 ### Cooldown effects
 
@@ -266,25 +269,44 @@ up in practice.
 
 ### Gaining a technology
 
-A planet's technology is permanent, and so is holding it. A technology is **gained** at two
-moments:
+Exploring a planet decides what it **holds**. It does not hand that technology to anybody.
 
-1. The player who **explores** the planet gains it immediately, on choosing it. They need no
-   power there at all, then or ever.
-2. Any player who later holds the planet **outright** gains it too.
+A technology is claimed by **holding its planet outright from one of your turns to the next**.
+At the start of every turn, before anything else, each explored planet you hold outright pays
+you its technology — provided you don't already have it. That is the whole rule, and it applies
+to the explorer exactly as it applies to everyone else.
 
 Outright means **strictly more power than any other player** — not merely tied for the most.
-This is stricter than control for scoring purposes (see below): matching an opponent's
-presence beside a planet is *not* a way to copy what they hold.
+This is stricter than control for scoring purposes (see below): matching an opponent's presence
+beside a planet is *not* a way to copy what they hold.
 
-A gained technology is **never lost** — not when the planet is, not ever. Whatever it grants
-(a special piece, a continuous power) stays with the player who gained it. Several players
-can therefore hold the same planet's technology, and over a game technologies only
-accumulate.
+So a planet is won by keeping it, not by reaching it. Explore on your turn and the planet's card
+is chosen, but a rival who drops a fighter beside it before your next turn takes the claim away
+from you and starts a wait of their own. You must break their hold again to be back in line, and
+they must survive a full round of everyone else's turns to collect. A planet under real
+contention can sit explored and unclaimed for a long time, changing hands and paying nobody.
 
-A planet pays each player **once and once only**. Losing a planet and taking it back again
-gains nothing the second time, so a planet can't be farmed by control passing back and
-forth.
+**Nothing is tracked between turns.** There is no timer to remember: the question is only ever
+asked at the moment a turn begins, so a player who loses a planet and takes it back before their
+own turn comes round arrives holding it, and is paid. The wait is the round of other players'
+turns you have to survive, not a clock that a momentary loss resets.
+
+**A probe alone can never claim what it discovers.** Probes have no power, so a probe beside a
+planet holds nothing. A player who explores with a probe and sends nothing else has chosen what
+the planet is worth for the rest of the game and handed the claiming of it to whoever brings a
+station or a fighter. This is a real cost of exploring cheaply, and the sharpest edge of the
+rule.
+
+A claimed technology is **never lost** — not when the planet is, not ever. Whatever it grants (a
+special piece, a continuous power) stays with the player who claimed it. Several players can
+therefore hold the same planet's technology, and over a game technologies only accumulate.
+
+A planet pays each player **once and once only**. Losing a planet and taking it back gains
+nothing the second time, so a planet can't be farmed by control passing back and forth.
+
+**A technology that acts at once acts when it is claimed**, at the top of the claiming player's
+turn, after any draft discard and before their placement. A turn that claims two such
+technologies carries both out, in turn, before placing anything.
 
 **Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
 the planet will hold — picking a technology that suits their position, from cards nobody
@@ -332,9 +354,11 @@ than as a change to what fighters can do.
 
 This is the only way a hex is ever vacated. Nothing else ever leaves the board.
 
-Destroying can change who holds a nearby planet outright, and therefore hand over its
-technology — **including to a player who took no part in the attack**, when the removal
-breaks a tie they were losing to.
+Destroying can change who holds a nearby planet outright, and so put a technology **within
+reach of a player who took no part in the attack** — when the removal breaks a tie they were
+losing. They still have to hold it until their own next turn to claim it, which gives everyone
+else, the attacker included, a round in which to take it off them. Shooting to break a tie is
+therefore a gift with a delay on it, and worth aiming carefully.
 
 ---
 
@@ -417,9 +441,11 @@ joins a complex *and* completes a run between two planets of one colour collects
 third station joining a pair, on a hex that also bridges two same-coloured planets, is 3 for
 the complex plus 3 for the chain.
 
-**OPEN:** whether that overlap should stand. It rewards a placement that does two jobs, which
-reads well, but it makes station-and-planet geometry the single most valuable thing to look for
-and can produce a jump that surprises the player who made it.
+**The overlap stands.** It rewards a placement that does two jobs, and making
+station-and-planet geometry the most valuable thing on the board to spot is a fair thing for
+the game to ask players to look for. The surprise jump is a real cost, which the score float
+over the board is there to explain (see the UI's per-action popups) - the points arrive
+labelled, not silently.
 
 ### Station blockades
 

@@ -46,6 +46,10 @@ export type GameSummary = {
     chainsScored: number
     // Immediate technology effects actually carried out.
     technologiesResolved: number
+    // Technologies actually in players' hands at the end, against the number of planets that
+    // were explored. The gap between the two is the cost of the holding rule: a planet can be
+    // explored, and its card chosen, and still never be claimed by anybody.
+    technologiesClaimed: number
     // Tiles laid during play by the board-growing technology.
     tilesPlaced: number
     // Ships thrown out of the game by the draft.
@@ -313,6 +317,10 @@ export function playRandomGame(
         piecesDestroyed,
         chainsScored,
         technologiesResolved,
+        technologiesClaimed: game.state.players.reduce(
+            (total, player) => total + player.technologies.length,
+            0
+        ),
         tilesPlaced,
         discards,
         upgradesSpent,

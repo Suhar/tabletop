@@ -75,6 +75,7 @@ export class EarendelGameInitializer
             technologyDeck: buildDeckFor(config, prng),
             technologyDiscard: [],
             tileSupply: buildTileSupply(game.players.length, prng),
+            queuedTechnologyEffects: [],
             scoredPlanetPairs: [],
         })
 

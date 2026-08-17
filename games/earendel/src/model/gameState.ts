@@ -55,8 +55,14 @@ export const EarendelGameState = Type.Evaluate(
             // because a drafted turn may still be holding a piece of its own.
             bonusPlacementTileId: Type.Optional(Type.String()),
             bonusPlacementPieceId: Type.Optional(Type.String()),
-            // Set while an immediate technology effect is owed to the player who chose it.
+            // Set while an immediate technology effect is owed to the player who claimed it.
             pendingTechnology: Type.Optional(PendingTechnology),
+            // Immediate effects still owed after the one being resolved. A turn can claim
+            // several technologies at once - two planets held to term on the same turn - and
+            // each one that acts at once has to be carried out before the turn proceeds. The
+            // one in hand lives in pendingTechnology/pendingTile as it always has; this is the
+            // rest of the line behind it, drained one at a time.
+            queuedTechnologyEffects: Type.Array(PendingTechnology),
             // Set while a newly placed fighter's owner decides whether to fire. Like
             // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
@@ -91,6 +97,7 @@ export class HydratedEarendelGameState
     declare heldPieces: Piece[]
     declare pendingAttack?: PendingAttack
     declare pendingTechnology?: PendingTechnology
+    declare queuedTechnologyEffects: PendingTechnology[]
     declare tileSupply: Tile[]
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string

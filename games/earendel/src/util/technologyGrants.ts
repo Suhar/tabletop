@@ -1,58 +1,59 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { dominantPlayerId, type EarendelBoard, getHex, HexKind, neighborsOf } from '../model/board.js'
+import {
+    dominantPlayerId,
+    type EarendelBoard,
+    getHex,
+    HexKind,
+    neighborsOf,
+    planetCoordinates
+} from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import {
     cooldownEffectOf,
     grantedPieceOf,
+    hasImmediateEffect,
     storedEffectOf,
     type TechnologyCard,
     TechnologyEffectKind
 } from '../model/technology.js'
+import type { PendingTechnology } from '../model/exploration.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
-// Technologies a placement just handed its owner: those on explored planets the placement
-// gave them OUTRIGHT hold of, and which they don't already hold.
+// Every explored planet this player holds outright and whose technology they don't yet have -
+// the technologies that are ripe for them RIGHT NOW.
 //
-// Outright, not merely tied - matching an opponent's presence is not a way to copy what they
-// hold (see dominantPlayerId). Only the placing player can gain anything here, since a
-// placement only ever adds to the placer's power: it can make them dominant, or break
-// someone else's dominance, but it can never make a third party dominant.
+// This is the whole of the timing rule. A technology is never handed over at the moment control
+// changes; it is handed over at the start of a turn, to whoever is holding the planet outright
+// when that turn begins. So exploring a planet no longer wins its technology - it decides what
+// the planet holds and starts a wait. Hold the planet until your next turn and it is yours; let
+// someone break your hold and they are the one waiting, from their next turn.
 //
-// Players who lose a planet keep everything they had already gained; a technology, once
-// gained, is never lost, and never gained twice by the same player.
-// Written around a hex rather than around a player because a board change cuts both ways: a
-// placement hands technology to the placer, but a DESTRUCTION can hand it to whoever is left
-// standing next to the planet, who may have had nothing to do with the attack.
-export function technologiesGainedAround(
-    board: EarendelBoard,
-    coords: AxialCoordinates,
-    held: Record<string, string[]>
-): Record<string, string[]> {
-    const gained: Record<string, string[]> = {}
-
-    for (const neighbor of neighborsOf(coords)) {
-        const hex = getHex(board, neighbor)
-        if (hex?.kind !== HexKind.Planet || !hex.technology) continue
-
-        const playerId = dominantPlayerId(board, neighbor)
-        if (!playerId) continue
-        if ((held[playerId] ?? []).includes(hex.technology.id)) continue
-        if ((gained[playerId] ?? []).includes(hex.technology.id)) continue
-
-        gained[playerId] = [...(gained[playerId] ?? []), hex.technology.id]
-    }
-
-    return gained
-}
-
-// What one player gains from a change at this hex.
-export function technologiesGainedBy(
+// Nothing needs to be remembered between turns for this. There is no timer in state, because
+// control is only ever asked about at one instant - the beginning of a turn - and a player who
+// loses and retakes a planet in between arrives at that instant holding it, which is all the
+// rule asks. (An earlier draft tracked a per-planet claim so that a broken hold voided the
+// wait; settled the other way, and this is much the simpler half of that bargain.)
+//
+// Read over the whole board rather than around one hex, because it is no longer answering
+// "what did that move just win?" but "what has this player held long enough to keep?".
+export function technologiesRipeFor(
     board: EarendelBoard,
     playerId: string,
-    coords: AxialCoordinates,
     alreadyHeld: string[]
-): string[] {
-    return technologiesGainedAround(board, coords, { [playerId]: alreadyHeld })[playerId] ?? []
+): TechnologyCard[] {
+    const ripe: TechnologyCard[] = []
+
+    for (const coords of planetCoordinates(board)) {
+        const hex = getHex(board, coords)
+        if (!hex?.technology) continue
+        if (alreadyHeld.includes(hex.technology.id)) continue
+        if (ripe.some((card) => card.id === hex.technology!.id)) continue
+        if (dominantPlayerId(board, coords) !== playerId) continue
+
+        ripe.push(hex.technology)
+    }
+
+    return ripe
 }
 
 // Hands one technology to one player: the id for the ledger, and anything the card stores for
@@ -99,25 +100,67 @@ function grantedPiece(
     return undefined
 }
 
-// Credits every player who now holds a neighbouring planet outright, and reports what each
-// gained. The board must already be in its new shape when this is called.
-export function applyTechnologyGains(
+// Hands this player every technology ripe for them, and lines up any that act at once.
+// Called at the top of a turn, which is the only moment a technology ever changes hands.
+//
+// Returns the ids gained so the action that triggered it can report them: a technology
+// arriving is worth announcing, and unlike the old model nobody was looking at the board when
+// it happened - it is the consequence of a hold that survived a full round.
+export function claimRipeTechnologies(
     state: HydratedEarendelGameState,
-    coords: AxialCoordinates
-): Record<string, string[]> {
-    const held = Object.fromEntries(
-        state.players.map((player) => [player.playerId, player.technologies])
-    )
-    const gained = technologiesGainedAround(state.board, coords, held)
+    playerId: string
+): string[] {
+    const playerState = state.getPlayerState(playerId)
+    const ripe = technologiesRipeFor(state.board, playerId, playerState.technologies)
+    if (ripe.length === 0) return []
 
-    for (const [playerId, technologies] of Object.entries(gained)) {
-        for (const technologyId of technologies) {
-            const hex = Object.values(state.board.hexes).find(
-                (candidate) => candidate.technology?.id === technologyId
-            )
-            if (hex?.technology) grantTechnology(state, playerId, hex.technology)
+    const effects: PendingTechnology[] = []
+
+    for (const card of ripe) {
+        grantTechnology(state, playerId, card)
+
+        // GrowBoard is handled apart from the others because it needs a tile drawn for it, and
+        // the supply can be empty - in which case the technology simply comes to nothing.
+        if (hasImmediateEffect(card)) {
+            effects.push({ playerId, technologyId: card.id, kind: card.effect!.kind })
         }
     }
 
-    return gained
+    // The first effect goes into the slot the resolving states already watch; the rest wait.
+    const [first, ...rest] = effects
+    state.queuedTechnologyEffects = rest
+    if (first) activateTechnologyEffect(state, first)
+
+    return ripe.map((card) => card.id)
+}
+
+// Puts one owed effect into the slot its resolving state watches. GrowBoard wants a tile in
+// hand; everything else waits on pendingTechnology.
+export function activateTechnologyEffect(
+    state: HydratedEarendelGameState,
+    effect: PendingTechnology
+) {
+    if (effect.kind === TechnologyEffectKind.GrowBoard) {
+        const tile = state.tileSupply.shift()
+        if (tile) state.pendingTile = { playerId: effect.playerId, tile }
+        return
+    }
+    state.pendingTechnology = effect
+}
+
+// Pulls the next owed effect into play, if any. Returns whether one was activated, so the
+// caller can decide between carrying on with the turn and resolving another effect.
+export function activateNextTechnologyEffect(state: HydratedEarendelGameState): boolean {
+    const [next, ...rest] = state.queuedTechnologyEffects
+    if (!next) return false
+
+    state.queuedTechnologyEffects = rest
+    activateTechnologyEffect(state, next)
+
+    // An empty tile supply leaves GrowBoard with nothing to do, so it isn't really pending -
+    // skip straight past it rather than stalling the turn on an effect that cannot happen.
+    if (!state.pendingTile && !state.pendingTechnology) {
+        return activateNextTechnologyEffect(state)
+    }
+    return true
 }

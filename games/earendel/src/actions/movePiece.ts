@@ -6,7 +6,6 @@ import { ActionType } from '../definition/actions.js'
 import { hexKey, sameHex } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
 import { destinationsFrom, legalMovesFor } from '../util/movement.js'
-import { applyTechnologyGains } from '../util/technologyGrants.js'
 
 export type MovePieceMetadata = Type.Static<typeof MovePieceMetadata>
 export const MovePieceMetadata = Type.Object({
@@ -17,7 +16,6 @@ export const MovePieceMetadata = Type.Object({
     // Recorded so history says the technology fizzled rather than going silent.
     noMoveAvailable: Type.Optional(Type.Boolean()),
     // Stepping out of a hex, or into one, can change who holds a neighbouring planet outright.
-    technologiesGained: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String())))
 })
 
 export type MovePiece = Type.Static<typeof MovePiece>
@@ -78,17 +76,13 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         origin.piece = undefined
         state.board.hexes[hexKey(this.to)].piece = piece
 
-        // Both ends matter: leaving a hex can hand a planet to whoever is left beside it, and
-        // arriving can take one. Neither need be the moving player.
-        const gained = {
-            ...applyTechnologyGains(state, this.from),
-            ...applyTechnologyGains(state, this.to)
-        }
+        // Both ends of the move can change who holds a planet outright - leaving one behind
+        // as much as arriving - but neither hands a technology over now. That is settled at
+        // the start of a turn, for whoever is holding on then.
 
         state.pendingTechnology = undefined
         this.metadata = {
             piece,
-            ...(Object.keys(gained).length > 0 ? { technologiesGained: gained } : {})
         }
     }
 

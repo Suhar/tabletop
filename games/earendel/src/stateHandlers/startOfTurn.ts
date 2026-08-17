@@ -3,6 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedDrawPieces, isDrawPieces } from '../actions/drawPieces.js'
+import { beginPlacement } from '../util/turn.js'
 
 type StartOfTurnAction = HydratedDrawPieces
 
@@ -12,7 +13,8 @@ type StartOfTurnAction = HydratedDrawPieces
 // draw is what makes hidden information public, and until it happens the player before them
 // can still take their own turn back.
 //
-// Transitions: StartOfTurn(DrawPieces) -> DraftingPieces | PlacingPiece
+// Transitions: StartOfTurn(DrawPieces) -> DraftingPieces | PlacingTile | ResolvingTechnology
+//               | PlacingPiece
 export class StartOfTurnStateHandler
     implements MachineStateHandler<StartOfTurnAction, HydratedEarendelGameState>
 {
@@ -47,10 +49,12 @@ export class StartOfTurnStateHandler
     ): MachineState {
         switch (true) {
             case isDrawPieces(action): {
-                // More than one ship in hand means there is one to throw away first.
+                // More than one ship in hand means there is one to throw away first. Any
+                // technology claimed by this draw waits until after that discard - see
+                // beginPlacement.
                 return context.gameState.heldPieces.length > 1
                     ? MachineState.DraftingPieces
-                    : MachineState.PlacingPiece
+                    : beginPlacement(context.gameState)
             }
             default: {
                 throw Error('Invalid action type')

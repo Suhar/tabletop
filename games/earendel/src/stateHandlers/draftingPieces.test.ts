@@ -250,9 +250,12 @@ describe('a drafted turn', () => {
         ).toThrow()
     })
 
-    it('keeps the turn through an exploration and its technology', () => {
-        // The reported sequence: keep a probe and a fighter, place the probe beside a planet,
-        // let the technology it finds move a piece - and the fighter must still be to place.
+    it('keeps the turn through a claimed technology, and discards before it', () => {
+        // The reported bug this guards: a technology interrupting a drafted turn must not drop
+        // the ships still in hand. The interruption now happens at the TOP of the turn - a
+        // planet held since last turn pays as the player draws - which makes the order matter
+        // twice over: the discard has to come first, and both kept ships must survive the
+        // effect. Resolving the effect straight after the draw would do neither.
         const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
         const mover = game.activePlayerId
 
@@ -261,18 +264,25 @@ describe('a drafted turn', () => {
             coords: at(0, 3),
             tileId: 't1',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure
-        }
-        game.state.board = board
-        game.state.tileSupply = []
-        game.state.technologyDeck = [
-            {
+            color: PlanetColor.Azure,
+            explored: true,
+            technology: {
                 id: 'shift',
                 colors: [PlanetColor.Azure],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
-        ]
+        }
+        // Holding the planet outright since before this turn, so the claim is due on the draw.
+        board.hexes[hexKey(at(0, 4))] = {
+            coords: at(0, 4),
+            tileId: 't1',
+            kind: HexKind.Open,
+            piece: { id: `${mover}-holder`, playerId: mover, type: PieceType.Station }
+        }
+        game.state.board = board
+        game.state.tileSupply = []
+        game.state.technologyDeck = []
         game.state.technologyDiscard = []
         game.stackBags((playerId) => [
             { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
@@ -280,40 +290,52 @@ describe('a drafted turn', () => {
             { id: `${playerId}-spare`, playerId, type: PieceType.Station }
         ])
 
+        // The draw happens inside this call, and with it the claim - so the technology is owed
+        // while there are still three ships in hand.
         game.run(DiscardPiece, {
             type: ActionType.DiscardPiece,
             playerId: mover,
             pieceId: `${mover}-spare`
         })
 
-        // The probe lands beside the planet, explores it, houses the only matching card, and the
-        // technology fires - all inside this one placement.
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 3),
-            pieceSource: PieceSource.Bag,
-            pieceId: `${mover}-probe`
-        })
-
+        // Discarded first, THEN the effect: two ships kept, and the effect waiting on them.
+        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
+            'shift'
+        ])
         expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
+        expect(game.state.heldPieces.map((piece) => piece.id).sort()).toEqual([
+            `${mover}-fighter`,
+            `${mover}-probe`
+        ])
 
         game.run(MovePiece, {
             type: ActionType.MovePiece,
             playerId: mover,
-            from: at(1, 3),
-            to: at(2, 3)
+            from: at(0, 4),
+            to: at(1, 3)
         })
 
-        // Still their turn, fighter still in hand. Ending it here would drop the fighter.
+        // Still their turn, both ships still in hand. Ending it here would drop them.
         expect(game.activePlayerId).toBe(mover)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
-        expect(game.state.heldPieces.map((piece) => piece.id)).toEqual([`${mover}-fighter`])
+        expect(game.state.heldPieces.map((piece) => piece.id).sort()).toEqual([
+            `${mover}-fighter`,
+            `${mover}-probe`
+        ])
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
             coords: at(5, 0),
+            pieceSource: PieceSource.Bag,
+            pieceId: `${mover}-probe`
+        })
+        expect(game.activePlayerId).toBe(mover)
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(6, 0),
             pieceSource: PieceSource.Bag,
             pieceId: `${mover}-fighter`
         })

@@ -3,7 +3,7 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { TechnologyTier } from '../model/technology.js'
-import { technologiesGainedBy } from './technologyGrants.js'
+import { technologiesRipeFor } from './technologyGrants.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame } from './testHarness.js'
@@ -50,29 +50,34 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
     return board
 }
 
-describe('technologiesGainedBy', () => {
-    it('hands over the technology of a planet the placement took control of', () => {
+describe('technologiesRipeFor', () => {
+    const ripeIds = (board: EarendelBoard, playerId: string, held: string[] = []) =>
+        technologiesRipeFor(board, playerId, held)
+            .map((card) => card.id)
+            .sort()
+
+    it('is ripe for the player holding the planet outright', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }]
         ])
 
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual(['tech-a'])
+        expect(ripeIds(board, 'p1')).toEqual(['tech-a'])
     })
 
-    it('hands over nothing to a player who did not take control', () => {
+    it('is not ripe for a player who is merely present', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Station] }],
             [at(0, 1), { ship: ['p2', PieceType.Fighter] }]
         ])
 
-        // p2 has the stronger ship, so p1 is beside the planet but doesn't hold it.
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual([])
-        expect(technologiesGainedBy(board, 'p2', at(0, 1), [])).toEqual(['tech-a'])
+        // p2's fighter outweighs the station, so p1 is beside the planet without holding it.
+        expect(ripeIds(board, 'p1')).toEqual([])
+        expect(ripeIds(board, 'p2')).toEqual(['tech-a'])
     })
 
-    it('hands nothing to either player when the strongest presence is tied', () => {
+    it('is ripe for nobody while the strongest presence is tied', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Station] }],
@@ -81,81 +86,145 @@ describe('technologiesGainedBy', () => {
 
         // A tie is enough to share the planet's point at the end, but not to take what it
         // holds - otherwise matching an opponent would copy their technology for one piece.
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual([])
-        expect(technologiesGainedBy(board, 'p2', at(0, 1), [])).toEqual([])
+        expect(ripeIds(board, 'p1')).toEqual([])
+        expect(ripeIds(board, 'p2')).toEqual([])
     })
 
-    it('never hands over the same technology twice, however control moves', () => {
+    it('is never ripe again once the player holds it', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }]
         ])
 
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), ['tech-a'])).toEqual([])
+        expect(ripeIds(board, 'p1', ['tech-a'])).toEqual([])
     })
 
-    it('hands over nothing for a planet that has no technology', () => {
+    it('is never ripe on a planet nobody has explored', () => {
         const board = boardOf([
             // Unexplored, so nothing is housed there yet.
             [at(0, 0), { planet: PlanetColor.Azure }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }]
         ])
 
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), [])).toEqual([])
+        expect(ripeIds(board, 'p1')).toEqual([])
     })
 
-    it('hands over every technology a single placement took control of', () => {
+    it('ripens every planet the player holds at once', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }],
             [at(2, 0), { planet: PlanetColor.Gold, technologyId: 'tech-b' }]
         ])
 
-        // Sorted because the order only reflects which way round the hex the scan walks.
-        expect(technologiesGainedBy(board, 'p1', at(1, 0), []).sort()).toEqual([
-            'tech-a',
-            'tech-b'
+        expect(ripeIds(board, 'p1')).toEqual(['tech-a', 'tech-b'])
+    })
+
+    it('looks across the whole board, not just around one ship', () => {
+        // Two of this player's ships, each holding a different planet, nowhere near each
+        // other. The old rule asked what a single move had just won and would have seen only
+        // one of these; the claim is settled per player per turn, so both come due together.
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
+            [at(1, 0), { ship: ['p1', PieceType.Fighter] }],
+            [at(8, 8), { planet: PlanetColor.Gold, technologyId: 'tech-b' }],
+            [at(9, 8), { ship: ['p1', PieceType.Fighter] }]
         ])
+
+        expect(ripeIds(board, 'p1')).toEqual(['tech-a', 'tech-b'])
     })
 })
 
-describe('holding a technology through the game', () => {
-    it('keeps it after control is lost', () => {
+describe('claiming a technology by holding a planet', () => {
+    const bagOf = (playerId: string, types: PieceType[]) =>
+        types.map((type, index) => ({ id: `${playerId}-${index}`, playerId, type }))
+
+    function scenario() {
         const game = new TestGame()
         game.state.board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
             [at(1, 0), {}],
             [at(0, 1), {}],
-            [at(9, 9), {}]
+            [at(8, 8), {}],
+            [at(9, 8), {}],
+            [at(8, 9), {}]
         ])
         game.state.technologyDeck = []
+        game.state.tileSupply = []
 
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
-        const bagOf = (playerId: string, types: PieceType[]) =>
-            types.map((type, index) => ({ id: `${playerId}-${index}`, playerId, type }))
 
         // stackBags, not a bare assignment: the turn's draw has already happened, so setting
         // the bag alone would leave a piece from the generated bag face up and place that.
         game.stackBags((playerId) =>
             playerId === mover
-                ? bagOf(mover, [PieceType.Station, PieceType.Station])
-                : bagOf(other, [PieceType.Fighter, PieceType.Fighter])
+                ? bagOf(mover, [PieceType.Station, PieceType.Station, PieceType.Station])
+                : bagOf(other, [PieceType.Fighter, PieceType.Fighter, PieceType.Fighter])
         )
 
-        const [taking] = game.run(PlacePiece, {
+        const held = (playerId: string) =>
+            game.state.players.find((p) => p.playerId === playerId)!.technologies
+
+        return { game, mover, other, held }
+    }
+
+    it('gives nothing at the moment control is taken', () => {
+        const { game, mover, held } = scenario()
+
+        game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
             coords: at(1, 0),
             pieceSource: PieceSource.Bag
         })
 
-        expect((taking as PlacePiece).metadata?.technologiesGained).toEqual({ [mover]: ['tech-a'] })
-        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
-            'tech-a'
-        ])
+        // The planet is theirs and nobody contests it - but taking it wins nothing yet. This
+        // is the whole point of the timing rule: it has to survive until their next turn.
+        expect(held(mover)).toEqual([])
+    })
 
-        // The other player's fighter outweighs the station and takes the planet.
+    it('gives it at the start of the next turn, control having survived', () => {
+        const { game, mover, other, held } = scenario()
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        // The other player goes elsewhere, leaving the planet alone.
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: other,
+            coords: at(8, 8),
+            pieceSource: PieceSource.Bag
+        })
+        expect(held(mover)).toEqual([])
+
+        // The mover's turn comes round and the claim falls due as they draw.
+        const [draw] = game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(8, 9),
+            pieceSource: PieceSource.Bag
+        })
+        expect(held(mover)).toEqual(['tech-a'])
+        expect(draw).toBeDefined()
+    })
+
+    it('passes the claim to whoever breaks the hold, and keeps what was already won', () => {
+        const { game, mover, other, held } = scenario()
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(1, 0),
+            pieceSource: PieceSource.Bag
+        })
+
+        // A fighter outweighs the station, so the planet changes hands before the mover's
+        // turn comes round - and the mover's wait comes to nothing.
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: other,
@@ -163,12 +232,22 @@ describe('holding a technology through the game', () => {
             pieceSource: PieceSource.Bag
         })
 
-        expect(game.state.players.find((p) => p.playerId === other)!.technologies).toEqual([
-            'tech-a'
-        ])
-        // Losing the planet does not take the technology back.
-        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
-            'tech-a'
-        ])
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(8, 8),
+            pieceSource: PieceSource.Bag
+        })
+        expect(held(mover)).toEqual([])
+
+        // The other player held it through a full round, so it is theirs.
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: other,
+            coords: at(8, 9),
+            pieceSource: PieceSource.Bag
+        })
+        expect(held(other)).toEqual(['tech-a'])
+        expect(held(mover)).toEqual([])
     })
 })

@@ -51,8 +51,10 @@ export function stationComplex(
 // How much a complex's score is multiplied by: each Station Hub standing in it doubles the
 // payout, from the moment it is placed and every time the complex is scored afterwards.
 //
-// ASSUMED: hubs multiply, so two in one complex quadruple it. That is what "doubles the score of
-// its station cluster" says of each hub taken on its own, but it climbs fast - see rules.md.
+// Hubs multiply, so two in one complex quadruple it - settled, not assumed. That is what
+// "doubles the score of its station cluster" says of each hub taken on its own, and the steep
+// climb is the point: a hub is won from a technology rather than drawn from the bag, so
+// concentrating two in one complex should beat spreading them thin. See rules.md.
 export function hubMultiplier(
     board: EarendelBoard,
     playerId: string,

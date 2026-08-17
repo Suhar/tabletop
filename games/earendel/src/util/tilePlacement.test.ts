@@ -22,6 +22,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
+import { DrawPieces } from '../actions/drawPieces.js'
 import { TestGame } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
@@ -170,6 +171,7 @@ describe('growing the board in play', () => {
     function scenario(supplyCount = 1) {
         const game = new TestGame()
         const mover = game.activePlayerId
+        const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
         // A planet with one approach hex, and a spare tile's worth of space beside it.
         const board: EarendelBoard = { hexes: {} }
@@ -181,6 +183,19 @@ describe('growing the board in play', () => {
             tileId: 'start',
             kind: HexKind.Planet,
             color: PlanetColor.Azure
+        }
+        // A station of the mover's on the planet's other approach hex. Without it they hold
+        // nothing - the probe that explores has no power - and the technology would never be
+        // claimed at all. Two loose hexes off to the side give the other player somewhere to
+        // spend their turn without touching the planet or the starting tile's last space.
+        board.hexes[hexKey(at(0, 1))] = {
+            coords: at(0, 1),
+            tileId: 'start',
+            kind: HexKind.Open,
+            piece: ship(mover, PieceType.Station)
+        }
+        for (const coords of [at(5, 5), at(6, 5)]) {
+            board.hexes[hexKey(coords)] = { coords, tileId: 'start', kind: HexKind.Open }
         }
         game.state.board = board
 
@@ -204,20 +219,33 @@ describe('growing the board in play', () => {
             ship(playerId, PieceType.Station)
         ])
 
-        return { game, mover }
+        return { game, mover, other }
     }
 
-    it('lays a tile and then places a drawn ship on it', () => {
-        const { game, mover } = scenario()
-
-        // The probe explores, the only matching card is housed, and the technology fires -
-        // all without a decision, so the tile is the first thing asked of the player.
+    // Explores the planet, hands the turn round, then opens the mover's next turn - the moment
+    // the claim falls due and the tile is handed over.
+    function exploreAndComeRound(game: TestGame, mover: string, other: string) {
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
             coords: at(1, 0),
             pieceSource: PieceSource.Bag
         })
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: other,
+            coords: at(5, 5),
+            pieceSource: PieceSource.Bag
+        })
+        return game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: mover })
+    }
+
+    it('lays a tile and then places a drawn ship on it', () => {
+        const { game, mover, other } = scenario()
+
+        // The probe explores and houses the card, but the technology is only claimed once the
+        // planet has been held to the mover's next turn - and the tile arrives with it.
+        exploreAndComeRound(game, mover, other)
 
         expect(game.state.machineState).toBe(MachineState.PlacingTile)
         expect(game.validActionsFor(mover)).toEqual([ActionType.PlaceTile])
@@ -236,29 +264,30 @@ describe('growing the board in play', () => {
         expect(game.state.bonusPlacementTileId).toBe('spare-0')
         expect(game.state.heldPieces.length).toBeGreaterThan(0)
 
+        // The ship has to be named now: claiming the technology happens BEFORE the turn's own
+        // placement, so the player is still holding the ship they drew when the tile's bonus
+        // ship arrives, and two in hand is ambiguous.
         const onTile = openHexesOfTile(game.state.board, 'spare-0')
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
             coords: onTile[0],
-            pieceSource: PieceSource.Bag
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.bonusPlacementPieceId
         })
 
         expect(game.state.board.hexes[hexKey(onTile[0])].piece?.playerId).toBe(mover)
         expect(game.state.bonusPlacementTileId).toBeUndefined()
-        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
-        expect(game.activePlayerId).not.toBe(mover)
+        // Still their turn: the tile and its bonus ship were claimed at the top of the turn,
+        // so the ship they drew for the turn itself is still in hand and still owed a hex.
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.activePlayerId).toBe(mover)
     })
 
     it('refuses to put the drawn ship anywhere but the new tile', () => {
-        const { game, mover } = scenario()
+        const { game, mover, other } = scenario()
 
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
-        })
+        exploreAndComeRound(game, mover, other)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -279,17 +308,12 @@ describe('growing the board in play', () => {
     })
 
     it('refuses a special piece in place of the ship drawn with the tile', () => {
-        const { game, mover } = scenario()
+        const { game, mover, other } = scenario()
         game.state.players.find((p) => p.playerId === mover)!.specialPieces = [
             ship(mover, PieceType.Station)
         ]
 
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
-        })
+        exploreAndComeRound(game, mover, other)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -316,14 +340,9 @@ describe('growing the board in play', () => {
     it('offers PlacePiece as a valid action while the tile ship is owed', () => {
         // The board asks the engine what is legal rather than matching machine states by
         // name, so this is the check that keeps the two in step.
-        const { game, mover } = scenario()
+        const { game, mover, other } = scenario()
 
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
-        })
+        exploreAndComeRound(game, mover, other)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -337,22 +356,18 @@ describe('growing the board in play', () => {
     })
 
     it('comes to nothing when the supply is empty', () => {
-        const { game, mover } = scenario(0)
+        const { game, mover, other } = scenario(0)
 
-        const processed = game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
-        })
+        const processed = exploreAndComeRound(game, mover, other)
 
-        // No tile was drawn, so the turn simply ended after the exploration.
-        expect(processed.map((action) => action.type)).toEqual([
-            ActionType.PlacePiece,
-            ActionType.ChoosePlanet,
-            ActionType.ChooseTechnology
+        // The technology is still claimed - it is theirs for scoring and for the ledger - but
+        // with no tile to draw it hands over nothing, and the turn carries on to its placement
+        // rather than stalling on an effect that cannot happen.
+        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
+            'grow-tech'
         ])
-        expect(game.state.machineState).toBe(MachineState.StartOfTurn)
+        expect(processed.map((action) => action.type)).toEqual([ActionType.DrawPieces])
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.state.pendingTile).toBeUndefined()
     })
 })

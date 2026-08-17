@@ -7,6 +7,7 @@ import { type Piece, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
 import { TechnologyTier } from '../model/technology.js'
 import { attackableTargets } from '../util/attack.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
+import { DrawPieces } from '../actions/drawPieces.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { TestGame } from '../util/testHarness.js'
 
@@ -297,7 +298,7 @@ describe('a fighter arriving', () => {
         expect(game.state.pendingAttack).toBeUndefined()
     })
 
-    it('hands a planet’s technology to a bystander when the shot clears the way', () => {
+    it('leaves a bystander holding a planet, to claim on their own next turn', () => {
         const game = new TestGame(3)
         const [mover, blocker, bystander] = game.state.turnManager.turnOrder
 
@@ -309,16 +310,20 @@ describe('a fighter arriving', () => {
             [at(0, 1), { ship: ship(bystander, PieceType.Fighter, PieceLevel.Two) }],
             // Where the mover's fighter lands: adjacent to the blocker, not to the planet.
             [at(2, 0), {}],
-            [at(5, 5), {}]
+            [at(5, 5), {}],
+            [at(6, 5), {}]
         ])
         game.state.technologyDeck = []
+        game.state.tileSupply = []
         // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
+            ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station)
         ])
 
-        expect(game.state.players.find((p) => p.playerId === bystander)!.technologies).toEqual([])
+        const held = (playerId: string) =>
+            game.state.players.find((p) => p.playerId === playerId)!.technologies
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -326,22 +331,30 @@ describe('a fighter arriving', () => {
             coords: at(2, 0),
             pieceSource: PieceSource.Bag
         })
-
-        const [shot] = game.run(AttackPiece, {
+        game.run(AttackPiece, {
             type: ActionType.AttackPiece,
             playerId: mover,
             coords: at(1, 0)
         })
 
-        // With the tie broken by the removal, the bystander now holds the planet outright and
-        // gains what it holds - without having taken any part in the attack.
-        expect(game.state.players.find((p) => p.playerId === bystander)!.technologies).toEqual([
-            'tech-a'
-        ])
-        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([])
-        expect((shot as AttackPiece).metadata?.technologiesGained).toEqual({
-            [bystander]: ['tech-a']
+        // The tie is broken and the bystander now holds the planet outright - but a shot hands
+        // nothing over. It has started someone else's wait, which is the strange and rather
+        // good part: the attacker has given a third party a technology they must now defend.
+        expect(held(bystander)).toEqual([])
+        expect(held(mover)).toEqual([])
+
+        // The blocker's turn passes without touching the planet.
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: blocker,
+            coords: at(5, 5),
+            pieceSource: PieceSource.Bag
         })
+
+        // And now it is the bystander's turn, so the hold pays.
+        game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: bystander })
+        expect(held(bystander)).toEqual(['tech-a'])
+        expect(held(mover)).toEqual([])
     })
 
     it('refuses a target out of reach, and a shot that isn’t yours', () => {

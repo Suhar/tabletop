@@ -5,11 +5,16 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
 import { drawCountForPlayer } from '../util/turn.js'
+import { claimRipeTechnologies } from '../util/technologyGrants.js'
 import type { EarendelGameConfig } from '../definition/config.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
-    drawn: Type.Optional(Type.Array(Piece))
+    drawn: Type.Optional(Type.Array(Piece)),
+    // Technologies that became this player's as the turn opened, by having held their planets
+    // outright since their last turn. Reported so history and the board can announce them:
+    // unlike a placement's rewards, nobody was watching the moment these were earned.
+    technologiesClaimed: Type.Optional(Type.Array(Type.String()))
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>
@@ -55,6 +60,14 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             throw Error(`Invalid DrawPieces action: ${invalidReason}`)
         }
 
+        // Claimed BEFORE the ships are drawn, because this is the start-of-turn reckoning:
+        // every planet this player has held outright since their last turn pays out now. It
+        // happens here rather than in StartOfTurnStateHandler.enter for two reasons - enter()
+        // cannot change the machine state, and an immediate effect has to be able to send the
+        // turn somewhere - and it costs nothing in fidelity, since between a turn beginning
+        // and its owner drawing, nobody else can act.
+        const technologiesClaimed = claimRipeTechnologies(state, this.playerId)
+
         const playerState = state.getPlayerState(this.playerId)
         const wanted = drawCountForPlayer(
             state,
@@ -70,7 +83,10 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         }
 
         this.revealsInfo = state.heldPieces.length > 0
-        this.metadata = { drawn: [...state.heldPieces] }
+        this.metadata = {
+            drawn: [...state.heldPieces],
+            ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {})
+        }
     }
 
     isValidDrawPieces(state: HydratedEarendelGameState): boolean {

@@ -13,7 +13,6 @@ import { Piece, PieceLevel } from '../model/pieces.js'
 import { AttackOutcome, attackOutcome } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { applyTechnologyGains } from '../util/technologyGrants.js'
 
 export type AttackPieceMetadata = Type.Static<typeof AttackPieceMetadata>
 export const AttackPieceMetadata = Type.Object({
@@ -30,7 +29,6 @@ export const AttackPieceMetadata = Type.Object({
     declined: Type.Optional(Type.Boolean()),
     // Removing a piece can change who holds a nearby planet outright - including handing it
     // to a player who had nothing to do with the attack.
-    technologiesGained: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String())))
 })
 
 export type AttackPiece = Type.Static<typeof AttackPiece>
@@ -110,10 +108,10 @@ export class HydratedAttackPiece
             hex.piece = undefined
         }
 
-        // The target is gone or weaker, so whoever is left may hold the neighbouring planets
-        // outright where they didn't before - and that need not be the attacker. Clearing the
-        // player who was blocking a planet can hand its technology to a bystander.
-        const technologiesGained = applyTechnologyGains(state, this.coords)
+        // Clearing a blocker can leave someone else holding a neighbouring planet outright,
+        // but nothing is handed over here: whoever holds it when their own turn begins is the
+        // one who claims it. A shot can therefore start someone ELSE's wait - including a
+        // bystander who had nothing to do with the attack.
 
         state.pendingAttack = undefined
         this.metadata = {
@@ -122,7 +120,6 @@ export class HydratedAttackPiece
                 ? { damaged: true, levelAfter: (target.level ?? PieceLevel.Two) - 1 }
                 : {}),
             ...(railgun ? { railgun: true } : {}),
-            ...(Object.keys(technologiesGained).length > 0 ? { technologiesGained } : {})
         }
     }
 

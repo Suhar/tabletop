@@ -1,5 +1,6 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
+import { beginPlacement } from '../util/turn.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { DiscardPiece, HydratedDiscardPiece } from '../actions/discardPiece.js'
@@ -49,7 +50,9 @@ export class DraftingPiecesStateHandler
         _action: DraftingAction,
         _context: MachineContext<HydratedEarendelGameState>
     ): MachineState {
-        return MachineState.PlacingPiece
+        // The hand is settled now, so this is where a technology claimed at the top of the
+        // turn gets to act - after the discard, not before it.
+        return beginPlacement(_context.gameState)
     }
 
     private isValidActionType(

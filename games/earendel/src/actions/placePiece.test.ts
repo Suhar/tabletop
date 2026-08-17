@@ -46,6 +46,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         board: boardWithPlanetAtOrigin(),
         technologyDeck: [],
         technologyDiscard: [],
+        queuedTechnologyEffects: [],
         scoredPlanetPairs: [],
         tileSupply: [],
         // The turn's draw happens when the turn opens, so a placement always arrives with

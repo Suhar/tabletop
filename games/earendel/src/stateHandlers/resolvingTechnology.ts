@@ -4,14 +4,16 @@ import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedMovePiece, isMovePiece, MovePiece } from '../actions/movePiece.js'
 import { legalMovesFor } from '../util/movement.js'
-import { endPlacement } from '../util/turn.js'
+import { afterTechnologyEffect } from '../util/turn.js'
 
 type ResolvingTechnologyAction = HydratedMovePiece
 
-// Still the exploring player's turn: the technology they just housed does something at once,
-// and it is waiting on them.
+// A technology that acts the moment it is CLAIMED, waiting on the player who claimed it. That
+// is now the top of their turn rather than the exploration that housed the card: exploring
+// decides what a planet holds, holding it until your next turn is what wins it.
 //
-// Transitions: ResolvingTechnology(MovePiece) -> PlacingPiece | EndOfGame
+// Transitions: ResolvingTechnology(MovePiece) -> PlacingTile | ResolvingTechnology
+//               | PlacingPiece | EndOfGame
 export class ResolvingTechnologyStateHandler
     implements MachineStateHandler<ResolvingTechnologyAction, HydratedEarendelGameState>
 {
@@ -52,7 +54,9 @@ export class ResolvingTechnologyStateHandler
     ): MachineState {
         switch (true) {
             case isMovePiece(action): {
-                return endPlacement(context.gameState, context)
+                // A turn can claim more than one technology at once, so this hands on to the
+                // next owed effect before letting the placement resume.
+                return afterTechnologyEffect(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

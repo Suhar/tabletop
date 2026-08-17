@@ -66,6 +66,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
             { id: 'azure-2', colors: [PlanetColor.Azure], tier: TechnologyTier.Standard }
         ],
         technologyDiscard: [],
+        queuedTechnologyEffects: [],
         scoredPlanetPairs: [],
         tileSupply: [],
         heldPieces: [],

@@ -14,7 +14,6 @@ import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { explorablePlanets } from '../util/exploration.js'
 import { chainsCompletedBy } from '../util/chains.js'
 import { stationGroupPoints } from '../util/stations.js'
-import { applyTechnologyGains } from '../util/technologyGrants.js'
 import { attackableTargets } from '../util/attack.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
@@ -48,7 +47,6 @@ export const PlacePieceMetadata = Type.Object({
     stationGroupPoints: Type.Optional(Type.Number()),
     // Technologies gained by taking outright hold of an explored planet. Kept for good -
     // the planet can be taken away afterwards, the technology can't.
-    technologiesGained: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String()))),
     // Planets this probe could explore from where it landed. One of them will be explored -
     // the player picks which - and the rest stay unexplored. Absent when the placement
     // reached no unexplored planet, or wasn't a probe at all.
@@ -150,9 +148,10 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             state.scoredPlanetPairs.push(chain.pairKey)
         }
 
-        // Taking outright hold of an explored planet hands its technology over, permanently.
-        // A probe can never do this - zero power holds nothing - but the check is general.
-        const technologiesGained = applyTechnologyGains(state, this.coords)
+        // Taking outright hold of an explored planet no longer hands its technology over on
+        // the spot: it is claimed at the start of a turn by whoever is still holding the
+        // planet then (see claimRipeTechnologies). So a placement that seizes a planet wins
+        // nothing yet - it starts a wait, and announces itself when the wait pays.
 
         // A fighter arrives shooting: it may destroy one adjacent piece weaker than itself.
         // Optional, and the target is the player's choice, so it parks a decision rather
@@ -189,7 +188,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
-            ...(Object.keys(technologiesGained).length > 0 ? { technologiesGained } : {}),
             ...(explorable.length > 0 ? { explorable } : {})
         }
     }

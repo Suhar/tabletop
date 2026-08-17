@@ -4,13 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
-import { grantTechnology } from '../util/technologyGrants.js'
-import {
-    hasImmediateEffect,
-    isElevated,
-    matchesColor,
-    TechnologyEffectKind
-} from '../model/technology.js'
+import { isElevated, matchesColor } from '../model/technology.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
@@ -67,36 +61,22 @@ export class HydratedChooseTechnology
 
         if (chosen) {
             state.board.hexes[hexKey(pending.exploringPlanet!)].technology = chosen
-            // The explorer gains it outright, without having to control the planet - being
-            // first is the whole reward for exploring. Anyone who takes control later gains
-            // it too, and nobody ever loses it.
-            grantTechnology(state, this.playerId, chosen)
         }
+
+        // Exploring decides what the planet HOLDS; it no longer hands that technology over.
+        // Choosing is still the explorer's privilege and still the reward for going first -
+        // they pick which of the matching cards this planet will be worth for the rest of the
+        // game, and they are usually the one standing next to it when the turn comes round.
+        // But the card is won by holding the planet outright from one of your turns to the
+        // next, which the explorer has to do like anyone else (see claimRipeTechnologies).
+        // Nothing is set up here for an immediate effect either: those fire when the
+        // technology is actually claimed, not when it is chosen.
 
         // Everything turned over goes to the discard except the one card the planet keeps -
         // including the matching cards that weren't chosen.
         state.technologyDiscard.push(...revealed.filter((card) => card.id !== chosen?.id))
 
-        // The exploration is done. If the card acts at once, the turn stays open for it.
         state.pendingExploration = undefined
-        if (chosen && hasImmediateEffect(chosen)) {
-            const kind = chosen.effect!.kind
-
-            if (kind === TechnologyEffectKind.GrowBoard) {
-                // Drawn here so the tile is decided by authoritative state and lands in the
-                // action log. An empty supply means the technology simply comes to nothing.
-                const tile = state.tileSupply.shift()
-                if (tile) {
-                    state.pendingTile = { playerId: this.playerId, tile }
-                }
-            } else {
-                state.pendingTechnology = {
-                    playerId: this.playerId,
-                    technologyId: chosen.id,
-                    kind
-                }
-            }
-        }
 
         this.metadata = chosen ? { technologyId: chosen.id } : { noTechnologyAvailable: true }
     }

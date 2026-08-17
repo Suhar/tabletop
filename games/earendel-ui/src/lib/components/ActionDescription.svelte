@@ -20,16 +20,31 @@
         isPlaceTile,
         type PlaceTile,
         type MovePiece,
-        type PlacePiece
+        type PlacePiece,
+        TECHNOLOGY_EFFECT_INFO
     } from '@tabletop/earendel'
     import { describePiece } from '$lib/model/session.svelte.js'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     let {
         action,
         justify = 'start'
     }: { action: GameAction; justify?: 'start' | 'center' | 'end'; history?: boolean } = $props()
 
+    const gameSession = getGameSession()
+
     const techName = (id?: string) => (id ? id.replace('tech-', 'Tech ') : 'nothing')
+
+    // A claimed technology is named from the card itself, which the planet still holds - the id
+    // alone says nothing a player would recognise. Falls back to the tidied id if the planet
+    // has since left the board.
+    const claimedName = (id: string) => {
+        const card = Object.values(gameSession.gameState.board.hexes).find(
+            (hex) => hex.technology?.id === id
+        )?.technology
+        const kind = card?.effect?.kind
+        return kind ? TECHNOLOGY_EFFECT_INFO[kind].name : techName(id)
+    }
 
     // History is read after the fact, so it has to say what happened rather than what was
     // clicked - which piece came out of the bag, what the flip turned up, who lost a ship.
@@ -84,7 +99,14 @@
         if (isDrawPieces(action)) {
             const drew = action as DrawPieces
             const count = drew.metadata?.drawn?.length ?? 0
-            return `drew ${count} ${count === 1 ? 'ship' : 'ships'}`
+            const drawn = `drew ${count} ${count === 1 ? 'ship' : 'ships'}`
+
+            // A technology claimed as the turn opened is the more interesting half of this
+            // action, and nobody was watching the board when it was earned - it is the payoff
+            // for a planet held through everyone else's turns, so it gets said out loud.
+            const claimed = drew.metadata?.technologiesClaimed ?? []
+            if (claimed.length === 0) return drawn
+            return `${drawn}, and held ${claimed.map(claimedName).join(' and ')}`
         }
         if (isUseLogisticsUpgrade(action)) {
             const used = action as UseLogisticsUpgrade
