@@ -23,6 +23,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
 import { DrawPieces } from '../actions/drawPieces.js'
+import { TurnStyle } from '../definition/config.js'
 import { TestGame } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
@@ -353,6 +354,79 @@ describe('growing the board in play', () => {
 
         expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
         expect(game.validActionsFor(mover)).toContain(ActionType.PlacePiece)
+    })
+
+    it('hands the tile over on a DRAFTED turn too', () => {
+        // Every other test here runs the single-piece style, but DraftThree is the configured
+        // default - so this is the shape a real game actually takes, with three ships in hand and
+        // a discard still owed while the tile is being laid.
+        const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
+        const mover = game.activePlayerId
+
+        const board: EarendelBoard = { hexes: {} }
+        for (const coords of tileFootprint(at(0, 0))) {
+            board.hexes[hexKey(coords)] = { coords, tileId: 'start', kind: HexKind.Open }
+        }
+        board.hexes[hexKey(at(0, 0))] = {
+            coords: at(0, 0),
+            tileId: 'start',
+            kind: HexKind.Planet,
+            color: PlanetColor.Azure,
+            explored: true,
+            technology: {
+                id: 'grow-tech',
+                colors: [PlanetColor.Azure],
+                tier: TechnologyTier.Standard,
+                effect: { kind: TechnologyEffectKind.GrowBoard }
+            }
+        }
+        // Held outright since before this turn, so the claim falls due as the turn opens.
+        board.hexes[hexKey(at(0, 1))] = {
+            coords: at(0, 1),
+            tileId: 'start',
+            kind: HexKind.Open,
+            piece: ship(mover, PieceType.Station)
+        }
+        game.state.board = board
+        game.state.technologyDeck = []
+        game.state.technologyDiscard = []
+        game.state.tileSupply = [{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Gold }]
+        game.stackBags((playerId) => [
+            ship(playerId, PieceType.Station),
+            ship(playerId, PieceType.Station),
+            ship(playerId, PieceType.Station),
+            ship(playerId, PieceType.Station)
+        ])
+
+        // stackBags opens the turn, so the claim has already happened: the tile is in hand before
+        // the player has been asked to discard anything.
+        expect(game.state.machineState).toBe(MachineState.PlacingTile)
+        expect(game.state.pendingTile?.tile.id).toBe('spare-0')
+        expect(game.state.heldPieces).toHaveLength(3)
+        expect(game.state.draftPending).toBe(true)
+
+        const first = legalTilePlacements(game.state.board)[0]
+        game.run(PlaceTile, {
+            type: ActionType.PlaceTile,
+            playerId: mover,
+            coords: first.origin,
+            rotation: first.rotation
+        })
+
+        // The tile owes a ship, which is placed before the draft resumes.
+        expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
+        const onTile = openHexesOfTile(game.state.board, 'spare-0')
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: onTile[0],
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.bonusPlacementPieceId
+        })
+
+        // And only now the discard the turn still owed - not skipped by the detour.
+        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        expect(game.state.draftPending).toBe(true)
     })
 
     it('comes to nothing when the supply is empty', () => {
