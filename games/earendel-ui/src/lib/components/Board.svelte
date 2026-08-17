@@ -120,10 +120,6 @@
         hovered ? gameSession.previewTargetsFor(hovered) : []
     )
 
-    function isPreviewTarget(coords: AxialCoordinates): boolean {
-        return previewTargets.some((target) => sameHex(target, coords))
-    }
-
     // The planets a probe would explore from the hovered hex. The fighter's equivalent is
     // previewTargets just above; between them they let a player see what a placement will DO
     // before committing, instead of finding out once it is too late to choose differently.
@@ -397,7 +393,6 @@
     {#each placed as entry (entry.hex.tileId + entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const hex = entry.hex}
         {@const highlighted = gameSession.isHighlighted(hex.coords)}
-        {@const targeted = isPreviewTarget(hex.coords)}
         {@const planetColor = hex.color ? PLANET_FILL[hex.color] : '#1b2436'}
 
         <g
@@ -634,16 +629,10 @@
                 {/if}
             {/if}
 
-            {#if targeted}
-                <!-- This piece would be in range of the fighter you are holding. -->
-                <polygon
-                    points={entry.points}
-                    fill="none"
-                    stroke="#ff6b5e"
-                    stroke-width="5"
-                    stroke-dasharray="8 6"
-                />
-            {/if}
+            <!-- The red outline that used to ring a piece in range of the fighter you are
+                 holding is gone: the ghost missile arc drawn to that piece now says the same
+                 thing, and says it better - it shows WHICH fighter would be shooting and along
+                 what path, where a ring on the target left the shooter implied. -->
 
             {#if gameSession.railgunArmed && gameSession.railgunWouldMatter(hex.coords)}
                 <!-- Where the Railgun changes the outcome. Everything else in reach dies to an
@@ -854,12 +843,16 @@
     {#if ghostEntry}
         {#each previewTargets as target, index (target.q + ',' + target.r)}
             {@const path = attackArc(hovered!, target)}
+            <!-- Up from 0.42/3 to 0.53/3.75, a quarter stronger in both weight and opacity:
+                 with the target ring gone this is the only sign that a shot is on offer, so it
+                 has to carry on its own. Still dashed and still held rather than flying, so it
+                 cannot be mistaken for a shot already taken. -->
             <path
                 d={path}
                 fill="none"
                 stroke="#ff2f2f"
-                stroke-opacity="0.42"
-                stroke-width="3"
+                stroke-opacity="0.53"
+                stroke-width="3.75"
                 stroke-linecap="round"
                 stroke-dasharray="7 6"
                 pointer-events="none"
