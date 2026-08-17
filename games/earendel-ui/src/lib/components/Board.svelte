@@ -21,6 +21,23 @@
     let gameSession = getGameSession()
 
     // Planet colours are the game's own five, not player colours - a planet belongs to nobody.
+    // The bright stars, laid out once at module scope with a fixed hash rather than
+    // Math.random: a starfield that re-rolled on every render would shimmer, and one seeded per
+    // board would move whenever a tile was laid. Spread over a wide area in BOARD coordinates,
+    // so growing the map reveals more sky rather than restretching the same sky.
+    const TWINKLING_STARS = Array.from({ length: 46 }, (_unused, i) => {
+        // Cheap deterministic hash - three different irrationals so x, y and phase don't
+        // correlate and produce a diagonal line of stars.
+        const frac = (n: number) => n - Math.floor(n)
+        return {
+            x: -1400 + frac(i * 0.7548776662) * 3400,
+            y: -1100 + frac(i * 0.5698402909) * 2800,
+            r: 1.4 + frac(i * 0.3819660113) * 1.3,
+            delay: frac(i * 0.6180339887) * 6,
+            duration: 3.4 + frac(i * 0.4142135624) * 3.6
+        }
+    })
+
     const PLANET_FILL: Record<PlanetColor, string> = {
         [PlanetColor.Azure]: '#3d8bd4',
         [PlanetColor.Crimson]: '#d1453f',
@@ -123,6 +140,13 @@
     function isPreviewTarget(coords: AxialCoordinates): boolean {
         return previewTargets.some((target) => sameHex(target, coords))
     }
+
+    // The planets a probe would explore from the hovered hex. The fighter's equivalent is
+    // previewTargets just above; between them they let a player see what a placement will DO
+    // before committing, instead of finding out once it is too late to choose differently.
+    let previewExplorables: AxialCoordinates[] = $derived(
+        hovered ? gameSession.previewExplorablesFor(hovered) : []
+    )
 
     // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
     // so the wavelength stays constant however long or however angled the line is.
@@ -380,8 +404,79 @@
 </script>
 
 <svg {viewBox} class="w-[1200px] max-w-full select-none" role="presentation">
+    <defs>
+        <!-- The starfield is two tiled patterns rather than a few thousand circles. Tiling is
+             what makes it free: the board's extent isn't known ahead of time and grows mid-game,
+             so a generated field would either have to cover an enormous area or be regenerated
+             (and jump) whenever a tile was laid.
+             The two tile sizes are deliberately coprime - 211 and 317, both prime - so the
+             combined pattern only truly repeats every 211x317 = 66,887px, which no game will
+             ever pan far enough to notice. One tile alone would show its grid immediately. -->
+        <pattern
+            id="starfield-fine"
+            x="0"
+            y="0"
+            width="211"
+            height="211"
+            patternUnits="userSpaceOnUse"
+        >
+            <circle cx="17" cy="43" r="1.1" fill="#dce6ff" fill-opacity="0.55" />
+            <circle cx="88" cy="12" r="0.9" fill="#ffffff" fill-opacity="0.45" />
+            <circle cx="146" cy="67" r="1.3" fill="#cfe0ff" fill-opacity="0.6" />
+            <circle cx="192" cy="128" r="0.8" fill="#ffffff" fill-opacity="0.35" />
+            <circle cx="59" cy="154" r="1.2" fill="#e6ecff" fill-opacity="0.5" />
+            <circle cx="123" cy="196" r="0.9" fill="#ffffff" fill-opacity="0.4" />
+            <circle cx="34" cy="103" r="0.7" fill="#bcd2ff" fill-opacity="0.35" />
+            <circle cx="171" cy="27" r="1" fill="#ffffff" fill-opacity="0.45" />
+        </pattern>
+
+        <pattern
+            id="starfield-coarse"
+            x="0"
+            y="0"
+            width="317"
+            height="317"
+            patternUnits="userSpaceOnUse"
+        >
+            <circle cx="41" cy="87" r="1.8" fill="#ffffff" fill-opacity="0.65" />
+            <circle cx="238" cy="41" r="1.5" fill="#dbe6ff" fill-opacity="0.55" />
+            <circle cx="152" cy="231" r="2" fill="#ffffff" fill-opacity="0.6" />
+            <circle cx="291" cy="188" r="1.4" fill="#cddfff" fill-opacity="0.5" />
+            <circle cx="96" cy="289" r="1.6" fill="#ffffff" fill-opacity="0.55" />
+        </pattern>
+
+        <!-- A faint wash of colour, so deep space has some depth to it rather than being flat
+             black behind the stars. Fixed in board coordinates, so it belongs to the map. -->
+        <radialGradient id="nebula-a" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="#3d6bd4" stop-opacity="0.14" />
+            <stop offset="100%" stop-color="#3d6bd4" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="nebula-b" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="#8b5cc4" stop-opacity="0.11" />
+            <stop offset="100%" stop-color="#8b5cc4" stop-opacity="0" />
+        </radialGradient>
+    </defs>
+
     <!-- Deep space behind everything, so the board reads as a map rather than a grid. -->
     <rect x="-10000" y="-10000" width="20000" height="20000" fill="#0a0f1c" />
+    <ellipse cx="-260" cy="-180" rx="900" ry="620" fill="url(#nebula-a)" />
+    <ellipse cx="820" cy="540" rx="760" ry="700" fill="url(#nebula-b)" />
+    <rect x="-10000" y="-10000" width="20000" height="20000" fill="url(#starfield-fine)" />
+    <rect x="-10000" y="-10000" width="20000" height="20000" fill="url(#starfield-coarse)" />
+
+    <!-- A handful of brighter stars that actually twinkle. Kept as real elements rather than
+         pattern contents, since a pattern's tiles share one animation and would blink in
+         unison across the whole sky. Positions are fixed in board coordinates. -->
+    {#each TWINKLING_STARS as star, i (i)}
+        <circle
+            cx={star.x}
+            cy={star.y}
+            r={star.r}
+            fill="#ffffff"
+            class="twinkle"
+            style="animation-delay: {star.delay}s; animation-duration: {star.duration}s;"
+        />
+    {/each}
 
     {#each placed as entry (entry.hex.tileId + entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const hex = entry.hex}
@@ -405,7 +500,7 @@
             <polygon
                 points={entry.points}
                 fill={hex.kind === HexKind.Planet ? planetColor : '#141c2e'}
-                fill-opacity={hex.kind === HexKind.Planet ? 0.42 : 1}
+                fill-opacity={hex.kind === HexKind.Planet ? 0.42 : 0.5}
                 stroke="#2b3752"
                 stroke-width="2"
             />
@@ -832,6 +927,43 @@
         </g>
     {/each}
 
+    <!-- What the placement being considered WOULD do: the same marks as the live versions
+         below, but held rather than played, and dimmed.
+         Held is the important part. The live missile flies its arc over and over because it is
+         asking for a decision; a ghost that did the same would be a board full of motion for
+         something that hasn't happened, and would read as a shot already fired. So the ghost
+         arc is drawn once, complete and still - the path a shot would take - while the ghost
+         pointers keep a gentle pulse, since a still triangle looks like a marker that has been
+         placed rather than an intention. -->
+    {#if ghostEntry}
+        {#each previewTargets as target, index (target.q + ',' + target.r)}
+            {@const path = attackArc(hovered!, target)}
+            <path
+                d={path}
+                fill="none"
+                stroke="#ff2f2f"
+                stroke-opacity="0.42"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-dasharray="7 6"
+                pointer-events="none"
+            />
+        {/each}
+
+        {#each previewExplorables as target, index (target.q + ',' + target.r)}
+            {@const pointer = reachPointer(hovered!, target)}
+            <polygon
+                points={pointer.points}
+                fill="#e8f0ff"
+                fill-opacity="0.45"
+                class="reach-pointer"
+                style="--nudge-x: {pointer.nudge.x}px; --nudge-y: {pointer.nudge.y}px; animation-delay: {index *
+                    180}ms"
+                pointer-events="none"
+            />
+        {/each}
+    {/if}
+
     <!-- Where a probe could explore: a triangle per planet, pulsing the way it points. -->
     {#each gameSession.explorationChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
         {@const pointer = reachPointer(gameSession.explorationChoice!.from, target)}
@@ -968,6 +1100,34 @@
 </svg>
 
 <style>
+    /* Clicking a hex focuses it - they carry role="button" so the board is operable without a
+       mouse - and the browser then draws a focus ring, which looked like a box the game had
+       drawn around the piece just placed and left behind until the next click. These all have
+       tabindex="-1", so they are not reachable by Tab and the ring was telling the player
+       nothing they could act on. */
+    svg :global([role='button']:focus) {
+        outline: none;
+    }
+
+    /* Stars don't pulse in unison, so each one gets its own duration and delay inline. The
+       range never reaches zero - a star that vanishes entirely reads as a rendering fault
+       rather than as atmosphere. */
+    @keyframes twinkle-frames {
+        0%,
+        100% {
+            opacity: 0.28;
+        }
+        50% {
+            opacity: 0.95;
+        }
+    }
+
+    .twinkle {
+        animation-name: twinkle-frames;
+        animation-timing-function: ease-in-out;
+        animation-iteration-count: infinite;
+    }
+
     /* Planet motion. All of it is slow on purpose: a board with a dozen planets on it would be
        exhausting if each one were busy, so these read as drift rather than as animation
        competing with the pieces and the score floats for attention.

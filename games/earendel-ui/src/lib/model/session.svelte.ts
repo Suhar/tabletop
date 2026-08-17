@@ -15,6 +15,7 @@ import {
     TechnologyEffectKind,
     turnsUntilReady,
     attackableTargets,
+    explorablePlanets,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
@@ -340,6 +341,19 @@ export class EarendelGameSession extends GameSession<
         if (!hex) return []
         hex.piece = piece
         return attackableTargets(board, coords, piece.playerId)
+    }
+
+    // Which planets a probe would explore if it landed here - the same question
+    // previewTargetsFor asks about a fighter's shot, so a player can see the consequence of a
+    // placement before committing to it rather than discovering it afterwards.
+    //
+    // Unlike the fighter's, this needs no hypothetical board: whether a planet is explorable
+    // depends on the planet and on the probe's own type, not on anything the probe changes by
+    // arriving. It is asked of the engine's own rule all the same.
+    previewExplorablesFor(coords: AxialCoordinates): AxialCoordinates[] {
+        const piece = this.pieceToPlace
+        if (!piece || piece.type !== PieceType.Probe || !this.isPlacing) return []
+        return explorablePlanets(this.gameState.board, coords, piece.type)
     }
 
     isHighlighted(coords: AxialCoordinates): boolean {
