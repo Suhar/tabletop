@@ -10,6 +10,7 @@
     import PlayersPanel from '$lib/components/PlayersPanel.svelte'
     import Board from '$lib/components/Board.svelte'
     import InformationPanel from '$lib/components/InformationPanel.svelte'
+    import Starfield from '$lib/components/Starfield.svelte'
 
     import type { EarendelGameSession } from '$lib/model/session.svelte'
     import type { HydratedEarendelGameState, EarendelGameState } from '@tabletop/earendel'
@@ -19,7 +20,21 @@
         gameSession
     }: { gameSession: GameSession<EarendelGameState, HydratedEarendelGameState> } = $props()
     setGameSession(gameSession as EarendelGameSession)
+
+    // One sky per game, from the game's own seed, so it is the same for everyone at the table and
+    // survives a reload - and so two games look like two different corners of space. Falls back
+    // to the id's characters when a game carries no seed.
+    const skySeed = $derived.by(() => {
+        const state = gameSession.gameState
+        if (state.prng?.seed) return state.prng.seed
+        const id = gameSession.game?.id ?? 'earendel'
+        let hash = 0
+        for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0
+        return hash
+    })
 </script>
+
+<Starfield seed={skySeed} />
 
 <!-- Full Height and Width with 8px padding-->
 <div style="--chat-height-offset: 0px;">
