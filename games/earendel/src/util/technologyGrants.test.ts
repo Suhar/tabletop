@@ -65,6 +65,18 @@ describe('technologiesRipeFor', () => {
         expect(ripeIds(board, 'p1')).toEqual(['tech-a'])
     })
 
+    it('is ripe for a lone probe, which is the point of a probe counting 1', () => {
+        // A probe explores a planet and can now hold what it found. This is the case the whole
+        // power change was for, so it is worth its own test rather than being implied by the
+        // fighter above.
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
+            [at(1, 0), { ship: ['p1', PieceType.Probe] }]
+        ])
+
+        expect(ripeIds(board, 'p1')).toEqual(['tech-a'])
+    })
+
     it('is not ripe for a player who is merely present', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],

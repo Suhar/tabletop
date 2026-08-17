@@ -1163,6 +1163,33 @@
         outline: none;
     }
 
+    /* The hourglass turns over, slowly, and pauses between turns - sand running rather than a
+       spinner. The long hold at each end is what makes it read as waiting; a continuous rotation
+       would read as loading.
+
+       This was lost once already: it sat in a stretch of CSS that was removed wholesale when the
+       board's own starfield went, and the hourglass spent a while rendering static and tiny
+       enough to miss entirely. */
+    @keyframes claim-glass-frames {
+        0%,
+        44% {
+            transform: rotate(0deg);
+        }
+        50%,
+        94% {
+            transform: rotate(180deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .claim-glass {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: claim-glass-frames 6s ease-in-out infinite;
+    }
+
     /* One dot brightens and fades while the next takes over, so a pulse travels the run. The
        peak is deliberately narrow - bright for about a tenth of the cycle, then falling away
        over a third - which leaves a short lit tail behind the leading dot instead of the whole
