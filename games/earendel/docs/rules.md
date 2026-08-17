@@ -328,9 +328,12 @@ Other piece types resolve their own effects on placement; only probes explore.
 
 ### Fighters destroy
 
-A fighter arrives shooting. On being placed, it **may fire on one adjacent piece with strictly
-less power than itself**. Nothing touches its equal, which makes a level 3 fighter untouchable
-until something wears it down.
+A fighter arrives shooting. On being placed, it **may fire on one adjacent piece of its own
+power or below**. A level 2 fighter can wear down another level 2; only a fighter *above* it is
+out of reach.
+
+Equal fighters used to be safe from each other, which made a level 3 the only piece on the board
+worth having and left two level 2s staring at each other indefinitely.
 
 What the shot does depends on the target:
 
@@ -343,10 +346,27 @@ What the shot does depends on the target:
 Fighters are drawn at level 2 or 3; level 1 is only ever reached by damage.
 
 **Stations are immune.** A station is a structure, not a ship, and no fighter shifts one
-whatever its level. So a level 2 fighter can only clear probes, and a level 3 fighter clears
-probes and level 2 fighters. Removing a station is meant to take a **special piece won from
-a technology** — when one exists, it goes in the destroy table as its own piece type rather
-than as a change to what fighters can do.
+whatever its level. Removing a station is meant to take a **special piece won from a
+technology** — when one exists, it goes in the destroy table as its own piece type rather than
+as a change to what fighters can do.
+
+### Escort
+
+**A piece standing next to a fighter of its own side cannot be attacked at all** — not damaged,
+not destroyed, by anything, at any time. No technology pierces an escort today; if one ever
+should, that is where it would go.
+
+This is what makes a fighter more than a gun. A lone fighter threatens its six neighbours. Two
+fighters side by side cover each other and cannot be touched by anything. A fighter parked
+beside a station makes that whole hex safe, and a fighter beside a probe lets the probe hold a
+planet without fear.
+
+A fighter does **not** escort itself: a lone fighter is as exposed as anything else. So an
+escorted line can only be attacked at its ends — and if both ends are themselves escorted, it
+cannot be attacked at all, and must be gone around rather than through.
+
+The cost is that escorting spends a fighter on standing still. A fighter guarding a station is
+not out threatening anything, and the six hexes it could have been contesting go uncontested.
 
 - It is **optional**. Even with a single target, the choice is the player's and is never
   taken for them.

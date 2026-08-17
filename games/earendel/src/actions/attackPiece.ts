@@ -10,7 +10,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, sameHex } from '../model/board.js'
 import { Piece, PieceLevel } from '../model/pieces.js'
-import { AttackOutcome, attackOutcome } from '../util/attack.js'
+import { AttackOutcome, attackOutcomeAt } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 
@@ -90,7 +90,9 @@ export class HydratedAttackPiece
         const hex = state.board.hexes[hexKey(this.coords)]
         const target = hex.piece!
         const attacker = state.board.hexes[hexKey(pending.fighterCoords)].piece!
-        const outcome = attackOutcome(attacker, target)
+        // Asked at the coordinates, so the escort rule is applied here exactly as it was when
+        // the target list was drawn up - one function answering it for everybody.
+        const outcome = attackOutcomeAt(state.board, pending.fighterCoords, this.coords)
 
         // A Railgun turns damage into destruction. It does not extend a fighter's reach: what it
         // could not touch, it still cannot.
@@ -146,9 +148,10 @@ export class HydratedAttackPiece
 
             // Refused rather than wasted: a Railgun on a shot that already kills would start the
             // timer for nothing.
-            const attacker = getHex(state.board, pending.fighterCoords)?.piece
-            const target = getHex(state.board, this.coords)?.piece
-            if (attacker && target && attackOutcome(attacker, target) !== AttackOutcome.Damaged) {
+            if (
+                attackOutcomeAt(state.board, pending.fighterCoords, this.coords) !==
+                AttackOutcome.Damaged
+            ) {
                 return 'That shot already destroys its target - save the Railgun.'
             }
         }

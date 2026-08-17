@@ -226,18 +226,61 @@ describe('a fighter arriving', () => {
         expect((shot as AttackPiece).metadata?.damaged).toBeUndefined()
     })
 
-    it('still needs a bigger fighter to touch one at all', () => {
-        // A level 1 fighter has power 1, so a level 2 can reach it but an equal cannot.
+    it('reaches an equal fighter, but never one above it', () => {
+        // A fighter now reaches its own level or below. Equal fighters used to be permanently
+        // safe from each other, which left two level 2s staring at each other forever and made a
+        // level 3 the only piece worth having.
         const board = boardOf([
-            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.One) }],
-            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.One) }],
-            [at(0, 1), { ship: ship('p2', PieceType.Station) }]
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Two) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
         ])
 
-        // Equal levels: nothing happens either way. And a station out-powers it but is not a
-        // fighter, so it never fires at all.
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([at(1, 0)])
+        expect(attackableTargets(board, at(1, 0), 'p2')).toEqual([at(0, 0)])
+    })
+
+    it('still cannot touch a fighter above it', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Two) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Three) }]
+        ])
+
         expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
-        expect(attackableTargets(board, at(1, 0), 'p2')).toEqual([])
+        // And the bigger one reaches down freely.
+        expect(attackableTargets(board, at(1, 0), 'p2')).toEqual([at(0, 0)])
+    })
+
+    it('cannot touch anything standing next to a fighter of its own side', () => {
+        // The escort rule. p2's probe would be easy prey, but a fighter of theirs is beside it.
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Probe) }],
+            [at(2, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
+        ])
+
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
+    })
+
+    it('leaves a lone fighter exposed - nothing escorts itself', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
+        ])
+
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([at(1, 0)])
+    })
+
+    it('makes a pair of fighters untouchable, but only in the middle of a line', () => {
+        // Two fighters side by side escort each other, so neither can be shot. This is the
+        // rule's sharpest consequence: a line of fighters can only be broken at its ends, and
+        // here there are no ends free of an escort at all.
+        const board = boardOf([
+            [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Three) }],
+            [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }],
+            [at(2, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
+        ])
+
+        expect(attackableTargets(board, at(0, 0), 'p1')).toEqual([])
     })
 
     it('may decline, and the turn ends just the same', () => {
@@ -280,8 +323,10 @@ describe('a fighter arriving', () => {
 
         game.state.board = boardOf([
             [at(0, 0), {}],
-            // An equal fighter is safe, so the arrival has no target at all.
+            // Escorted by the fighter behind it, so the arrival has no target at all - an equal
+            // fighter is reachable now, but not one under guard.
             [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
+            [at(2, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
         game.state.technologyDeck = []

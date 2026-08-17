@@ -206,7 +206,9 @@ describe('Railgun', () => {
     })
 
     it('does not extend a fighter’s reach', () => {
-        // A Railgun changes what a hit does, not what can be hit: an equal fighter is still safe.
+        // A Railgun changes what a hit does, not what can be hit. An EQUAL fighter is reachable
+        // now, so the demonstration has to be a fighter above the attacker: a level 2 firing at
+        // a level 3, which no Railgun makes possible.
         const game = new TestGame()
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
@@ -224,7 +226,7 @@ describe('Railgun', () => {
             TechnologyEffectKind.Railgun
         ]
         game.stackBags((playerId) => [
-            ship(playerId, PieceType.Fighter, PieceLevel.Three),
+            ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
         ])
 
