@@ -192,9 +192,11 @@
         }
     }
 
+    /* Shorthand, not longhand: Svelte scopes a component's @keyframes and rewrites the
+       reference only in the `animation` shorthand, so animation-name pointed at a name that no
+       longer existed and none of these stars were twinkling at all. The per-star duration and
+       delay still arrive inline and override the shorthand's values. */
     .sky-twinkle {
-        animation-name: sky-twinkle-frames;
-        animation-timing-function: ease-in-out;
-        animation-iteration-count: infinite;
+        animation: sky-twinkle-frames 4s ease-in-out infinite;
     }
 </style>

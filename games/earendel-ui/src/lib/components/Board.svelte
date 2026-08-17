@@ -155,13 +155,12 @@
 
         const ux = dx / length
         const uy = dy / length
-        const nearInset = 25 // clear of the piece's own art
-        const farInset = 33 // clear of the planet body (r=27)
-        const span = length - nearInset - farInset
-        if (span <= 0) return []
 
+        // The full span, centre of the piece's hex to centre of the planet's. The run was inset
+        // clear of both at first, which read as a detached dash floating in the gap; anchoring it
+        // in the two centres is what makes it read as a line FROM the piece TO the planet.
         return Array.from({ length: CONTROL_DOTS }, (_unused, i) => {
-            const along = nearInset + (span * i) / (CONTROL_DOTS - 1)
+            const along = (length * i) / (CONTROL_DOTS - 1)
             return {
                 x: start.x + ux * along,
                 y: start.y + uy * along,
@@ -1162,6 +1161,36 @@
        nothing they could act on. */
     svg :global([role='button']:focus) {
         outline: none;
+    }
+
+    /* One dot brightens and fades while the next takes over, so a pulse travels the run. The
+       peak is deliberately narrow - bright for about a tenth of the cycle, then falling away
+       over a third - which leaves a short lit tail behind the leading dot instead of the whole
+       run glowing at once. Never fully dark, so the path stays legible between pulses.
+
+       Note the `animation` SHORTHAND. Svelte renames a component's @keyframes to a scoped name
+       and rewrites the reference only in the shorthand, so the longhand animation-name this was
+       first written with pointed at a keyframe that no longer existed - and the dots simply sat
+       there at full brightness. Every animation in this file uses the shorthand for that reason.
+       Duration and delay are overridden per dot inline, which longhand declarations may do
+       against a shorthand in a class. */
+    @keyframes control-dot-frames {
+        0% {
+            opacity: 0.18;
+        }
+        10% {
+            opacity: 1;
+        }
+        38% {
+            opacity: 0.18;
+        }
+        100% {
+            opacity: 0.18;
+        }
+    }
+
+    .control-dot {
+        animation: control-dot-frames 1.5s ease-out infinite;
     }
 
     /* Planet motion. All of it is slow on purpose: a board with a dozen planets on it would be
