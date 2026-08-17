@@ -133,6 +133,45 @@
         return waveBetween(hexGeometry(from).center, hexGeometry(to).center)
     }
 
+    // Two ways of showing who controls a planet, one at a time. The wavy boundary line is kept
+    // whole rather than deleted - it works, and it may well come back - so switching between them
+    // is a matter of flipping these.
+    const SHOW_CONTROL_WAVE = false
+    const SHOW_CONTROL_DOTS = true
+
+    // Dots marching from a controlling piece to the planet it holds. Spaced along the line
+    // between the two hex centres, but inset at both ends so the run starts clear of the piece
+    // and stops short of the planet's disc rather than disappearing under either.
+    const CONTROL_DOTS = 6
+    const CONTROL_DOT_CYCLE = 1.5 // seconds for one dot to travel the whole run
+
+    function controlDots(from: AxialCoordinates, planet: AxialCoordinates) {
+        const start = hexGeometry(from).center
+        const end = hexGeometry(planet).center
+        const dx = end.x - start.x
+        const dy = end.y - start.y
+        const length = Math.hypot(dx, dy)
+        if (length === 0) return []
+
+        const ux = dx / length
+        const uy = dy / length
+        const nearInset = 25 // clear of the piece's own art
+        const farInset = 33 // clear of the planet body (r=27)
+        const span = length - nearInset - farInset
+        if (span <= 0) return []
+
+        return Array.from({ length: CONTROL_DOTS }, (_unused, i) => {
+            const along = nearInset + (span * i) / (CONTROL_DOTS - 1)
+            return {
+                x: start.x + ux * along,
+                y: start.y + uy * along,
+                // Staggered so the bright one travels toward the planet: the dot nearest the
+                // piece lights first, and each one after it a fraction of a cycle later.
+                delay: (i * CONTROL_DOT_CYCLE) / CONTROL_DOTS
+            }
+        })
+    }
+
     // The shared edge between two neighbouring hexes: the two vertices they have in common.
     // Found by matching vertices rather than by mapping a direction to an edge index, so it
     // cannot go wrong if the hex orientation ever changes.
@@ -902,17 +941,40 @@
          The wave is the same figure the station sight lines use, at a shorter wavelength and
          smaller amplitude to suit an edge rather than a span of board. -->
     {#each gameSession.controlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
-        {@const edgeLine = sharedEdge(edge.planet, edge.from)}
-        {#if edgeLine}
-            <path
-                d={waveBetween(edgeLine.start, edgeLine.end, 4.5, 15)}
-                fill="none"
-                stroke={gameSession.colors.getPlayerUiColor(edge.playerId)}
-                stroke-width="3.5"
-                stroke-linecap="round"
-                stroke-opacity="0.95"
-                pointer-events="none"
-            />
+        {@const edgeColor = gameSession.colors.getPlayerUiColor(edge.playerId)}
+
+        {#if SHOW_CONTROL_WAVE}
+            {@const edgeLine = sharedEdge(edge.planet, edge.from)}
+            {#if edgeLine}
+                <path
+                    d={waveBetween(edgeLine.start, edgeLine.end, 4.5, 15)}
+                    fill="none"
+                    stroke={edgeColor}
+                    stroke-width="3.5"
+                    stroke-linecap="round"
+                    stroke-opacity="0.95"
+                    pointer-events="none"
+                />
+            {/if}
+        {/if}
+
+        {#if SHOW_CONTROL_DOTS}
+            <!-- A run of dots from the piece to the planet, with a bright one travelling along
+                 it: the piece end lights first, so the motion reads as the piece exerting its
+                 hold on the planet rather than the planet drawing on the piece. Direction is the
+                 whole point of choosing dots over a static line - a wavy boundary says THAT a
+                 piece controls the planet, a run of dots says which way the control flows. -->
+            {#each controlDots(edge.from, edge.planet) as dot, i (i)}
+                <circle
+                    cx={dot.x}
+                    cy={dot.y}
+                    r="3"
+                    fill={edgeColor}
+                    class="control-dot"
+                    style="animation-delay: {dot.delay}s; animation-duration: {CONTROL_DOT_CYCLE}s;"
+                    pointer-events="none"
+                />
+            {/each}
         {/if}
     {/each}
 
