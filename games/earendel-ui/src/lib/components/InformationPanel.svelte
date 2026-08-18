@@ -16,10 +16,10 @@
 
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
 
-    // Hover opens the spent-technology list; a click pins it open, so it can be read without
-    // holding the cursor still on it.
-    let discardHovered = $state(false)
-    let discardPinned = $state(false)
+    // Hover opens the set-aside cards from this exploration; a click pins them open.
+    let setAsideHovered = $state(false)
+    let setAsidePinned = $state(false)
+
 
     const SHAPE: Record<string, string> = {
         [PieceType.Probe]: '◎',
@@ -101,58 +101,6 @@
         {/each}
     </div>
 
-    <!-- The spent technologies, and how much deck is left. Collapsed to two counts until asked
-         about: it is reference material, not something in the way of a turn. Hovering opens it,
-         and clicking pins it so a player can read it without holding the mouse still.
-         Grouped by effect rather than listed card by card - see discardedTechnologies. -->
-    {#if gameSession.discardedTechnologyCount > 0 || gameSession.technologyDeckCount > 0}
-        <div
-            class="relative text-xs"
-            role="group"
-            onmouseenter={() => (discardHovered = true)}
-            onmouseleave={() => (discardHovered = false)}
-        >
-            <button
-                type="button"
-                class="rounded-md px-2 py-1 border border-white/25 bg-white/5 hover:bg-white/15 {discardPinned
-                    ? 'border-white/60 bg-white/15'
-                    : ''}"
-                onclick={() => (discardPinned = !discardPinned)}
-            >
-                deck {gameSession.technologyDeckCount} · spent {gameSession.discardedTechnologyCount}
-            </button>
-
-            {#if discardHovered || discardPinned}
-                <div
-                    class="absolute left-1/2 top-full z-30 mt-1 w-[19rem] -translate-x-1/2 rounded-lg border border-white/25 bg-[#0d1424]/95 p-2 text-left shadow-xl"
-                >
-                    {#if gameSession.discardedTechnologies.length === 0}
-                        <div class="opacity-70">Nothing discarded yet.</div>
-                    {:else}
-                        <div class="mb-1 opacity-70">
-                            Spent technologies — reshuffled into the deck when it runs dry.
-                        </div>
-                        <div class="max-h-[13rem] overflow-auto">
-                            {#each gameSession.discardedTechnologies as group (group.name)}
-                                <div
-                                    class="flex items-baseline justify-between gap-2 border-t border-white/10 py-1 first:border-t-0"
-                                >
-                                    <span class="font-semibold">{group.name}</span>
-                                    <span class="shrink-0 opacity-60">
-                                        {group.colors.join(' · ')}
-                                        {#if group.count > 1}
-                                            <span class="ml-1 opacity-90">×{group.count}</span>
-                                        {/if}
-                                    </span>
-                                </div>
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-            {/if}
-        </div>
-    {/if}
-
     {#if gameSession.technologyChoices.length > 0}
         <!-- Only what can actually be taken. Every card turned over on the way used to be shown
              too, greyed out and labelled with why it missed, so the flip read as a moment rather
@@ -176,6 +124,48 @@
                 </button>
             {/each}
         </div>
+
+        <!-- What was turned over and set aside reaching this choice: the cards that came up
+             without the planet's colour. Behind a button because they are not choices - putting
+             them in the row above buried the ones that are - but they are the only sight a player
+             gets of what has just left the deck. -->
+        {#if gameSession.setAsideCards.length > 0}
+            <div
+                class="relative text-xs"
+                role="group"
+                onmouseenter={() => (setAsideHovered = true)}
+                onmouseleave={() => (setAsideHovered = false)}
+            >
+                <button
+                    type="button"
+                    class="rounded-md px-2 py-1 border border-white/25 bg-white/5 hover:bg-white/15 {setAsidePinned
+                        ? 'border-white/60 bg-white/15'
+                        : ''}"
+                    onclick={() => (setAsidePinned = !setAsidePinned)}
+                >
+                    {gameSession.setAsideCards.length} set aside
+                </button>
+
+                {#if setAsideHovered || setAsidePinned}
+                    <div
+                        class="absolute left-1/2 top-full z-30 mt-1 w-[19rem] -translate-x-1/2 rounded-lg border border-white/25 bg-[#0d1424]/95 p-2 text-left shadow-xl"
+                    >
+                        <div class="mb-1 opacity-70">
+                            Turned over without this planet's colour, and discarded.
+                        </div>
+                        {#each gameSession.setAsideCards as card (card.id)}
+                            <div class="border-t border-white/10 py-1 first:border-t-0">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="font-semibold">{technologyName(card)}</span>
+                                    <span class="shrink-0 opacity-60">{card.colors.join(' · ')}</span>
+                                </div>
+                                <div class="opacity-70">{technologyAbility(card)}</div>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {/if}
     {/if}
 
     {#if gameSession.canDraw}

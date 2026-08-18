@@ -235,6 +235,22 @@ export class EarendelGameSession extends GameSession<
     // runs dry, so neither number means much without the other.
     technologyDeckCount: number = $derived(this.gameState.technologyDeck?.length ?? 0)
 
+    // The cards turned over on the way to this exploration's choice that are NOT part of it: a
+    // probe on a red planet keeps drawing until it has enough reds, and everything that came up
+    // without red is set aside.
+    //
+    // Kept out of the choice row on purpose - they are not choices, and mixing them in buried the
+    // real ones - but they are worth being able to look at. They say what has just left the deck,
+    // and once a colour stands for a concept rather than being decoration, "you turned over three
+    // military cards looking for an economic one" is a real read on what is left.
+    setAsideCards: TechnologyCard[] = $derived.by(() => {
+        const pending = this.gameState.pendingExploration
+        if (!pending?.revealed) return []
+
+        const choosable = new Set((pending.candidates ?? []).map((card) => card.id))
+        return pending.revealed.filter((card) => !choosable.has(card.id))
+    })
+
     // Which probe is choosing, and between which planets. Only while the choice is this
     // player's - the arrows are an invitation to click, not a report.
     explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(

@@ -11,6 +11,7 @@
     import Board from '$lib/components/Board.svelte'
     import InformationPanel from '$lib/components/InformationPanel.svelte'
     import Starfield from '$lib/components/Starfield.svelte'
+    import TechnologyPiles from '$lib/components/TechnologyPiles.svelte'
 
     import type { EarendelGameSession } from '$lib/model/session.svelte'
     import type { HydratedEarendelGameState, EarendelGameState } from '@tabletop/earendel'
@@ -48,6 +49,7 @@
                    <History />
                 {/snippet}
             </DefaultSideContent>
+            <TechnologyPiles />
         {/snippet}
         {#snippet gameContent()}
             <!--  Top part is not allowed to shrink -->
