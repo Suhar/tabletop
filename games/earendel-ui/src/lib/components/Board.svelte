@@ -733,6 +733,19 @@
                  thing, and says it better - it shows WHICH fighter would be shooting and along
                  what path, where a ring on the target left the shooter implied. -->
 
+            {#if gameSession.spreading && gameSession.isSpreadTarget(hex.coords)}
+                <!-- Picked for the volley. A filled ring rather than the dashed outline a single
+                     target gets, so a chosen target reads as committed-but-not-yet-fired - the
+                     one state no other attack in the game has. -->
+                <polygon
+                    points={entry.points}
+                    fill="#ff8a3d"
+                    fill-opacity="0.18"
+                    stroke="#ffab6b"
+                    stroke-width="4"
+                />
+            {/if}
+
             {#if gameSession.railgunArmed && gameSession.railgunWouldMatter(hex.coords)}
                 <!-- Where the Railgun changes the outcome. Everything else in reach dies to an
                      ordinary shot, so it is not worth a three-turn power. -->

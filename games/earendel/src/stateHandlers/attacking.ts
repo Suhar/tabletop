@@ -1,11 +1,14 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
+import { HydratedAttackSpread, isAttackSpread } from '../actions/attackSpread.js'
+import { canUseCooldownEffect } from '../util/cooldowns.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { endPlacement } from '../util/turn.js'
 
-type AttackingAction = HydratedAttackPiece
+type AttackingAction = HydratedAttackPiece | HydratedAttackSpread
 
 // Still the placing player's turn: their fighter landed next to something it could destroy.
 //
@@ -28,7 +31,7 @@ export class AttackingStateHandler
         playerId: string,
         context: MachineContext<HydratedEarendelGameState>
     ): ActionType[] {
-        return [ActionType.AttackPiece].filter((actionType) =>
+        return [ActionType.AttackPiece, ActionType.AttackSpread].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
         )
     }
@@ -44,7 +47,9 @@ export class AttackingStateHandler
         context: MachineContext<HydratedEarendelGameState>
     ): MachineState {
         switch (true) {
-            case isAttackPiece(action): {
+            case isAttackPiece(action):
+            case isAttackSpread(action): {
+                // Both end the shot, so both hand the turn back the same way.
                 return endPlacement(context.gameState, context)
             }
             default: {
@@ -60,6 +65,21 @@ export class AttackingStateHandler
     ): boolean {
         const pending = context.gameState.pendingAttack
         if (!pending || pending.playerId !== playerId) return false
+
+        if (actionType === ActionType.AttackSpread) {
+            // Only worth offering with something to spread ACROSS: on a single target it is an
+            // ordinary shot, and spending three turns of a power on that is a trap rather than a
+            // choice.
+            return (
+                pending.targets.length > 1 &&
+                canUseCooldownEffect(
+                    context.gameState,
+                    playerId,
+                    TechnologyEffectKind.FullTorpedoSpread
+                )
+            )
+        }
+
         return actionType === ActionType.AttackPiece
     }
 }

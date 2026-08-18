@@ -95,3 +95,35 @@ export function attackableTargets(
         (neighbor) => attackOutcomeAt(board, coords, neighbor) !== undefined
     )
 }
+
+// Carries out one shot on the board and reports what it did. Shared by the single attack and by
+// Full Torpedo Spread, so a spread cannot drift from an ordinary shot: the wearing-down rule, the
+// escort and the Railgun's override are all decided in one place, once.
+//
+// Returns undefined if there was nothing to shoot - the callers validate before calling, so this
+// is a guard rather than a path.
+export function resolveShot(
+    board: EarendelBoard,
+    attackerCoords: AxialCoordinates,
+    targetCoords: AxialCoordinates,
+    destroyOutright = false
+): { target: Piece; damaged: boolean; levelAfter?: number } | undefined {
+    const hex = getHex(board, targetCoords)
+    const target = hex?.piece
+    if (!hex || !target) return undefined
+
+    const outcome = attackOutcomeAt(board, attackerCoords, targetCoords)
+    if (!outcome) return undefined
+
+    // A level is a fighter's power as well as its staying power, so wearing one down weakens its
+    // hold on the planets around it at the same time.
+    const damaged = outcome === AttackOutcome.Damaged && !destroyOutright
+    if (damaged) {
+        const levelAfter = (target.level ?? PieceLevel.Two) - 1
+        hex.piece = { ...target, level: levelAfter }
+        return { target, damaged: true, levelAfter }
+    }
+
+    hex.piece = undefined
+    return { target, damaged: false }
+}

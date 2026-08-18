@@ -495,6 +495,20 @@ The shot is an ordinary one in every other respect: the escort rule applies, a R
 spent on it, and it may be declined. It is refused outright on a fighter with nothing in reach,
 rather than spending three turns of the power on a shot that cannot be taken.
 
+**Full Torpedo Spread**: *when a fighter attacks, it may hit any or all of its neighbours.*
+
+**Any**, not merely all. Sparing a neighbour is a real decision: clearing a piece can hand a
+planet to a third party, or open a blockade of your own, so a player choosing two of three
+targets is playing the rule rather than under-using it. A spread of one is refused — that is an
+ordinary shot, and it should not cost three turns of a power.
+
+Each hit is resolved exactly as a single shot is, so an escorted neighbour is untouched, a fighter
+of equal or lower level is worn down rather than removed, and a station is immune. What makes it a
+spread is only that it happens more than once, from one attack, for one cooldown.
+
+The hits land **in the order chosen**, and that can matter: if one target was escorting another,
+shooting the guard first opens up its neighbour. The volley is not simultaneous.
+
 ### Station blockades
 
 Two of one player's stations with **clear empty space between them along a straight line**

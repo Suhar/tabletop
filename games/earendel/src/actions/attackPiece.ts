@@ -10,7 +10,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, sameHex } from '../model/board.js'
 import { Piece, PieceLevel } from '../model/pieces.js'
-import { AttackOutcome, attackOutcomeAt } from '../util/attack.js'
+import { AttackOutcome, attackOutcomeAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 
@@ -87,28 +87,14 @@ export class HydratedAttackPiece
             return
         }
 
-        const hex = state.board.hexes[hexKey(this.coords)]
-        const target = hex.piece!
-        const attacker = state.board.hexes[hexKey(pending.fighterCoords)].piece!
-        // Asked at the coordinates, so the escort rule is applied here exactly as it was when
-        // the target list was drawn up - one function answering it for everybody.
-        const outcome = attackOutcomeAt(state.board, pending.fighterCoords, this.coords)
-
-        // A Railgun turns damage into destruction. It does not extend a fighter's reach: what it
-        // could not touch, it still cannot.
         const railgun = this.useRailgun === true
         if (railgun) {
+            // A Railgun turns damage into destruction. It does not extend a fighter's reach:
+            // what it could not touch, it still cannot.
             startCooldown(state, this.playerId, TechnologyEffectKind.Railgun)
         }
 
-        const damaged = outcome === AttackOutcome.Damaged && !railgun
-        if (damaged) {
-            // A level is a fighter's power as well as its staying power, so this weakens its
-            // hold on the planets around it at the same time as it wears it down.
-            hex.piece = { ...target, level: (target.level ?? PieceLevel.Two) - 1 }
-        } else {
-            hex.piece = undefined
-        }
+        const result = resolveShot(state.board, pending.fighterCoords, this.coords, railgun)!
 
         // Clearing a blocker can leave someone else holding a neighbouring planet outright,
         // but nothing is handed over here: whoever holds it when their own turn begins is the
@@ -117,11 +103,9 @@ export class HydratedAttackPiece
 
         state.pendingAttack = undefined
         this.metadata = {
-            target,
-            ...(damaged
-                ? { damaged: true, levelAfter: (target.level ?? PieceLevel.Two) - 1 }
-                : {}),
-            ...(railgun ? { railgun: true } : {}),
+            target: result.target,
+            ...(result.damaged ? { damaged: true, levelAfter: result.levelAfter } : {}),
+            ...(railgun ? { railgun: true } : {})
         }
     }
 

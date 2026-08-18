@@ -18,6 +18,7 @@ import {
     explorablePlanets,
     technologyName,
     UseUpdatedLogistics,
+    AttackSpread,
     dominantPlayerId,
     planetControl,
     planetCoordinates,
@@ -383,6 +384,52 @@ export class EarendelGameSession extends GameSession<
         return explorablePlanets(this.gameState.board, coords, piece.type)
     }
 
+    // Full Torpedo Spread. Available only with more than one piece in reach, matching the engine:
+    // on a single target a spread is an ordinary shot, and spending three turns on that is a trap
+    // rather than a choice.
+    canSpread: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.AttackSpread)
+    )
+
+    // Which targets the player has picked so far. Purely local until they confirm - "any or all"
+    // means this is a subset being assembled, and nothing is sent while it is being changed.
+    spreadTargets: AxialCoordinates[] = $state([])
+    spreading: boolean = $state(false)
+
+    isSpreadTarget(coords: AxialCoordinates): boolean {
+        return this.spreadTargets.some((target) => sameHex(target, coords))
+    }
+
+    toggleSpreading() {
+        this.spreading = !this.spreading
+        // Leaving the mode throws the selection away rather than keeping it warm: a half-built
+        // volley that survives being cancelled is a trap waiting for the next click.
+        if (!this.spreading) this.spreadTargets = []
+    }
+
+    toggleSpreadTarget(coords: AxialCoordinates) {
+        this.spreadTargets = this.isSpreadTarget(coords)
+            ? this.spreadTargets.filter((target) => !sameHex(target, coords))
+            : [...this.spreadTargets, coords]
+    }
+
+    // Two is the floor, and it is the engine's rule rather than this component's - a spread of one
+    // is refused outright there.
+    get canConfirmSpread(): boolean {
+        return this.spreading && this.spreadTargets.length > 1
+    }
+
+    async confirmSpread() {
+        if (!this.canConfirmSpread) return
+
+        const action = this.createPlayerAction(AttackSpread, {
+            targets: $state.snapshot(this.spreadTargets)
+        })
+        this.spreading = false
+        this.spreadTargets = []
+        await this.applyAction(action)
+    }
+
     // Planets where a claim is ticking: someone holds it outright, it holds a technology, and
     // they don't have that technology yet - so it becomes theirs at the start of their next turn
     // unless somebody breaks the hold first.
@@ -499,6 +546,11 @@ export class EarendelGameSession extends GameSession<
             return this.canArmRailgun
                 ? 'Your fighter may attack one adjacent piece, arm the Railgun first, or hold fire.'
                 : 'Your fighter may attack one adjacent piece, or hold fire.'
+        }
+        if (this.spreading) {
+            return this.spreadTargets.length > 1
+                ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
+                : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
         }
         if (this.choosingUpdatedLogistics) {
             return this.wakeableFighters.length === 0
@@ -675,9 +727,23 @@ export class EarendelGameSession extends GameSession<
 
         // Answered before anything else, for the same reason it takes over the highlights: while
         // the player is picking a fighter to wake, a click means that and nothing else.
+        if (this.spreading) {
+            return this.spreadTargets.length > 1
+                ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
+                : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+        }
         if (this.choosingUpdatedLogistics) {
             if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {
                 await this.useUpdatedLogistics(coords)
+            }
+            return
+        }
+
+        if (this.spreading) {
+            // While a volley is being assembled a click adds or removes a target; the shot is
+            // only sent by the confirm button.
+            if (this.attackTargets.some((target) => sameHex(target, coords))) {
+                this.toggleSpreadTarget(coords)
             }
             return
         }

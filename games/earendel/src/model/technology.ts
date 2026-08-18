@@ -28,6 +28,7 @@ export enum TechnologyEffectKind {
     // Cooldown: a fighter's shot destroys its target outright rather than damaging it.
     Railgun = 'railgun',
     UpdatedLogistics = 'updatedLogistics',
+    FullTorpedoSpread = 'fullTorpedoSpread',
     // Grant: hands over a Station Hub to keep in front of the player until they place it.
     StationUpgrade = 'stationUpgrade'
 }
@@ -102,6 +103,11 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.Railgun]: {
         name: 'Railgun',
         ability: "A fighter's attack destroys its target outright, whatever its health.",
+        timing: TechnologyTiming.Cooldown
+    },
+    [TechnologyEffectKind.FullTorpedoSpread]: {
+        name: 'Full Torpedo Spread',
+        ability: 'When a fighter attacks, it may hit any or all of its neighbours.',
         timing: TechnologyTiming.Cooldown
     },
     [TechnologyEffectKind.UpdatedLogistics]: {

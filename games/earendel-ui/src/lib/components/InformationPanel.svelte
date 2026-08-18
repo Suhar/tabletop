@@ -235,6 +235,34 @@
         </button>
     {/if}
 
+    <!-- Full Torpedo Spread: arm it, click the neighbours to include, then fire. A confirm step
+         rather than firing on click, because "any or all" makes this a subset being assembled -
+         and unlike every other attack in the game, a click here is not the decision. -->
+    {#if gameSession.canSpread}
+        <div class="flex items-center gap-2">
+            <button
+                class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.spreading
+                    ? 'bg-orange-400/30 border-orange-300'
+                    : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+                onclick={() => gameSession.toggleSpreading()}
+            >
+                {gameSession.spreading ? 'Cancel spread' : 'Full Torpedo Spread'}
+            </button>
+
+            {#if gameSession.spreading}
+                <button
+                    disabled={!gameSession.canConfirmSpread}
+                    class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.canConfirmSpread
+                        ? 'bg-orange-400/30 border-orange-300 hover:bg-orange-400/40'
+                        : 'border-white/25 bg-white/5 opacity-50 cursor-default'}"
+                    onclick={() => gameSession.confirmSpread()}
+                >
+                    Fire at {gameSession.spreadTargets.length}
+                </button>
+            {/if}
+        </div>
+    {/if}
+
     {#if gameSession.canArmRailgun}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.railgunArmed
