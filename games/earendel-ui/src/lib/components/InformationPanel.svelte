@@ -219,6 +219,22 @@
         </div>
     {/if}
 
+    <!-- Updated Logistics wakes a fighter that has already landed. Pressing this asks which
+         one; the board then highlights the fighters that actually have something in reach, and a
+         click sends it. Pressing again backs out, since nothing has been committed yet. -->
+    {#if gameSession.canUseUpdatedLogistics}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingUpdatedLogistics
+                ? 'bg-sky-400/30 border-sky-300'
+                : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+            onclick={() => gameSession.toggleUpdatedLogistics()}
+        >
+            {gameSession.choosingUpdatedLogistics
+                ? 'Choose a fighter to attack with'
+                : 'Updated Logistics'}
+        </button>
+    {/if}
+
     {#if gameSession.canArmRailgun}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.railgunArmed

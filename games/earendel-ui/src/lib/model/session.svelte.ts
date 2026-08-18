@@ -17,6 +17,7 @@ import {
     attackableTargets,
     explorablePlanets,
     technologyName,
+    UseUpdatedLogistics,
     dominantPlayerId,
     planetControl,
     planetCoordinates,
@@ -333,6 +334,9 @@ export class EarendelGameSession extends GameSession<
     // What the board should invite a click on right now. One list keeps the board component
     // from having to know which decision is outstanding.
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
+        // Choosing a fighter to wake takes precedence over the placement it interrupts: while the
+        // question is "which fighter", the board should offer fighters and nothing else.
+        if (this.choosingUpdatedLogistics) return this.wakeableFighters
         if (this.isPlacingTile) return this.tileOrigins
         if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
         if (this.isMovingForTechnology) return this.movableHexes
@@ -437,6 +441,40 @@ export class EarendelGameSession extends GameSession<
         return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
     }
 
+    // Updated Logistics: whether the power is available to spend, and which of this player's
+    // fighters could actually do something with it. A fighter with nothing in reach is left out,
+    // since the engine refuses it rather than spending three turns on an impossible shot.
+    canUseUpdatedLogistics: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseUpdatedLogistics)
+    )
+
+    // Local intent, like the Railgun's arming: pressing the button asks WHICH fighter, and the
+    // board answers. Nothing is sent until one is clicked.
+    choosingUpdatedLogistics: boolean = $state(false)
+
+    wakeableFighters: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseUpdatedLogistics || !this.myPlayer) return []
+        const playerId = this.myPlayer.id
+
+        return Object.values(this.gameState.board.hexes)
+            .filter((hex) => hex.piece?.playerId === playerId)
+            .filter((hex) => hex.piece?.type === PieceType.Fighter)
+            .map((hex) => hex.coords)
+            .filter((coords) => attackableTargets(this.gameState.board, coords, playerId).length > 0)
+    })
+
+    toggleUpdatedLogistics() {
+        this.choosingUpdatedLogistics = !this.choosingUpdatedLogistics
+    }
+
+    async useUpdatedLogistics(coords: AxialCoordinates) {
+        if (!this.canUseUpdatedLogistics) return
+
+        const action = this.createPlayerAction(UseUpdatedLogistics, { coords })
+        this.choosingUpdatedLogistics = false
+        await this.applyAction(action)
+    }
+
     isHighlighted(coords: AxialCoordinates): boolean {
         return this.highlightedHexes.some((candidate) => sameHex(candidate, coords))
     }
@@ -461,6 +499,11 @@ export class EarendelGameSession extends GameSession<
             return this.canArmRailgun
                 ? 'Your fighter may attack one adjacent piece, arm the Railgun first, or hold fire.'
                 : 'Your fighter may attack one adjacent piece, or hold fire.'
+        }
+        if (this.choosingUpdatedLogistics) {
+            return this.wakeableFighters.length === 0
+                ? 'None of your fighters has anything in reach - press Updated Logistics again to back out.'
+                : 'Updated Logistics — click one of your highlighted fighters to attack with it.'
         }
         if (this.isPlacingTile) {
             return this.tileOrigins.length === 0
@@ -629,6 +672,15 @@ export class EarendelGameSession extends GameSession<
 
     async onBoardClick(coords: AxialCoordinates) {
         if (this.busy) return
+
+        // Answered before anything else, for the same reason it takes over the highlights: while
+        // the player is picking a fighter to wake, a click means that and nothing else.
+        if (this.choosingUpdatedLogistics) {
+            if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {
+                await this.useUpdatedLogistics(coords)
+            }
+            return
+        }
 
         if (this.isPlacingTile) {
             if (this.tileOrigins.some((origin) => sameHex(origin, coords))) {

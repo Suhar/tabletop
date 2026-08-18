@@ -28,7 +28,7 @@ export function canUseCooldownEffect(
     const since = turnsSinceUse(state, playerId, kind)
     if (since === undefined) return true
 
-    return since >= (COOLDOWN_TURNS[kind] ?? 0)
+    return since >= COOLDOWN_TURNS
 }
 
 // How many more of this player's turns until the power is ready, or 0 if it is.
@@ -39,7 +39,7 @@ export function turnsUntilReady(
 ): number {
     const since = turnsSinceUse(state, playerId, kind)
     if (since === undefined) return 0
-    return Math.max(0, (COOLDOWN_TURNS[kind] ?? 0) - since)
+    return Math.max(0, COOLDOWN_TURNS - since)
 }
 
 export function startCooldown(

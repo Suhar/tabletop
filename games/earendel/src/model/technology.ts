@@ -27,6 +27,7 @@ export enum TechnologyEffectKind {
     LogisticsUpgrade = 'logisticsUpgrade',
     // Cooldown: a fighter's shot destroys its target outright rather than damaging it.
     Railgun = 'railgun',
+    UpdatedLogistics = 'updatedLogistics',
     // Grant: hands over a Station Hub to keep in front of the player until they place it.
     StationUpgrade = 'stationUpgrade'
 }
@@ -46,7 +47,13 @@ export enum TechnologyTiming {
 
 // How many of the owner's own turns a cooldown power sits idle. Used on a turn, it comes back on
 // the third turn after it.
-export const COOLDOWN_TURNS: Partial<Record<TechnologyEffectKind, number>> = {}
+//
+// One number for every cooldown power, deliberately. This was a per-effect table, which invited
+// tuning each power's timer separately - and a player then has to remember which of their powers
+// is on which clock. A single shared figure is one rule instead of several, and any power that
+// genuinely needs a different rhythm is better off with a different TIMING than with its own
+// number here.
+export const COOLDOWN_TURNS = 3
 
 // Immediate effects resolve the moment the technology is chosen for the planet, inside the
 // exploring player's own turn. Other timings - a standing power, a granted special piece -
@@ -97,6 +104,11 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         ability: "A fighter's attack destroys its target outright, whatever its health.",
         timing: TechnologyTiming.Cooldown
     },
+    [TechnologyEffectKind.UpdatedLogistics]: {
+        name: 'Updated Logistics',
+        ability: 'A fighter already on the board may attack one of its neighbours.',
+        timing: TechnologyTiming.Cooldown
+    },
     [TechnologyEffectKind.StationUpgrade]: {
         name: 'Station Upgrade',
         ability:
@@ -104,8 +116,6 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         timing: TechnologyTiming.Grant
     }
 }
-
-COOLDOWN_TURNS[TechnologyEffectKind.Railgun] = 3
 
 export function timingOf(card: TechnologyCard): TechnologyTiming | undefined {
     return card.effect ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].timing : undefined

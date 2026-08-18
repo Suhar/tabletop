@@ -241,7 +241,11 @@ stretch of their game whatever the player count and whatever anyone else does in
 Holding two copies of the same cooldown technology confers nothing extra — the timer belongs to
 the power, not to the card.
 
-The first is **Railgun**, timer **3 turns**: *a fighter's attack destroys its target outright,
+**Every cooldown is 3 turns.** One figure for all of them, so a player never has to remember
+which of their powers is on which clock. A power that genuinely wants a different rhythm should
+have a different *timing* rather than its own number.
+
+The first is **Railgun**: *a fighter's attack destroys its target outright,
 whatever its health.*
 
 Armed before a shot, it turns what would have been damage into a kill. Used on a turn, it is
@@ -480,6 +484,16 @@ station-and-planet geometry the most valuable thing on the board to spot is a fa
 the game to ask players to look for. The surprise jump is a real cost, which the score float
 over the board is there to explain (see the UI's per-action popups) - the points arrive
 labelled, not silently.
+
+**Updated Logistics**: *a fighter already on the board may attack one of its neighbours.*
+
+This is the only way a fighter fires twice. Shooting is otherwise something that happens on
+arrival and never again, so a landed fighter threatens its neighbours only in the sense that
+enemies keep away from them — Updated Logistics makes that threat real, once every three turns.
+
+The shot is an ordinary one in every other respect: the escort rule applies, a Railgun can be
+spent on it, and it may be declined. It is refused outright on a fighter with nothing in reach,
+rather than spending three turns of the power on a shot that cannot be taken.
 
 ### Station blockades
 

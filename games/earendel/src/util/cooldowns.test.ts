@@ -93,7 +93,7 @@ describe('Railgun', () => {
             canUseCooldownEffect(game.hydrated, mover, TechnologyEffectKind.Railgun)
 
         expect(readyNow()).toBe(true)
-        expect(COOLDOWN_TURNS[TechnologyEffectKind.Railgun]).toBe(3)
+        expect(COOLDOWN_TURNS).toBe(3)
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,

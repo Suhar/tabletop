@@ -1,5 +1,11 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
+import {
+    HydratedUseUpdatedLogistics,
+    isUseUpdatedLogistics
+} from '../actions/useUpdatedLogistics.js'
+import { canUseCooldownEffect } from '../util/cooldowns.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
@@ -7,7 +13,7 @@ import { HydratedPass, isPass, Pass } from '../actions/pass.js'
 import { endPlacement } from '../util/turn.js'
 import { hasAnyPlacement } from '../util/placement.js'
 
-type PlacingPieceAction = HydratedPlacePiece | HydratedPass
+type PlacingPieceAction = HydratedPlacePiece | HydratedPass | HydratedUseUpdatedLogistics
 
 // A whole turn is one placement. This state is where every turn begins and, unless the
 // placement was a probe that found something, where it ends.
@@ -29,7 +35,11 @@ export class PlacingPieceStateHandler
         playerId: string,
         context: MachineContext<HydratedEarendelGameState>
     ): ActionType[] {
-        return [ActionType.PlacePiece, ActionType.Pass].filter((actionType) =>
+        return [
+            ActionType.PlacePiece,
+            ActionType.UseUpdatedLogistics,
+            ActionType.Pass
+        ].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
         )
     }
@@ -77,6 +87,12 @@ export class PlacingPieceStateHandler
         const gameState = context.gameState
 
         switch (true) {
+            case isUseUpdatedLogistics(action): {
+                // The woken fighter's shot is the ordinary one, so hand straight over to the
+                // state that resolves shots. It comes back here afterwards, with the ship in
+                // hand still to place.
+                return MachineState.Attacking
+            }
             case isPlacePiece(action): {
                 // A placement that owes the player a decision holds the turn open. A piece
                 // is one type or the other, so these are never both pending: probes explore,
@@ -121,6 +137,16 @@ export class PlacingPieceStateHandler
         switch (actionType) {
             case ActionType.PlacePiece: {
                 return canPlace
+            }
+            case ActionType.UseUpdatedLogistics: {
+                // Offered alongside the placement rather than instead of it: the power wakes a
+                // fighter that is already standing somewhere, which has nothing to do with the
+                // ship in hand. Whether any particular fighter can actually fire is the action's
+                // own business - this only says the power is available to spend.
+                return (
+                    gameState.pendingAttack === undefined &&
+                    canUseCooldownEffect(gameState, playerId, TechnologyEffectKind.UpdatedLogistics)
+                )
             }
             case ActionType.Pass: {
                 // Only ever a safety valve: a player with something they can place must
