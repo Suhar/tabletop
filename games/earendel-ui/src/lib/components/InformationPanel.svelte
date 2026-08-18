@@ -249,6 +249,26 @@
         </button>
     {/if}
 
+    <!-- Tactical Feint: two clicks on the board rather than one, since a swap has two ends. The
+         button only asks for the first; the board narrows to that ship's enemy neighbours once it
+         is picked. -->
+    {#if gameSession.canUseTacticalFeint}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingFeint
+                ? 'bg-violet-400/30 border-violet-300'
+                : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+            onclick={() => gameSession.toggleFeint()}
+        >
+            {#if !gameSession.choosingFeint}
+                Tactical Feint
+            {:else if gameSession.feintFrom}
+                Choose the enemy ship to swap with
+            {:else}
+                Choose one of your ships
+            {/if}
+        </button>
+    {/if}
+
     <!-- Full Torpedo Spread: arm it, click the neighbours to include, then fire. A confirm step
          rather than firing on click, because "any or all" makes this a subset being assembled -
          and unlike every other attack in the game, a click here is not the decision. -->

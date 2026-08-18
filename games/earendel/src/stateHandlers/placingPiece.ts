@@ -4,6 +4,7 @@ import {
     HydratedUseUpdatedLogistics,
     isUseUpdatedLogistics
 } from '../actions/useUpdatedLogistics.js'
+import { HydratedUseTacticalFeint, isUseTacticalFeint } from '../actions/useTacticalFeint.js'
 import { canUseCooldownEffect } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
@@ -13,7 +14,11 @@ import { HydratedPass, isPass, Pass } from '../actions/pass.js'
 import { endPlacement } from '../util/turn.js'
 import { hasAnyPlacement } from '../util/placement.js'
 
-type PlacingPieceAction = HydratedPlacePiece | HydratedPass | HydratedUseUpdatedLogistics
+type PlacingPieceAction =
+    | HydratedPlacePiece
+    | HydratedPass
+    | HydratedUseUpdatedLogistics
+    | HydratedUseTacticalFeint
 
 // A whole turn is one placement. This state is where every turn begins and, unless the
 // placement was a probe that found something, where it ends.
@@ -38,6 +43,7 @@ export class PlacingPieceStateHandler
         return [
             ActionType.PlacePiece,
             ActionType.UseUpdatedLogistics,
+            ActionType.UseTacticalFeint,
             ActionType.Pass
         ].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
@@ -93,6 +99,18 @@ export class PlacingPieceStateHandler
                 // hand still to place.
                 return MachineState.Attacking
             }
+            case isUseTacticalFeint(action): {
+                // The swapped ship arrives as if placed, so it can owe the same decisions a
+                // placement owes - a probe's exploration, a fighter's shot. Either way the turn
+                // comes back here afterwards: the feint costs a power, not the placement.
+                if (gameState.pendingExploration) {
+                    return MachineState.Exploring
+                }
+                if (gameState.pendingAttack) {
+                    return MachineState.Attacking
+                }
+                return endPlacement(gameState, context)
+            }
             case isPlacePiece(action): {
                 // A placement that owes the player a decision holds the turn open. A piece
                 // is one type or the other, so these are never both pending: probes explore,
@@ -137,6 +155,17 @@ export class PlacingPieceStateHandler
         switch (actionType) {
             case ActionType.PlacePiece: {
                 return canPlace
+            }
+            case ActionType.UseTacticalFeint: {
+                // Like Updated Logistics, offered alongside the placement rather than instead of
+                // it: the swap concerns ships already standing on the board and has nothing to do
+                // with the one in hand. Which pair of ships can actually trade places is the
+                // action's own business.
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    canUseCooldownEffect(gameState, playerId, TechnologyEffectKind.TacticalFeint)
+                )
             }
             case ActionType.UseUpdatedLogistics: {
                 // Offered alongside the placement rather than instead of it: the power wakes a

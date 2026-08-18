@@ -29,6 +29,8 @@ export enum TechnologyEffectKind {
     Railgun = 'railgun',
     UpdatedLogistics = 'updatedLogistics',
     FullTorpedoSpread = 'fullTorpedoSpread',
+    // Cooldown: trade places with an adjacent enemy ship, and arrive as if newly placed.
+    TacticalFeint = 'tacticalFeint',
     // Grant: hands over a Station Hub to keep in front of the player until they place it.
     StationUpgrade = 'stationUpgrade'
 }
@@ -113,6 +115,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.UpdatedLogistics]: {
         name: 'Updated Logistics',
         ability: 'A fighter already on the board may attack one of its neighbours.',
+        timing: TechnologyTiming.Cooldown
+    },
+    [TechnologyEffectKind.TacticalFeint]: {
+        name: 'Tactical Feint',
+        ability:
+            'Swap one of your ships with an adjacent enemy ship. Your ship counts as newly placed.',
         timing: TechnologyTiming.Cooldown
     },
     [TechnologyEffectKind.StationUpgrade]: {

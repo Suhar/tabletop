@@ -790,6 +790,20 @@
                 />
             {/if}
 
+            {#if gameSession.feintFrom && sameHex(gameSession.feintFrom, hex.coords)}
+                <!-- The near end of a feint, chosen and waiting for the ship it trades places
+                     with. Violet, matching its button, so it doesn't read as the yellow of a
+                     Tactical Shift's picked-up piece - the two are easy to confuse and only one
+                     of them moves an enemy. -->
+                <polygon
+                    points={entry.points}
+                    fill="#c4a2ff"
+                    fill-opacity="0.16"
+                    stroke="#c4a2ff"
+                    stroke-width="5"
+                />
+            {/if}
+
             {#if isExploringPlanet(hex.coords)}
                 <polygon points={entry.points} fill="none" stroke="#ffffff" stroke-width="4" />
             {/if}

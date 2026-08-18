@@ -8,14 +8,10 @@ import {
     shuffle
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, isOpenHex } from '../model/board.js'
-import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { explorablePlanets } from '../util/exploration.js'
-import { chainsCompletedBy } from '../util/chains.js'
-import { stationGroupPoints } from '../util/stations.js'
-import { attackableTargets } from '../util/attack.js'
+import { Piece, PieceType } from '../model/pieces.js'
+import { resolveArrival } from '../util/arrival.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 
@@ -127,64 +123,14 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
-        // A station pays for the company it keeps: one for itself, one for each station
-        // already in the group it joins. Scored on every placement, so a cluster built up
-        // one station at a time pays 1, 2, 3, ...
-        const stationPoints =
-            piece.type === PieceType.Station
-                ? stationGroupPoints(state.board, this.playerId, this.coords)
-                : 0
-        playerState.score += stationPoints
-
-        // Joining two planets of one colour pays T(n) on the n ships between them. Scored
-        // here, on the placement that completes it, and never again for that pair.
-        const chains = chainsCompletedBy(
-            state.board,
+        // Everything the arrival sets off - station points, chains, a fighter's shot, a probe's
+        // exploration, control - lives in resolveArrival, because Tactical Feint has to be able
+        // to do all of it to a ship it swapped into place rather than played from hand.
+        const { stationPoints, chains, explorable } = resolveArrival(
+            state,
             this.playerId,
-            this.coords,
-            state.scoredPlanetPairs
+            this.coords
         )
-        for (const chain of chains) {
-            playerState.score += chain.points
-            state.scoredPlanetPairs.push(chain.pairKey)
-        }
-
-        // Taking outright hold of an explored planet no longer hands its technology over on
-        // the spot: it is claimed at the start of a turn by whoever is still holding the
-        // planet then (see claimRipeTechnologies). So a placement that seizes a planet wins
-        // nothing yet - it starts a wait, and announces itself when the wait pays.
-
-        // A fighter arrives shooting: it may destroy one adjacent piece weaker than itself.
-        // Optional, and the target is the player's choice, so it parks a decision rather
-        // than resolving here.
-        const targets = attackableTargets(state.board, this.coords, this.playerId)
-        if (targets.length > 0) {
-            state.pendingAttack = {
-                playerId: this.playerId,
-                fighterCoords: this.coords,
-                targets
-            }
-        }
-
-        // A probe landing beside unexplored planets doesn't resolve anything here: which
-        // planet it explores is the player's choice, and the reveal that follows consumes the
-        // technology deck. Both belong in their own actions so each is separately undoable
-        // and the deck is only touched once the target is settled.
-        const explorable = explorablePlanets(state.board, this.coords, piece.type)
-        if (explorable.length > 0) {
-            state.pendingExploration = {
-                playerId: this.playerId,
-                probeCoords: this.coords,
-                // A probe won from a technology may not carry a level of its own; the
-                // weaker level is the safe reading.
-                probeLevel: piece.level ?? PieceLevel.Two,
-                candidatePlanets: explorable
-            }
-        }
-
-        // Control is recomputed once the board is settled: a tie now leaves whoever held
-        // the planet holding it, so this cannot be read off the board later.
-        refreshPlanetControl(state)
 
         this.metadata = {
             pieceType: piece.type,

@@ -4,6 +4,7 @@ export enum ActionType {
     DrawPieces = 'drawPieces',
     UseLogisticsUpgrade = 'useLogisticsUpgrade',
     UseUpdatedLogistics = 'useUpdatedLogistics',
+    UseTacticalFeint = 'useTacticalFeint',
     AttackSpread = 'attackSpread',
     DiscardPiece = 'discardPiece',
     PlaceTile = 'placeTile',

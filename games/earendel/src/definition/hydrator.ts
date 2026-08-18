@@ -10,6 +10,7 @@ import { HydratedPlaceTile, isPlaceTile } from '../actions/placeTile.js'
 import { HydratedDiscardPiece, isDiscardPiece } from '../actions/discardPiece.js'
 import { HydratedDrawPieces, isDrawPieces } from '../actions/drawPieces.js'
 import { HydratedAttackSpread, isAttackSpread } from '../actions/attackSpread.js'
+import { HydratedUseTacticalFeint, isUseTacticalFeint } from '../actions/useTacticalFeint.js'
 import {
     HydratedUseUpdatedLogistics,
     isUseUpdatedLogistics
@@ -37,6 +38,9 @@ export class EarendelHydrator
             }
             case isAttackSpread(data): {
                 return new HydratedAttackSpread(data)
+            }
+            case isUseTacticalFeint(data): {
+                return new HydratedUseTacticalFeint(data)
             }
             case isUseUpdatedLogistics(data): {
                 return new HydratedUseUpdatedLogistics(data)

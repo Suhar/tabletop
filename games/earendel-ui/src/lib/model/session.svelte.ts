@@ -18,6 +18,7 @@ import {
     explorablePlanets,
     technologyName,
     UseUpdatedLogistics,
+    UseTacticalFeint,
     AttackSpread,
     controllerOf,
     planetCoordinates,
@@ -409,6 +410,7 @@ export class EarendelGameSession extends GameSession<
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
         // Choosing a fighter to wake takes precedence over the placement it interrupts: while the
         // question is "which fighter", the board should offer fighters and nothing else.
+        if (this.choosingFeint) return this.feintHexes
         if (this.choosingUpdatedLogistics) return this.wakeableFighters
         if (this.isPlacingTile) return this.tileOrigins
         if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
@@ -600,6 +602,83 @@ export class EarendelGameSession extends GameSession<
         await this.applyAction(action)
     }
 
+    // Tactical Feint: two clicks, because a swap has two ends. The first picks one of the
+    // player's own ships, the second the enemy ship it trades places with - and until the second
+    // arrives nothing has been sent, so the first is freely taken back.
+    canUseTacticalFeint: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseTacticalFeint)
+    )
+
+    choosingFeint: boolean = $state(false)
+    // The player's ship picked as the near end of the swap, if they have picked one yet.
+    feintFrom: AxialCoordinates | undefined = $state(undefined)
+
+    // The player's ships that have an enemy beside them. A ship with no neighbour to trade with
+    // is left out rather than offered and then refused - the same reason a fighter with nothing
+    // in reach is left out of wakeableFighters.
+    feintableShips: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseTacticalFeint || !this.myPlayer) return []
+        const playerId = this.myPlayer.id
+
+        return Object.values(this.gameState.board.hexes)
+            .filter((hex) => hex.piece?.playerId === playerId)
+            .map((hex) => hex.coords)
+            .filter((coords) => this.feintTargetsFrom(coords).length > 0)
+    })
+
+    // The enemy ships one of the player's own could trade places with.
+    feintTargetsFrom(coords: AxialCoordinates): AxialCoordinates[] {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return []
+
+        return neighborsOf(coords).filter((neighbor) => {
+            const piece = getHex(this.gameState.board, neighbor)?.piece
+            return piece !== undefined && piece.playerId !== playerId
+        })
+    }
+
+    // What the board should be offering right now: the near end until one is chosen, then the far
+    // end. Split this way so the highlights answer one question at a time.
+    feintHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingFeint) return []
+        return this.feintFrom ? this.feintTargetsFrom(this.feintFrom) : this.feintableShips
+    })
+
+    toggleFeint() {
+        this.choosingFeint = !this.choosingFeint
+        // Backing out drops the half-made swap: a remembered near end that survives a cancel is
+        // waiting to be paired with the next stray click.
+        if (!this.choosingFeint) this.feintFrom = undefined
+    }
+
+    private async onFeintClick(coords: AxialCoordinates) {
+        // Clicking the chosen ship again puts it back down, so a misclick costs nothing.
+        if (this.feintFrom && sameHex(this.feintFrom, coords)) {
+            this.feintFrom = undefined
+            return
+        }
+        if (this.feintFrom) {
+            if (this.feintTargetsFrom(this.feintFrom).some((target) => sameHex(target, coords))) {
+                await this.useTacticalFeint(this.feintFrom, coords)
+            }
+            return
+        }
+        // Picking a different one of your own ships instead simply moves the choice, rather than
+        // being read as a target and rejected.
+        if (this.feintableShips.some((ship) => sameHex(ship, coords))) {
+            this.feintFrom = coords
+        }
+    }
+
+    async useTacticalFeint(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseTacticalFeint) return
+
+        const action = this.createPlayerAction(UseTacticalFeint, { from, to })
+        this.choosingFeint = false
+        this.feintFrom = undefined
+        await this.applyAction(action)
+    }
+
     isHighlighted(coords: AxialCoordinates): boolean {
         return this.highlightedHexes.some((candidate) => sameHex(candidate, coords))
     }
@@ -629,6 +708,14 @@ export class EarendelGameSession extends GameSession<
             return this.spreadTargets.length > 1
                 ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
                 : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+        }
+        if (this.choosingFeint) {
+            if (this.feintFrom) {
+                return 'Tactical Feint — click the enemy ship to trade places with. Click your own ship again to change it.'
+            }
+            return this.feintableShips.length === 0
+                ? 'None of your ships has an enemy beside it - press Tactical Feint again to back out.'
+                : 'Tactical Feint — click one of your highlighted ships to swap it with a neighbour.'
         }
         if (this.choosingUpdatedLogistics) {
             return this.wakeableFighters.length === 0
@@ -804,11 +891,10 @@ export class EarendelGameSession extends GameSession<
         if (this.busy) return
 
         // Answered before anything else, for the same reason it takes over the highlights: while
-        // the player is picking a fighter to wake, a click means that and nothing else.
-        if (this.spreading) {
-            return this.spreadTargets.length > 1
-                ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
-                : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+        // the player is picking a ship, a click means that and nothing else.
+        if (this.choosingFeint) {
+            await this.onFeintClick(coords)
+            return
         }
         if (this.choosingUpdatedLogistics) {
             if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {

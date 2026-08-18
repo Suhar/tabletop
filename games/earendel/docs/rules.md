@@ -525,6 +525,38 @@ spread is only that it happens more than once, from one attack, for one cooldown
 The hits land **in the order chosen**, and that can matter: if one target was escorting another,
 shooting the guard first opens up its neighbour. The volley is not simultaneous.
 
+**Tactical Feint**: *swap one of your ships with an adjacent enemy ship. Your ship counts as newly
+placed.*
+
+The swap is the small half. "Newly placed" is the large one: the ship arrives as though it had
+just been played out of hand, which means **everything** an arrival sets off. A station scores its
+complex again. A run of ships between two same-coloured planets pays if the swap completes one. A
+fighter fires — and the enemy ship it just displaced has been set down right beside it, so the
+displaced ship is usually a legal target. A probe explores an unexplored planet it now touches.
+Control is recomputed, so a planet can change hands without a shot.
+
+**Only your ship arrives.** The enemy ship is moved, not placed: it lands on the hex yours left
+and sets nothing off, however inviting that hex might have been. One player's power should not
+hand another player a free arrival.
+
+Two consequences worth stating, because both are deliberate:
+
+- **A feint reaches an escorted ship.** The escort rule protects against *attacks*, and a swap is
+  not an attack. So this is the answer to a cluster that cannot be shot into — and note that
+  displacing the escorting fighter can open its neighbours up to the shot that follows.
+- **A feint ignores a station blockade.** A hex closed to your probes is closed to *placing* one
+  there; a swap is not a placement, and every swap target hex is occupied anyway, so the blockade
+  check never had a hex to apply to. Worth revisiting if blockades turn out to matter more than
+  this does.
+
+It is refused when a shot or an exploration of the player's own is already waiting: there is one
+slot for each, and the feint's own arrival needs it.
+
+OPEN: a station can be **rescored by shuffling**. Swap a station one hex sideways into an enemy and
+its complex pays again, every three turns. That follows from "newly placed" and may be exactly the
+combination the card is for, but it is points for no new position and it should be watched at the
+table.
+
 ### Station blockades
 
 Two of one player's stations with **clear empty space between them along a straight line**

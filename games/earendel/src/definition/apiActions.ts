@@ -9,6 +9,7 @@ import { PlaceTile } from '../actions/placeTile.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { UseUpdatedLogistics } from '../actions/useUpdatedLogistics.js'
+import { UseTacticalFeint } from '../actions/useTacticalFeint.js'
 import { AttackSpread } from '../actions/attackSpread.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 
@@ -19,6 +20,7 @@ export const EarendelApiActions = {
     [ActionType.DrawPieces]: DrawPieces,
     [ActionType.UseLogisticsUpgrade]: UseLogisticsUpgrade,
     [ActionType.UseUpdatedLogistics]: UseUpdatedLogistics,
+    [ActionType.UseTacticalFeint]: UseTacticalFeint,
     [ActionType.AttackSpread]: AttackSpread,
     [ActionType.DiscardPiece]: DiscardPiece,
     [ActionType.PlaceTile]: PlaceTile,

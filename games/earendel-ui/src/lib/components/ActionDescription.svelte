@@ -15,6 +15,8 @@
         type DrawPieces,
         isUseLogisticsUpgrade,
         type UseLogisticsUpgrade,
+        isUseTacticalFeint,
+        type UseTacticalFeint,
         isMovePiece,
         isPlacePiece,
         isPlaceTile,
@@ -107,6 +109,25 @@
             const claimed = drew.metadata?.technologiesClaimed ?? []
             if (claimed.length === 0) return drawn
             return `${drawn}, and held ${claimed.map(claimedName).join(' and ')}`
+        }
+        if (isUseTacticalFeint(action)) {
+            const feint = action as UseTacticalFeint
+            const mine = feint.metadata?.movedType ?? 'ship'
+            const theirs = feint.metadata?.displacedType ?? 'ship'
+            const parts: string[] = [`feinted, swapping their ${mine} with a ${theirs}`]
+            // The swap's own consequences, said out loud for the same reason a placement's are:
+            // the score moved and history has to be able to say why.
+            if (feint.metadata?.stationGroupPoints) {
+                parts.push(`for ${feint.metadata.stationGroupPoints}`)
+            }
+            for (const chain of feint.metadata?.chains ?? []) {
+                parts.push(
+                    `and joined two ${chain.color} planets with ${chain.length} ${
+                        chain.length === 1 ? 'ship' : 'ships'
+                    } for ${chain.points}`
+                )
+            }
+            return parts.join(' ')
         }
         if (isUseLogisticsUpgrade(action)) {
             const used = action as UseLogisticsUpgrade

@@ -92,8 +92,18 @@ const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
     TechnologyEffectKind.GrowBoard,
     TechnologyEffectKind.LogisticsUpgrade,
     TechnologyEffectKind.Railgun,
-    TechnologyEffectKind.StationUpgrade
+    TechnologyEffectKind.StationUpgrade,
+    TechnologyEffectKind.UpdatedLogistics,
+    TechnologyEffectKind.FullTorpedoSpread,
+    TechnologyEffectKind.TacticalFeint
 ]
+
+// Every effect there is, so a new one cannot be written, wired up and then never dealt. The
+// bottom three were exactly that: added, tested, and absent from this list, which meant no game
+// could ever produce them.
+const _EVERY_EFFECT_IS_DEALT: Record<TechnologyEffectKind, true> = Object.fromEntries(
+    PLACEHOLDER_EFFECTS.map((kind) => [kind, true])
+) as Record<TechnologyEffectKind, true>
 // A deck of nothing but the named effect, one card per planet colour so that whatever a probe
 // reaches, the effect comes up. A testing aid - see the technologyDeck config option.
 export function buildFocusedTechnologyDeck(
