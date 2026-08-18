@@ -2,6 +2,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { Tile } from '../model/tile.js'
 import {
@@ -72,7 +73,11 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
 
         if (!this.coords) {
             state.pendingTile = undefined
-            this.metadata = { noTilePlaced: true }
+            // A new tile brings planets that have never had a controller, and can put a hex within
+        // reach of pieces that were previously too far away.
+        refreshPlanetControl(state)
+
+        this.metadata = { noTilePlaced: true }
             return
         }
 

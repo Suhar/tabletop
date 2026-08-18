@@ -2,6 +2,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey, sameHex } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
@@ -81,6 +82,10 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         // the start of a turn, for whoever is holding on then.
 
         state.pendingTechnology = undefined
+        // Control is recomputed once the board is settled: a tie now leaves whoever held
+        // the planet holding it, so this cannot be read off the board later.
+        refreshPlanetControl(state)
+
         this.metadata = {
             piece,
         }

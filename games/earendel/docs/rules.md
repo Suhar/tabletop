@@ -405,6 +405,18 @@ probe parked beside a planet stops a station holding it outright and neither pla
 cheapest piece in the game cannot take a planet from a station, but it can stop the station
 having it.
 
+**Control is sticky, because the only way to GAIN a planet is to have the most power beside it.**
+A tie changes nothing: whoever already held the planet goes on holding it, and a challenger who has
+merely drawn level has achieved nothing yet. They must actually get ahead.
+
+An incumbent keeps it only while still tied for the lead. Fall behind, or lose every piece beside
+the planet, and it is gone — a controller who is no longer among the strongest is not an incumbent
+but a former one. A planet nobody has ever controlled, tied from the start, is controlled by
+nobody.
+
+This is why control is *recorded* rather than worked out from the board: the answer depends on who
+held it before.
+
 Ties are treated differently depending on what is at stake:
 
 | At stake | A tie |

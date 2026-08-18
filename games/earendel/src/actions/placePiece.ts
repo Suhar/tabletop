@@ -8,6 +8,7 @@ import {
     shuffle
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, isOpenHex } from '../model/board.js'
 import { Piece, PieceLevel, PieceType } from '../model/pieces.js'
@@ -180,6 +181,10 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
                 candidatePlanets: explorable
             }
         }
+
+        // Control is recomputed once the board is settled: a tie now leaves whoever held
+        // the planet holding it, so this cannot be read off the board later.
+        refreshPlanetControl(state)
 
         this.metadata = {
             pieceType: piece.type,

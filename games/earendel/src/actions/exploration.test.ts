@@ -67,6 +67,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         ],
         technologyDiscard: [],
         queuedTechnologyEffects: [],
+        planetControllers: {},
         scoredPlanetPairs: [],
         tileSupply: [],
         heldPieces: [],

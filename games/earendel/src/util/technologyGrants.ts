@@ -17,6 +17,7 @@ import {
     TechnologyEffectKind
 } from '../model/technology.js'
 import type { PendingTechnology } from '../model/exploration.js'
+import { controllerOf } from './control.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
 // Every explored planet this player holds outright and whose technology they don't yet have -
@@ -36,19 +37,24 @@ import { type Piece, PieceType } from '../model/pieces.js'
 //
 // Read over the whole board rather than around one hex, because it is no longer answering
 // "what did that move just win?" but "what has this player held long enough to keep?".
+//
+// Asks the RECORDED controller rather than recomputing dominance from the board, because control
+// is sticky: a challenger who draws level takes nothing, and the incumbent's wait carries on. Read
+// off the board alone, a tie looked like nobody holding the planet and silently cancelled a timer
+// that should have kept running.
 export function technologiesRipeFor(
-    board: EarendelBoard,
+    state: HydratedEarendelGameState,
     playerId: string,
     alreadyHeld: string[]
 ): TechnologyCard[] {
     const ripe: TechnologyCard[] = []
 
-    for (const coords of planetCoordinates(board)) {
-        const hex = getHex(board, coords)
+    for (const coords of planetCoordinates(state.board)) {
+        const hex = getHex(state.board, coords)
         if (!hex?.technology) continue
         if (alreadyHeld.includes(hex.technology.id)) continue
         if (ripe.some((card) => card.id === hex.technology!.id)) continue
-        if (dominantPlayerId(board, coords) !== playerId) continue
+        if (controllerOf(state, coords) !== playerId) continue
 
         ripe.push(hex.technology)
     }
@@ -111,7 +117,7 @@ export function claimRipeTechnologies(
     playerId: string
 ): string[] {
     const playerState = state.getPlayerState(playerId)
-    const ripe = technologiesRipeFor(state.board, playerId, playerState.technologies)
+    const ripe = technologiesRipeFor(state, playerId, playerState.technologies)
     if (ripe.length === 0) return []
 
     const effects: PendingTechnology[] = []

@@ -7,6 +7,7 @@ import {
     MachineContext
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, sameHex } from '../model/board.js'
 import { Piece, PieceLevel } from '../model/pieces.js'
@@ -100,6 +101,10 @@ export class HydratedAttackPiece
         // but nothing is handed over here: whoever holds it when their own turn begins is the
         // one who claims it. A shot can therefore start someone ELSE's wait - including a
         // bystander who had nothing to do with the attack.
+
+        // The board has changed, so who holds the planets around it may have too - and a tie
+        // now leaves the incumbent in place rather than clearing the planet.
+        refreshPlanetControl(state)
 
         state.pendingAttack = undefined
         this.metadata = {

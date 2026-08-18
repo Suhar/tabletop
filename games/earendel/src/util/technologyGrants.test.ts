@@ -4,6 +4,8 @@ import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board
 import { PieceType } from '../model/pieces.js'
 import { TechnologyTier } from '../model/technology.js'
 import { technologiesRipeFor } from './technologyGrants.js'
+import { controllerKey, refreshPlanetControl } from './control.js'
+import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame } from './testHarness.js'
@@ -51,8 +53,25 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
 }
 
 describe('technologiesRipeFor', () => {
-    const ripeIds = (board: EarendelBoard, playerId: string, held: string[] = []) =>
-        technologiesRipeFor(board, playerId, held)
+    // Control is recorded rather than derived, so a board on its own is not enough: it has to be
+    // settled into a state first. refreshPlanetControl does that, and with no incumbent recorded a
+    // tie resolves to nobody - which is what these cases expect.
+    const stateFor = (board: EarendelBoard, controllers: Record<string, string> = {}) => {
+        const state = {
+            board,
+            planetControllers: controllers
+        } as unknown as HydratedEarendelGameState
+        refreshPlanetControl(state)
+        return state
+    }
+
+    const ripeIds = (
+        board: EarendelBoard,
+        playerId: string,
+        held: string[] = [],
+        controllers: Record<string, string> = {}
+    ) =>
+        technologiesRipeFor(stateFor(board, controllers), playerId, held)
             .map((card) => card.id)
             .sort()
 
@@ -100,6 +119,21 @@ describe('technologiesRipeFor', () => {
         // holds - otherwise matching an opponent would copy their technology for one piece.
         expect(ripeIds(board, 'p1')).toEqual([])
         expect(ripeIds(board, 'p2')).toEqual([])
+    })
+
+    it('stays ripe for an incumbent who has only been DRAWN level with', () => {
+        // The reported case. A player held a planet outright, a rival then matched their power
+        // exactly, and the timer vanished - because a tie read as nobody holding it. Control is
+        // sticky: matching someone takes nothing off them.
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
+            [at(1, 0), { ship: ['p1', PieceType.Station] }],
+            [at(0, 1), { ship: ['p2', PieceType.Station] }]
+        ])
+
+        expect(ripeIds(board, 'p1', [], { [controllerKey(at(0, 0))]: 'p1' })).toEqual(['tech-a'])
+        // And the challenger gains nothing by drawing level.
+        expect(ripeIds(board, 'p2', [], { [controllerKey(at(0, 0))]: 'p1' })).toEqual([])
     })
 
     it('is never ripe again once the player holds it', () => {

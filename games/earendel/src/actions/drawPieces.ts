@@ -6,6 +6,7 @@ import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
 import { drawCountForPlayer } from '../util/turn.js'
 import { claimRipeTechnologies } from '../util/technologyGrants.js'
+import { refreshPlanetControl } from '../util/control.js'
 import type { EarendelGameConfig } from '../definition/config.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
@@ -66,6 +67,12 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         // cannot change the machine state, and an immediate effect has to be able to send the
         // turn somewhere - and it costs nothing in fidelity, since between a turn beginning
         // and its owner drawing, nobody else can act.
+        // Brought up to date before the claim is judged. Every action that changes the board
+        // refreshes this already, so it is normally a no-op - but it also catches a planet that
+        // has never had a controller recorded, and it means the claim is always decided against a
+        // freshly settled answer rather than a remembered one.
+        refreshPlanetControl(state)
+
         const technologiesClaimed = claimRipeTechnologies(state, this.playerId)
 
         const playerState = state.getPlayerState(this.playerId)

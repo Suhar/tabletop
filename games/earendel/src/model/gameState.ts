@@ -67,6 +67,10 @@ export const EarendelGameState = Type.Evaluate(
             // that on its own: a turn that lays a tile draws an extra ship for it, so "more than
             // one held" stops meaning "hasn't discarded yet" the moment a technology intervenes.
             draftPending: Type.Optional(Type.Boolean()),
+            // Who controls each planet, by hex key. Recorded rather than derived because control
+            // is STICKY: a tie leaves the incumbent in place, so the answer depends on who held it
+            // before and cannot be read off the board alone (see util/control.ts).
+            planetControllers: Type.Record(Type.String(), Type.String()),
             // Set while a newly placed fighter's owner decides whether to fire. Like
             // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
@@ -103,6 +107,7 @@ export class HydratedEarendelGameState
     declare pendingTechnology?: PendingTechnology
     declare queuedTechnologyEffects: PendingTechnology[]
     declare draftPending?: boolean
+    declare planetControllers: Record<string, string>
     declare tileSupply: Tile[]
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string

@@ -2,6 +2,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
+import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 import { sameHex } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
@@ -86,6 +87,8 @@ export class HydratedAttackSpread
                 ...(result.damaged ? { damaged: true, levelAfter: result.levelAfter } : {})
             })
         }
+
+        refreshPlanetControl(state)
 
         state.pendingAttack = undefined
         this.metadata = { hits }

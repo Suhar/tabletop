@@ -19,8 +19,7 @@ import {
     technologyName,
     UseUpdatedLogistics,
     AttackSpread,
-    dominantPlayerId,
-    planetControl,
+    controllerOf,
     planetCoordinates,
     neighborsOf,
     type EarendelGameState,
@@ -446,7 +445,10 @@ export class EarendelGameSession extends GameSession<
             .map((coords) => {
                 const hex = getHex(this.gameState.board, coords)
                 if (!hex?.technology) return undefined
-                const playerId = dominantPlayerId(this.gameState.board, coords)
+                // The RECORDED controller, not dominance recomputed from the board: control is
+                // sticky, so an incumbent who has merely been drawn level still holds the planet
+                // and their timer is still running.
+                const playerId = controllerOf(this.gameState, coords)
                 if (!playerId) return undefined
                 if ((held.get(playerId) ?? []).includes(hex.technology.id)) return undefined
                 return { coords, playerId }
@@ -471,13 +473,16 @@ export class EarendelGameSession extends GameSession<
                 []
 
             for (const planet of planetCoordinates(this.gameState.board)) {
-                const { controllingPlayerIds } = planetControl(this.gameState.board, planet)
-                if (controllingPlayerIds.length === 0) continue
+                // Exactly one controller now, or none. A tie no longer draws both players' lines:
+                // drawing level takes nothing, so the incumbent's lines stay and the challenger
+                // gets none - which is the difference between "we are equal" and "it is mine".
+                const controller = controllerOf(this.gameState, planet)
+                if (!controller) continue
 
                 for (const neighbor of neighborsOf(planet)) {
                     const piece = getHex(this.gameState.board, neighbor)?.piece
-                    if (!piece || !controllingPlayerIds.includes(piece.playerId)) continue
-                    edges.push({ planet, from: neighbor, playerId: piece.playerId })
+                    if (piece?.playerId !== controller) continue
+                    edges.push({ planet, from: neighbor, playerId: controller })
                 }
             }
 

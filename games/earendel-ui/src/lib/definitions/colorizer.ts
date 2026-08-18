@@ -14,10 +14,17 @@ export class EarendelGameColorizer extends DefaultColorizer {
                 return '#63b878'
             case Color.Purple:
                 return '#804796'
+            // A light grey rather than a dark one. The fifth player used to be near-black, which
+            // on a starfield read as a hole in the board rather than as somebody's ships - and its
+            // control lines and score pills were almost unreadable.
+            //
+            // Both slots get it: the colour list now hands out Gray, but a game already in
+            // progress has Black stored against a player, and that player should not be left
+            // invisible for the rest of it.
             case Color.Gray:
-                return '#888888'
+                return '#c9d2e2'
             case Color.Black:
-                return '#444444'
+                return '#c9d2e2'
             default:
                 return '#555555'
         }
@@ -36,9 +43,9 @@ export class EarendelGameColorizer extends DefaultColorizer {
             case Color.Purple:
                 return 'bg-[#804796]'
             case Color.Gray:
-                return 'bg-[#aaaaaa]'
+                return 'bg-[#c9d2e2]'
             case Color.Black:
-                return 'bg-[#444444]'
+                return 'bg-[#c9d2e2]'
             default:
                 return 'bg-[#555555]'
         }
@@ -57,9 +64,9 @@ export class EarendelGameColorizer extends DefaultColorizer {
             case Color.Purple:
                 return 'border-[#804796]'
             case Color.Gray:
-                return 'border-[#888888]'
+                return 'border-[#c9d2e2]'
             case Color.Black:
-                return 'border-[#444444]'
+                return 'border-[#c9d2e2]'
             default:
                 return 'border-[#555555]'
         }
