@@ -21,6 +21,7 @@ import {
     AttackSpread,
     controllerOf,
     planetCoordinates,
+    planetPairKey,
     neighborsOf,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -28,6 +29,7 @@ import {
     getHex,
     hexesClosedToProbesOf,
     hexKey,
+    HexKind,
     isElevated,
     isOpenHex,
     legalMovesFor,
@@ -279,6 +281,28 @@ export class EarendelGameSession extends GameSession<
     // Every station pair projecting a blockade, whoever owns it. Drawn for everyone, since a
     // corridor you can't see is a rule you can only discover by being refused.
     sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
+
+    // Every planet sharing a colour with this one, and whether their pair has already been
+    // collected. Asked per planet rather than listed for the whole board on purpose: a colour with
+    // four planets has six pairs, and drawing them all at once would bury the board under exactly
+    // the clutter we keep clearing off it. "What is left for THIS planet" is the question a player
+    // has while weighing a placement.
+    //
+    // A spent pair is spent for good and for everybody - the record is never pruned, so a pair
+    // collected on turn three stays collected even if the chain is broken and never rebuilt. That
+    // is the whole reason this needs showing: nothing on the board remembered it, so players were
+    // being asked to.
+    planetPairsFrom(coords: AxialCoordinates): { to: AxialCoordinates; spent: boolean }[] {
+        const hex = getHex(this.gameState.board, coords)
+        if (hex?.kind !== HexKind.Planet || hex.color === undefined) return []
+
+        const spent = new Set(this.gameState.scoredPlanetPairs ?? [])
+
+        return planetCoordinates(this.gameState.board)
+            .filter((other) => !sameHex(other, coords))
+            .filter((other) => getHex(this.gameState.board, other)?.color === hex.color)
+            .map((other) => ({ to: other, spent: spent.has(planetPairKey(coords, other)) }))
+    }
 
     // Stations of one player standing side by side. These are joined for scoring exactly as two
     // stations across a sight line are (see stationComplex), but nothing on the board said so -

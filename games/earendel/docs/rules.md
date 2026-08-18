@@ -453,7 +453,11 @@ the game's clock.
   measure that doesn't pay a player for wandering.
 - A **pair of planets pays once, ever, to whoever joins it first** — it is then spent for
   everyone. Otherwise the same two planets could be re-joined by a longer route for a bigger
-  payout.
+  payout. A spent pair stays spent even when the chain is broken and the ships are gone: the
+  record is of the joining, not of a connection still standing.
+  Since nothing on the board remembers that, **hovering a planet shows its pairs**: a dotted line
+  in its colour to each same-coloured planet, struck through where the pair has already been
+  collected. Shown on hover rather than always because a colour with four planets has six pairs.
 - One placement can complete **several pairs at once** (a ship touching three planets of one
   color joins three pairs); each is measured and paid separately.
 

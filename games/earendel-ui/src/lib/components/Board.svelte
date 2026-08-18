@@ -1165,6 +1165,49 @@
     <!-- Station blockades, drawn last so they read above the hexes they cross. Two stations
          of one player with clear space between them shut that space to everyone else's
          probes; anything else may be placed there, and doing so breaks the line. -->
+    <!-- Which same-coloured planets this one has already been paired with, shown while the cursor
+         rests on it. A pair pays once, ever, to whoever joins it first, and the record is never
+         pruned - so a pair collected on turn three is still spent even though nothing on the board
+         shows a connection any more. Nothing displayed it at all before, which left players
+         remembering it, and getting it wrong costs a lot when the payout is superlinear.
+         On hover rather than always, because a colour with four planets has six pairs. -->
+    {#if hovered}
+        {@const hoveredColor = placed.find((entry) => sameHex(entry.hex.coords, hovered!))?.hex
+            .color}
+        {@const pairColor = hoveredColor ? PLANET_FILL[hoveredColor] : '#dce6ff'}
+        {#each gameSession.planetPairsFrom(hovered) as pair, index (index)}
+            {@const from = hexGeometry(hovered).center}
+            {@const to = hexGeometry(pair.to).center}
+            {@const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }}
+            <g pointer-events="none">
+                <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke={pair.spent ? '#dce6ff' : pairColor}
+                    stroke-opacity={pair.spent ? 0.16 : 0.55}
+                    stroke-width={pair.spent ? 2 : 3}
+                    stroke-linecap="round"
+                    stroke-dasharray={pair.spent ? '3 9' : '2 7'}
+                />
+                {#if pair.spent}
+                    <!-- Struck through at the midpoint. Dimming alone says "less important" where
+                         a cross says "closed" - and closed is the fact. -->
+                    <g
+                        stroke="#dce6ff"
+                        stroke-opacity="0.5"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                    >
+                        <line x1={mid.x - 7} y1={mid.y - 7} x2={mid.x + 7} y2={mid.y + 7} />
+                        <line x1={mid.x + 7} y1={mid.y - 7} x2={mid.x - 7} y2={mid.y + 7} />
+                    </g>
+                {/if}
+            </g>
+        {/each}
+    {/if}
+
     <!-- Habitat tubes: two of a player's stations standing side by side are joined by a pressurised
          run between them. They count as one complex for scoring whether they touch or see each
          other across a gap, and the beam only ever showed the gap kind - so the plainest link on
