@@ -16,6 +16,7 @@ import {
     turnsUntilReady,
     attackableTargets,
     explorablePlanets,
+    technologyName,
     dominantPlayerId,
     planetControl,
     planetCoordinates,
@@ -201,6 +202,37 @@ export class EarendelGameSession extends GameSession<
         if (pending.playerId !== this.myPlayer?.id) return []
         return pending.candidates ?? []
     })
+
+    // The technologies already spent, grouped by what they DO rather than listed card by card.
+    // Two cards with the same effect differ only in which planet colours they match, and a flat
+    // list of twenty is not something a player reads mid-turn - whereas "three Railguns gone"
+    // is. The colours are kept alongside each group, since they are about to mean something (a
+    // colour will stand for a concept - military, economic - rather than being decoration).
+    //
+    // Sorted by count and then name, so the pile has a stable order and does not reshuffle under
+    // the cursor as it grows.
+    discardedTechnologies: { name: string; count: number; colors: string[] }[] = $derived.by(() => {
+        const groups = new Map<string, { name: string; count: number; colors: Set<string> }>()
+
+        for (const card of this.gameState.technologyDiscard ?? []) {
+            const name = technologyName(card)
+            const group = groups.get(name) ?? { name, count: 0, colors: new Set<string>() }
+            group.count += 1
+            for (const color of card.colors) group.colors.add(color)
+            groups.set(name, group)
+        }
+
+        return [...groups.values()]
+            .map((group) => ({ name: group.name, count: group.count, colors: [...group.colors] }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    })
+
+    discardedTechnologyCount: number = $derived(this.gameState.technologyDiscard?.length ?? 0)
+
+    // What is left to be turned over. Shown beside the discard because the two together say how
+    // much of the deck is still unknown - and the deck is reshuffled from the discard when it
+    // runs dry, so neither number means much without the other.
+    technologyDeckCount: number = $derived(this.gameState.technologyDeck?.length ?? 0)
 
     // Which probe is choosing, and between which planets. Only while the choice is this
     // player's - the arrows are an invitation to click, not a report.
