@@ -171,6 +171,27 @@
         })
     }
 
+    // The run of a habitat tube: the segment between two adjacent station squares, stopping at
+    // each one's edge rather than at its centre. A station is drawn 38px across, so 18 from the
+    // centre is just inside its own edge - enough to look plugged in without covering the square.
+    function tubeRun(from: AxialCoordinates, to: AxialCoordinates) {
+        const start = hexGeometry(from).center
+        const end = hexGeometry(to).center
+        const dx = end.x - start.x
+        const dy = end.y - start.y
+        const length = Math.hypot(dx, dy) || 1
+        const ux = dx / length
+        const uy = dy / length
+        const inset = 18
+
+        return {
+            x1: start.x + ux * inset,
+            y1: start.y + uy * inset,
+            x2: end.x - ux * inset,
+            y2: end.y - uy * inset
+        }
+    }
+
     // The shared edge between two neighbouring hexes: the two vertices they have in common.
     // Found by matching vertices rather than by mapping a direction to an edge index, so it
     // cannot go wrong if the hex orientation ever changes.
@@ -1144,6 +1165,42 @@
     <!-- Station blockades, drawn last so they read above the hexes they cross. Two stations
          of one player with clear space between them shut that space to everyone else's
          probes; anything else may be placed there, and doing so breaks the line. -->
+    <!-- Habitat tubes: two of a player's stations standing side by side are joined by a pressurised
+         run between them. They count as one complex for scoring whether they touch or see each
+         other across a gap, and the beam only ever showed the gap kind - so the plainest link on
+         the board was the one with nothing drawn on it.
+         Inset at both ends so the tube spans the space BETWEEN the two squares rather than lying
+         over them: it has to look plugged into each station, and a line drawn centre to centre
+         would cross straight over both. -->
+    {#each gameSession.stationTubes as tube, index (tube.playerId + index)}
+        {@const color = gameSession.colors.getPlayerUiColor(tube.playerId)}
+        {@const run = tubeRun(tube.from, tube.to)}
+        <!-- Casing, then a lit core down the middle - the two together read as something hollow
+             with light inside, where a single stroke reads as a painted line. -->
+        <line
+            x1={run.x1}
+            y1={run.y1}
+            x2={run.x2}
+            y2={run.y2}
+            stroke={color}
+            stroke-width="17"
+            stroke-opacity="0.55"
+            stroke-linecap="round"
+            pointer-events="none"
+        />
+        <line
+            x1={run.x1}
+            y1={run.y1}
+            x2={run.x2}
+            y2={run.y2}
+            stroke="#e9f1ff"
+            stroke-width="6"
+            stroke-opacity="0.3"
+            stroke-linecap="round"
+            pointer-events="none"
+        />
+    {/each}
+
     {#each gameSession.sightLines as line, index (line.playerId + index)}
         {@const color = gameSession.colors.getPlayerUiColor(line.playerId)}
         <path

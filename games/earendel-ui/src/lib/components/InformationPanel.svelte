@@ -47,6 +47,11 @@
         {/if}
     </div>
 
+    <!-- Two ways to spend a turn, and they are exclusive: place one of the ships drawn, or play a
+         special piece instead. Side by side in one row they read as six interchangeable options,
+         which hid both the choice and its price - playing a special sends the WHOLE hand back to
+         the bag (reshuffled, so putting ships back tells nobody what is coming). That is a real
+         cost and the player should see it before clicking, not discover it afterwards. -->
     <div class="flex flex-wrap items-center justify-center gap-3">
         {#each gameSession.isMyTurn ? gameSession.heldPieces : [] as piece (piece.id)}
             <!-- The hand sits face up before any hex is chosen, which is the whole point of
@@ -86,20 +91,39 @@
             </button>
         {/each}
 
-        {#each gameSession.canPlaySpecial ? specials : [] as special (special.id)}
-            <button
-                class="flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {gameSession.chosenSpecialId ===
-                special.id
-                    ? 'border-white'
-                    : 'border-transparent opacity-90'}"
-                style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
-                onclick={() => gameSession.toggleSpecial(special.id)}
-            >
-                <span class="text-xl leading-none">{glyph(special)}</span>
-                <span class="text-sm font-semibold">{describePiece(special)}</span>
-            </button>
-        {/each}
     </div>
+
+    {#if gameSession.canPlaySpecial && specials.length > 0}
+        <div class="flex flex-wrap items-center justify-center gap-3">
+            <!-- The word doing the work. Set between the two groups rather than beside either, so
+                 it reads as a fork instead of a label on one side of it. -->
+            <span class="text-xs uppercase tracking-widest opacity-60">or</span>
+
+            {#each specials as special (special.id)}
+                <button
+                    class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 border-2 {gameSession.chosenSpecialId ===
+                    special.id
+                        ? 'border-white'
+                        : 'border-transparent opacity-90'}"
+                    style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
+                    onclick={() => gameSession.toggleSpecial(special.id)}
+                >
+                    <span class="flex items-center gap-2">
+                        <span class="text-xl leading-none">{glyph(special)}</span>
+                        <span class="text-sm font-semibold">{describePiece(special)}</span>
+                    </span>
+                    <!-- Named on the button itself. A player is about to hand several ships back
+                         for this, and a note elsewhere on the panel is not where they are looking
+                         at the moment they decide. -->
+                    <span class="text-[10px] leading-none opacity-75">
+                        {gameSession.heldPieces.length === 1
+                            ? 'returns your drawn ship to the bag'
+                            : `returns all ${gameSession.heldPieces.length} drawn ships to the bag`}
+                    </span>
+                </button>
+            {/each}
+        </div>
+    {/if}
 
     {#if gameSession.technologyChoices.length > 0}
         <!-- Only what can actually be taken. Every card turned over on the way used to be shown

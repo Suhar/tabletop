@@ -280,6 +280,39 @@ export class EarendelGameSession extends GameSession<
     // corridor you can't see is a rule you can only discover by being refused.
     sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
 
+    // Stations of one player standing side by side. These are joined for scoring exactly as two
+    // stations across a sight line are (see stationComplex), but nothing on the board said so -
+    // the wavy beam is drawn only for the ones with a GAP between them, so the plainest kind of
+    // link was the invisible one, and a row of touching stations looked like separate pieces that
+    // happened to be near each other.
+    //
+    // One entry per pair: the walk meets each pair from both ends, and drawing a tube twice would
+    // double its opacity.
+    stationTubes: { from: AxialCoordinates; to: AxialCoordinates; playerId: string }[] =
+        $derived.by(() => {
+            const tubes: { from: AxialCoordinates; to: AxialCoordinates; playerId: string }[] = []
+            const seen = new Set<string>()
+
+            for (const hex of Object.values(this.gameState.board.hexes)) {
+                const station = hex.piece
+                if (station?.type !== PieceType.Station) continue
+
+                for (const neighbor of neighborsOf(hex.coords)) {
+                    const other = getHex(this.gameState.board, neighbor)?.piece
+                    if (other?.type !== PieceType.Station) continue
+                    if (other.playerId !== station.playerId) continue
+
+                    const key = [hexKey(hex.coords), hexKey(neighbor)].sort((a, b) => a - b).join(':')
+                    if (seen.has(key)) continue
+                    seen.add(key)
+
+                    tubes.push({ from: hex.coords, to: neighbor, playerId: station.playerId })
+                }
+            }
+
+            return tubes
+        })
+
     // Hexes this player's probes are shut out of. Only meaningful while holding a probe, so
     // the board isn't cluttered with a restriction that doesn't apply to the piece in hand.
     hexesClosedToMe: AxialCoordinates[] = $derived.by(() => {
