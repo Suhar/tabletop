@@ -1,7 +1,6 @@
 <script lang="ts">
     import {
         isElevated,
-        matchesColor,
         PieceType,
         technologyAbility,
         technologyName
@@ -14,8 +13,6 @@
     // A card can be the right colour and still be unavailable, when an elevated technology
     // turned up beside it. Saying which of the two it is keeps the rule visible instead of
     // just greying a card out.
-    let planetColor = $derived(gameSession.exploringPlanetColor)
-    let anyElevated = $derived(gameSession.technologyChoices.some(isElevated))
 
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
 
@@ -100,28 +97,17 @@
     </div>
 
     {#if gameSession.technologyChoices.length > 0}
-        <!-- Everything turned over is shown, but only the matching cards can be taken - the
-             misses are there so the flip reads as a moment rather than a result. -->
+        <!-- Only what can actually be taken. Every card turned over on the way used to be shown
+             too, greyed out and labelled with why it missed, so the flip read as a moment rather
+             than a result - but it made the choice hard to find inside a row of things that
+             weren't choices, and the misses are recorded in history anyway. -->
         <div class="flex flex-wrap items-center justify-center gap-2">
-            {#each gameSession.revealedCards as card (card.id)}
-                {@const choosable = gameSession.technologyChoices.some(
-                    (candidate) => candidate.id === card.id
-                )}
-                {@const outranked =
-                    !choosable && anyElevated && planetColor && matchesColor(card, planetColor)}
+            {#each gameSession.technologyChoices as card (card.id)}
                 <button
-                    disabled={!choosable}
-                    title={choosable
-                        ? ''
-                        : outranked
-                          ? 'An elevated technology was revealed, so this cannot be taken'
-                          : 'Not this planet’s colour'}
-                    class="rounded-md px-3 py-2 text-sm border-2 {choosable
-                        ? isElevated(card)
-                            ? 'border-amber-300 bg-amber-300/20 hover:bg-amber-300/30 cursor-pointer'
-                            : 'border-white bg-white/15 hover:bg-white/25 cursor-pointer'
-                        : 'border-white/20 bg-white/5 opacity-45 cursor-default'}"
-                    onclick={() => choosable && gameSession.chooseTechnology(card.id)}
+                    class="rounded-md px-3 py-2 text-sm border-2 cursor-pointer {isElevated(card)
+                        ? 'border-amber-300 bg-amber-300/20 hover:bg-amber-300/30'
+                        : 'border-white bg-white/15 hover:bg-white/25'}"
+                    onclick={() => gameSession.chooseTechnology(card.id)}
                 >
                     <div class="font-semibold">
                         {technologyName(card)}{isElevated(card) ? ' ★' : ''}
@@ -130,9 +116,6 @@
                         {technologyAbility(card)}
                     </div>
                     <div class="text-[11px] opacity-60">{card.colors.join(' · ')}</div>
-                    {#if outranked}
-                        <div class="text-[11px] opacity-70">outranked</div>
-                    {/if}
                 </button>
             {/each}
         </div>

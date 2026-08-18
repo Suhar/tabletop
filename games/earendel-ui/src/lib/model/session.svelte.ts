@@ -202,12 +202,6 @@ export class EarendelGameSession extends GameSession<
         return pending.candidates ?? []
     })
 
-    // Everything turned over on the way, so the player can see the flips that produced the
-    // choice rather than only its result.
-    revealedCards: TechnologyCard[] = $derived(
-        this.gameState.pendingExploration?.revealed ?? []
-    )
-
     // Which probe is choosing, and between which planets. Only while the choice is this
     // player's - the arrows are an invitation to click, not a report.
     explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
@@ -217,13 +211,6 @@ export class EarendelGameSession extends GameSession<
             return { from: pending.probeCoords, to: this.choosablePlanets }
         }
     )
-
-    // The colour of the planet being explored, so the panel can tell a card that missed the
-    // colour from one that matched but was outranked by an elevated card.
-    exploringPlanetColor: PlanetColor | undefined = $derived.by(() => {
-        const planet = this.gameState.pendingExploration?.exploringPlanet
-        return planet ? getHex(this.gameState.board, planet)?.color : undefined
-    })
 
     // Which fighter is firing, and at what. Only while the shot is this player's.
     attackChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
