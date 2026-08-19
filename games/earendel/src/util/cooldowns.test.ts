@@ -136,6 +136,54 @@ describe('Railgun', () => {
         expect(turnsUntilReady(game.hydrated, mover, TechnologyEffectKind.Railgun)).toBe(0)
     })
 
+    it('counts down 3, 2, 1 on the owner’s own turns', () => {
+        // What the player panel puts on screen beside the power's name, asked at the moments the
+        // panel is actually looked at. The engine's readiness is covered above; this pins the
+        // NUMBER, because a countdown that never leaves 0 is indistinguishable from one that is
+        // simply never used.
+        const { game, mover } = scenario()
+        const left = () => turnsUntilReady(game.hydrated, mover, TechnologyEffectKind.Railgun)
+
+        // Unused: no timer at all, which the panel shows as ready rather than as 0.
+        expect(left()).toBe(0)
+
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: at(0, 0),
+            pieceSource: PieceSource.Bag
+        })
+        game.run(AttackPiece, {
+            type: ActionType.AttackPiece,
+            playerId: mover,
+            coords: at(1, 0),
+            useRailgun: true
+        })
+
+        // 2, not 3, and this is the tick rather than an off-by-one: the shot was the last thing
+        // in that turn, so the turn ended and the mover's turnCount advanced before anyone could
+        // read the number. 3 is only ever on screen while the turn that fired is still going -
+        // a drafted turn with another ship still in hand.
+        expect(left()).toBe(2)
+
+        const playOn = (q: number) =>
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId: game.activePlayerId,
+                coords: at(q, 3),
+                pieceSource: PieceSource.Bag
+            })
+
+        let q = 0
+        for (const expected of [2, 1, 0]) {
+            // Read at the top of each of the mover's own turns, which is when the panel matters.
+            playOn(q++) // the other player's turn
+            expect(game.activePlayerId).toBe(mover)
+            expect(left(), `on the mover's turn showing ${expected}`).toBe(expected)
+            if (expected > 0) playOn(q++)
+        }
+    })
+
     it('cannot be used without holding it, nor while its timer runs', () => {
         const { game, mover } = scenario()
         game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = []
