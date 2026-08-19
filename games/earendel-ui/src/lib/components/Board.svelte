@@ -804,6 +804,19 @@
                 />
             {/if}
 
+            {#if gameSession.wormholeFrom && sameHex(gameSession.wormholeFrom, hex.coords)}
+                <!-- Picked to travel, waiting for a destination. Teal, matching its button, so
+                     the three "click one of your ships" powers are told apart by colour rather
+                     than by remembering which one you pressed. -->
+                <polygon
+                    points={entry.points}
+                    fill="#7fe3d4"
+                    fill-opacity="0.16"
+                    stroke="#7fe3d4"
+                    stroke-width="5"
+                />
+            {/if}
+
             {#if isExploringPlanet(hex.coords)}
                 <polygon points={entry.points} fill="none" stroke="#ffffff" stroke-width="4" />
             {/if}

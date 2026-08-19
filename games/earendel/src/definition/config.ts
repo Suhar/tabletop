@@ -51,7 +51,8 @@ const technologyDeckOption: ListConfigOption = {
         { name: 'Only: station upgrade', value: TechnologyEffectKind.StationUpgrade },
         { name: 'Only: updated logistics', value: TechnologyEffectKind.UpdatedLogistics },
         { name: 'Only: full torpedo spread', value: TechnologyEffectKind.FullTorpedoSpread },
-        { name: 'Only: tactical feint', value: TechnologyEffectKind.TacticalFeint }
+        { name: 'Only: tactical feint', value: TechnologyEffectKind.TacticalFeint },
+        { name: 'Only: trade route wormhole', value: TechnologyEffectKind.TradeRouteWormhole }
     ]
 }
 

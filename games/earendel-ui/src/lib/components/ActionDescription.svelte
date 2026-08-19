@@ -17,6 +17,8 @@
         type UseLogisticsUpgrade,
         isUseTacticalFeint,
         type UseTacticalFeint,
+        isUseTradeRouteWormhole,
+        type UseTradeRouteWormhole,
         isMovePiece,
         isPlacePiece,
         isPlaceTile,
@@ -109,6 +111,23 @@
             const claimed = drew.metadata?.technologiesClaimed ?? []
             if (claimed.length === 0) return drawn
             return `${drawn}, and held ${claimed.map(claimedName).join(' and ')}`
+        }
+        if (isUseTradeRouteWormhole(action)) {
+            const hop = action as UseTradeRouteWormhole
+            const parts: string[] = [
+                `sent a ${hop.metadata?.pieceType ?? 'ship'} through a trade route wormhole`
+            ]
+            if (hop.metadata?.stationGroupPoints) {
+                parts.push(`for ${hop.metadata.stationGroupPoints}`)
+            }
+            for (const chain of hop.metadata?.chains ?? []) {
+                parts.push(
+                    `and joined two ${chain.color} planets with ${chain.length} ${
+                        chain.length === 1 ? 'ship' : 'ships'
+                    } for ${chain.points}`
+                )
+            }
+            return parts.join(' ')
         }
         if (isUseTacticalFeint(action)) {
             const feint = action as UseTacticalFeint

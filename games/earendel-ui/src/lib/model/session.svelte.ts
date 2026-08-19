@@ -19,6 +19,9 @@ import {
     technologyName,
     UseUpdatedLogistics,
     UseTacticalFeint,
+    UseTradeRouteWormhole,
+    wormholableShips,
+    wormholeDestinations,
     AttackSpread,
     controllerOf,
     planetCoordinates,
@@ -411,6 +414,7 @@ export class EarendelGameSession extends GameSession<
         // Choosing a fighter to wake takes precedence over the placement it interrupts: while the
         // question is "which fighter", the board should offer fighters and nothing else.
         if (this.choosingFeint) return this.feintHexes
+        if (this.choosingWormhole) return this.wormholeHexes
         if (this.choosingUpdatedLogistics) return this.wakeableFighters
         if (this.isPlacingTile) return this.tileOrigins
         if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
@@ -670,6 +674,72 @@ export class EarendelGameSession extends GameSession<
         }
     }
 
+    // Trade Route Wormhole: two clicks like the feint, and for the same reason - a journey has
+    // two ends. The first picks the traveller, the second where it comes out.
+    canUseTradeRouteWormhole: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseTradeRouteWormhole)
+    )
+
+    choosingWormhole: boolean = $state(false)
+    wormholeFrom: AxialCoordinates | undefined = $state(undefined)
+
+    // Both ends come straight from the engine's own helpers rather than being worked out again
+    // here: which hexes are on a route is exactly the rule, and two answers to it would drift.
+    travellableShips: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseTradeRouteWormhole || !this.myPlayer) return []
+        return wormholableShips(this.gameState.board, this.myPlayer.id)
+    })
+
+    wormholeExits(from: AxialCoordinates): AxialCoordinates[] {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return []
+        return wormholeDestinations(this.gameState.board, from, playerId)
+    }
+
+    // The near end until one is chosen, then the far end - so the highlights ask one question at
+    // a time.
+    wormholeHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingWormhole) return []
+        return this.wormholeFrom ? this.wormholeExits(this.wormholeFrom) : this.travellableShips
+    })
+
+    toggleWormhole() {
+        this.choosingWormhole = !this.choosingWormhole
+        if (!this.choosingWormhole) this.wormholeFrom = undefined
+    }
+
+    private async onWormholeClick(coords: AxialCoordinates) {
+        // Clicking the chosen ship again puts it back down, so a misclick costs nothing.
+        if (this.wormholeFrom && sameHex(this.wormholeFrom, coords)) {
+            this.wormholeFrom = undefined
+            return
+        }
+        if (this.wormholeFrom) {
+            if (this.wormholeExits(this.wormholeFrom).some((exit) => sameHex(exit, coords))) {
+                await this.useTradeRouteWormhole(this.wormholeFrom, coords)
+                return
+            }
+            // Clicking a different traveller instead moves the choice, rather than being read as
+            // a destination and rejected.
+            if (this.travellableShips.some((ship) => sameHex(ship, coords))) {
+                this.wormholeFrom = coords
+            }
+            return
+        }
+        if (this.travellableShips.some((ship) => sameHex(ship, coords))) {
+            this.wormholeFrom = coords
+        }
+    }
+
+    async useTradeRouteWormhole(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseTradeRouteWormhole) return
+
+        const action = this.createPlayerAction(UseTradeRouteWormhole, { from, to })
+        this.choosingWormhole = false
+        this.wormholeFrom = undefined
+        await this.applyAction(action)
+    }
+
     async useTacticalFeint(from: AxialCoordinates, to: AxialCoordinates) {
         if (!this.canUseTacticalFeint) return
 
@@ -708,6 +778,14 @@ export class EarendelGameSession extends GameSession<
             return this.spreadTargets.length > 1
                 ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
                 : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+        }
+        if (this.choosingWormhole) {
+            if (this.wormholeFrom) {
+                return 'Trade Route Wormhole — click where it comes out. Click your own ship again to change it.'
+            }
+            return this.travellableShips.length === 0
+                ? 'None of your ships beside a planet has a route to travel - press Trade Route Wormhole again to back out.'
+                : 'Trade Route Wormhole — click one of your highlighted ships to send it.'
         }
         if (this.choosingFeint) {
             if (this.feintFrom) {
@@ -894,6 +972,10 @@ export class EarendelGameSession extends GameSession<
         // the player is picking a ship, a click means that and nothing else.
         if (this.choosingFeint) {
             await this.onFeintClick(coords)
+            return
+        }
+        if (this.choosingWormhole) {
+            await this.onWormholeClick(coords)
             return
         }
         if (this.choosingUpdatedLogistics) {

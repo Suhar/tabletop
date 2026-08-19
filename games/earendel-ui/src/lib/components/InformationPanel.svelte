@@ -269,6 +269,25 @@
         </button>
     {/if}
 
+    <!-- Trade Route Wormhole: pick the traveller, then where it comes out. The board narrows to
+         that ship's own routes once it is picked, so the colour rule never has to be explained. -->
+    {#if gameSession.canUseTradeRouteWormhole}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingWormhole
+                ? 'bg-teal-400/30 border-teal-300'
+                : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+            onclick={() => gameSession.toggleWormhole()}
+        >
+            {#if !gameSession.choosingWormhole}
+                Trade Route Wormhole
+            {:else if gameSession.wormholeFrom}
+                Choose where it comes out
+            {:else}
+                Choose a ship to send
+            {/if}
+        </button>
+    {/if}
+
     <!-- Full Torpedo Spread: arm it, click the neighbours to include, then fire. A confirm step
          rather than firing on click, because "any or all" makes this a subset being assembled -
          and unlike every other attack in the game, a click here is not the decision. -->

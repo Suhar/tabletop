@@ -5,6 +5,10 @@ import {
     isUseUpdatedLogistics
 } from '../actions/useUpdatedLogistics.js'
 import { HydratedUseTacticalFeint, isUseTacticalFeint } from '../actions/useTacticalFeint.js'
+import {
+    HydratedUseTradeRouteWormhole,
+    isUseTradeRouteWormhole
+} from '../actions/useTradeRouteWormhole.js'
 import { canUseCooldownEffect } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
@@ -19,6 +23,7 @@ type PlacingPieceAction =
     | HydratedPass
     | HydratedUseUpdatedLogistics
     | HydratedUseTacticalFeint
+    | HydratedUseTradeRouteWormhole
 
 // A whole turn is one placement. This state is where every turn begins and, unless the
 // placement was a probe that found something, where it ends.
@@ -44,6 +49,7 @@ export class PlacingPieceStateHandler
             ActionType.PlacePiece,
             ActionType.UseUpdatedLogistics,
             ActionType.UseTacticalFeint,
+            ActionType.UseTradeRouteWormhole,
             ActionType.Pass
         ].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
@@ -99,10 +105,12 @@ export class PlacingPieceStateHandler
                 // hand still to place.
                 return MachineState.Attacking
             }
+            case isUseTradeRouteWormhole(action):
             case isUseTacticalFeint(action): {
-                // The swapped ship arrives as if placed, so it can owe the same decisions a
-                // placement owes - a probe's exploration, a fighter's shot. Either way the turn
-                // comes back here afterwards: the feint costs a power, not the placement.
+                // Both powers move a ship that arrives AS IF NEWLY PLACED, so either can owe the
+                // decisions a placement owes - a probe's exploration, a fighter's shot. And
+                // either way the turn comes back here afterwards: these cost a power, not the
+                // placement the turn already owed.
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
                 }
@@ -155,6 +163,19 @@ export class PlacingPieceStateHandler
         switch (actionType) {
             case ActionType.PlacePiece: {
                 return canPlace
+            }
+            case ActionType.UseTradeRouteWormhole: {
+                // Same shape as the feint: a power spent on ships already standing on the board,
+                // offered alongside the placement the turn owes rather than instead of it.
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    canUseCooldownEffect(
+                        gameState,
+                        playerId,
+                        TechnologyEffectKind.TradeRouteWormhole
+                    )
+                )
             }
             case ActionType.UseTacticalFeint: {
                 // Like Updated Logistics, offered alongside the placement rather than instead of

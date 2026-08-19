@@ -31,6 +31,8 @@ export enum TechnologyEffectKind {
     FullTorpedoSpread = 'fullTorpedoSpread',
     // Cooldown: trade places with an adjacent enemy ship, and arrive as if newly placed.
     TacticalFeint = 'tacticalFeint',
+    // Cooldown: hop a ship between two planets of one colour, arriving as if newly placed.
+    TradeRouteWormhole = 'tradeRouteWormhole',
     // Grant: hands over a Station Hub to keep in front of the player until they place it.
     StationUpgrade = 'stationUpgrade'
 }
@@ -121,6 +123,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         name: 'Tactical Feint',
         ability:
             'Swap one of your ships with an adjacent enemy ship. Your ship counts as newly placed.',
+        timing: TechnologyTiming.Cooldown
+    },
+    [TechnologyEffectKind.TradeRouteWormhole]: {
+        name: 'Trade Route Wormhole',
+        ability:
+            'Move one of your ships from beside a planet to beside a different planet of the same colour. Your ship counts as newly placed.',
         timing: TechnologyTiming.Cooldown
     },
     [TechnologyEffectKind.StationUpgrade]: {

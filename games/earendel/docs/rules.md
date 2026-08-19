@@ -557,6 +557,32 @@ its complex pays again, every three turns. That follows from "newly placed" and 
 combination the card is for, but it is points for no new position and it should be watched at the
 table.
 
+**Trade Route Wormhole**: *move one of your ships from beside a planet to beside a different
+planet of the same colour. Your ship counts as newly placed.*
+
+The **colour is the route**. Two planets of one colour are the two ends of a wormhole, and a ship
+standing beside one can be standing beside the other — however far apart they are, and with no
+regard for what lies between. Same promise as a Tactical Feint at the far end: the ship arrives as
+though newly played, so a station pays for the complex it joins, a chain the arrival completes
+pays, a fighter fires, a probe explores, and control is recomputed.
+
+**The pair of planets is not part of the move.** A ship beside two planets has two colours to
+travel on, and a destination is legal if *any* planet it touches pairs with *any* planet the ship
+is leaving. So a player picks a hex, not a route, and nothing has to be said about which planet
+they had in mind. A different hex beside the *same* planet is not a destination — the planet has
+to be a different one, or the trade route goes nowhere.
+
+**A blockade still holds against it**, unlike a feint. The difference is not special pleading: a
+wormhole lands on an *empty* hex, so "as if newly placed" has a placement rule to answer to, and
+two enemy stations watching that corridor shut a probe out of it exactly as they would if the
+probe were being played from hand. A feint's destination is occupied by definition, so the
+blockade check never had an empty hex to apply to.
+
+Note what this does to chains: the ship *leaves* a hex, and a chain it was standing in is broken
+by its departure. Since a spent pair stays spent, a player can dismantle their own scored chain
+freely — but the ship arriving may complete a **new** pair at the far end, which is the trade the
+card is really offering.
+
 ### Station blockades
 
 Two of one player's stations with **clear empty space between them along a straight line**

@@ -12,6 +12,10 @@ import { HydratedDrawPieces, isDrawPieces } from '../actions/drawPieces.js'
 import { HydratedAttackSpread, isAttackSpread } from '../actions/attackSpread.js'
 import { HydratedUseTacticalFeint, isUseTacticalFeint } from '../actions/useTacticalFeint.js'
 import {
+    HydratedUseTradeRouteWormhole,
+    isUseTradeRouteWormhole
+} from '../actions/useTradeRouteWormhole.js'
+import {
     HydratedUseUpdatedLogistics,
     isUseUpdatedLogistics
 } from '../actions/useUpdatedLogistics.js'
@@ -41,6 +45,9 @@ export class EarendelHydrator
             }
             case isUseTacticalFeint(data): {
                 return new HydratedUseTacticalFeint(data)
+            }
+            case isUseTradeRouteWormhole(data): {
+                return new HydratedUseTradeRouteWormhole(data)
             }
             case isUseUpdatedLogistics(data): {
                 return new HydratedUseUpdatedLogistics(data)

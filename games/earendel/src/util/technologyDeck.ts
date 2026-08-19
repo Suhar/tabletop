@@ -95,7 +95,8 @@ const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
     TechnologyEffectKind.StationUpgrade,
     TechnologyEffectKind.UpdatedLogistics,
     TechnologyEffectKind.FullTorpedoSpread,
-    TechnologyEffectKind.TacticalFeint
+    TechnologyEffectKind.TacticalFeint,
+    TechnologyEffectKind.TradeRouteWormhole
 ]
 
 // Every effect there is, so a new one cannot be written, wired up and then never dealt. The
