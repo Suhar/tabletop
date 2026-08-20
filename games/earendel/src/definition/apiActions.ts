@@ -11,6 +11,7 @@ import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { UseUpdatedLogistics } from '../actions/useUpdatedLogistics.js'
 import { UseTacticalFeint } from '../actions/useTacticalFeint.js'
 import { UseTradeRouteWormhole } from '../actions/useTradeRouteWormhole.js'
+import { UseImmediateDownload } from '../actions/useImmediateDownload.js'
 import { AttackSpread } from '../actions/attackSpread.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 
@@ -23,6 +24,7 @@ export const EarendelApiActions = {
     [ActionType.UseUpdatedLogistics]: UseUpdatedLogistics,
     [ActionType.UseTacticalFeint]: UseTacticalFeint,
     [ActionType.UseTradeRouteWormhole]: UseTradeRouteWormhole,
+    [ActionType.UseImmediateDownload]: UseImmediateDownload,
     [ActionType.AttackSpread]: AttackSpread,
     [ActionType.DiscardPiece]: DiscardPiece,
     [ActionType.PlaceTile]: PlaceTile,

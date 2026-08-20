@@ -16,6 +16,10 @@ import {
     isUseTradeRouteWormhole
 } from '../actions/useTradeRouteWormhole.js'
 import {
+    HydratedUseImmediateDownload,
+    isUseImmediateDownload
+} from '../actions/useImmediateDownload.js'
+import {
     HydratedUseUpdatedLogistics,
     isUseUpdatedLogistics
 } from '../actions/useUpdatedLogistics.js'
@@ -48,6 +52,9 @@ export class EarendelHydrator
             }
             case isUseTradeRouteWormhole(data): {
                 return new HydratedUseTradeRouteWormhole(data)
+            }
+            case isUseImmediateDownload(data): {
+                return new HydratedUseImmediateDownload(data)
             }
             case isUseUpdatedLogistics(data): {
                 return new HydratedUseUpdatedLogistics(data)

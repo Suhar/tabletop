@@ -216,6 +216,31 @@ empty.
 
 Note it does nothing in the simpler one-draw turn style, where there is no discard to save.
 
+**Immediate Download**: *once: gain the technology of any explored planet with a clear line of
+sight to this one. It is available at once.*
+
+What this really buys is **time**. Every other route to a technology runs through the claim rule:
+take a planet outright, then hold it until your next turn begins — a full round in which anyone can
+break the hold. A Download skips all of it. The planet it reads from may be an opponent's, deep in
+their space, with a claim of their own ripening on it; **sight is the only requirement, and sight
+does not care who owns what.**
+
+It does not take the technology *away*. A technology gained is a record, not a token: the card stays
+on its planet and its owner keeps it. Two players holding the same technology was already possible —
+a planet that changes hands after its claim has ripened does exactly that — so this needs no new
+rule to make sense of.
+
+"Available at once" matters for one kind of card. A downloaded **immediate** effect fires on the
+spot rather than being remembered; everything else — a cooldown power, a granted piece, another
+stored effect — is usable the moment it arrives anyway.
+
+It is spent **from the planet holding it**, and that planet is where the line of sight is measured.
+A player holding two Downloads on two planets has two different views of the board, and spends each
+from its own.
+
+OPEN: a Download can be read from a planet whose technology is *another* Download. Nothing stops
+that today, and chaining sight across the board may be stronger than it looks.
+
 ### Granted pieces
 
 A technology may hand over a **piece** the moment it is gained, rather than an effect to resolve
@@ -582,6 +607,29 @@ Note what this does to chains: the ship *leaves* a hex, and a chain it was stand
 by its departure. Since a spent pair stays spent, a player can dismantle their own scored chain
 freely — but the ship arriving may complete a **new** pair at the far end, which is the trade the
 card is really offering.
+
+### Clear line of sight
+
+Several rules ask whether two things on the board can **see** each other. One definition, used
+everywhere:
+
+Two hexes have a **clear line of sight** when they lie on the same straight line of hexes — one of
+the six directions, no others — and **every hex between them is empty space**. Anything at all in
+between breaks it:
+
+- **Any piece**, of any colour, **including your own**. Nothing about seeing cares who owns the
+  ship in the way; a fleet parked between two worlds is in the way either way.
+- **Any planet**, which is a world rather than a gap to see past.
+- The **edge of the board**, which ends the line without reaching anything.
+
+**Adjacency counts.** Two things standing next to each other have a clear line of sight, because
+there are no hexes between them to be blocked. This is worth stating because it is the case people
+reach for first and it looks like an exception — it isn't. Nothing in between means nothing in
+between, and zero hexes is the easiest way to have nothing in between.
+
+The one rule that reads this differently is the **station blockade** below, and deliberately: two
+*touching* stations close nothing, because a blockade is about shutting a corridor and there is no
+corridor to shut. That is a rule about the space between, not about sight.
 
 ### Station blockades
 

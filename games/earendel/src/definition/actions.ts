@@ -6,6 +6,7 @@ export enum ActionType {
     UseUpdatedLogistics = 'useUpdatedLogistics',
     UseTacticalFeint = 'useTacticalFeint',
     UseTradeRouteWormhole = 'useTradeRouteWormhole',
+    UseImmediateDownload = 'useImmediateDownload',
     AttackSpread = 'attackSpread',
     DiscardPiece = 'discardPiece',
     PlaceTile = 'placeTile',

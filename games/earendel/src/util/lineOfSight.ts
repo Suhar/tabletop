@@ -78,6 +78,42 @@ export function sightLinkedStations(
     return linked
 }
 
+// The planets one planet can see: walking out along each of the six axes, the first thing met.
+// A planet met that way is in sight; a piece met first blocks the view, and so does the edge of
+// the board.
+//
+// Adjacency counts here, and that is the one deliberate difference from sightLinkedStations
+// above, which skips a station standing right next door. That exclusion is right for a blockade -
+// touching stations have no space between them to close, and are already one complex by
+// adjacency - and would be perverse here, where it would mean two neighbouring planets are the
+// one pair that cannot see each other.
+//
+// Any piece blocks, including the viewer's own. Nothing about the rule cares whose ship is in the
+// way; a fleet parked between two worlds is in the way either way.
+export function planetsInSightOf(
+    board: EarendelBoard,
+    coords: AxialCoordinates
+): AxialCoordinates[] {
+    const seen: AxialCoordinates[] = []
+
+    for (const step of HEX_STEPS) {
+        let at = { q: coords.q + step.q, r: coords.r + step.r }
+
+        for (;;) {
+            const hex = getHex(board, at)
+            if (!hex) break
+            if (hex.kind === HexKind.Planet) {
+                seen.push(hex.coords)
+                break
+            }
+            if (hex.piece) break
+            at = { q: at.q + step.q, r: at.r + step.r }
+        }
+    }
+
+    return seen
+}
+
 export type SightLine = {
     playerId: string
     from: AxialCoordinates

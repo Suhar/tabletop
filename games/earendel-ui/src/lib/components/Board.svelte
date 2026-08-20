@@ -817,6 +817,19 @@
                 />
             {/if}
 
+            {#if gameSession.downloadFrom && sameHex(gameSession.downloadFrom, hex.coords)}
+                <!-- The Download's own planet, chosen and waiting for something to read. Emerald,
+                     matching its button - the fourth of these two-click powers, and the only one
+                     whose ends are both planets. -->
+                <polygon
+                    points={entry.points}
+                    fill="#7ff0c0"
+                    fill-opacity="0.16"
+                    stroke="#7ff0c0"
+                    stroke-width="5"
+                />
+            {/if}
+
             {#if isExploringPlanet(hex.coords)}
                 <polygon points={entry.points} fill="none" stroke="#ffffff" stroke-width="4" />
             {/if}

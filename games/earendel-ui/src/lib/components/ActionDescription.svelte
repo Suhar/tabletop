@@ -19,6 +19,8 @@
         type UseTacticalFeint,
         isUseTradeRouteWormhole,
         type UseTradeRouteWormhole,
+        isUseImmediateDownload,
+        type UseImmediateDownload,
         isMovePiece,
         isPlacePiece,
         isPlaceTile,
@@ -111,6 +113,17 @@
             const claimed = drew.metadata?.technologiesClaimed ?? []
             if (claimed.length === 0) return drawn
             return `${drawn}, and held ${claimed.map(claimedName).join(' and ')}`
+        }
+        if (isUseImmediateDownload(action)) {
+            const read = action as UseImmediateDownload
+            const name = read.metadata?.technologyId
+                ? claimedName(read.metadata.technologyId)
+                : 'a technology'
+            // Worth saying it went off at once: a downloaded Immediate effect is resolved in the
+            // same breath, so the next entry in the log is its consequence.
+            return read.metadata?.resolvedAtOnce
+                ? `downloaded ${name} and used it on the spot`
+                : `downloaded ${name} from a planet in sight`
         }
         if (isUseTradeRouteWormhole(action)) {
             const hop = action as UseTradeRouteWormhole

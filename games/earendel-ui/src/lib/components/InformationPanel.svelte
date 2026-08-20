@@ -269,6 +269,26 @@
         </button>
     {/if}
 
+    <!-- Immediate Download: both ends are planets, not ships. Only offered when some Download
+         planet of theirs can actually see a technology worth taking, since it is a one-shot and
+         there is no getting it back. -->
+    {#if gameSession.canUseImmediateDownload}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingDownload
+                ? 'bg-emerald-400/30 border-emerald-300'
+                : 'bg-white/15 hover:bg-white/25 border-white/70'}"
+            onclick={() => gameSession.toggleDownload()}
+        >
+            {#if !gameSession.choosingDownload}
+                Immediate Download
+            {:else if gameSession.downloadFrom}
+                Choose a planet in sight
+            {:else}
+                Choose your Download planet
+            {/if}
+        </button>
+    {/if}
+
     <!-- Trade Route Wormhole: pick the traveller, then where it comes out. The board narrows to
          that ship's own routes once it is picked, so the colour rule never has to be explained. -->
     {#if gameSession.canUseTradeRouteWormhole}

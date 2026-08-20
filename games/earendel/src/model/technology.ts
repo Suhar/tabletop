@@ -25,6 +25,8 @@ export enum TechnologyEffectKind {
     GrowBoard = 'growBoard',
     // Stored: once, on a later turn, keep the ship a draft would have thrown away.
     LogisticsUpgrade = 'logisticsUpgrade',
+    // Stored: once, take the technology of a planet this one can see, without the wait.
+    ImmediateDownload = 'immediateDownload',
     // Cooldown: a fighter's shot destroys its target outright rather than damaging it.
     Railgun = 'railgun',
     UpdatedLogistics = 'updatedLogistics',
@@ -102,6 +104,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.LogisticsUpgrade]: {
         name: 'Logistics Upgrade',
         ability: 'Once, on a later turn, place the ship you would otherwise discard.',
+        timing: TechnologyTiming.Stored
+    },
+    [TechnologyEffectKind.ImmediateDownload]: {
+        name: 'Immediate Download',
+        ability:
+            'Once: gain the technology of any explored planet with a clear line of sight to this one. It is available at once.',
         timing: TechnologyTiming.Stored
     },
     [TechnologyEffectKind.Railgun]: {

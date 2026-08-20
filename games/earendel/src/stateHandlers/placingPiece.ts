@@ -9,13 +9,17 @@ import {
     HydratedUseTradeRouteWormhole,
     isUseTradeRouteWormhole
 } from '../actions/useTradeRouteWormhole.js'
+import {
+    HydratedUseImmediateDownload,
+    isUseImmediateDownload
+} from '../actions/useImmediateDownload.js'
 import { canUseCooldownEffect } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedPass, isPass, Pass } from '../actions/pass.js'
-import { endPlacement } from '../util/turn.js'
+import { endPlacement, pendingTechnologyEffectState } from '../util/turn.js'
 import { hasAnyPlacement } from '../util/placement.js'
 
 type PlacingPieceAction =
@@ -24,6 +28,7 @@ type PlacingPieceAction =
     | HydratedUseUpdatedLogistics
     | HydratedUseTacticalFeint
     | HydratedUseTradeRouteWormhole
+    | HydratedUseImmediateDownload
 
 // A whole turn is one placement. This state is where every turn begins and, unless the
 // placement was a probe that found something, where it ends.
@@ -50,6 +55,7 @@ export class PlacingPieceStateHandler
             ActionType.UseUpdatedLogistics,
             ActionType.UseTacticalFeint,
             ActionType.UseTradeRouteWormhole,
+            ActionType.UseImmediateDownload,
             ActionType.Pass
         ].filter((actionType) =>
             this.isValidActionType(actionType, playerId, context)
@@ -104,6 +110,15 @@ export class PlacingPieceStateHandler
                 // state that resolves shots. It comes back here afterwards, with the ship in
                 // hand still to place.
                 return MachineState.Attacking
+            }
+            case isUseImmediateDownload(action): {
+                // A downloaded Immediate effect was activated by the action itself, so it is
+                // already sitting in the slot its resolving state watches. Everything else the
+                // download can hand over - a cooldown power, a granted piece, another stored
+                // effect - needs no state of its own, and the turn simply carries on.
+                const owed = pendingTechnologyEffectState(gameState)
+                if (owed) return owed
+                return endPlacement(gameState, context)
             }
             case isUseTradeRouteWormhole(action):
             case isUseTacticalFeint(action): {
@@ -163,6 +178,18 @@ export class PlacingPieceStateHandler
         switch (actionType) {
             case ActionType.PlacePiece: {
                 return canPlace
+            }
+            case ActionType.UseImmediateDownload: {
+                // A stored one-shot rather than a cooldown, so the test is simply whether they
+                // still hold it. Which planet it reads from, and whether anything is in sight, is
+                // the action's own business.
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    gameState.pendingTechnology === undefined &&
+                    gameState.pendingTile === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.ImmediateDownload)
+                )
             }
             case ActionType.UseTradeRouteWormhole: {
                 // Same shape as the feint: a power spent on ships already standing on the board,

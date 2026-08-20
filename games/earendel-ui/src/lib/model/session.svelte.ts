@@ -20,6 +20,9 @@ import {
     UseUpdatedLogistics,
     UseTacticalFeint,
     UseTradeRouteWormhole,
+    UseImmediateDownload,
+    downloadAnchorsFor,
+    downloadTargetsFrom,
     wormholableShips,
     wormholeDestinations,
     AttackSpread,
@@ -415,6 +418,7 @@ export class EarendelGameSession extends GameSession<
         // question is "which fighter", the board should offer fighters and nothing else.
         if (this.choosingFeint) return this.feintHexes
         if (this.choosingWormhole) return this.wormholeHexes
+        if (this.choosingDownload) return this.downloadHexes
         if (this.choosingUpdatedLogistics) return this.wakeableFighters
         if (this.isPlacingTile) return this.tileOrigins
         if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
@@ -731,6 +735,71 @@ export class EarendelGameSession extends GameSession<
         }
     }
 
+    // Immediate Download: two clicks again, but both ends are PLANETS rather than ships - the
+    // anchor holding the card, then the planet being read. A one-shot, so there is no cooldown to
+    // show; holding the stored effect is the whole test.
+    canUseImmediateDownload: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseImmediateDownload)
+    )
+
+    choosingDownload: boolean = $state(false)
+    downloadFrom: AxialCoordinates | undefined = $state(undefined)
+
+    // Straight from the engine's helpers: which planets hold a Download of theirs, and what each
+    // can see. Line of sight is the rule, and a second implementation of it in the UI would be a
+    // second answer to disagree with.
+    downloadAnchors: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseImmediateDownload || !this.myPlayer) return []
+        return downloadAnchorsFor(this.gameState, this.myPlayer.id).filter(
+            (anchor) => this.downloadTargets(anchor).length > 0
+        )
+    })
+
+    downloadTargets(anchor: AxialCoordinates): AxialCoordinates[] {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return []
+        return downloadTargetsFrom(this.gameState, playerId, anchor)
+    }
+
+    downloadHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingDownload) return []
+        return this.downloadFrom ? this.downloadTargets(this.downloadFrom) : this.downloadAnchors
+    })
+
+    toggleDownload() {
+        this.choosingDownload = !this.choosingDownload
+        if (!this.choosingDownload) this.downloadFrom = undefined
+    }
+
+    private async onDownloadClick(coords: AxialCoordinates) {
+        if (this.downloadFrom && sameHex(this.downloadFrom, coords)) {
+            this.downloadFrom = undefined
+            return
+        }
+        if (this.downloadFrom) {
+            if (this.downloadTargets(this.downloadFrom).some((target) => sameHex(target, coords))) {
+                await this.useImmediateDownload(this.downloadFrom, coords)
+                return
+            }
+            if (this.downloadAnchors.some((anchor) => sameHex(anchor, coords))) {
+                this.downloadFrom = coords
+            }
+            return
+        }
+        if (this.downloadAnchors.some((anchor) => sameHex(anchor, coords))) {
+            this.downloadFrom = coords
+        }
+    }
+
+    async useImmediateDownload(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseImmediateDownload) return
+
+        const action = this.createPlayerAction(UseImmediateDownload, { from, to })
+        this.choosingDownload = false
+        this.downloadFrom = undefined
+        await this.applyAction(action)
+    }
+
     async useTradeRouteWormhole(from: AxialCoordinates, to: AxialCoordinates) {
         if (!this.canUseTradeRouteWormhole) return
 
@@ -778,6 +847,14 @@ export class EarendelGameSession extends GameSession<
             return this.spreadTargets.length > 1
                 ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
                 : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+        }
+        if (this.choosingDownload) {
+            if (this.downloadFrom) {
+                return 'Immediate Download — click a planet that one can see to take its technology.'
+            }
+            return this.downloadAnchors.length === 0
+                ? 'None of your Download planets can see a technology you could take - press Immediate Download again to back out.'
+                : 'Immediate Download — click the planet holding your Download.'
         }
         if (this.choosingWormhole) {
             if (this.wormholeFrom) {
@@ -976,6 +1053,10 @@ export class EarendelGameSession extends GameSession<
         }
         if (this.choosingWormhole) {
             await this.onWormholeClick(coords)
+            return
+        }
+        if (this.choosingDownload) {
+            await this.onDownloadClick(coords)
             return
         }
         if (this.choosingUpdatedLogistics) {
