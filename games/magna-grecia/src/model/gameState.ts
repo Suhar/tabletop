@@ -110,15 +110,19 @@ export class HydratedMagnaGreciaGameState
     }
 
     beginRound(round: number) {
-        const revealedCount = this.revealedCardCount(round)
-        if (revealedCount > this.revealedCardIds.length) {
-            const deck = this.deck
-            assertExists(deck, 'Starting a round requires the action deck')
-            this.revealedCardIds = deck.slice(0, revealedCount)
-        }
         this.round = round
         this.turnManager.turnOrder = this.turnOrderForCard(this.currentCard())
         this.turnIndex = 0
+    }
+
+    awaitsCardReveal(): boolean {
+        return this.revealedCardCount(this.round) > this.revealedCardIds.length
+    }
+
+    revealCardsForRound() {
+        const deck = this.deck
+        assertExists(deck, 'Revealing an action card requires the action deck')
+        this.revealedCardIds = deck.slice(0, this.revealedCardCount(this.round))
     }
 
     endTurnOutcome(): EndTurnOutcome {
@@ -137,11 +141,12 @@ export class HydratedMagnaGreciaGameState
         return Math.min(round + 2, this.roundCount)
     }
 
-    beginTurn(): string {
+    beginTurn() {
         const playerId = this.turnManager.turnOrder[this.turnIndex]
         assertExists(playerId, `No player for turn ${this.turnIndex} of round ${this.round}`)
         this.turn = newTurn(playerId)
-        return playerId
+        this.turnManager.startTurn(playerId, this.actionCount)
+        this.activePlayerIds = [playerId]
     }
 
     activeTurn(playerId: string): TurnProgress {

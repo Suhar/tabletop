@@ -12,6 +12,7 @@ import {
     PlaceCity,
     PlaceRoad,
     Resupply,
+    RevealCard,
     isEndTurn,
     RoadShape,
     SellMarket,
@@ -124,6 +125,12 @@ export class MagnaGreciaGameSession extends GameSession<
         this.isMyTurn &&
             !this.isViewingHistory &&
             this.gameState.machineState === MachineState.TakingTurn
+    )
+
+    canRevealCard = $derived(
+        this.isMyTurn &&
+            !this.isViewingHistory &&
+            this.validActionTypes.includes(ActionType.RevealCard)
     )
 
     private turnKey = $derived(`${this.gameState.round}:${this.gameState.turnIndex}`)
@@ -316,11 +323,8 @@ export class MagnaGreciaGameSession extends GameSession<
 
     endTurnOutcome: EndTurnOutcome = $derived(this.gameState.endTurnOutcome())
 
-    // Revealing a card or ending the game cannot be undone, so End turn asks first.
-    endTurnIsFinal = $derived(
-        this.endTurnOutcome === EndTurnOutcome.RevealsCard ||
-            this.endTurnOutcome === EndTurnOutcome.EndsGame
-    )
+    // Ending the game cannot be undone, so End turn asks first.
+    endTurnIsFinal = $derived(this.endTurnOutcome === EndTurnOutcome.EndsGame)
 
     confirmingEndTurn = $derived(
         this.canEndTurn && this.endTurnIsFinal && draftConfirmingEndTurn(this.draft)
@@ -483,5 +487,12 @@ export class MagnaGreciaGameSession extends GameSession<
             return
         }
         await this.applyAction(this.createPlayerAction(EndTurn, {}))
+    }
+
+    async revealCard() {
+        if (!this.canRevealCard) {
+            return
+        }
+        await this.applyAction(this.createPlayerAction(RevealCard, {}))
     }
 }

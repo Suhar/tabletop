@@ -432,6 +432,7 @@ test('a market action keeps the turn open and highlights End turn', async ({ pag
     expect(await turnOf()).toBe(first)
     await expect(endTurn).toHaveClass(/ready/)
     await expect(page.getByText('Skipped', { exact: true })).toBeVisible()
+    await expect(page.getByText('Skipped', { exact: true })).toHaveClass(/skipped/)
     await expect(
         page.getByRole('button', { name: /^(Roads|Cities|Resupply|Build market|Sell market)/ })
     ).toHaveCount(0)
@@ -440,48 +441,45 @@ test('a market action keeps the turn open and highlights End turn', async ({ pag
     await expect.poll(turnOf).not.toBe(first)
 })
 
-test('the last player of a round confirms End turn, and Cancel or Undo backs out', async ({
+test('the round’s last End turn stays undoable until the next first player reveals a card', async ({
     page
 }) => {
     await createGame(page)
     const endTurn = page.getByRole('button', { name: 'End turn', exact: true })
-    const yes = page.getByRole('button', { name: 'Yes, end turn', exact: true })
-    const cancel = page.getByRole('button', { name: 'Cancel', exact: true })
-    const question = page.getByText('End turn and start the next round?', { exact: true })
-    const cannotUndo = page.getByText('This cannot be undone.', { exact: true })
+    const reveal = page.getByRole('button', { name: 'Reveal next card', exact: true })
+    const undo = page.getByRole('button', { name: 'UNDO', exact: true })
     const turnIndex = () => page.evaluate(() => window.magnaGreciaSession.gameState.turnIndex)
     const round = () => page.evaluate(() => window.magnaGreciaSession.gameState.round)
+    const revealed = () =>
+        page.evaluate(() => window.magnaGreciaSession.gameState.revealedCardIds.length)
     const players = await page.evaluate(
         () => window.magnaGreciaSession.gameState.turnManager.turnOrder.length
     )
     for (let turn = 0; turn < players - 1; turn++) {
         await endTurn.click()
-        await expect(yes).toHaveCount(0)
         await expect.poll(turnIndex).toBe(turn + 1)
     }
     const lastTurn = await turnIndex()
     const firstRound = await round()
-    await expect(cannotUndo).toHaveCount(0)
-    await expect(page.getByText(/It cannot be undone/)).toHaveCount(0)
+    const revealedBefore = await revealed()
 
     await endTurn.click()
-    await expect(question).toBeVisible()
-    await expect(cannotUndo).toBeVisible()
-    await expect(endTurn).toHaveCount(0)
-    await cancel.click()
-    await expect(question).toHaveCount(0)
-    await expect(endTurn).toBeVisible()
-    expect(await turnIndex()).toBe(lastTurn)
-
-    await endTurn.click()
-    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
-    await expect(question).toHaveCount(0)
-    expect(await turnIndex()).toBe(lastTurn)
-
-    await page.getByRole('button', { name: /^Cities/ }).click()
-    await endTurn.click()
-    await expect(question).toBeVisible()
-    await yes.click()
     await expect.poll(round).toBe(firstRound + 1)
-    await expect(question).toHaveCount(0)
+    await expect(page.getByText('Yes, end turn', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('This cannot be undone.', { exact: true })).toHaveCount(0)
+    await expect(reveal).toBeVisible()
+    expect(await revealed()).toBe(revealedBefore)
+    expect(await page.evaluate(() => window.magnaGreciaSession.upcomingCard)).toBeUndefined()
+
+    await undo.click()
+    await expect.poll(round).toBe(firstRound)
+    expect(await turnIndex()).toBe(lastTurn)
+    await expect(reveal).toHaveCount(0)
+    await expect(endTurn).toBeVisible()
+
+    await endTurn.click()
+    await reveal.click()
+    await expect.poll(revealed).toBe(revealedBefore + 1)
+    await expect(page.getByText('Choose an action', { exact: true })).toBeVisible()
+    await expect(undo).toHaveCount(0)
 })

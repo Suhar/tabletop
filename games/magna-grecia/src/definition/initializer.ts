@@ -81,6 +81,7 @@ export class MagnaGreciaGameInitializer
             turnIndex: 0
         })
         const hydrated = new HydratedMagnaGreciaGameState(magnaGreciaState)
+        hydrated.revealCardsForRound()
         hydrated.beginRound(0)
         return hydrated
     }

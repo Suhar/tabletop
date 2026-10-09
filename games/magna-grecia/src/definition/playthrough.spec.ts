@@ -58,6 +58,9 @@ function botAction(
     step: number
 ): GameAction {
     const base = { id: `a${step}`, gameId: state.gameId, source: ActionSource.User, playerId }
+    if (state.machineState === MachineState.RevealingCard) {
+        return act({ ...base, type: ActionType.RevealCard })
+    }
     const player = state.getPlayerState(playerId)
     const pending = state.turn?.pendingCity
     if (pending?.kind === PendingCityKind.Claim) {

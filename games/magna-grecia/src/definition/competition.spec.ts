@@ -52,7 +52,7 @@ function canonical(state: MagnaGreciaProjectedState): MagnaGreciaGameState {
     return state
 }
 
-function endTurn(game: Game, state: MagnaGreciaProjectedState): MagnaGreciaProjectedState {
+function advance(game: Game, state: MagnaGreciaProjectedState): MagnaGreciaProjectedState {
     const [playerId] = state.activePlayerIds
     assertExists(playerId, 'Expected an acting player')
     return engine.executeCanonicalAction({
@@ -63,7 +63,10 @@ function endTurn(game: Game, state: MagnaGreciaProjectedState): MagnaGreciaProje
             gameId: game.id,
             source: ActionSource.User,
             playerId,
-            type: ActionType.EndTurn
+            type:
+                state.machineState === MachineState.RevealingCard
+                    ? ActionType.RevealCard
+                    : ActionType.EndTurn
         }
     }).updatedState
 }
@@ -87,7 +90,7 @@ describe.each([2, 3, 4])('Magna Grecia tournaments with %i players', (count) => 
                 for (const playerId of order) {
                     expect(state.round).toBe(0)
                     expect(state.activePlayerIds).toEqual([playerId])
-                    state = endTurn(game, state)
+                    state = advance(game, state)
                 }
                 expect(state.round).toBe(1)
             }
@@ -143,8 +146,8 @@ describe.each([2, 3, 4])('Magna Grecia tournaments with %i players', (count) => 
                 startingPositions: { playerIds: order }
             }).initialState
             for (let step = 0; state.machineState !== MachineState.EndOfGame; step++) {
-                expect(step).toBeLessThan(count * 12)
-                state = endTurn(game, state)
+                expect(step).toBeLessThan((count + 1) * 12)
+                state = advance(game, state)
             }
             expect(() => validateGameResult(state)).not.toThrow()
             const finalScores = MagnaGreciaRuntime.scoring.finalScores(state)

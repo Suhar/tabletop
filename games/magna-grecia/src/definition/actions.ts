@@ -4,5 +4,6 @@ export enum ActionType {
     Resupply = 'Resupply',
     BuildMarket = 'BuildMarket',
     SellMarket = 'SellMarket',
-    EndTurn = 'EndTurn'
+    EndTurn = 'EndTurn',
+    RevealCard = 'RevealCard'
 }

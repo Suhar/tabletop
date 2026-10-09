@@ -1,13 +1,11 @@
 import type { GameAction, GameHydrator, HydratedAction } from '@tabletop/common'
-import {
-    HydratedMagnaGreciaGameState,
-    type MagnaGreciaProjectedState
-} from '../model/gameState.js'
+import { HydratedMagnaGreciaGameState, type MagnaGreciaProjectedState } from '../model/gameState.js'
 import { HydratedBuildMarket, isBuildMarket } from '../actions/buildMarket.js'
 import { HydratedEndTurn, isEndTurn } from '../actions/endTurn.js'
 import { HydratedPlaceCity, isPlaceCity } from '../actions/placeCity.js'
 import { HydratedPlaceRoad, isPlaceRoad } from '../actions/placeRoad.js'
 import { HydratedResupply, isResupply } from '../actions/resupply.js'
+import { HydratedRevealCard, isRevealCard } from '../actions/revealCard.js'
 import { HydratedSellMarket, isSellMarket } from '../actions/sellMarket.js'
 
 export class MagnaGreciaHydrator implements GameHydrator<
@@ -28,6 +26,8 @@ export class MagnaGreciaHydrator implements GameHydrator<
                 return new HydratedSellMarket(data)
             case isEndTurn(data):
                 return new HydratedEndTurn(data)
+            case isRevealCard(data):
+                return new HydratedRevealCard(data)
             default:
                 throw new Error(`Unknown action type ${data.type}`)
         }

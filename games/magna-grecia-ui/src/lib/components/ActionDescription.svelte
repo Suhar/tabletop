@@ -6,6 +6,7 @@
         isPlaceCity,
         isPlaceRoad,
         isResupply,
+        isRevealCard,
         isSellMarket,
         type OracleChange
     } from '@tabletop/magna-grecia'
@@ -55,6 +56,8 @@
         <span>sold a market for {plural(action.metadata?.value ?? 0, 'point')}</span>
     {:else if isEndTurn(action)}
         <span>ended their turn</span>
+    {:else if isRevealCard(action)}
+        <span>revealed the next round's action card</span>
     {:else}
         <span>{action.type}</span>
     {/if}

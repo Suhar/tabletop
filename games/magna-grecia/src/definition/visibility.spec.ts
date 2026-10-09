@@ -17,6 +17,7 @@ import {
 } from '../model/gameState.js'
 import { ActionType } from './actions.js'
 import { Definition } from './definition.js'
+import { MachineState } from './states.js'
 import { sampleDeck } from './exploration.js'
 import { MagnaGreciaRuntime } from './runtime.js'
 
@@ -50,18 +51,24 @@ function canonical(state: MagnaGreciaProjectedState): MagnaGreciaGameState {
     return state
 }
 
-function endTurn(game: Game, state: MagnaGreciaProjectedState) {
+function nextActionType(state: MagnaGreciaProjectedState): ActionType {
+    return state.machineState === MachineState.RevealingCard
+        ? ActionType.RevealCard
+        : ActionType.EndTurn
+}
+
+function advance(game: Game, state: MagnaGreciaProjectedState) {
     const [playerId] = state.activePlayerIds
     assertExists(playerId, 'Expected an acting player')
     return engine.executeCanonicalAction({
         game,
         state,
         action: {
-            id: `end-${state.actionCount}`,
+            id: `step-${state.actionCount}`,
             gameId: game.id,
             source: ActionSource.User,
             playerId,
-            type: ActionType.EndTurn
+            type: nextActionType(state)
         }
     })
 }
@@ -120,26 +127,36 @@ describe('Magna Grecia visibility', () => {
         }
     })
 
-    it('marks the turn that reveals the next card as information-revealing', () => {
+    it('ends a round without revealing, then marks the first player’s reveal as revealing', () => {
         const game = createGame()
         let state = engine.startGame(game, { masterSeed }).initialState
         const players = state.turnManager.turnOrder.length
-        for (let turn = 0; turn < players - 1; turn++) {
-            const result = endTurn(game, state)
+        for (let turn = 0; turn < players; turn++) {
+            const result = advance(game, state)
             expect(result.processedActions[0].revealsInfo).toBeUndefined()
             state = result.updatedState
         }
-        const roundEnd = endTurn(game, state)
-        expect(roundEnd.processedActions[0].revealsInfo).toBe(true)
-        expect(roundEnd.updatedState.revealedCardIds).toEqual(state.deck?.slice(0, 3))
+        expect(state.machineState).toBe(MachineState.RevealingCard)
+        expect(state.round).toBe(1)
+        expect(state.revealedCardIds).toEqual(state.deck?.slice(0, 2))
+        expect(state.activePlayerIds).toEqual([state.turnManager.turnOrder[0]])
+
+        const reveal = advance(game, state)
+        expect(reveal.processedActions[0].type).toBe(ActionType.RevealCard)
+        expect(reveal.processedActions[0].revealsInfo).toBe(true)
+        expect(reveal.updatedState.revealedCardIds).toEqual(state.deck?.slice(0, 3))
+        expect(reveal.updatedState.machineState).toBe(MachineState.TakingTurn)
+        expect(reveal.updatedState.activePlayerIds).toEqual(state.activePlayerIds)
     })
 
-    it('lets a player apply the End turn into the final round without the hidden deck', () => {
+    it('lets a player end any round without the hidden deck; only the reveal needs the host', () => {
         const { initialState, startedGame } = engine.startGame(createGame(), { masterSeed })
         let state = initialState
         const lastTurnOf = (round: number) =>
-            state.round === round && state.turnIndex === state.turnManager.turnOrder.length - 1
-        const endTurnAsPlayer = () => {
+            state.machineState === MachineState.TakingTurn &&
+            state.round === round &&
+            state.turnIndex === state.turnManager.turnOrder.length - 1
+        const advanceAsPlayer = () => {
             const [playerId] = state.activePlayerIds
             assertExists(playerId, 'Expected an acting player')
             const perspective = { kind: 'player', playerId } as const
@@ -150,26 +167,34 @@ describe('Magna Grecia visibility', () => {
                 }),
                 perspective,
                 action: {
-                    id: `end-${state.actionCount}`,
+                    id: `step-${state.actionCount}`,
                     gameId: startedGame.id,
                     source: ActionSource.User,
                     playerId,
-                    type: ActionType.EndTurn
+                    type: nextActionType(state)
                 }
             })
         }
 
         while (!lastTurnOf(0)) {
-            state = endTurn(startedGame, state).updatedState
+            state = advance(startedGame, state).updatedState
         }
-        expect(Visibility.isUnavailableProjectedValueError(thrownBy(endTurnAsPlayer))).toBe(true)
+        const localRoundEnd = advanceAsPlayer()
+        state = advance(startedGame, state).updatedState
+        expect(localRoundEnd.updatedState.machineState).toBe(MachineState.RevealingCard)
+        expect(localRoundEnd.updatedState.revealedCardIds).toEqual(state.revealedCardIds)
+        expect(localRoundEnd.updatedState.turnManager.turnOrder).toEqual(
+            state.turnManager.turnOrder
+        )
+        expect(Visibility.isUnavailableProjectedValueError(thrownBy(advanceAsPlayer))).toBe(true)
 
         while (!lastTurnOf(state.roundCount - 2)) {
-            state = endTurn(startedGame, state).updatedState
+            state = advance(startedGame, state).updatedState
         }
-        const local = endTurnAsPlayer()
-        const host = endTurn(startedGame, state)
+        const local = advanceAsPlayer()
+        const host = advance(startedGame, state)
         expect(local.updatedState.round).toBe(state.roundCount - 1)
+        expect(local.updatedState.machineState).toBe(MachineState.TakingTurn)
         expect(local.updatedState.revealedCardIds).toEqual(state.revealedCardIds)
         expect(local.updatedState.turnManager.turnOrder).toEqual(
             host.updatedState.turnManager.turnOrder

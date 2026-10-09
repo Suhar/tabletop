@@ -94,6 +94,8 @@
             : undefined
     }
 
+    const SKIPPED = 'Skipped'
+
     const marketStatus = $derived(tookMarketAction ? 'Done' : 'None available')
 
     const tileStatus = $derived.by(() => {
@@ -103,7 +105,7 @@
         if (tookTileAction) {
             return 'Done'
         }
-        return tookMarketAction || marketToolChosen ? 'Skipped' : 'None available'
+        return tookMarketAction || marketToolChosen ? SKIPPED : 'None available'
     })
     const mobileStep = $derived.by(() => {
         if (gameSession.onlyEndTurnLeft) {
@@ -123,12 +125,12 @@
             : undefined
     )
     const END_TURN_TIPS: Partial<Record<EndTurnOutcome, string>> = {
-        [EndTurnOutcome.RevealsCard]: 'Starts the next round and reveals a new action card',
+        [EndTurnOutcome.RevealsCard]:
+            'Starts the next round; its first player then reveals a new action card',
         [EndTurnOutcome.NextRound]: 'Starts the final round',
         [EndTurnOutcome.EndsGame]: 'Ends the game'
     }
     const CONFIRM_QUESTIONS: Partial<Record<EndTurnOutcome, string>> = {
-        [EndTurnOutcome.RevealsCard]: 'End turn and start the next round?',
         [EndTurnOutcome.EndsGame]: 'End turn and end the game?'
     }
     const CANNOT_UNDO = 'This cannot be undone.'
@@ -213,19 +215,29 @@
     </svg>
 {/snippet}
 
+{#snippet roundActions()}
+    <div class="round-actions">
+        <AllowanceList
+            card={gameSession.gameState.currentCard()}
+            label="This round's actions"
+            size={26}
+            bonusStyle="parensOnPhone"
+        />
+    </div>
+{/snippet}
+
 <div class="flex min-h-[50px] flex-col items-center justify-center gap-1 px-4 py-1 text-[#4a2c12]">
-    {#if !gameSession.canAct}
+    {#if gameSession.canRevealCard}
+        <div class="message">Your turn starts by revealing the next round's action card</div>
+        <button type="button" class="tool end ready" onclick={() => gameSession.revealCard()}>
+            Reveal next card
+        </button>
+        {@render roundActions()}
+    {:else if !gameSession.canAct}
         <LastActionDescription
             fallbackText={gameSession.isViewingHistory ? 'Viewing history' : 'Waiting for turn'}
         />
-        <div class="round-actions">
-            <AllowanceList
-                card={gameSession.gameState.currentCard()}
-                label="This round's actions"
-                size={26}
-                bonusStyle="parensOnPhone"
-            />
-        </div>
+        {@render roundActions()}
     {:else}
         <div class="message">
             {message}
@@ -256,7 +268,9 @@
                             </button>
                         {/each}
                         {#if tilePhaseClosed}
-                            <span class="phase-status">{tileStatus}</span>
+                            <span class="phase-status" class:skipped={tileStatus === SKIPPED}
+                                >{tileStatus}</span
+                            >
                         {/if}
                     </div>
                     <button type="button" class="skip" onclick={() => gameSession.skipTiles()}>
@@ -391,6 +405,12 @@
         font-size: 13px;
         font-style: italic;
         color: rgba(74, 44, 18, 0.55);
+    }
+
+    .phase-status.skipped {
+        font-size: 17px;
+        font-weight: 700;
+        color: #c0261a;
     }
 
     .chevron {

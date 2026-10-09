@@ -19,6 +19,7 @@ import { HydratedEndTurn } from '../actions/endTurn.js'
 import { HydratedPlaceCity } from '../actions/placeCity.js'
 import { HydratedPlaceRoad } from '../actions/placeRoad.js'
 import { HydratedResupply } from '../actions/resupply.js'
+import { HydratedRevealCard } from '../actions/revealCard.js'
 import { HydratedSellMarket } from '../actions/sellMarket.js'
 import { ActionType } from '../definition/actions.js'
 import type { RoadEnds } from '../components/pieces.js'
@@ -27,6 +28,7 @@ import { marketCost, marketValue } from './marketRules.js'
 import { ROAD_END_OPTIONS, RoadShape, legalRoadEnds, roadShape } from './roadRules.js'
 import { PendingCityKind, newTurn } from './turn.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
+import { RevealingCardStateHandler } from '../stateHandlers/revealingCard.js'
 import { TakingTurnStateHandler } from '../stateHandlers/takingTurn.js'
 import { MachineState } from '../definition/states.js'
 
@@ -175,14 +177,24 @@ describe('setup', () => {
         for (let round = 1; round < state.roundCount; round++) {
             state.beginRound(round)
             expect(turnOrderColours()).toEqual(cardColours())
+            if (state.awaitsCardReveal()) {
+                state.revealCardsForRound()
+            }
         }
     })
 
-    it('reveals the next round’s card until the final round', () => {
+    it('holds back the next round’s card until it is revealed, until the final round', () => {
         const state = freshState()
         expect(state.upcomingCard()?.id).toBe(state.deck?.[1])
-        state.beginRound(state.roundCount - 1)
-        expect(state.upcomingCard()).toBeUndefined()
+        for (let round = 1; round < state.roundCount; round++) {
+            state.beginRound(round)
+            expect(state.upcomingCard()).toBeUndefined()
+            expect(state.awaitsCardReveal()).toBe(round < state.roundCount - 1)
+            if (state.awaitsCardReveal()) {
+                state.revealCardsForRound()
+                expect(state.upcomingCard()?.id).toBe(state.deck?.[round + 1])
+            }
+        }
     })
 })
 
@@ -749,6 +761,7 @@ describe('network, markets and oracles', () => {
     it('predicts what each End turn does, as the handler then does it', () => {
         const state = freshState()
         const handler = new TakingTurnStateHandler()
+        const revealing = new RevealingCardStateHandler()
         const context = new MachineContext({ gameConfig: {}, gameState: state })
         const seen = new Set<EndTurnOutcome>()
         let next = MachineState.TakingTurn
@@ -763,12 +776,35 @@ describe('network, markets and oracles', () => {
             next = handler.onAction(endTurn, context)
             seen.add(predicted)
             const reveals = predicted === EndTurnOutcome.RevealsCard
-            expect(endTurn.revealsInfo === true).toBe(reveals)
-            expect(state.revealedCardIds.length > revealedBefore).toBe(reveals)
+            expect(endTurn.revealsInfo).toBeUndefined()
+            expect(state.revealedCardIds.length).toBe(revealedBefore)
             expect(state.round > roundBefore).toBe(
                 reveals || predicted === EndTurnOutcome.NextRound
             )
+            expect(next === MachineState.RevealingCard).toBe(reveals)
             expect(next === MachineState.EndOfGame).toBe(predicted === EndTurnOutcome.EndsGame)
+            if (next === MachineState.RevealingCard) {
+                state.machineState = next
+                revealing.enter(context)
+                const firstPlayer = state.turnManager.turnOrder[0]
+                expect(state.activePlayerIds).toEqual([firstPlayer])
+                expect(revealing.validActionsForPlayer(firstPlayer, context)).toEqual([
+                    ActionType.RevealCard
+                ])
+                expect(revealing.validActionsForPlayer(playerId, context)).toEqual(
+                    playerId === firstPlayer ? [ActionType.RevealCard] : []
+                )
+                const reveal = new HydratedRevealCard({
+                    ...base(firstPlayer),
+                    type: ActionType.RevealCard
+                })
+                reveal.apply(state)
+                expect(reveal.revealsInfo).toBe(true)
+                expect(state.revealedCardIds.length).toBe(revealedBefore + 1)
+                next = revealing.onAction(reveal, context)
+                state.machineState = next
+                expect(next).toBe(MachineState.TakingTurn)
+            }
         }
         expect([...seen].toSorted()).toEqual(Object.values(EndTurnOutcome).toSorted())
     })
