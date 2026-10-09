@@ -317,6 +317,20 @@ export class HydratedSarGameState
         return this.dividendsPaid >= DIVIDENDS_BEFORE_FINAL
     }
 
+    // What the next dividend pays per share at current incomes; the sixth is the final payoff.
+    nextDividendPerShare(railroadId: RailroadId): number {
+        return this.isFinalPayoffNext()
+            ? this.finalPayoffPerShare(railroadId)
+            : this.dividendPerShare(railroadId)
+    }
+
+    nextDividend(playerId: string): number {
+        return this.holdings(playerId).reduce(
+            (sum, holding) => sum + holding.shares * this.nextDividendPerShare(holding.railroadId),
+            0
+        )
+    }
+
     // Cash if the game ended now: the final payoff for every share held.
     projectedFinalCash(playerId: string): number {
         return (

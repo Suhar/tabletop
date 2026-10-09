@@ -1,15 +1,12 @@
 <script lang="ts">
     import { EXTERNAL_CONNECTIONS, settlement } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { BOARD_WIDTH } from '$lib/utils/boardLayout.js'
+    import { CONNECTION_STAR_RADIUS, connectionLabel } from '$lib/utils/mapGeometry.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { starPoints } from '$lib/utils/shapes.js'
     import Cube from '../icons/Cube.svelte'
 
     const gameSession = getGameSession()
-
-    // Room the right-hand terms text needs; nearer the edge the label stacks above the star.
-    const LABEL_WIDTH = 150
 
     const connections = $derived(
         EXTERNAL_CONNECTIONS.map((connection) => {
@@ -21,10 +18,7 @@
                 from: settlement(connection.settlementId),
                 style: owner ? RAILROAD_STYLE[owner] : undefined,
                 target: gameSession.connectionTargets.includes(connection.id),
-                label:
-                    connection.x + 30 + LABEL_WIDTH > BOARD_WIDTH - 15
-                        ? { x: connection.x, y: connection.y - 66, anchor: 'middle' }
-                        : { x: connection.x + 30, y: connection.y - 8, anchor: 'start' }
+                label: connectionLabel(connection)
             }
         })
     )
@@ -49,7 +43,7 @@
             stroke={connection.style?.fill ?? '#6c4f9c'}
         />
         <g transform="translate({connection.x} {connection.y})" filter="url(#sar-shadow)">
-            <polygon points={starPoints(8, 25, 13)} class="star" />
+            <polygon points={starPoints(8, CONNECTION_STAR_RADIUS, 13)} class="star" />
             {#if connection.style}
                 <Cube x={0} y={1} size={18} color={connection.style.fill} edge={connection.style.dark} />
             {/if}

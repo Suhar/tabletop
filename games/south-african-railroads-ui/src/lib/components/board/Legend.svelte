@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { LEGEND_ORIGIN } from '$lib/utils/mapLabels.js'
     import { polygonPoints } from '$lib/utils/shapes.js'
 
     const ENTRIES = [
@@ -9,9 +10,9 @@
     ]
 </script>
 
-<g transform="translate(36 30)" class="legend">
+<g transform="translate({LEGEND_ORIGIN.x} {LEGEND_ORIGIN.y})" class="legend">
     {#each ENTRIES as entry, index (entry.label)}
-        <g transform="translate({(index % 2) * 250 + 18} {Math.floor(index / 2) * 48 + 18})">
+        <g transform="translate(18 {index * 50 + 18})">
             {#if entry.shape === 'hex'}
                 <polygon points={polygonPoints(6, 15)} fill={entry.fill} class="symbol" />
             {:else if entry.shape === 'circle'}

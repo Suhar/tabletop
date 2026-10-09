@@ -125,6 +125,29 @@ describe('income and value', () => {
         expect(state.dividendPerShare(RailroadId.NRC)).toBe(3)
     })
 
+    it('totals the next dividend over every share a player holds', () => {
+        const state = hydrate(afterInitialOffering())
+        const [holder] = state.railroad(RailroadId.CdFM).owners
+        const expected = state
+            .holdings(holder)
+            .reduce(
+                (sum, holding) => sum + holding.shares * state.dividendPerShare(holding.railroadId),
+                0
+            )
+        expect(expected).toBeGreaterThan(0)
+        expect(state.nextDividend(holder)).toBe(expected)
+        state.dividendsPaid = 5
+        expect(state.nextDividend(holder)).toBe(
+            state
+                .holdings(holder)
+                .reduce(
+                    (sum, holding) =>
+                        sum + holding.shares * state.finalPayoffPerShare(holding.railroadId),
+                    0
+                )
+        )
+    })
+
     it('rounds the final payoff up over the shares sold', () => {
         const state = hydrate(afterInitialOffering())
         // CdFM: one $5 link worth 4 income, one share sold.

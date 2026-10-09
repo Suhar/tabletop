@@ -16,11 +16,14 @@
     import Board from '$lib/components/Board.svelte'
     import Header from '$lib/components/Header.svelte'
     import ActionPanel from '$lib/components/ActionPanel.svelte'
+    import ActionBoxes from '$lib/components/ActionBoxes.svelte'
     import GameEndPanel from '$lib/components/GameEndPanel.svelte'
     import { SarGameSession } from '$lib/model/session.svelte'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import LibreBaskervilleFont from '$lib/fonts/LibreBaskerville.woff2'
     import LibreBaskervilleItalicFont from '$lib/fonts/LibreBaskerville-Italic.woff2'
+    import CourierPrimeFont from '$lib/fonts/CourierPrime-Regular.woff2'
+    import CourierPrimeBoldFont from '$lib/fonts/CourierPrime-Bold.woff2'
 
     let { gameSession }: { gameSession: GameSession<SarGameState, HydratedSarGameState> } =
         $props()
@@ -51,6 +54,9 @@
             <ActionPanel />
         {/if}
     </div>
+    {#if !gameSession.gameState.result}
+        <ActionBoxes />
+    {/if}
 {/snippet}
 
 <CustomFont
@@ -65,6 +71,13 @@
     format="woff2"
     fontWeight="400 700"
     fontStyle="italic"
+/>
+<CustomFont fontFamily="Courier Prime" url={CourierPrimeFont} format="woff2" fontWeight="400" />
+<CustomFont
+    fontFamily="Courier Prime"
+    url={CourierPrimeBoldFont}
+    format="woff2"
+    fontWeight="700"
 />
 
 <div class="bg-[#e9dcbc]">

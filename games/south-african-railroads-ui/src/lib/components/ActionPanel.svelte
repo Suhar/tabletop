@@ -15,6 +15,19 @@
     const holdings = $derived(me ? state.holdings(me) : [])
 </script>
 
+{#snippet railroadChoices()}
+    <div class="row">
+        {#each gameSession.railroadChoices as railroadId (railroadId)}
+            <button
+                type="button"
+                class="secondary"
+                onclick={() => gameSession.selectRailroad(railroadId)}
+                ><RailroadBadge {railroadId} /></button
+            >
+        {/each}
+    </div>
+{/snippet}
+
 <div class="panel">
     {#if gameSession.isViewingHistory}
         <WaitingView />
@@ -28,7 +41,7 @@
             {settlement(freeBuildHome(state.freeBuild.railroadId)).name}: choose a highlighted link.
         </p>
     {:else if machineState === MachineState.ChoosingAction}
-        <p class="prompt">Choose an action box at the top of the board.</p>
+        <p class="prompt">Choose an action below.</p>
     {:else if machineState === MachineState.ConstructingTrack || machineState === MachineState.DelegatedBuild}
         {#if gameSession.delegating}
             {#if gameSession.selectedRailroad && gameSession.delegateBuilders.length > 1}
@@ -49,12 +62,14 @@
                 </div>
             {:else}
                 <p class="prompt">
-                    You control no railroad that can build. Choose a railroad card below; its
-                    controlling shareholder builds.
+                    You control no railroad that can build. Choose one; its controlling
+                    shareholder builds.
                 </p>
+                {@render railroadChoices()}
             {/if}
         {:else if !gameSession.selectedRailroad}
-            <p class="prompt">Choose which of your railroads builds: pick its card below.</p>
+            <p class="prompt">Choose which of your railroads builds.</p>
+            {@render railroadChoices()}
         {:else if gameSession.firstLink}
             <p class="prompt">
                 {linkName(gameSession.firstLink)} chosen. Choose a second link to build both for $15,
@@ -92,12 +107,20 @@
     {:else if machineState === MachineState.OfferingStock}
         <p class="prompt">
             {#if state.unsoldOffers().length > 0}
-                Offer a railroad's unsold share: pick its card below, or sell one of your own.
+                Offer a railroad's unsold share, or sell one of your own.
             {:else}
                 Every share is sold. You may sell one of your own.
             {/if}
         </p>
         <div class="row">
+            {#each state.unsoldOffers() as railroadId (railroadId)}
+                <button
+                    type="button"
+                    class="secondary"
+                    onclick={() => gameSession.offerShare(railroadId, false)}
+                    >Offer <RailroadBadge {railroadId} /></button
+                >
+            {/each}
             {#each holdings as holding (holding.railroadId)}
                 <button
                     type="button"

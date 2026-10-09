@@ -1,6 +1,5 @@
 <script lang="ts">
     import {
-        RailroadId,
         SETTLEMENTS,
         SettlementKind,
         incomeLevels,
@@ -9,7 +8,13 @@
     } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { METRO_CELL, METRO_GRIDS } from '$lib/utils/boardLayout.js'
-    import { SETTLEMENT_LABELS } from '$lib/utils/mapLabels.js'
+    import {
+        BASE_NAMES,
+        SETTLEMENT_LABELS,
+        metroCaptionBox,
+        metroFrameBox,
+        settlementIconBox
+    } from '$lib/utils/mapLabels.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { polygonPoints } from '$lib/utils/shapes.js'
     import Cube from '../icons/Cube.svelte'
@@ -21,15 +26,6 @@
         [SettlementKind.RailroadStation]: '#2d58b0',
         [SettlementKind.MercantileCenter]: '#d42a22'
     }
-
-    // The base railroads' names, printed large beside their homes.
-    const BASE_NAMES: { x: number; y: number; railroadId: RailroadId }[] = [
-        { x: 34, y: 940, railroadId: RailroadId.CMRC },
-        { x: 66, y: 588, railroadId: RailroadId.CTRD },
-        { x: 196, y: 1068, railroadId: RailroadId.CSAR },
-        { x: 812, y: 1098, railroadId: RailroadId.NRC },
-        { x: 1352, y: 1026, railroadId: RailroadId.CdFM }
-    ]
 
     const developTargets = $derived(
         new Map(gameSession.developTargets.map((target) => [target.settlementId, target.cost]))
@@ -59,17 +55,6 @@
             x: grid.origin.x + (index % grid.columns) * METRO_CELL,
             y: grid.origin.y + Math.floor(index / grid.columns) * METRO_CELL
         }))
-    }
-
-    function metroBounds(place: SettlementDefinition) {
-        const grid = METRO_GRIDS[place.id]
-        const rows = Math.ceil(incomeLevels(place.id).length / grid.columns)
-        return {
-            x: grid.origin.x,
-            y: grid.origin.y,
-            width: grid.columns * METRO_CELL,
-            height: rows * METRO_CELL
-        }
     }
 
     function onKey(event: KeyboardEvent, settlementId: string) {
@@ -103,12 +88,26 @@
     {#each settlements as place (place.id)}
         <g class="settlement" filter="url(#sar-shadow)">
             {#if place.kind === SettlementKind.MetroArea}
-                {@const bounds = metroBounds(place)}
+                {@const frame = metroFrameBox(place)}
+                {@const caption = metroCaptionBox(place)}
                 <rect
-                    x={bounds.x - 3}
-                    y={bounds.y - 3}
-                    width={bounds.width + 6}
-                    height={bounds.height + 6}
+                    x={caption.x}
+                    y={caption.y}
+                    width={caption.width}
+                    height={caption.height}
+                    rx="4"
+                    class="metro-caption"
+                />
+                <text
+                    x={caption.x + caption.width / 2}
+                    y={caption.y + caption.height / 2 + 4.5}
+                    class="metro-name">{place.name}</text
+                >
+                <rect
+                    x={frame.x}
+                    y={frame.y}
+                    width={frame.width}
+                    height={frame.height}
                     rx="4"
                     class="metro-frame"
                 />
@@ -165,7 +164,7 @@
         {#if place.cost !== undefined}
             {@const bounds =
                 place.kind === SettlementKind.MetroArea
-                    ? metroBounds(place)
+                    ? settlementIconBox(place)
                     : { x: place.x - 22, y: place.y - 22, width: 44, height: 44 }}
             <g
                 class="develop-target"
@@ -183,12 +182,6 @@
                     rx="9"
                     class="ring"
                 />
-                {#if place.cost > 0}
-                    <g transform="translate({bounds.x + bounds.width + 2} {bounds.y - 4})">
-                        <rect x="-15" y="-10" width="30" height="18" rx="9" class="cost-tag" />
-                        <text y="4" class="cost">${place.cost}</text>
-                    </g>
-                {/if}
             </g>
         {/if}
     {/each}
@@ -238,6 +231,21 @@
         fill: #3b2a17;
     }
 
+    .metro-caption {
+        fill: #f7efd9;
+        stroke: #3b2a17;
+        stroke-width: 2;
+    }
+
+    .metro-name {
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 12.5px;
+        font-style: italic;
+        font-weight: 700;
+        fill: #2c1d0e;
+        text-anchor: middle;
+    }
+
     .metro-cell {
         fill: #fdf8ea;
         stroke: #3b2a17;
@@ -283,17 +291,7 @@
         fill: rgba(255, 230, 140, 0.5);
     }
 
-    .cost-tag {
-        fill: #3b2410;
-    }
 
-    .cost {
-        font-family: 'Libre Baskerville', Georgia, serif;
-        font-size: 11px;
-        font-weight: 700;
-        fill: #ffe9a8;
-        text-anchor: middle;
-    }
 
     @keyframes sar-ring {
         to {

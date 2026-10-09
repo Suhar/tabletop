@@ -15,6 +15,7 @@ import {
     freeBuildHome,
     homeLinks,
     type HydratedSarGameState,
+    type HydratedSarPlayerState,
     type RailroadId,
     type SarGameState
 } from '@tabletop/south-african-railroads'
@@ -45,6 +46,20 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         return playerId && this.actingIn(MachineState.ChoosingAction)
             ? this.gameState.availableBoxes(playerId)
             : []
+    })
+
+    // Every locomotive starts in Construct Track, but the boxes show one only once its player has
+    // chosen a first action.
+    placedLocomotives: HydratedSarPlayerState[] = $derived.by(() => {
+        const turnManager = this.gameState.turnManager
+        const actingPlayerId =
+            this.gameState.machineState === MachineState.ChoosingAction
+                ? undefined
+                : turnManager.currentTurn()?.playerId
+        return this.gameState.players.filter(
+            (player) =>
+                turnManager.turnCount(player.playerId) > 0 || player.playerId === actingPlayerId
+        )
     })
 
     // Construction
@@ -79,6 +94,10 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         }
         return !this.delegating && options.length === 1 ? options[0] : undefined
     })
+
+    railroadChoices: RailroadId[] = $derived(
+        this.delegating || this.buildRailroadOptions.length > 1 ? this.buildRailroadOptions : []
+    )
 
     delegateBuilders: string[] = $derived(
         this.delegating && this.selectedRailroad

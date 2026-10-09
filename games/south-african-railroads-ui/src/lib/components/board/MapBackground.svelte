@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { BOARD_HEIGHT, BOARD_WIDTH } from '$lib/utils/boardLayout.js'
+    import { BOARD_HEIGHT, BOARD_TOP, BOARD_WIDTH } from '$lib/utils/boardLayout.js'
 
     type RegionLabel = { lines: string[]; x: number; y: number; rotate?: number }
 
@@ -33,7 +33,7 @@
         <stop offset="100%" stop-color="#36210f" />
     </linearGradient>
     <clipPath id="sar-inner">
-        <rect x="15" y="15" width={BOARD_WIDTH - 30} height={BOARD_HEIGHT - 30} rx="10" />
+        <rect x="15" y={BOARD_TOP + 15} width={BOARD_WIDTH - 30} height={BOARD_HEIGHT - 30} rx="10" />
     </clipPath>
     <filter id="sar-shadow" x="-30%" y="-30%" width="160%" height="160%">
         <feDropShadow
@@ -46,7 +46,7 @@
     </filter>
 </defs>
 
-<rect width={BOARD_WIDTH} height={BOARD_HEIGHT} rx="18" fill="url(#sar-paper)" />
+<rect y={BOARD_TOP} width={BOARD_WIDTH} height={BOARD_HEIGHT} rx="18" fill="url(#sar-paper)" />
 <g clip-path="url(#sar-inner)">
     <path d={SEA} fill="url(#sar-sea)" />
     <path d={SEA} fill="none" stroke="#4f7f8c" stroke-width="2" />
@@ -64,7 +64,7 @@
 </g>
 <rect
     x="8"
-    y="8"
+    y={BOARD_TOP + 8}
     width={BOARD_WIDTH - 16}
     height={BOARD_HEIGHT - 16}
     rx="14"
@@ -74,7 +74,7 @@
 />
 <rect
     x="15"
-    y="15"
+    y={BOARD_TOP + 15}
     width={BOARD_WIDTH - 30}
     height={BOARD_HEIGHT - 30}
     rx="10"
