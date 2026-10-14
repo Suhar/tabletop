@@ -4,23 +4,15 @@
 
     let {
         railroadId,
-        choice,
-        shrinkOnPhone = false
+        choice
     }: {
         railroadId: RailroadId
         choice?: { label: string; onclick: () => void }
-        shrinkOnPhone?: boolean
     } = $props()
 
     const style = $derived(RAILROAD_STYLE[railroadId])
     const definition = $derived(railroadDefinition(railroadId))
 </script>
-
-{#snippet face()}
-    <span class="kind">One share</span>
-    <span class="code">{definition.shortName}</span>
-    <span class="name">{definition.name}</span>
-{/snippet}
 
 {#if choice}
     <button
@@ -32,17 +24,16 @@
         title={choice.label}
         onclick={choice.onclick}
     >
-        {@render face()}
+        <span class="code">{definition.shortName}</span>
     </button>
 {:else}
     <div
         class="certificate"
-        class:shrink-on-phone={shrinkOnPhone}
         style:--rr={style.fill}
         style:--rr-text={style.text}
         title="{definition.name} share"
     >
-        {@render face()}
+        <span class="code">{definition.shortName}</span>
     </div>
 {/if}
 
@@ -53,8 +44,8 @@
         align-items: center;
         justify-content: center;
         box-sizing: border-box;
-        width: 132px;
-        height: 66px;
+        width: 108px;
+        height: 50px;
         padding: 0 6px;
         border-radius: 3px;
         background: var(--rr);
@@ -67,28 +58,10 @@
             0 0 0 1px rgba(0, 0, 0, 0.45);
     }
 
-    .kind {
-        font-family: 'Courier Prime', 'Courier New', monospace;
-        font-size: 9px;
-        letter-spacing: 0.24em;
-        text-transform: uppercase;
-        opacity: 0.85;
-    }
-
     .code {
         font-size: 20px;
         font-weight: 700;
         line-height: 1.15;
-    }
-
-    .name {
-        overflow: hidden;
-        max-width: 100%;
-        font-size: 8.5px;
-        font-style: italic;
-        line-height: 1.2;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     .choosable {
@@ -111,26 +84,13 @@
 
     @media (max-width: 639px) {
         .certificate {
-            width: 104px;
-            height: 52px;
+            width: 62px;
+            height: 30px;
+            padding: 0 3px;
         }
 
         .code {
-            font-size: 17px;
-        }
-
-        .shrink-on-phone {
-            width: 62px;
-            height: 30px;
-        }
-
-        .shrink-on-phone .code {
             font-size: 13px;
-        }
-
-        .shrink-on-phone .kind,
-        .shrink-on-phone .name {
-            display: none;
         }
     }
 </style>

@@ -26,7 +26,7 @@
     <div class="auction">
         <div class="table">
             <div class="heading">{HEADINGS[view.kind]}</div>
-            <BigShareCertificate railroadId={view.railroadId} shrinkOnPhone />
+            <BigShareCertificate railroadId={view.railroadId} />
             <div class="seats">
                 {#each view.seats as seat (seat.playerId)}
                     {@const current = seat.playerId === view.currentBidderId}
