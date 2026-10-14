@@ -78,8 +78,6 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         )
     })
 
-    // Construction
-
     private building = $derived(
         this.actingIn(MachineState.ConstructingTrack, MachineState.DelegatedBuild)
     )
@@ -249,8 +247,6 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         await this.applyAction(this.createPlayerAction(DelegateBuild, { railroadId, builderId }))
     }
 
-    // Development
-
     developTargets: DevelopTarget[] = $derived.by(() => {
         const playerId = this.myPlayerId
         if (!playerId || !this.actingIn(MachineState.DevelopingSettlements)) {
@@ -276,8 +272,6 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
     async finishDevelopment() {
         await this.applyAction(this.createPlayerAction(FinishDevelopment, {}))
     }
-
-    // Stock
 
     offeringStock = $derived(this.actingIn(MachineState.OfferingStock))
 
@@ -333,8 +327,6 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
     async passBid() {
         await this.applyAction(this.createPlayerAction(PassBid, {}))
     }
-
-    // Undo
 
     hasManualSelection(): boolean {
         return hasManualBuildSelection(this.buildSelection)

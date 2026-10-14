@@ -122,8 +122,6 @@ export class HydratedSarGameState
         return playerId
     }
 
-    // Income and value
-
     settlementIncome(settlementId: string): number {
         return settlementIncome(this, settlementId)
     }
@@ -151,8 +149,6 @@ export class HydratedSarGameState
     minimumBid(railroadId: RailroadId): number {
         return minimumBid(this.value(railroadId))
     }
-
-    // Shares
 
     sharesHeld(railroadId: RailroadId, playerId: string): number {
         return this.railroad(railroadId).owners.filter((owner) => owner === playerId).length
@@ -184,8 +180,6 @@ export class HydratedSarGameState
         return this.controllers(railroadId).includes(playerId)
     }
 
-    // Action selection
-
     locomotivesIn(box: ActionBox, exceptPlayerId?: string): number {
         return this.players.filter(
             (player) => player.locomotive === box && player.playerId !== exceptPlayerId
@@ -200,8 +194,6 @@ export class HydratedSarGameState
                 this.locomotivesIn(box, playerId) < boxCapacity(box, this.players.length)
         )
     }
-
-    // Construction
 
     singleBuilds(railroadId: RailroadId): string[] {
         return this.railroad(railroadId).treasury >= LINK_COST ? singleBuilds(this, railroadId) : []
@@ -251,8 +243,6 @@ export class HydratedSarGameState
         return linkIds.some((linkId) => link(linkId).ends.includes(JOHANNESBURG))
     }
 
-    // Development
-
     developableSettlements(): string[] {
         return SETTLEMENTS.filter(
             (candidate) =>
@@ -285,8 +275,6 @@ export class HydratedSarGameState
         return settlement(settlementId).name
     }
 
-    // Auctions
-
     bidding(): PassableBidding {
         const auction = this.auction
         assertExists(auction, 'No auction in progress')
@@ -305,8 +293,6 @@ export class HydratedSarGameState
             .filter((railroad) => this.unsoldShares(railroad.id) > 0)
             .map((railroad) => railroad.id)
     }
-
-    // Dividends and scoring
 
     dividendPerShare(railroadId: RailroadId): number {
         return dividendPerShare(this.income(railroadId))
