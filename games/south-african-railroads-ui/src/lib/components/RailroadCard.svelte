@@ -29,14 +29,6 @@
     const railroad = $derived(gameSession.gameState.railroad(railroadId))
     const sharesLeft = $derived(gameSession.gameState.unsoldShares(railroadId))
 
-    function initials(name: string): string {
-        return name
-            .split(/\s+/)
-            .map((word) => word.charAt(0).toUpperCase())
-            .join('')
-            .slice(0, 2)
-    }
-
     function choose() {
         if (choice === 'offer') {
             void gameSession.offerShare(railroadId, false)
@@ -105,6 +97,14 @@
                         >${gameSession.gameState.dividendPerShare(railroadId)}</span
                     >
                 </div>
+                <div
+                    class="entry"
+                    title="Endgame payout per share: (value + income) ÷ shares sold, rounded up"
+                >
+                    <span>Endgame payout</span><span class="money"
+                        >${gameSession.gameState.finalPayoffPerShare(railroadId)}</span
+                    >
+                </div>
             </div>
         {:else}
             <div class="closed-note">
@@ -114,20 +114,6 @@
             </div>
         {/if}
     </div>
-    {#if railroad.owners.length > 0}
-        <div class="holders">
-            <span class="holders-label">Held by</span>
-            {#each railroad.owners as owner, index (index)}
-                <span
-                    class="holder"
-                    style:background={gameSession.colors.getPlayerUiColor(owner)}
-                    style:color={gameSession.colors.getPlayerTextColorValue(owner)}
-                    title={gameSession.getPlayerName(owner)}
-                    >{initials(gameSession.getPlayerName(owner))}</span
-                >
-            {/each}
-        </div>
-    {/if}
 {/snippet}
 
 {#if choice}
@@ -317,33 +303,5 @@
         font-size: 11px;
         font-style: italic;
         color: #6b4a28;
-    }
-
-    .holders {
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        padding: 3px 8px 4px;
-    }
-
-    .holders-label {
-        margin-right: 3px;
-        font-size: 10px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #6b4a28;
-    }
-
-    .holder {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 2px;
-        border-radius: 2px;
-        font-size: 11px;
-        font-weight: 700;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
     }
 </style>

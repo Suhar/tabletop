@@ -103,9 +103,25 @@ describe('the initial offering', () => {
             state = run(state, { type: ActionType.PassBid })
         }
         const hydrated = hydrate(state)
-        expect(hydrated.machineState).toBe(MachineState.FreeBuild)
         expect(hydrated.railroad(RailroadId.CdFM).treasury).toBe(7)
         expect(hydrated.getPlayerState('a').cash).toBe(63)
+    })
+
+    it('lays a lone free first link without asking, so the next offering opens', () => {
+        let state = engine.startGame(game, {
+            masterSeed: '0123456789abcdef0123456789abcdef',
+            startingPositions: { playerIds: ['a', 'b', 'c', 'd'] }
+        }).initialState
+        state = run(state, { type: ActionType.PlaceBid, amount: 7 })
+        for (let pass = 0; pass < 3; pass++) {
+            state = run(state, { type: ActionType.PassBid })
+        }
+        const hydrated = hydrate(state)
+        expect(hydrated.track.filter((built) => built.railroadId === RailroadId.CdFM)).toHaveLength(
+            1
+        )
+        expect(hydrated.machineState).toBe(MachineState.Bidding)
+        expect(hydrated.auction?.railroadId).toBe(RailroadId.CSAR)
     })
 
     it('drops a bidder who cannot afford the next bid', () => {

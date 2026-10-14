@@ -34,10 +34,6 @@
         <span class="name">{gameSession.getPlayerName(playerId)}</span>
         <span class="cash" title="Cash in hand">${playerState.cash}</span>
     </div>
-    <div class="kind">
-        {#if acting}<span class="to-act">To act</span>{/if}
-        SHAREHOLDER · RETURN
-    </div>
     {#each lines as line (line.railroad.id)}
         <div
             class="line"
@@ -67,7 +63,7 @@
         <span>${dividend}</span>
     </div>
     <div class="fine-print" title="Cash plus every share's final payoff if the game ended now">
-        Worth at final payoff ${projected}
+        Score if game ended now ${projected}
     </div>
 </div>
 
@@ -92,8 +88,8 @@
     .ticket.acting::after {
         content: '';
         position: absolute;
-        right: 18px;
-        top: 40px;
+        right: 14px;
+        bottom: 6px;
         width: 14px;
         height: 14px;
         border-radius: 50%;
@@ -125,30 +121,6 @@
     .cash {
         font-size: 15px;
         font-weight: 700;
-    }
-
-    .to-act {
-        position: absolute;
-        top: 50%;
-        left: 8px;
-        transform: translateY(-50%);
-        border-radius: 2px;
-        padding: 0 5px;
-        background: var(--player);
-        color: var(--player-text);
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-    }
-
-    .kind {
-        position: relative;
-        padding: 3px 0;
-        border-bottom: 1px dashed #a88a5c;
-        font-size: 10px;
-        letter-spacing: 0.3em;
-        text-align: center;
     }
 
     .line {

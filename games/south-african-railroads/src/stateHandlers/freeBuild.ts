@@ -1,8 +1,10 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
-import { HydratedBuildTrack, isBuildTrack } from '../actions/buildTrack.js'
+import { BuildTrack, HydratedBuildTrack, isBuildTrack } from '../actions/buildTrack.js'
+import { freeBuildHome } from '../model/freeBuild.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
+import { homeLinks } from '../model/track.js'
 import { afterFreeBuild } from './flow.js'
 
 export class FreeBuildStateHandler implements MachineStateHandler<
@@ -26,8 +28,20 @@ export class FreeBuildStateHandler implements MachineStateHandler<
     }
 
     enter(context: MachineContext<HydratedSarGameState>) {
-        const due = context.gameState.freeBuild
-        context.gameState.activePlayerIds = due ? [due.playerId] : []
+        const state = context.gameState
+        const due = state.freeBuild
+        state.activePlayerIds = due ? [due.playerId] : []
+        if (!due) {
+            return
+        }
+        const links = homeLinks(state, freeBuildHome(due.railroadId))
+        if (links.length === 1) {
+            context.addSystemAction(BuildTrack, {
+                playerId: due.playerId,
+                railroadId: due.railroadId,
+                linkIds: links
+            })
+        }
     }
 
     onAction(

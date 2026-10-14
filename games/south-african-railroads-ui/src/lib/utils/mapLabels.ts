@@ -10,7 +10,14 @@ import {
     settlement,
     type SettlementDefinition
 } from '@tabletop/south-african-railroads'
-import { BOARD_HEIGHT, BOARD_TOP, BOARD_WIDTH, METRO_CELL, METRO_GRIDS } from './boardLayout.js'
+import {
+    BOARD_HEIGHT,
+    BOARD_TOP,
+    BOARD_WIDTH,
+    LINK_BOX_SIZE,
+    METRO_CELL,
+    METRO_GRIDS
+} from './boardLayout.js'
 import { CONNECTION_STAR_RADIUS, connectionLabelBox } from './mapGeometry.js'
 
 export type MapLabel = { x: number; y: number; rotate?: number }
@@ -125,7 +132,7 @@ const ICON_HALF_SIZE: Record<Exclude<SettlementKind, SettlementKind.MetroArea>, 
     [SettlementKind.MercantileCenter]: 16.3,
     [SettlementKind.RailroadBase]: 23
 }
-const LINK_BOX_HALF_SIZE = 10
+const LINK_BOX_HALF_SIZE = LINK_BOX_SIZE / 2
 
 function square(x: number, y: number, half: number): BoundingBox {
     return { x: x - half, y: y - half, width: half * 2, height: half * 2 }

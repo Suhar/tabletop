@@ -1,6 +1,7 @@
 <script lang="ts">
     import { LINKS, linkOwner, settlement } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { LINK_BOX_SIZE } from '$lib/utils/boardLayout.js'
     import { linkPath } from '$lib/utils/mapGeometry.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import Cube from '../icons/Cube.svelte'
@@ -60,9 +61,30 @@
     {#each links as trackLink (trackLink.id)}
         <g transform="translate({trackLink.box.x} {trackLink.box.y})">
             {#if trackLink.style}
-                <Cube x={0} y={1} size={20} color={trackLink.style.fill} edge={trackLink.style.dark} />
+                <Cube
+                    x={0}
+                    y={1}
+                    size={LINK_BOX_SIZE}
+                    color={trackLink.style.fill}
+                    edge={trackLink.style.dark}
+                />
+            {:else if trackLink.chosen && builderStyle}
+                <Cube
+                    x={0}
+                    y={1}
+                    size={LINK_BOX_SIZE}
+                    color={builderStyle.fill}
+                    edge={builderStyle.dark}
+                />
             {:else}
-                <rect x="-10" y="-10" width="20" height="20" rx="2.5" class="box" />
+                <rect
+                    x={-LINK_BOX_SIZE / 2}
+                    y={-LINK_BOX_SIZE / 2}
+                    width={LINK_BOX_SIZE}
+                    height={LINK_BOX_SIZE}
+                    rx="3.5"
+                    class="box"
+                />
             {/if}
         </g>
     {/each}
@@ -79,11 +101,11 @@
             >
                 <path d={trackLink.path} class="hit-path" />
                 <rect
-                    x={trackLink.box.x - 15}
-                    y={trackLink.box.y - 15}
-                    width="30"
-                    height="30"
-                    rx="5"
+                    x={trackLink.box.x - LINK_BOX_SIZE / 2 - 5}
+                    y={trackLink.box.y - LINK_BOX_SIZE / 2 - 5}
+                    width={LINK_BOX_SIZE + 10}
+                    height={LINK_BOX_SIZE + 10}
+                    rx="6"
                     class="hit-box"
                     stroke={builderStyle?.fill ?? '#c8961a'}
                 />

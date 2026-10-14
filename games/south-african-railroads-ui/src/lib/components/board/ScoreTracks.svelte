@@ -1,18 +1,16 @@
 <script lang="ts">
-    import { ACTION_TRACK_LIMIT } from '@tabletop/south-african-railroads'
+    import { ACTION_TRACK_LIMIT, DIVIDENDS_BEFORE_FINAL } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
         ACTION_TRACK_CELL,
         ACTION_TRACK_ORIGIN,
-        DIVIDEND_TRACK_CELL,
-        DIVIDEND_TRACK_ORIGIN
+        ROUND_INDICATOR_ORIGIN
     } from '$lib/utils/boardLayout.js'
     import Cube from '../icons/Cube.svelte'
 
     const gameSession = getGameSession()
 
     const PER_ROW = 18
-    const DIVIDEND_LABELS = ['S', '1', '2', '3', '4', '5', 'F']
 
     const actionCells = Array.from({ length: ACTION_TRACK_LIMIT + 1 }, (_, value) => ({
         value,
@@ -23,7 +21,7 @@
     const actionMarker = $derived(
         actionCells[Math.min(gameSession.gameState.actionTrack, ACTION_TRACK_LIMIT)]
     )
-    const dividendIndex = $derived(Math.min(gameSession.gameState.dividendsPaid, 6))
+    const round = $derived(Math.min(gameSession.gameState.dividendsPaid, DIVIDENDS_BEFORE_FINAL) + 1)
 </script>
 
 <g class="action-track">
@@ -44,33 +42,19 @@
         />
         <text x={cell.x + ACTION_TRACK_CELL / 2} y={cell.y + 16} class="number">{cell.value}</text>
     {/each}
-    <Cube x={actionMarker.x + ACTION_TRACK_CELL / 2} y={actionMarker.y + ACTION_TRACK_CELL / 2 + 1} size={17} />
+    <Cube
+        x={actionMarker.x + ACTION_TRACK_CELL / 2}
+        y={actionMarker.y + ACTION_TRACK_CELL / 2 + 1}
+        size={22}
+    />
 </g>
 
-<g class="dividend-track">
-    <text x={DIVIDEND_TRACK_ORIGIN.x} y={DIVIDEND_TRACK_ORIGIN.y - 12} class="heading">Dividends Paid</text>
-    {#each DIVIDEND_LABELS as label, index (label)}
-        {@const x = DIVIDEND_TRACK_ORIGIN.x + index * DIVIDEND_TRACK_CELL}
-        <rect
-            {x}
-            y={DIVIDEND_TRACK_ORIGIN.y}
-            width={DIVIDEND_TRACK_CELL - 8}
-            height="40"
-            rx="3"
-            class="dividend-cell"
-            class:final={label === 'F'}
-        />
-        <text x={x + (DIVIDEND_TRACK_CELL - 8) / 2} y={DIVIDEND_TRACK_ORIGIN.y + 28} class="dividend-label"
-            >{label}</text
-        >
-        {#if index === dividendIndex}
-            <Cube x={x + DIVIDEND_TRACK_CELL - 14} y={DIVIDEND_TRACK_ORIGIN.y + 8} size={15} />
-        {/if}
-    {/each}
-    <text x={DIVIDEND_TRACK_ORIGIN.x} y={DIVIDEND_TRACK_ORIGIN.y + 60} class="note-left"
+<g class="round-indicator">
+    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 24} class="round">Round {round}</text>
+    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 60} class="note-left"
         >Dividend per share = income ÷ 5, rounded up.</text
     >
-    <text x={DIVIDEND_TRACK_ORIGIN.x} y={DIVIDEND_TRACK_ORIGIN.y + 75} class="note-left"
+    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 75} class="note-left"
         >Final payoff per share = (income + value) ÷ shares sold, rounded up.</text
     >
 </g>
@@ -115,20 +99,10 @@
         text-anchor: middle;
     }
 
-    .dividend-cell {
-        fill: #fbf5e3;
-        stroke: #5c3f1f;
-        stroke-width: 1.6;
-    }
-
-    .dividend-cell.final {
-        fill: #f3d58b;
-    }
-
-    .dividend-label {
+    .round {
         font-family: 'Libre Baskerville', Georgia, serif;
-        font-size: 22px;
+        font-size: 28px;
+        font-weight: 700;
         fill: #3b2410;
-        text-anchor: middle;
     }
 </style>

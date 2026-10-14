@@ -7,8 +7,9 @@ export const BOARD_HEIGHT = 1124 - BOARD_TOP
 export const ACTION_TRACK_ORIGIN = { x: 1062, y: 176 }
 export const ACTION_TRACK_CELL = 24
 
-export const DIVIDEND_TRACK_ORIGIN = { x: 214, y: 166 }
-export const DIVIDEND_TRACK_CELL = 52
+export const ROUND_INDICATOR_ORIGIN = { x: 214, y: 166 }
+
+export const LINK_BOX_SIZE = 28
 
 // Johannesburg's and Bloemfontein's development boxes, row by row, lowest income first.
 export const METRO_GRIDS: Record<string, { columns: number; origin: { x: number; y: number } }> = {

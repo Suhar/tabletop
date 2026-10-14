@@ -156,7 +156,7 @@
                 {/each}
                 {#if place.level > 0}
                     {@const current = metroCells(place)[place.level]}
-                    <Cube x={current.x + METRO_CELL - 4} y={current.y + 5} size={12} />
+                    <Cube x={current.x + METRO_CELL - 6} y={current.y + 8} size={17} />
                 {/if}
             {:else}
                 <g transform="translate({place.x} {place.y})">
@@ -170,7 +170,7 @@
                         class:dark={place.kind === SettlementKind.AgriculturalRailhead}>{place.income}</text
                     >
                     {#if place.level > 0}
-                        <Cube x={12} y={-13} size={13} />
+                        <Cube x={14} y={-15} size={18} />
                     {/if}
                 </g>
             {/if}

@@ -50,7 +50,13 @@
             />
             <polygon points={starPoints(8, CONNECTION_STAR_RADIUS, 13)} class="star" />
             {#if connection.style}
-                <Cube x={0} y={1} size={18} color={connection.style.fill} edge={connection.style.dark} />
+                <Cube
+                    x={0}
+                    y={1}
+                    size={26}
+                    color={connection.style.fill}
+                    edge={connection.style.dark}
+                />
             {/if}
         </g>
         <text

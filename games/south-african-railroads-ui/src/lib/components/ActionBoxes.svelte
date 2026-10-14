@@ -2,7 +2,7 @@
     import { ACTION_BOXES, ActionBox, boxCapacity } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { BOX_NAMES } from '$lib/utils/describeAction.js'
-    import Locomotive from './icons/Locomotive.svelte'
+    import PlayerInitial from './PlayerInitial.svelte'
 
     const gameSession = getGameSession()
 
@@ -17,15 +17,15 @@
 
     const boxes = $derived(
         ACTION_BOXES.map((box) => {
-            const locomotives = gameSession.placedLocomotives
+            const occupants = gameSession.placedPlayers
                 .filter((player) => player.locomotive === box)
-                .map((player) => gameSession.colors.getPlayerUiColor(player.playerId))
-            const slots = Math.max(boxCapacity(box, playerCount), locomotives.length)
+                .map((player) => player.playerId)
+            const slots = Math.max(boxCapacity(box, playerCount), occupants.length)
             return {
                 box,
                 title: BOX_NAMES[box],
                 advance: ADVANCE[box],
-                slots: Array.from({ length: slots }, (_, index) => locomotives[index]),
+                slots: Array.from({ length: slots }, (_, index) => occupants[index]),
                 selectable: gameSession.selectableBoxes.includes(box)
             }
         })
@@ -38,11 +38,9 @@
         <span class="advance">{entry.advance}</span>
     </span>
     <span class="slots">
-        {#each entry.slots as color, index (index)}
+        {#each entry.slots as playerId, index (index)}
             <span class="slot">
-                {#if color}
-                    <svg viewBox="-25 -20 50 36" aria-hidden="true"><Locomotive {color} /></svg>
-                {/if}
+                {#if playerId}<PlayerInitial {playerId} />{/if}
             </span>
         {/each}
     </span>
@@ -140,11 +138,6 @@
         background: #efe3c4;
     }
 
-    .slot svg {
-        width: 30px;
-        height: 22px;
-    }
-
     @media (max-width: 639px) {
         .action-boxes {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -165,9 +158,5 @@
             height: 18px;
         }
 
-        .slot svg {
-            width: 23px;
-            height: 16px;
-        }
     }
 </style>

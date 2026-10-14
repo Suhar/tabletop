@@ -63,9 +63,9 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
             : []
     })
 
-    // Every locomotive starts in Construct Track, but the boxes show one only once its player has
+    // Every locomotive starts in Construct Track, but the boxes show a player only once they have
     // chosen a first action.
-    placedLocomotives: HydratedSarPlayerState[] = $derived.by(() => {
+    placedPlayers: HydratedSarPlayerState[] = $derived.by(() => {
         const turnManager = this.gameState.turnManager
         const actingPlayerId =
             this.gameState.machineState === MachineState.ChoosingAction
