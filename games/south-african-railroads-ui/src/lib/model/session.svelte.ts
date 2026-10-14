@@ -1,6 +1,8 @@
+import type { AuctionParticipant } from '@tabletop/common'
 import { GameSession } from '@tabletop/frontend-components'
 import {
     ActionBox,
+    AuctionKind,
     BuildConnection,
     BuildTrack,
     ChooseAction,
@@ -8,6 +10,7 @@ import {
     DelegateBuild,
     Develop,
     FinishDevelopment,
+    INITIAL_OFFERING,
     MachineState,
     OfferShare,
     PassBid,
@@ -29,6 +32,18 @@ import {
 } from './selection.js'
 
 export type DevelopTarget = { settlementId: string; cost: number }
+
+export type AuctionView = {
+    railroadId: RailroadId
+    kind: AuctionKind
+    sellerId: string | undefined
+    openerId: string | undefined
+    minimum: number
+    seats: AuctionParticipant[]
+    currentBidderId: string | undefined
+    smallestBid: number
+    upcomingOfferings: RailroadId[]
+}
 
 export class SarGameSession extends GameSession<SarGameState, HydratedSarGameState> {
     private buildSelection: BuildSelection = $state({})
@@ -266,6 +281,35 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
     }
 
     bidding = $derived(this.actingIn(MachineState.Bidding))
+
+    auctionView: AuctionView | undefined = $derived.by(() => {
+        const auction = this.gameState.auction
+        if (!auction) {
+            return undefined
+        }
+        return {
+            railroadId: auction.railroadId,
+            kind: auction.kind,
+            sellerId: auction.sellerId,
+            openerId: auction.bidding.auctioneerId,
+            minimum: auction.minimum,
+            seats: auction.bidding.participants,
+            currentBidderId: this.gameState.bidding().currentBidderId,
+            smallestBid: this.gameState.smallestBid(),
+            upcomingOfferings:
+                auction.kind === AuctionKind.InitialOffering
+                    ? INITIAL_OFFERING.filter(
+                          (railroadId) =>
+                              railroadId !== auction.railroadId &&
+                              !this.gameState.railroad(railroadId).open
+                      )
+                    : []
+        }
+    })
+
+    displayName(playerId: string): string {
+        return playerId === this.myPlayerId ? 'You' : this.getPlayerName(playerId)
+    }
 
     async placeBid(amount: number) {
         await this.applyAction(this.createPlayerAction(PlaceBid, { amount }))

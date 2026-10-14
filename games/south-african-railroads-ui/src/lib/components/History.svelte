@@ -7,6 +7,7 @@
         actionSale,
         describeAction,
         saleDescription,
+        winVerb,
         withdrawnBidders
     } from '$lib/utils/describeAction.js'
     import { entryActions, historyEntries, type HistoryEntry } from '$lib/utils/history.js'
@@ -15,10 +16,12 @@
 
     const gameSession = getGameSession()
 
-    const entries = $derived(
-        historyEntries(
-            gameSession.actions.toSorted((a, b) => (a.index ?? 0) - (b.index ?? 0))
-        ).toReversed()
+    const chronological = $derived(
+        historyEntries(gameSession.actions.toSorted((a, b) => (a.index ?? 0) - (b.index ?? 0)))
+    )
+    const entries = $derived(chronological.toReversed())
+    const entryNumbers = $derived(
+        new Map(chronological.map((entry, index) => [entry.key, index + 1]))
     )
 
     async function jumpTo(entry: HistoryEntry) {
@@ -44,10 +47,16 @@
     {#if gameSession.gameState.result && gameSession.gameState.winningPlayerIds.length > 0}
         <div class="milestone">
             Game over:
-            {#each gameSession.gameState.winningPlayerIds as playerId (playerId)}
-                <PlayerName {playerId} />
+            {#each gameSession.gameState.winningPlayerIds as playerId, index (playerId)}
+                {#if index > 0}and{/if}
+                <PlayerName
+                    {playerId}
+                    capitalization={index > 0 && playerId === gameSession.myPlayerId
+                        ? 'none'
+                        : 'capitalize'}
+                />
             {/each}
-            {gameSession.gameState.winningPlayerIds.length > 1 ? 'share the win' : 'wins'}
+            {winVerb(gameSession.gameState.winningPlayerIds, gameSession.myPlayerId)}
         </div>
     {/if}
     {#each entries as entry (entry.key)}
@@ -59,6 +68,7 @@
                 onclick={() => jumpTo(entry)}
                 onkeydown={(event) => onKey(event, entry)}
             >
+                <span class="number">No. {entryNumbers.get(entry.key)}</span>
                 <Description description={describeAction(entry.action)} />
             </div>
         {:else}
@@ -71,6 +81,7 @@
                     onclick={() => jumpTo(entry)}
                     onkeydown={(event) => onKey(event, entry)}
                 >
+                    <span class="number">No. {entryNumbers.get(entry.key)}</span>
                     {#if entry.kind === 'turn'}
                         <PlayerName playerId={entry.playerId} />
                         <span class="box">{BOX_NAMES[entry.box]}</span>
@@ -127,6 +138,13 @@
         align-items: center;
         gap: 6px;
         font-weight: 700;
+    }
+
+    .number {
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.7;
     }
 
     .box {

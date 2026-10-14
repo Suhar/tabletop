@@ -6,6 +6,11 @@
     } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
+    import ShareCertificate, {
+        CERTIFICATE_HEIGHT,
+        CERTIFICATE_WIDTH
+    } from './ShareCertificate.svelte'
+    import Stamp from './Stamp.svelte'
 
     let {
         railroadId,
@@ -15,12 +20,22 @@
 
     const gameSession = getGameSession()
 
+    const SHARE_OFFSET_X = 4
+    const SHARE_OFFSET_Y = 3
+    const STACK_STEPS = SHARES_PER_RAILROAD - 1
+
     const definition = $derived(railroadDefinition(railroadId))
     const style = $derived(RAILROAD_STYLE[railroadId])
     const railroad = $derived(gameSession.gameState.railroad(railroadId))
-    const shares = $derived(
-        Array.from({ length: SHARES_PER_RAILROAD }, (_, index) => railroad.owners[index])
-    )
+    const sharesLeft = $derived(gameSession.gameState.unsoldShares(railroadId))
+
+    function initials(name: string): string {
+        return name
+            .split(/\s+/)
+            .map((word) => word.charAt(0).toUpperCase())
+            .join('')
+            .slice(0, 2)
+    }
 
     function choose() {
         if (choice === 'offer') {
@@ -34,32 +49,85 @@
 {#snippet body()}
     <div class="head" style:background={style.fill} style:color={style.text}>
         <span class="short" title={definition.name}>{definition.shortName}</span>
-        <span class="treasury" title="Treasury">${railroad.treasury}</span>
+        <span class="treasury">
+            <span class="treasury-label">Treasury</span>
+            <span class="money">${railroad.treasury}</span>
+        </span>
     </div>
-    {#if railroad.open}
-        <div class="stats">
-            <span>Income <strong>{gameSession.gameState.income(railroadId)}</strong></span>
-            <span>Value <strong>{gameSession.gameState.value(railroadId)}</strong></span>
-            <span>Div <strong>{gameSession.gameState.dividendPerShare(railroadId)}</strong></span>
-        </div>
-    {:else if railroadId === RailroadId.ZASM}
-        <div class="stats closed-note">Opens when track reaches Johannesburg</div>
-    {:else}
-        <div class="stats closed-note">Opens in the initial offering</div>
-    {/if}
-    <div class="shares" title="{railroad.owners.length} of {SHARES_PER_RAILROAD} shares sold">
-        {#each shares as owner, index (index)}
-            <span class="share" class:sold={owner} style:--rr={style.fill}>
-                {#if owner}
+    <div class="ledger">
+        <div
+            class="pile"
+            title="{sharesLeft} of {SHARES_PER_RAILROAD} shares left for sale"
+        >
+            {#if sharesLeft > 0}
+                <span
+                    class="stack"
+                    style:width="{CERTIFICATE_WIDTH + SHARE_OFFSET_X * STACK_STEPS}px"
+                    style:height="{CERTIFICATE_HEIGHT + SHARE_OFFSET_Y * STACK_STEPS}px"
+                >
+                    {#each Array.from({ length: sharesLeft }, (_, index) => STACK_STEPS - sharesLeft + 1 + index) as step (step)}
+                        <span
+                            class="stacked"
+                            aria-hidden="true"
+                            style:left="{SHARE_OFFSET_X * step}px"
+                            style:top="{SHARE_OFFSET_Y * step}px"
+                        >
+                            <ShareCertificate {railroadId} />
+                        </span>
+                    {/each}
+                </span>
+                <span class="count">{sharesLeft} left</span>
+            {:else}
+                <span class="sold-out">
                     <span
-                        class="owner"
-                        style:background={gameSession.colors.getPlayerUiColor(owner)}
-                        title={gameSession.getPlayerName(owner)}
+                        class="empty-slot"
+                        style:width="{CERTIFICATE_WIDTH}px"
+                        style:height="{CERTIFICATE_HEIGHT}px"
                     ></span>
-                {/if}
-            </span>
-        {/each}
+                    <Stamp label="All sold" />
+                </span>
+            {/if}
+        </div>
+        {#if railroad.open}
+            <div class="rows">
+                <div class="entry" title="Income: the settlements along its track">
+                    <span>Income</span><span class="money"
+                        >${gameSession.gameState.income(railroadId)}</span
+                    >
+                </div>
+                <div class="entry" title="Value: its track and external connections">
+                    <span>Value</span><span class="money"
+                        >${gameSession.gameState.value(railroadId)}</span
+                    >
+                </div>
+                <div class="entry" title="Dividend per share: income ÷ {SHARES_PER_RAILROAD}, rounded up">
+                    <span>Dividend</span><span class="money"
+                        >${gameSession.gameState.dividendPerShare(railroadId)}</span
+                    >
+                </div>
+            </div>
+        {:else}
+            <div class="closed-note">
+                {railroadId === RailroadId.ZASM
+                    ? 'Opens when track reaches Johannesburg'
+                    : 'Opens in the initial offering'}
+            </div>
+        {/if}
     </div>
+    {#if railroad.owners.length > 0}
+        <div class="holders">
+            <span class="holders-label">Held by</span>
+            {#each railroad.owners as owner, index (index)}
+                <span
+                    class="holder"
+                    style:background={gameSession.colors.getPlayerUiColor(owner)}
+                    style:color={gameSession.colors.getPlayerTextColorValue(owner)}
+                    title={gameSession.getPlayerName(owner)}
+                    >{initials(gameSession.getPlayerName(owner))}</span
+                >
+            {/each}
+        </div>
+    {/if}
 {/snippet}
 
 {#if choice}
@@ -95,7 +163,8 @@
         border-radius: 6px;
         background: #fbf5e3;
         color: #3b2410;
-        font-family: 'Libre Baskerville', Georgia, serif;
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-size: 13px;
         box-shadow: 0 1px 3px rgba(40, 24, 8, 0.15);
     }
 
@@ -124,9 +193,10 @@
 
     .head {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
-        padding: 2px 8px;
+        padding-left: 8px;
+        font-family: 'Libre Baskerville', Georgia, serif;
         font-weight: 700;
     }
 
@@ -135,54 +205,145 @@
     }
 
     .treasury {
-        font-size: 14px;
-    }
-
-    .stats {
         display: flex;
-        justify-content: space-between;
+        align-items: center;
+        align-self: stretch;
         gap: 6px;
-        padding: 3px 8px 0;
-        font-size: 11px;
-        color: #6b4a28;
+        min-height: 24px;
+        font-family: 'Courier Prime', 'Courier New', monospace;
     }
 
-    .stats strong {
-        font-size: 14px;
-        color: #2c1d0e;
+    .treasury-label {
+        font-size: 10px;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.85;
+    }
+
+    .treasury .money {
+        border-left-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .ledger {
+        display: flex;
+        border-bottom: 1px solid #e0d1ac;
+    }
+
+    .pile {
+        position: relative;
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        width: 78px;
+        padding: 5px 0 3px;
+        border-right: 1px solid #e0d1ac;
+        background: #f3e7c4;
+        --stamp-size: 9px;
+    }
+
+    .stack {
+        position: relative;
+    }
+
+    .stacked {
+        position: absolute;
+        display: flex;
+        border-radius: 2px;
+        box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
+    }
+
+    .sold-out {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        align-self: stretch;
+        justify-content: center;
+    }
+
+    .empty-slot {
+        box-sizing: border-box;
+        border: 1.5px dashed #c4b496;
+        border-radius: 2px;
+    }
+
+    .count {
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .rows {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+    }
+
+    .entry {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: space-between;
+        padding-left: 8px;
+        border-bottom: 1px solid #e0d1ac;
+    }
+
+    .entry:last-child {
+        border-bottom: 0;
+    }
+
+    .money {
+        display: flex;
+        align-items: center;
+        align-self: stretch;
+        justify-content: flex-end;
+        min-width: 52px;
+        padding: 0 8px;
+        border-left: 1px solid #d9b98a;
+        font-size: 15px;
+        font-weight: 700;
     }
 
     .closed-note {
-        font-style: italic;
-    }
-
-    .shares {
         display: flex;
-        gap: 4px;
-        padding: 4px 8px 6px;
+        flex: 1;
+        align-items: center;
+        padding: 0 8px;
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 11px;
+        font-style: italic;
+        color: #6b4a28;
     }
 
-    .share {
+    .holders {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px 8px 4px;
+    }
+
+    .holders-label {
+        margin-right: 3px;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #6b4a28;
+    }
+
+    .holder {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 22px;
-        border: 1px solid #a88a5c;
-        border-radius: 3px;
-        background: #efe3c4;
-        box-shadow: inset 0 0 0 2px #efe3c4, inset 0 0 0 3px var(--rr);
-    }
-
-    .share.sold {
-        background: #fffdf6;
-        box-shadow: inset 0 0 0 2px #fffdf6, inset 0 0 0 3px var(--rr);
-    }
-
-    .owner {
-        width: 12px;
-        height: 12px;
-        border: 1.2px solid #1d140b;
-        border-radius: 999px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 2px;
+        border-radius: 2px;
+        font-size: 11px;
+        font-weight: 700;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
     }
 </style>

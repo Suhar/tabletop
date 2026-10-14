@@ -1,9 +1,15 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
-    import { MachineState, freeBuildHome, settlement } from '@tabletop/south-african-railroads'
+    import {
+        MachineState,
+        freeBuildHome,
+        railroadDefinition,
+        settlement
+    } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { linkName } from '$lib/utils/describeAction.js'
     import AuctionPanel from './AuctionPanel.svelte'
+    import BigShareCertificate from './BigShareCertificate.svelte'
     import RailroadBadge from './RailroadBadge.svelte'
     import WaitingView from './WaitingView.svelte'
 
@@ -72,8 +78,8 @@
             {@render railroadChoices()}
         {:else if gameSession.firstLink}
             <p class="prompt">
-                {linkName(gameSession.firstLink)} chosen. Choose a second link to build both for $15,
-                or build this one alone.
+                {linkName(gameSession.firstLink)} chosen. Add a second link for $15 in all, or build
+                this one alone.
             </p>
             <div class="row">
                 <button type="button" class="primary" onclick={() => gameSession.buildFirstLinkAlone()}
@@ -84,9 +90,8 @@
             <p class="prompt">
                 Build for the <RailroadBadge railroadId={gameSession.selectedRailroad} /> (treasury ${state.railroad(
                     gameSession.selectedRailroad
-                ).treasury}): choose a link for $5{#if state.doubleBuilds(gameSession.selectedRailroad).length > 0},
-                    or the first of two for $15{/if}{#if gameSession.connectionTargets.length > 0}, or
-                    an external connection{/if}.
+                ).treasury}): one link $5{#if state.doubleBuilds(gameSession.selectedRailroad).length > 0}, two
+                    links $15{/if}{#if gameSession.connectionTargets.length > 0}, or a connection{/if}.
             </p>
         {/if}
     {:else if machineState === MachineState.DevelopingSettlements}
@@ -97,6 +102,9 @@
                 Develop a second settlement for $3 of your own cash, or Johannesburg free.
             {/if}
         </p>
+        <p class="effects">
+            It moves to its next income, and every railroad link into it earns the difference.
+        </p>
         {#if gameSession.mayFinishDeveloping}
             <div class="row">
                 <button type="button" class="secondary" onclick={() => gameSession.finishDevelopment()}
@@ -106,35 +114,48 @@
         {/if}
     {:else if machineState === MachineState.OfferingStock}
         <p class="prompt">
-            {#if state.unsoldOffers().length > 0}
+            {#if state.unsoldOffers().length > 0 && holdings.length > 0}
                 Offer a railroad's unsold share, or sell one of your own.
+            {:else if state.unsoldOffers().length > 0}
+                Offer a railroad's unsold share.
             {:else}
                 Every share is sold. You may sell one of your own.
             {/if}
         </p>
-        <div class="row">
-            {#each state.unsoldOffers() as railroadId (railroadId)}
-                <button
-                    type="button"
-                    class="secondary"
-                    onclick={() => gameSession.offerShare(railroadId, false)}
-                    >Offer <RailroadBadge {railroadId} /></button
-                >
-            {/each}
-            {#each holdings as holding (holding.railroadId)}
-                <button
-                    type="button"
-                    class="secondary"
-                    onclick={() => gameSession.offerShare(holding.railroadId, true)}
-                    >Sell my <RailroadBadge railroadId={holding.railroadId} /></button
-                >
-            {/each}
-            {#if state.unsoldOffers().length === 0}
+        {#if state.unsoldOffers().length > 0}
+            <div class="row" role="group" aria-label="Railroad shares">
+                {#each state.unsoldOffers() as railroadId (railroadId)}
+                    <BigShareCertificate
+                        {railroadId}
+                        choice={{
+                            label: `Offer a ${railroadDefinition(railroadId).shortName} share`,
+                            onclick: () => gameSession.offerShare(railroadId, false)
+                        }}
+                    />
+                {/each}
+            </div>
+        {/if}
+        {#if holdings.length > 0}
+            <div class="row" role="group" aria-label="Your shares">
+                <span class="group-label">Yours</span>
+                {#each holdings as holding (holding.railroadId)}
+                    <BigShareCertificate
+                        railroadId={holding.railroadId}
+                        choice={{
+                            label: `Sell one of your ${railroadDefinition(holding.railroadId).shortName} shares`,
+                            onclick: () => gameSession.offerShare(holding.railroadId, true)
+                        }}
+                    />
+                {/each}
+            </div>
+        {/if}
+        {#if state.unsoldOffers().length === 0}
+            <div class="row">
                 <button type="button" class="secondary" onclick={() => gameSession.declineOffer()}
                     >Offer nothing</button
                 >
-            {/if}
-        </div>
+            </div>
+        {/if}
     {:else}
         <WaitingView />
     {/if}
@@ -157,11 +178,29 @@
         text-align: center;
     }
 
+    .effects {
+        margin: 0;
+        font-size: 13px;
+        font-style: italic;
+        color: #6b4a28;
+        text-align: center;
+    }
+
     .row {
         display: flex;
         flex-wrap: wrap;
+        align-items: center;
         justify-content: center;
         gap: 8px;
+    }
+
+    .group-label {
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #6b4a28;
     }
 
     @media (max-width: 639px) {

@@ -44,9 +44,17 @@ export function saleDescription(sale: ShareSale): Description {
         return ['nobody bought the ', railroad, ' share']
     }
     if (sale.price === 0 && sale.kind !== AuctionKind.OfferStock) {
-        return [{ playerId: sale.buyerId }, ' takes the ', railroad, ' share free']
+        return [{ playerId: sale.buyerId }, ' took the ', railroad, ' share free']
     }
-    return [{ playerId: sale.buyerId }, ` buys the `, railroad, ` share for $${sale.price}`]
+    return [{ playerId: sale.buyerId }, ' bought the ', railroad, ` share for $${sale.price}`]
+}
+
+// "You" is plural in form, so a lone winner who is the viewer takes "win".
+export function winVerb(winnerIds: readonly string[], myPlayerId: string | undefined): string {
+    if (winnerIds.length > 1) {
+        return 'share the win'
+    }
+    return winnerIds[0] === myPlayerId ? 'win' : 'wins'
 }
 
 export function describeAction(action: GameAction): Description {
@@ -97,7 +105,7 @@ export function describeAction(action: GameAction): Description {
     if (isOfferShare(action)) {
         const minimum = action.metadata ? ` · minimum $${action.metadata.minimum}` : ''
         return action.ownShare
-            ? ['offered one of their own ', { railroadId: action.railroadId }, ` shares${minimum}`]
+            ? ['offered a ', { railroadId: action.railroadId }, ` share for resale${minimum}`]
             : ['offered a ', { railroadId: action.railroadId }, ` share${minimum}`]
     }
     if (isDeclineOffer(action)) {

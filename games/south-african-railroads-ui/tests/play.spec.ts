@@ -57,7 +57,7 @@ async function playInitialOffering(page: Page) {
             if (step % 3 === 0 && (await bid.count()) > 0) {
                 // Bids fund the treasuries; $1 bids leave every railroad unable to build.
                 for (let raise = 0; raise < 15; raise++) {
-                    await page.getByRole('button', { name: '+', exact: true }).click()
+                    await page.getByRole('button', { name: 'Raise the bid' }).click()
                 }
                 await bid.click()
             } else {
@@ -76,7 +76,7 @@ async function playInitialOffering(page: Page) {
 
 test('plays the initial offering and a construction turn on the board', async ({ page }) => {
     await createGame(page)
-    await expect(page.getByText('Initial offering:')).toBeVisible()
+    await expect(page.getByText('Initial offering', { exact: true })).toBeVisible()
     await screenshot(page, '01-initial-auction')
 
     await playInitialOffering(page)

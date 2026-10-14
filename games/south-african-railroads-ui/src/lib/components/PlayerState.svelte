@@ -1,7 +1,7 @@
 <script lang="ts">
     import { RAILROADS, type HydratedSarPlayerState } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
+    import ShareCertificate from './ShareCertificate.svelte'
 
     let { playerState }: { playerState: HydratedSarPlayerState } = $props()
 
@@ -17,7 +17,6 @@
             const each = gameSession.gameState.nextDividendPerShare(railroad.id)
             return {
                 railroad,
-                style: RAILROAD_STYLE[railroad.id],
                 shares,
                 each,
                 amount: shares * each,
@@ -35,7 +34,10 @@
         <span class="name">{gameSession.getPlayerName(playerId)}</span>
         <span class="cash" title="Cash in hand">${playerState.cash}</span>
     </div>
-    <div class="kind">SHAREHOLDER · RETURN</div>
+    <div class="kind">
+        {#if acting}<span class="to-act">To act</span>{/if}
+        SHAREHOLDER · RETURN
+    </div>
     {#each lines as line (line.railroad.id)}
         <div
             class="line"
@@ -45,11 +47,7 @@
         >
             <span class="certs">
                 {#each Array.from({ length: line.shares }, (_, index) => index) as share (share)}
-                    <span
-                        class="cert"
-                        style:--rr={line.style.fill}
-                        style:--rr-text={line.style.text}>{line.railroad.shortName}</span
-                    >
+                    <ShareCertificate railroadId={line.railroad.id} />
                 {/each}
                 {#if line.controls}<span class="control" aria-label="controls">★</span>{/if}
             </span>
@@ -129,7 +127,23 @@
         font-weight: 700;
     }
 
+    .to-act {
+        position: absolute;
+        top: 50%;
+        left: 8px;
+        transform: translateY(-50%);
+        border-radius: 2px;
+        padding: 0 5px;
+        background: var(--player);
+        color: var(--player-text);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+    }
+
     .kind {
+        position: relative;
         padding: 3px 0;
         border-bottom: 1px dashed #a88a5c;
         font-size: 10px;
@@ -152,24 +166,6 @@
         gap: 3px;
     }
 
-    .cert {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 40px;
-        height: 19px;
-        padding: 0 4px;
-        border-radius: 2px;
-        background: var(--rr);
-        color: var(--rr-text);
-        font-family: 'Libre Baskerville', Georgia, serif;
-        font-size: 10.5px;
-        font-weight: 700;
-        box-shadow:
-            inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
-            0 0 0 1px rgba(0, 0, 0, 0.35);
-    }
-
     .control {
         color: #c8961a;
     }
@@ -181,7 +177,7 @@
     }
 
     .amount {
-        font-weight: 700;
+        font-variant-numeric: tabular-nums;
     }
 
     .none {
@@ -196,7 +192,7 @@
         justify-content: space-between;
         padding: 4px 10px 2px;
         border-top: 1px dashed #a88a5c;
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 700;
     }
 
