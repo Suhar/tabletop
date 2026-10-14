@@ -62,5 +62,9 @@
   {
     "gameId": "napoleons-triumph",
     "packageId": "napoleons-triumph"
+  },
+  {
+    "gameId": "south-african-railroads",
+    "packageId": "south-african-railroads"
   }
 ]

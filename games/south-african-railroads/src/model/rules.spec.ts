@@ -12,7 +12,7 @@ import { Definition } from '../definition/definition.js'
 import { SarRuntime } from '../definition/runtime.js'
 import { MachineState } from '../definition/states.js'
 import { RailroadId } from '../components/railroads.js'
-import { ActionBox } from './actionBoxes.js'
+import { ActionBox, boxCapacity } from './actionBoxes.js'
 import type { HydratedSarGameState, SarGameState } from './gameState.js'
 import { homeLinks } from './track.js'
 import { freeBuildHome } from './freeBuild.js'
@@ -107,6 +107,20 @@ describe('the initial offering', () => {
         expect(hydrated.railroad(RailroadId.CdFM).treasury).toBe(7)
         expect(hydrated.getPlayerState('a').cash).toBe(63)
     })
+
+    it('drops a bidder who cannot afford the next bid', () => {
+        let state = engine.startGame(game, {
+            masterSeed: '0123456789abcdef0123456789abcdef',
+            startingPositions: { playerIds: ['a', 'b', 'c', 'd'] }
+        }).initialState
+        const b = state.players.find((player) => player.playerId === 'b')
+        assertExists(b, 'Player b is seated')
+        b.cash = 7
+        state = run(state, { type: ActionType.PlaceBid, amount: 7 })
+        const hydrated = hydrate(state)
+        expect(hydrated.bidding().remainingPlayerIds).not.toContain('b')
+        expect(hydrated.activePlayerIds).toEqual(['c'])
+    })
 })
 
 describe('income and value', () => {
@@ -174,6 +188,23 @@ describe('choosing an action', () => {
         expect(state.availableBoxes('a')).toContain(ActionBox.DevelopSettlements)
         state.getPlayerState('d').locomotive = ActionBox.DevelopSettlements
         expect(state.availableBoxes('a')).not.toContain(ActionBox.DevelopSettlements)
+    })
+
+    it('ends the turn of an action with nothing to do', () => {
+        const state = afterInitialOffering()
+        for (const railroad of state.railroads.filter((candidate) => candidate.open)) {
+            railroad.owners = ['b', 'b', 'b', 'b', 'b']
+        }
+        const after = hydrate(run(state, { type: ActionType.ChooseAction, box: ActionBox.OfferStock }))
+        expect(after.getPlayerState('a').locomotive).toBe(ActionBox.OfferStock)
+        expect(after.machineState).toBe(MachineState.ChoosingAction)
+        expect(after.activePlayerIds).toEqual(['b'])
+    })
+
+    it('opens every Offer Stock slot the redrawn board prints', () => {
+        expect([3, 4, 5, 6].map((count) => boxCapacity(ActionBox.OfferStock, count))).toEqual([
+            2, 3, 3, 2
+        ])
     })
 })
 
