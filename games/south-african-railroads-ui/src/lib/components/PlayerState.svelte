@@ -9,7 +9,6 @@
 
     const playerId = $derived(playerState.playerId)
     const color = $derived(gameSession.colors.getPlayerUiColor(playerId))
-    const textColor = $derived(gameSession.colors.getPlayerTextColorValue(playerId))
     const acting = $derived(gameSession.shownState.activePlayerIds.includes(playerId))
     const lines = $derived(
         RAILROADS.map((railroad) => {
@@ -29,7 +28,7 @@
     const projected = $derived(gameSession.shownState.projectedFinalCash(playerId))
 </script>
 
-<div class="ticket" class:acting style:--player={color} style:--player-text={textColor}>
+<div class="ticket" class:acting style:--player={color}>
     <div class="band">
         <span class="name">{gameSession.getPlayerName(playerId)}</span>
         <span class="cash" title="Cash in hand">${playerState.cash}</span>
@@ -72,10 +71,20 @@
         overflow: hidden;
         border: 3px solid #f3e7c4;
         border-radius: 5px;
+        padding-left: 16px;
         background: #f3e7c4;
         color: #3b2410;
         font-family: 'Courier Prime', 'Courier New', monospace;
         box-shadow: 0 2px 4px rgba(40, 24, 8, 0.3);
+    }
+
+    .ticket::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 16px;
+        background: var(--player);
+        box-shadow: inset -1.5px 0 0 rgba(0, 0, 0, 0.3);
     }
 
     .ticket.acting {
@@ -89,8 +98,7 @@
         justify-content: space-between;
         gap: 8px;
         padding: 4px 10px;
-        background: var(--player);
-        color: var(--player-text);
+        border-bottom: 1px dashed #a88a5c;
     }
 
     .name {
