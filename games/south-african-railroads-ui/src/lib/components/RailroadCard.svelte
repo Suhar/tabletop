@@ -64,7 +64,7 @@
                             style:left="{SHARE_OFFSET_X * step}px"
                             style:top="{SHARE_OFFSET_Y * step}px"
                         >
-                            <ShareCertificate {railroadId} />
+                            <ShareCertificate {railroadId} labelled={step === STACK_STEPS} />
                         </span>
                     {/each}
                 </span>

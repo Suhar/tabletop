@@ -7,7 +7,7 @@
     import { railroadDefinition, type RailroadId } from '@tabletop/south-african-railroads'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
 
-    let { railroadId }: { railroadId: RailroadId } = $props()
+    let { railroadId, labelled = true }: { railroadId: RailroadId; labelled?: boolean } = $props()
 
     const style = $derived(RAILROAD_STYLE[railroadId])
     const definition = $derived(railroadDefinition(railroadId))
@@ -19,7 +19,7 @@
     style:height="{CERTIFICATE_HEIGHT}px"
     style:--rr={style.fill}
     style:--rr-text={style.text}
-    title="{definition.name} share">{definition.shortName}</span
+    title="{definition.name} share">{labelled ? definition.shortName : ''}</span
 >
 
 <style>
