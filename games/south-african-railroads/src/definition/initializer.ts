@@ -1,5 +1,6 @@
 import {
     BaseGameInitializer,
+    assertExists,
     HydratedTurnManager,
     Prng,
     shuffle,
@@ -42,9 +43,11 @@ export class SarGameInitializer
         )
         const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
         const sarState: SarGameState = Object.assign(state, {
-            players: turnManager.turnOrder.map((playerId) =>
-                players.find((player) => player.playerId === playerId)!
-            ),
+            players: turnManager.turnOrder.map((playerId) => {
+                const player = players.find((candidate) => candidate.playerId === playerId)
+                assertExists(player, `No player ${playerId} in the turn order`)
+                return player
+            }),
             machineState: MachineState.Bidding,
             turnManager,
             railroads: RAILROADS.map((railroad) => ({
