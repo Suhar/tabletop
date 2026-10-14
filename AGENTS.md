@@ -32,6 +32,10 @@ Before designing or changing any 18xx model, Action, state/handler, logical or v
 
 For multi-step action selection, auto-selection, or `Undo` behavior, and before adding any `Back` control, read `docs/user-interactions.md`.
 
+### Harness scenarios
+
+To add a prepared position to a game's dev harness Scenarios menu, use `.agents/skills/add-harness-scenario/SKILL.md`.
+
 ### Game UI layout
 
 When building or reworking a game UI's table layout, turn header, action area, board interaction, board scaling, small-screen behavior, player panels, or history panel, read `docs/game-ui-layout.md`.
@@ -45,6 +49,8 @@ The Firestore emulator and Redis run as the `firebase` and `cache` Docker Compos
 For end-to-end verification through the hosted site, use `.agents/skills/local-hosted-game/SKILL.md`.
 
 The devcontainer is on the user's Tailscale network as `tabletop`. Bind dev servers to `0.0.0.0` (e.g. `vite --host`) and report URLs as `http://tabletop:<port>`, not `localhost`.
+
+`/tmp` is wiped when the devcontainer is rebuilt. Put scratch work that may be needed again (scripts, generators, extracted data, screenshots shown to the user) in `/workspace/tmp/<topic>/`, which is on the host mount and gitignored. Only throwaway output, such as logs for the current command, belongs in `/tmp`.
 
 ### Releasing
 

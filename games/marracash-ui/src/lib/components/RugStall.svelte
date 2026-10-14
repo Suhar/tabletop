@@ -5,7 +5,6 @@
         kilimId,
         rugFringe,
         rugOutline,
-        StallShadowFilterId,
         StallShadowOffset,
         WeavePatternId
     } from '$lib/utils/stalls.js'
@@ -39,8 +38,11 @@
     d={outline}
     transform="translate({StallShadowOffset.x} {StallShadowOffset.y})"
     fill="#3a2410"
+    stroke="#3a2410"
+    stroke-width="5"
+    stroke-opacity="0.45"
+    stroke-linejoin="round"
     opacity="0.28"
-    filter="url(#{StallShadowFilterId})"
 ></path>
 <path d={outline} fill="url(#{kilimId(color, vertical)})"></path>
 <path d={outline} fill="url(#{WeavePatternId})"></path>

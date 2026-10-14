@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { AxialCoordinates } from '@tabletop/common'
 import { GameSession } from '@tabletop/frontend-components'
 import { ActionSpace, CompanyId, MachineState } from '@tabletop/hill-country-grocers'
 import {
     choose,
     disposeSessions,
     firstTurnTable,
+    initialAuctionTable,
     oneGrocerBuildTable,
     openSessionOn,
     twoGrocerBuildTable
@@ -18,6 +20,14 @@ afterEach(() => {
 
 function spyOnActionUndo() {
     return vi.spyOn(GameSession.prototype, 'undo').mockResolvedValue()
+}
+
+function otherGrocers(
+    session: HcgGameSession,
+    coords: AxialCoordinates,
+    companyId: CompanyId
+): number {
+    return session.gameState.companiesIn(coords).filter((present) => present !== companyId).length
 }
 
 async function stageFirstHex(session: HcgGameSession) {
@@ -64,6 +74,47 @@ describe('building with a choice of grocers', () => {
         session.selectBuildCompany(CompanyId.Verbena)
         expect(session.buildCompany).toBe(CompanyId.Verbena)
         expect(session.chosenHexes).toEqual([])
+    })
+})
+
+describe('the cost shown on each buildable hex', () => {
+    it('is $2 to the bank plus $1 for each other grocer already there', () => {
+        const session = openSessionOn(twoGrocerBuildTable())
+        session.selectBuildCompany(CompanyId.AlamoCity)
+        expect(session.hexTargets.length).toBeGreaterThan(0)
+        for (const target of session.hexTargets) {
+            expect(session.placementCost(target)).toBe(
+                2 + otherGrocers(session, target, CompanyId.AlamoCity)
+            )
+        }
+    })
+
+    it('prices the next store once one is staged', async () => {
+        const session = openSessionOn(twoGrocerBuildTable())
+        session.selectBuildCompany(CompanyId.AlamoCity)
+        await stageFirstHex(session)
+        expect(session.hexTargets.length).toBeGreaterThan(0)
+        for (const target of session.hexTargets) {
+            expect(session.placementCost(target)).toBe(
+                2 + otherGrocers(session, target, CompanyId.AlamoCity)
+            )
+        }
+    })
+
+    it('lets Verbena waive the fees of its costliest store', async () => {
+        const session = openSessionOn(twoGrocerBuildTable())
+        session.selectBuildCompany(CompanyId.Verbena)
+        expect(session.hexTargets.length).toBeGreaterThan(0)
+        for (const target of session.hexTargets) {
+            expect(session.placementCost(target)).toBe(2)
+        }
+        await stageFirstHex(session)
+        const [staged] = session.chosenHexes
+        const stagedFees = otherGrocers(session, staged, CompanyId.Verbena)
+        for (const target of session.hexTargets) {
+            const targetFees = otherGrocers(session, target, CompanyId.Verbena)
+            expect(session.placementCost(target)).toBe(2 + Math.min(stagedFees, targetFees))
+        }
     })
 })
 
@@ -145,6 +196,38 @@ describe('choosing a share to auction', () => {
 
         await session.undo()
         expect(actionUndo).toHaveBeenCalledTimes(1)
+    })
+
+    it('previews the opening bid with every player seated and the opener to bid', () => {
+        const session = openSessionOn(choose(firstTurnTable(), ActionSpace.AuctionShare))
+        expect(session.auctionView).toBeUndefined()
+        session.selectAuctionCompany(CompanyId.Verbena)
+        const view = session.auctionView
+        const openerId = session.myPlayerId
+        expect(view?.opening).toBe(true)
+        expect(view?.companyId).toBe(CompanyId.Verbena)
+        expect(view?.currentBidderId).toBe(openerId)
+        expect(view?.seats[0]).toEqual({ playerId: openerId, passed: false })
+        expect(view?.seats).toHaveLength(session.gameState.players.length)
+        expect(view?.minimumBid).toBe(0)
+    })
+})
+
+describe('the initial auctions', () => {
+    it('lists the companies still to be auctioned after the current one, in the shuffled order', () => {
+        const session = openSessionOn(initialAuctionTable(2))
+        const order = session.gameState.initialAuctionOrder
+        expect(session.auctionView?.companyId).toBe(order[2])
+        expect(session.auctionView?.upcomingInitialAuctions).toEqual(order.slice(3))
+    })
+
+    it('lists nothing for the last initial auction or for a share auction', () => {
+        const lastAuction = openSessionOn(initialAuctionTable(4))
+        expect(lastAuction.auctionView?.upcomingInitialAuctions).toEqual([])
+
+        const shareAuction = openSessionOn(choose(firstTurnTable(), ActionSpace.AuctionShare))
+        shareAuction.selectAuctionCompany(CompanyId.Verbena)
+        expect(shareAuction.auctionView?.upcomingInitialAuctions).toEqual([])
     })
 })
 

@@ -74,7 +74,9 @@ test('choosing a fountain dims the board around its destinations, previews a rou
     await expect(actionPanel(page)).toContainText('Choose the destination for these visitors.')
 
     await page.getByRole('button', { name: 'Move visitors to fountain 6' }).hover()
-    await expect(page.locator('polyline')).toHaveCount(2)
+    // The route's track and its flowing dashes; its glow is drawn beneath them
+    await expect(page.locator('polyline:not(.route-glow)')).toHaveCount(2)
+    await expect(page.locator('polyline.route-glow')).toHaveCount(1)
 
     await page.getByRole('button', { name: 'Undo', exact: true }).click()
     await expect(destinationFountains(page)).toHaveCount(0)
@@ -137,7 +139,7 @@ test('emptied entrances are refilled from a chosen end of the queue', async ({ p
     await page.getByRole('button', { name: 'Move visitors to fountain 9' }).click()
 
     await expect(actionPanel(page)).toContainText('Bring new visitors')
-    const boardHalos = board(page).locator('path[filter*="candidate-halo"]')
+    const boardHalos = board(page).locator('path.candidate-halo')
     await expect(boardHalos).toHaveCount(2)
     await expect(page.locator('g[role="button"][aria-label^="Fountain"]')).toHaveCount(0)
     await expect(page.getByRole('button', { name: '3', exact: true })).toBeVisible()

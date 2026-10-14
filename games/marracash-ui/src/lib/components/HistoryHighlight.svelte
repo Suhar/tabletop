@@ -2,12 +2,7 @@
     import type { Point } from '@tabletop/common'
     import { getFountain, getShop, type MarketColor } from '@tabletop/marracash'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import {
-        cellCenter,
-        LineHaloFilterId,
-        CandidateHaloFilterId
-    } from '$lib/utils/boardGeometry.js'
-    import { shopRect, ShopTileInset } from '$lib/utils/boardGeometry.js'
+    import { cellCenter, shopRect, ShopTileInset } from '$lib/utils/boardGeometry.js'
     import { routeLine, shopBranch } from '$lib/utils/routePreview.js'
     import { stallOutline } from '$lib/utils/stalls.js'
     import {
@@ -17,6 +12,8 @@
         octagon
     } from '$lib/utils/fountainShape.js'
     import type { HistoryHighlight } from '$lib/utils/historyHighlight.js'
+
+    import RouteGlow from '$lib/components/RouteGlow.svelte'
 
     let { highlight }: { highlight: HistoryHighlight } = $props()
 
@@ -72,6 +69,12 @@
             {/each}
         </defs>
         {#each branches as branch (branch.shopId)}
+            <RouteGlow
+                id="marracash-history-glow-{branch.shopId}"
+                line={branch.line}
+                color={branch.stroke}
+                width={BranchWidth}
+            />
             <polyline
                 points={points(branch.line)}
                 fill="none"
@@ -79,9 +82,14 @@
                 stroke-width={BranchWidth}
                 stroke-linecap="round"
                 marker-end="url(#{arrowId(branch.color)})"
-                filter="url(#{LineHaloFilterId})"
             ></polyline>
         {/each}
+        <RouteGlow
+            id="marracash-history-glow"
+            line={routeLine(highlight.route)}
+            color={White}
+            width={RouteWidth}
+        />
         <polyline
             points={points(routeLine(highlight.route))}
             fill="none"
@@ -90,7 +98,6 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             marker-end="url(#{arrowId('route')})"
-            filter="url(#{LineHaloFilterId})"
         ></polyline>
     {:else if highlight.kind === 'fountain'}
         {@const fountain = getFountain(highlight.fountainId)}
@@ -103,7 +110,7 @@
             stroke={White}
             stroke-width="5"
             stroke-linejoin="round"
-            filter="url(#{CandidateHaloFilterId})"
+            class="candidate-halo"
         ></path>
     {:else}
         {@const rect = shopRect(highlight.shopId, ShopTileInset)}
@@ -114,7 +121,7 @@
             stroke={White}
             stroke-width="5"
             stroke-linejoin="round"
-            filter="url(#{CandidateHaloFilterId})"
+            class="candidate-halo"
         ></path>
     {/if}
 </g>

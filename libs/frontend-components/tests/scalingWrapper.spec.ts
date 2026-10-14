@@ -69,6 +69,24 @@ test('full screen keeps the table and page behind it from scrolling', async ({ p
     await expect.poll(() => table.evaluate(element => element.scrollLeft)).toBeLessThan(400)
 })
 
+for (const focus of [undefined, { x: 200, y: 200, width: 300, height: 200 }]) {
+    test(`the scale read as reactive state follows the view ${focus ? 'focused on a region' : 'fitted whole'}, then zoomed`, async ({ page }) => {
+        await mountWrapper(page, { maxScale: 2, focus })
+        const board = page.getByTestId('board')
+        const read = async () => Number(await page.getByTestId('scale').textContent())
+        const drawn = async () => ((await board.boundingBox())?.width ?? 0) / 1000
+        const fitted = 0.375
+        if (focus) await expect.poll(read).toBeGreaterThan(fitted)
+        else await expect.poll(read).toBe(fitted)
+        const rested = await read()
+        expect(rested).toBeCloseTo(await drawn(), 3)
+        await page.mouse.move(200, 150)
+        await page.mouse.wheel(0, -100)
+        await expect.poll(read).toBeGreaterThan(rested)
+        await expect.poll(async () => Math.abs((await read()) - (await drawn()))).toBeLessThan(0.001)
+    })
+}
+
 test('mouse wheel zooms and dragging pans without clicking the board', async ({ page }) => {
     await mountWrapper(page)
     const board = page.getByTestId('board')
@@ -299,3 +317,44 @@ for (const [overpan, expected] of [['none', { x: 0, y: 0 }], ['focus', { x: 632,
         expect(offset.y).toBeCloseTo(expected.y, 0)
     })
 }
+
+test('content drawn at its view scale is laid out at that scale once the view settles', async ({ page }) => {
+    await mountWrapper(page, { renderAtViewScale: true })
+    const board = page.getByTestId('board')
+    const drawn = () => board.evaluate(element => {
+        const zoomed = element.parentElement as HTMLElement
+        return {
+            zoom: Number(zoomed.style.zoom),
+            transform: (zoomed.parentElement as HTMLElement).style.transform,
+            ownWidth: (element as HTMLElement).offsetWidth
+        }
+    })
+    // The 1000 px board fits the 400 px view at 0.375 and is laid out there, not stretched to it
+    await expect.poll(async () => (await board.boundingBox())?.width).toBe(375)
+    expect(await drawn()).toMatchObject({ zoom: 0.375, ownWidth: 1000 })
+    expect((await drawn()).transform).toContain('scale(1)')
+
+    await board.dispatchEvent('wheel', { deltaY: -200, clientX: 200, clientY: 150 })
+    const zoomedWidth = 375 * Math.exp(0.6)
+    await expect.poll(async () => (await board.boundingBox())?.width).toBeCloseTo(zoomedWidth, 1)
+    const before = await board.boundingBox()
+    await expect.poll(async () => (await drawn()).zoom).toBeCloseTo(zoomedWidth / 1000, 3)
+    expect((await drawn()).transform).toContain('scale(1)')
+    // Redrawing moves nothing on screen, and the content still takes clicks
+    const after = await board.boundingBox()
+    expect(after!.x).toBeCloseTo(before!.x, 0)
+    expect(after!.width).toBeCloseTo(before!.width, 0)
+    await board.click()
+    await expect(page.locator('output')).toHaveText('1')
+})
+
+test('a small board rests at full size unless it may fit larger, and still zooms to the max', async ({ page }) => {
+    await mountWrapper(page, { maxScale: 2, boardWidth: 100, boardHeight: 80 })
+    const board = page.getByTestId('board')
+    await expect.poll(async () => (await board.boundingBox())?.width).toBe(100)
+    await page.reload()
+    await mountWrapper(page, { maxScale: 2, maxFitScale: 1.5, boardWidth: 100, boardHeight: 80 })
+    await expect.poll(async () => (await board.boundingBox())?.width).toBe(150)
+    await board.dispatchEvent('wheel', { deltaY: -400, clientX: 200, clientY: 150 })
+    await expect.poll(async () => (await board.boundingBox())?.width).toBe(200)
+})

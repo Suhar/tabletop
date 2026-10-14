@@ -4,17 +4,17 @@ import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedOathGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { PlayerStatus } from '../model/oathEnums.js'
-import { IMPERIAL_WARBANDS, WarbandOwner } from '../model/warbandCounts.js'
+import { WarbandOwner } from '../model/warbandCounts.js'
 import { reasonCannotPlaceOn } from '../util/powerCost.js'
 import { musterWarbandsBonus } from '../util/continuous.js'
 import { riverMusterBonus } from '../util/sitePowers.js'
-import { addWarbandsToBoard } from '../util/force.js'
+import { gainWarbandsWithOwner, warbandOwnerGainedBy, warbandsInBankFor } from '../util/force.js'
 import { reasonPersistentForbidsMuster } from '../util/persistent.js'
 import {
     anyRelaxesOccupancy,
     firstForbid,
     foldNumber,
+    foldSupplyCost,
     modifierSummary,
     ModifierUse,
     ModifierUses,
@@ -24,7 +24,6 @@ import {
     type ActionPlan,
     type ActiveModifier
 } from '../util/modifiers.js'
-import { countOf } from '../util/warbands.js'
 import { pawnSiteId } from '../util/pawn.js'
 import {
     favorPayment,
@@ -32,7 +31,6 @@ import {
     reasonCannotPayInAll,
     secretPayment
 } from '../util/actionPayment.js'
-import { ownWarbandOwner } from '../util/rule.js'
 
 /** R-5.2.1 */
 export const MUSTER_SUPPLY_COST = 1
@@ -106,15 +104,12 @@ export class HydratedMuster extends HydratableAction<typeof Muster> implements M
         }
 
         const owner = HydratedMuster.warbandOwnerFor(state, this.playerId)
-        const bank = state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank
-        const available = countOf(bank, owner)
-        const gained = Math.min(
+        const { gained } = gainWarbandsWithOwner(
+            state,
+            this.playerId,
             HydratedMuster.wanted(state, this.playerId, this.cardId, active),
-            available
+            owner
         )
-
-        bank[owner] = available - gained
-        addWarbandsToBoard(state, this.playerId, owner, gained)
 
         // R-7.4
         const after = runAfter(state, this.playerId, active, particulars)
@@ -130,8 +125,7 @@ export class HydratedMuster extends HydratableAction<typeof Muster> implements M
 
     /** R-5.2.2 — a Citizen musters the Empire's warbands, from the Chancellor's bank (R-10.13). */
     static warbandOwnerFor(state: HydratedOathGameState, playerId: string): WarbandOwner {
-        if (state.getPlayerState(playerId).status === PlayerStatus.Citizen) return IMPERIAL_WARBANDS
-        return ownWarbandOwner(state, playerId)
+        return warbandOwnerGainedBy(state, playerId)
     }
 
     /** R-5.2.2, R-7.4, R-7.1.4-H1 (Ring of Devotion), R-11.5 (River): the warbands asked for. */
@@ -150,11 +144,7 @@ export class HydratedMuster extends HydratableAction<typeof Muster> implements M
 
     /** R-9.3 — the warbands left in the bank a Muster draws from. */
     static available(state: HydratedOathGameState, playerId: string): number {
-        const owner = HydratedMuster.warbandOwnerFor(state, playerId)
-        return countOf(
-            state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank,
-            owner
-        )
+        return warbandsInBankFor(state, HydratedMuster.warbandOwnerFor(state, playerId))
     }
 
     /** Initiation Rite — "you must place a secret instead of favor". */
@@ -181,14 +171,7 @@ export class HydratedMuster extends HydratableAction<typeof Muster> implements M
         )
         if (resolved.reason) return { ...none, reason: resolved.reason }
         const active = resolved.active
-        const cost = foldNumber(
-            'supplyCost',
-            MUSTER_SUPPLY_COST,
-            state,
-            playerId,
-            active,
-            particulars
-        )
+        const cost = foldSupplyCost(MUSTER_SUPPLY_COST, state, playerId, active, particulars)
         const forbidden = firstForbid(state, playerId, active, particulars)
         if (forbidden) return { cost, active, reason: forbidden }
         if (player.supply < cost) {

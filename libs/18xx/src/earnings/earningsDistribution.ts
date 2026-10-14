@@ -53,6 +53,15 @@ export interface EarningsRules {
         revenue: number
     ): number
     roundDividend(state: DistributionState, companyId: string, amount: number): number
+    /**
+     * A holder's payment where the title rounds each holding rather than each share; undefined
+     * leaves the holder their shares times the dividend per share.
+     */
+    holderDividend?(
+        state: DistributionState,
+        companyId: string,
+        holding: { shares: number; choice: EarningsChoice; revenue: number }
+    ): number | undefined
     marketEffect(
         state: DistributionState,
         companyId: string,
@@ -63,18 +72,11 @@ export interface EarningsRules {
 export function dividendEntitlements(
     state: FinancialState,
     companyId: string,
-    recipient: (
-        certificate: Extract<Certificate, { retired: false; kind: 'share' | 'short' }>
-    ) => Owner | undefined
+    recipient: (certificate: Extract<Certificate, { kind: 'share' | 'short' }>) => Owner | undefined
 ): DividendEntitlement[] {
     const result: DividendEntitlement[] = []
     for (const certificate of state.certificates) {
-        if (
-            certificate.retired ||
-            certificate.kind === 'private' ||
-            certificate.companyId !== companyId
-        )
-            continue
+        if (certificate.kind === 'private' || certificate.companyId !== companyId) continue
         const owner = recipient(certificate)
         if (!owner) continue
         const shares = signedShares(certificate)
@@ -143,7 +145,12 @@ export class EarningsDistribution {
         const charges: CashPayment[] = []
         this.addPayment(payments, { kind: 'company', companyId }, retained)
         for (const entitlement of this.rules.entitlements(this.state, companyId)) {
-            const amount = entitlement.shares * dividendPerShare
+            const amount =
+                this.rules.holderDividend?.(this.state, companyId, {
+                    shares: entitlement.shares,
+                    choice,
+                    revenue
+                }) ?? entitlement.shares * dividendPerShare
             if (amount >= 0) this.addPayment(payments, entitlement.owner, amount)
             else
                 charges.push({

@@ -1,3 +1,4 @@
+import type { TitleNames } from './titleNames.js'
 import type { HydratedAction, MachineStateHandler } from '@tabletop/common'
 import type { ActionDefinition } from '../actions/actionDefinition.js'
 import { type OfferPileAuctionRules } from '../auctions/offerPileAuction.js'
@@ -37,6 +38,7 @@ export interface EighteenXXTitleRules<
         HydratedEighteenXXState<Schema> & HydratedEighteenXXState
 > {
     endingRules: EndingRules
+    names: TitleNames
     state: EighteenXXStateDefinition<Schema, State>
     decisionHandlers?: Partial<
         Record<
@@ -65,6 +67,8 @@ export interface EighteenXXTitleRules<
     privatePowerRules: PrivatePowerRules
     outOfTurnPrivatePowers?: boolean
     trackRules: TrackRules
+    /** Title actions in the track step that keep it open while one is still possible. */
+    additionalConstructionActions?: readonly string[]
     loanRules?: LoanRules
     cashCrisisRules?: CashCrisisRules
 }

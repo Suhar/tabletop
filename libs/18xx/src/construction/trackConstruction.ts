@@ -1,9 +1,15 @@
+import type { RevenueCenter } from '../routes/route.js'
 import * as Type from 'typebox'
 import { cashOwnedBy, controllingOwner, type Owner } from '../finance/finance.js'
 import type { CompanyState } from '../company/companyState.js'
 import { RailwayMapState, type MapStateData } from '../map/mapState.js'
 import type { RailwayMap } from '../map/map.js'
-import { Station, StationReservation } from '../map/station.js'
+import {
+    PlacedStation,
+    type Station,
+    type StationReservation,
+    type StationState
+} from '../map/station.js'
 import { CashPayment } from '../finance/cashPayments.js'
 import { TilePlacement, type TileInventory, type TileSet } from '../tiles/inventory.js'
 import { TileRotation, type TileDefinition, type TileFace, type TileEdge } from '../tiles/tile.js'
@@ -64,8 +70,7 @@ export const TrackLayDetails = Type.Object(
         consentPlayerId: Type.Optional(Type.String()),
         terrainCost: Type.Integer({ minimum: 0 }),
         allowanceCost: Type.Integer({ minimum: 0 }),
-        stations: Type.Array(Station),
-        stationReservations: Type.Array(StationReservation),
+        movedStations: Type.Array(PlacedStation),
         effects: Type.Optional(TrackLayEffects)
     },
     { additionalProperties: false }
@@ -78,14 +83,28 @@ export interface TrackRules {
     tileSet: TileSet
     colorOrder: readonly string[]
     availableColors(state: ConstructionState): readonly string[]
-    allowance(state: ConstructionState, color: string): { cost: number } | { reason: string }
+    /** Whether the company may lay a tile of the colour, replacing a tile when ``upgrade``. */
+    allowance(
+        state: ConstructionState,
+        color: string,
+        upgrade?: boolean
+    ): { cost: number } | { reason: string }
+    /**
+     * A replacement in the same colour the title allows on this hex, such as a medium city's
+     * yellow town becoming a yellow city; the title then judges its stops, and towns may become
+     * cities.
+     */
+    upgradesWithinColor?(state: ConstructionState, locationId: string, after: TileFace): boolean
+    /** Whether the company's network may continue through a revenue center, as its routes may. */
+    stopAllowed?(state: ConstructionState, companyId: string, center: RevenueCenter): boolean
     preservesStops(before: TileFace, after: TileFace): boolean
     /** Whether a tile on this hex must be one of the tiles of its colour with the most exits. */
     mostExits?(before: TileFace): boolean
     restriction(state: ConstructionState, request: TrackRequest): string | undefined
     /**
      * Whether a lay is allowed: on a home hex, touching the company's network (``connected``),
-     * adding connected track, or raising a connected city's revenue.
+     * adding connected track, raising a connected city's revenue, or putting a city or town on
+     * the company's network.
      */
     useful(change: {
         home: boolean
@@ -93,6 +112,7 @@ export interface TrackRules {
         newTrack: boolean
         increasedCityRevenue: boolean
         connectedCity: boolean
+        connectedTown: boolean
     }): boolean
     homeLocations(companyId: string): readonly string[]
     consentPlayerId?(state: ConstructionState, request: TrackRequest): string | undefined
@@ -139,7 +159,8 @@ export class TrackConstruction {
                     connected: false,
                     newTrack: false,
                     increasedCityRevenue: false,
-                    connectedCity: false
+                    connectedCity: false,
+                    connectedTown: false
                 }))
         )
     }
@@ -147,16 +168,24 @@ export class TrackConstruction {
         const companyId = this.state.trackStep?.companyId
         if (!companyId || !this.canReach(locationId)) return []
         const choices: TrackLayDetails[] = []
+        const reservations = this.state.stationReservations.filter(
+            (reservation) => reservation.locationId === locationId
+        )
         for (const definition of this.rules.tileSet.definitions) {
             if (
                 !this.basicTileAllowed(locationId, definition) ||
-                'reason' in this.rules.allowance(this.state, definition.face.color)
+                'reason' in
+                    this.rules.allowance(
+                        this.state,
+                        definition.face.color,
+                        this.replacesTile(locationId)
+                    )
             )
                 continue
             for (const rotation of Rotations) {
                 const before = this.mapState.tile(locationId)
                 const after = rotateTileFace(definition.face, rotation)
-                for (const nodeMapping of tileUpgradeMappings(
+                for (const nodeMapping of this.upgradeMappings(
                     rotateTileFace(before.face, before.rotation),
                     after
                 )) {
@@ -169,7 +198,9 @@ export class TrackConstruction {
                     })
                     if (
                         result.details &&
-                        !choices.some((choice) => samePlacement(choice, result.details))
+                        !choices.some((choice) =>
+                            samePlacement(choice, result.details, reservations)
+                        )
                     )
                         choices.push(result.details)
                 }
@@ -193,7 +224,7 @@ export class TrackConstruction {
                 other.face.color === definition.face.color &&
                 this.exitCount(other.face) > this.exitCount(definition.face) &&
                 Rotations.some((rotation) =>
-                    tileUpgradeMappings(before, rotateTileFace(other.face, rotation)).some(
+                    this.upgradeMappings(before, rotateTileFace(other.face, rotation)).some(
                         (nodeMapping) =>
                             !!this.evaluatePlacement({
                                 ...request,
@@ -230,7 +261,11 @@ export class TrackConstruction {
         if (!location || !definition) return { reason: 'Unknown map location or tile' }
         if (!this.basicTileAllowed(locationId, definition))
             return { reason: 'The tile’s color, labels, or stops cannot replace this hex' }
-        const allowance = this.rules.allowance(this.state, definition.face.color)
+        const allowance = this.rules.allowance(
+            this.state,
+            definition.face.color,
+            this.replacesTile(locationId)
+        )
         if ('reason' in allowance) return allowance
         const restriction = this.rules.restriction(this.state, request)
         if (restriction) return { reason: restriction }
@@ -238,7 +273,7 @@ export class TrackConstruction {
         const before = rotateTileFace(previous.face, previous.rotation)
         const after = rotateTileFace(definition.face, rotation)
         if (
-            !tileUpgradeMappings(before, after).some(
+            !this.upgradeMappings(before, after).some(
                 (mapping) =>
                     Object.keys(mapping).length === Object.keys(nodeMapping).length &&
                     Object.entries(mapping).every(([id, target]) => nodeMapping[id] === target)
@@ -324,6 +359,9 @@ export class TrackConstruction {
                 increasedCityRevenue,
                 connectedCity: after.nodes.some(
                     (node) => node.kind === 'city' && network.nodes.has(node.id)
+                ),
+                connectedTown: after.nodes.some(
+                    (node) => node.kind === 'town' && network.nodes.has(node.id)
                 )
             })
         )
@@ -343,10 +381,12 @@ export class TrackConstruction {
                 terrainCost,
                 ...(consentPlayerId ? { consentPlayerId } : {}),
                 allowanceCost: allowance.cost,
-                stations: migrated.stations,
-                stationReservations: migrated.stationReservations
+                movedStations: migrated.moved
             }
         }
+    }
+    stationsAfter(details: TrackLayDetails): StationState {
+        return stationsAfterLay(this.state, details)
     }
     inventoryAfter(details: TrackLayDetails): TileInventory {
         return this.rules.tileSet.replace(this.state.tileInventory, {
@@ -359,7 +399,9 @@ export class TrackConstruction {
         return (this.reachability ??= new ConstructionReachability(
             this.mapState,
             this.state,
-            companyId
+            companyId,
+            (locationId, nodeId) =>
+                this.rules.stopAllowed?.(this.state, companyId, { locationId, nodeId }) === false
         ))
     }
     private availablePieces(definitionId: string): ReturnType<TileSet['availablePieces']> {
@@ -379,10 +421,18 @@ export class TrackConstruction {
                 this.availablePieces(definition.id).length > 0 &&
                 Rotations.some(
                     (rotation) =>
-                        tileUpgradeMappings(before, rotateTileFace(definition.face, rotation))
+                        this.upgradeMappings(before, rotateTileFace(definition.face, rotation))
                             .length > 0
                 )
         )
+    }
+    private replacesTile(locationId: string): boolean {
+        return this.rules.colorOrder.indexOf(this.mapState.tile(locationId).face.color) > 0
+    }
+    private upgradeMappings(before: TileFace, after: TileFace): TileNodeMapping[] {
+        return tileUpgradeMappings(before, after, {
+            townsBecomeCities: before.color === after.color
+        })
     }
     private basicTileAllowed(
         locationId: string,
@@ -393,12 +443,11 @@ export class TrackConstruction {
         const before = this.mapState.tile(locationId).face
         const after = definition.face
         if (!location.buildable || !colors.includes(after.color)) return false
-        if (
-            this.rules.colorOrder.indexOf(after.color) !==
-            this.rules.colorOrder.indexOf(before.color) + 1
-        )
-            return false
-        if (!this.rules.preservesStops(before, after)) return false
+        const colorStep =
+            this.rules.colorOrder.indexOf(after.color) - this.rules.colorOrder.indexOf(before.color)
+        if (colorStep === 0) {
+            if (!this.rules.upgradesWithinColor?.(this.state, locationId, after)) return false
+        } else if (colorStep !== 1 || !this.rules.preservesStops(before, after)) return false
         const future = location.upgradeLabels
             ?.filter(
                 (label) =>
@@ -417,9 +466,10 @@ export class TrackConstruction {
         locationId: string,
         after: TileFace,
         mapping: TileNodeMapping
-    ): Pick<ConstructionState, 'stations' | 'stationReservations'> | undefined {
+    ): (StationState & { moved: PlacedStation[] }) | undefined {
         const occupied = new Map<string, Set<number>>()
         const stations: Station[] = []
+        const moved: PlacedStation[] = []
         for (const station of this.state.stations) {
             if (station.status !== 'placed' || station.position.locationId !== locationId) {
                 stations.push(station)
@@ -438,23 +488,55 @@ export class TrackConstruction {
             if (slot === undefined) return undefined
             slots.add(slot)
             occupied.set(nodeId, slots)
-            stations.push({ ...station, position: { locationId, nodeId, slot } })
+            if (nodeId === station.position.nodeId && slot === station.position.slot) {
+                stations.push(station)
+                continue
+            }
+            const migrated = { ...station, position: { locationId, nodeId, slot } }
+            stations.push(migrated)
+            moved.push(migrated)
         }
-        const stationReservations = this.state.stationReservations.map((reservation) =>
-            reservation.locationId === locationId
-                ? { ...reservation, nodeId: mapping[reservation.nodeId] }
-                : reservation
-        )
-        return { stations, stationReservations }
+        return {
+            stations,
+            moved,
+            stationReservations: reservationsAfterLay(this.state, locationId, mapping)
+        }
     }
 }
 
-function samePlacement(first: TrackLayDetails, second: TrackLayDetails): boolean {
+export function stationsAfterLay(state: StationState, details: TrackLayDetails): StationState {
+    return {
+        stations: state.stations.map(
+            (station) => details.movedStations.find((moved) => moved.id === station.id) ?? station
+        ),
+        stationReservations: reservationsAfterLay(state, details.locationId, details.nodeMapping)
+    }
+}
+
+function reservationsAfterLay(
+    state: StationState,
+    locationId: string,
+    mapping: TileNodeMapping
+): StationReservation[] {
+    return state.stationReservations.map((reservation) =>
+        reservation.locationId === locationId
+            ? { ...reservation, nodeId: mapping[reservation.nodeId] }
+            : reservation
+    )
+}
+
+function samePlacement(
+    first: TrackLayDetails,
+    second: TrackLayDetails,
+    reservations: readonly StationReservation[]
+): boolean {
+    const reserved = ({ nodeMapping }: TrackLayDetails) =>
+        reservations.map(({ companyId, nodeId }) => [companyId, nodeMapping[nodeId]])
     return (
         first.definitionId === second.definitionId &&
         first.rotation === second.rotation &&
-        sameMembers(first.stations, second.stations) &&
-        sameMembers(first.stationReservations, second.stationReservations)
+        sameMembers(first.movedStations, second.movedStations) &&
+        sameMembers(reserved(first), reserved(second))
     )
 }
 
@@ -468,7 +550,7 @@ export function validateTrackStep(state: {
     trackStep?: TrackStep
     operatingSet?: { companyOrder: readonly string[] }
 }): void {
-    if (!['LayingTrack', 'PlacingStation', 'StationsComplete'].includes(state.machineState)) return
+    if (state.machineState !== 'LayingTrack' && state.machineState !== 'PlacingStation') return
     assert(
         state.trackStep && state.operatingSet?.companyOrder.includes(state.trackStep.companyId),
         'Track step requires an operating company'

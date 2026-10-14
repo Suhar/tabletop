@@ -1,3 +1,4 @@
+import { EighteenSeventeenNames } from '../names.js'
 import { type GameDefinition } from '@tabletop/common'
 import { createEighteenXXRuntime, defineAction, type EighteenXXTitleRules } from '@tabletop/18xx'
 import { EighteenSeventeenEndingRules } from '../endingRules.js'
@@ -120,7 +121,7 @@ import {
 } from '../shorts.js'
 import {
     BuyBackShares,
-    CorporateActionsHandler,
+    corporateActionsHandler,
     HydratedBuyBackShares,
     isBuyBackShares
 } from '../corporateActions.js'
@@ -148,6 +149,7 @@ export const EighteenSeventeenTitleRules: EighteenXXTitleRules<
 > = {
     state: EighteenSeventeenStateDefinition,
     endingRules: EighteenSeventeenEndingRules,
+    names: EighteenSeventeenNames,
     selectionAuctionRules: EighteenSeventeenAuctionRules,
     trainFundingRules: EighteenSeventeenTrainFundingRules,
     transferRules: EighteenSeventeenTransferRules,
@@ -168,7 +170,7 @@ export const EighteenSeventeenTitleRules: EighteenXXTitleRules<
     cashCrisisRules: EighteenSeventeenCashCrisisRules,
     decisionHandlers: {
         StockRound: (family) =>
-            buysOwedStations(new ShortSellingHandler(new CorporateActionsHandler(family))),
+            buysOwedStations(new ShortSellingHandler(corporateActionsHandler(family))),
         StartingOperatingSet: (family) =>
             buysOwedStations(liquidatesUnpaidStations(closesTrainStation(family))),
         OperatingSet: (family) =>

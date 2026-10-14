@@ -6,6 +6,7 @@ import { PileDeposit } from '../model/hidden.js'
 import { commitHiddenOutputs, showTakenSiteRelics } from '../util/hiddenInputs.js'
 import { tableWitnesses } from '../util/knowledge.js'
 import {
+    banditPlanContext,
     killOrRedirect,
     partiesOf,
     usedPlanContext,
@@ -13,9 +14,15 @@ import {
 } from '../util/campaignRoll.js'
 import { concludeCampaign } from '../util/campaignEnd.js'
 import { MachineState } from '../definition/states.js'
-import { isImperialPlayer, rulingWarbandOwners } from '../util/rule.js'
-import { scopeOf } from '../util/campaign.js'
-import { BANDITS_PLAN_USER, plansUsedBy, sideOf, defendingPlayerIds } from '../util/battlePlans.js'
+import { isImperialPlayer } from '../util/rule.js'
+import { collectAttackingForce, scopeOf } from '../util/campaign.js'
+import {
+    BANDITS_PLAN_USER,
+    ignoresKillAll,
+    plansUsedBy,
+    playerIdsOnSide,
+    sideOf
+} from '../util/battlePlans.js'
 import { BattlePlanSide } from '../data/cardPowers.js'
 import { ActionType } from '../definition/actions.js'
 import { WarbandGroup, type CampaignState } from '../model/campaign.js'
@@ -24,14 +31,12 @@ import {
     takeFromGroups,
     moveForceToBoards,
     selectionExceedsForce,
-    boardOwnersOwnFirst,
     defeatChoiceMatters,
-    soleOwner,
-    warbandGroupsAtSites
+    defeatPickMatters,
+    soleOwner
 } from '../util/force.js'
 import { BRUTAL, hasTrait } from '../util/reliquaryTraits.js'
 import { reasonPersistentForbidsSacrifice } from '../util/persistent.js'
-import { countOf } from '../util/warbands.js'
 import { WarbandOwner } from '../model/warbandCounts.js'
 import { OathRevision, isAtLeastOathRevision } from '../util/revision.js'
 
@@ -207,15 +212,25 @@ export class HydratedCampaignSacrifice
         if (required === 0 || required >= forceTotal(force) || force.length < 2) return undefined
         if (
             isAtLeastOathRevision(state, OathRevision.TurnFlow) &&
-            !defeatChoiceMatters(force)
+            !HydratedCampaignSacrifice.defendingLossesMatter(state, force)
         ) {
             return undefined
         }
         const defenderId = campaign.defenderPlayerId
         assertExists(defenderId, 'A defending force with warbands to choose from has a defender')
-        return isImperialPlayer(state, defenderId, scopeOf(partiesOf(campaign)))
+        return isImperialPlayer(state, defenderId, scopeOf(partiesOf(state, campaign)))
             ? state.chancellorId()
             : defenderId
+    }
+
+    /** R-5.5.6-H1 — from revision 7, only losses that can end in another bank or on another board. */
+    private static defendingLossesMatter(
+        state: HydratedOathGameState,
+        force: readonly WarbandGroup[]
+    ): boolean {
+        return isAtLeastOathRevision(state, OathRevision.EngineFixes3)
+            ? defeatPickMatters(state, force)
+            : defeatChoiceMatters(force)
     }
 
     /** R-5.5.5, R-10.22 — sacrificing is choosing to kill your own warbands. */
@@ -225,7 +240,14 @@ export class HydratedCampaignSacrifice
             return killFromAttackingForce(state, campaign, this.sacrifice)
         }
         for (const group of this.sacrificeKills) {
-            killOrRedirect(state, campaign, group.at, group.owner, group.count)
+            killOrRedirect(
+                state,
+                campaign,
+                BattlePlanSide.Attacker,
+                group.at,
+                group.owner,
+                group.count
+            )
         }
         return this.sacrificeKills
     }
@@ -237,12 +259,13 @@ export class HydratedCampaignSacrifice
         kills: readonly WarbandGroup[],
         attackerVictorious: boolean
     ): { defeatKilled: number; survivorsNote?: string } {
+        const victorSide = attackerVictorious ? BattlePlanSide.Attacker : BattlePlanSide.Defender
+        const defeatedSide = attackerVictorious ? BattlePlanSide.Defender : BattlePlanSide.Attacker
         for (const group of kills) {
-            killOrRedirect(state, campaign, group.at, group.owner, group.count)
+            killOrRedirect(state, campaign, defeatedSide, group.at, group.owner, group.count)
         }
 
         const survivors = HydratedCampaignSacrifice.subtractSelection(force, kills)
-        const victorSide = attackerVictorious ? BattlePlanSide.Attacker : BattlePlanSide.Defender
         const survivorsNote = HydratedCampaignSacrifice.victorTakesSurvivors(
             state,
             campaign,
@@ -250,7 +273,11 @@ export class HydratedCampaignSacrifice
             survivors
         )
         if (survivorsNote === undefined) {
-            moveForceToBoards(state, survivors)
+            moveForceToBoards(
+                state,
+                survivors,
+                attackerVictorious ? undefined : campaign.attackerPlayerId
+            )
         }
         return { defeatKilled: forceTotal(kills), survivorsNote }
     }
@@ -261,7 +288,7 @@ export class HydratedCampaignSacrifice
         victorSide: BattlePlanSide,
         survivors: readonly WarbandGroup[]
     ): string | undefined {
-        for (const playerId of HydratedCampaignSacrifice.playerIdsOn(campaign, victorSide)) {
+        for (const playerId of playerIdsOnSide(campaign, victorSide)) {
             for (const plan of plansUsedBy(state, campaign, playerId)) {
                 const take = plan.hooks.takesEnemySurvivors
                 if (take) {
@@ -270,12 +297,6 @@ export class HydratedCampaignSacrifice
             }
         }
         return undefined
-    }
-
-    private static playerIdsOn(campaign: CampaignState, side: BattlePlanSide): string[] {
-        return side === BattlePlanSide.Attacker
-            ? [campaign.attackerPlayerId]
-            : defendingPlayerIds(campaign)
     }
 
     static sacrificeNeeded(campaign: CampaignState): number {
@@ -331,6 +352,9 @@ export class HydratedCampaignSacrifice
         if (!campaign) return 'no Campaign is under way'
         if (campaign.pendingDefenderPlans) {
             return 'the defender has yet to use their battle plans (R-5.5.3); nothing is rolled'
+        }
+        if (campaign.pendingSkullLosses) {
+            return 'the attacker has yet to pick where the skulls kill (R-5.5.5)'
         }
         if (campaign.attackerVictorious !== undefined) {
             return 'this Campaign is already resolved'
@@ -422,22 +446,18 @@ export class HydratedCampaignSacrifice
     ): number {
         const total = forceTotal(defeated)
         const attackerLost = defeated !== campaign.defendingForce
-        const losers = HydratedCampaignSacrifice.playerIdsOn(
-            campaign,
-            attackerLost ? BattlePlanSide.Attacker : BattlePlanSide.Defender
-        )
-        const rules = losers
+        const loserSide = attackerLost ? BattlePlanSide.Attacker : BattlePlanSide.Defender
+        const rules = playerIdsOnSide(campaign, loserSide)
             .flatMap((id) => plansUsedBy(state, campaign, id))
             .map((p) => p.hooks.defeatKills)
         // Peace Envoy — "ignore killing warbands", for either side.
         if (campaign.ignoreDefeatKills) return 0
+        // R-9.2 — from revision 5, checked before Sticky Fire's kill.
+        if (ignoresKillAll(state, campaign, loserSide)) return 0
         // Sticky Fire — the victor burns the whole enemy force.
-        const winners = HydratedCampaignSacrifice.playerIdsOn(
-            campaign,
-            attackerLost ? BattlePlanSide.Defender : BattlePlanSide.Attacker
-        )
+        const winnerSide = attackerLost ? BattlePlanSide.Defender : BattlePlanSide.Attacker
         if (
-            winners
+            playerIdsOnSide(campaign, winnerSide)
                 .flatMap((id) => plansUsedBy(state, campaign, id))
                 .some((p) => p.hooks.killsEnemyForce)
         )
@@ -463,7 +483,17 @@ export class HydratedCampaignSacrifice
         const notes: string[] = []
         const pileDeposits: PileDeposit[] = []
         for (const playerId of Object.keys(campaign.plansUsedBy)) {
-            if (playerId === BANDITS_PLAN_USER) continue
+            if (playerId === BANDITS_PLAN_USER) {
+                notes.push(
+                    ...HydratedCampaignSacrifice.banditOutcomes(
+                        state,
+                        campaign,
+                        !attackerVictorious,
+                        sides
+                    )
+                )
+                continue
+            }
             const victorious =
                 sideOf(campaign, playerId) === BattlePlanSide.Attacker
                     ? attackerVictorious
@@ -484,6 +514,26 @@ export class HydratedCampaignSacrifice
             }
         }
         return { notes, pileDeposits }
+    }
+
+    /** R-5.5.3-H1, R-5.5.6, R-10.3-H1 — the bandits' compelled plans whose outcome is ruled for them. */
+    private static banditOutcomes(
+        state: HydratedOathGameState,
+        campaign: CampaignState,
+        victorious: boolean,
+        sides: (victorious: boolean) => boolean
+    ): string[] {
+        if (!isAtLeastOathRevision(state, OathRevision.CardFixes1)) return []
+        if (!sides(victorious)) return []
+        const notes: string[] = []
+        for (const plan of plansUsedBy(state, campaign, BANDITS_PLAN_USER)) {
+            const note = plan.hooks.onBanditOutcome?.(
+                banditPlanContext(state, campaign, plan),
+                victorious
+            )
+            if (note) notes.push(note)
+        }
+        return notes
     }
 
     // R-5.5.5-H1 — the attacker names the sacrificed warbands whenever the force holds more than one kind.
@@ -511,28 +561,13 @@ export class HydratedCampaignSacrifice
         campaign: CampaignState,
         alreadySacrificed = 0
     ): WarbandGroup[] {
-        const attacker = state.getPlayerState(campaign.attackerPlayerId)
-        // Wild Allies, Captains, Vow of Union
-        const groups = warbandGroupsAtSites(
-            state,
-            campaign.forceSiteIds,
-            rulingWarbandOwners(state, campaign.attackerPlayerId)
-        )
         let toRemove = alreadySacrificed
-        for (const owner of boardOwnersOwnFirst(state, campaign.attackerPlayerId)) {
-            let count = countOf(attacker.warbandsOnBoard, owner)
-            const taken = Math.min(count, toRemove)
-            count -= taken
+        return collectAttackingForce(state, campaign).flatMap((group) => {
+            if (group.at.kind !== 'board') return [group]
+            const taken = Math.min(group.count, toRemove)
             toRemove -= taken
-            if (count > 0) {
-                groups.push({
-                    at: { kind: 'board', playerId: campaign.attackerPlayerId },
-                    owner,
-                    count
-                })
-            }
-        }
-        return groups
+            return group.count > taken ? [{ ...group, count: group.count - taken }] : []
+        })
     }
 
     private static subtractSelection(

@@ -21,7 +21,9 @@ import { PowerChoice, PowerChoiceKind, reasonChoicesInvalid } from './powerChoic
 import { PowerUse } from '../model/powerUse.js'
 import { effectFor, type EffectContext, type ModifierHooks } from '../powers/registry.js'
 import { traitModifiers } from './reliquaryTraits.js'
+import { isAtLeastOathRevision, OathRevision } from './revision.js'
 import type { DiscardTarget } from './discard.js'
+import type { WarbandOwner } from '../model/warbandCounts.js'
 
 // R-7.4.1, R-7.4.2, R-X.1 — one use per action; a costed modifier pays at declaration.
 
@@ -102,6 +104,20 @@ export function mandatoryModifiers(
     // R-6.6.2.a — uncovered Reliquary traits are mandatory modifiers with no card behind them.
     found.push(...traitModifiers(state, playerId, action))
     return found
+}
+
+/** R-7.4.1 — a modifier the engine applies by itself: it is never declared. */
+export function isMandatoryModifier(power: CardPower): boolean {
+    return effectFor(power)?.mandatory === true
+}
+
+/**
+ * A free gain (Dragonskin Drum, Rowdy Pub, Wild Cry …): an optional modifier that costs nothing,
+ * asks nothing and only gains, so a menu may start it in use. Read by no rule: a modifier applies
+ * only when it is declared (R-7.4.1).
+ */
+export function isFreeGain(power: CardPower): boolean {
+    return effectFor(power)?.freeGain === true
 }
 
 /** A printed condition depends on the action's particulars, so it is checked at declaration. */
@@ -275,12 +291,82 @@ export function payModifierCosts(
     }
 }
 
+/** R-7.6.2 — "spend no Supply" ignores the cost and any increase to it, whatever the order declared. */
+export function foldSupplyCost(
+    base: number,
+    state: HydratedOathGameState,
+    playerId: string,
+    active: readonly ActiveModifier[],
+    particulars: Partial<EffectContext['particulars']> = {},
+    siteSpendsNoSupply = false
+): number {
+    const spendsNone = (m: ActiveModifier) =>
+        m.hooks.spendsNoSupply?.({ ...modifierContext(state, playerId, m), particulars }) === true
+    if (!isAtLeastOathRevision(state, OathRevision.CardFixes1)) {
+        return foldInDeclarationOrder(
+            'supplyCost',
+            siteSpendsNoSupply ? 0 : base,
+            state,
+            playerId,
+            active,
+            particulars,
+            (m) => (spendsNone(m) ? 0 : undefined)
+        )
+    }
+    if (siteSpendsNoSupply || active.some(spendsNone)) return 0
+    return foldNumber('supplyCost', base, state, playerId, active, particulars)
+}
+
+/** Mushrooms with Augury — a count one modifier sets is the base the others add to. */
+export function foldDrawCount(
+    base: number,
+    state: HydratedOathGameState,
+    playerId: string,
+    active: readonly ActiveModifier[],
+    particulars: Partial<EffectContext['particulars']> = {}
+): number {
+    const setBy = (m: ActiveModifier) => m.hooks.setsDrawCount
+    if (!isAtLeastOathRevision(state, OathRevision.CardFixes1)) {
+        return foldInDeclarationOrder(
+            'drawCount',
+            base,
+            state,
+            playerId,
+            active,
+            particulars,
+            setBy
+        )
+    }
+    const set = active.map(setBy).find((count) => count !== undefined)
+    return foldNumber('drawCount', set ?? base, state, playerId, active, particulars)
+}
+
+/** R-X.4 — before revision 4 a value one modifier set stood at its place in the declaration order. */
+function foldInDeclarationOrder(
+    seam: 'supplyCost' | 'drawCount',
+    base: number,
+    state: HydratedOathGameState,
+    playerId: string,
+    active: readonly ActiveModifier[],
+    particulars: Partial<EffectContext['particulars']>,
+    setBy: (m: ActiveModifier) => number | undefined
+): number {
+    let value = base
+    for (const m of active) {
+        value = setBy(m) ?? value
+        const hook = m.hooks[seam]
+        if (hook) value = hook(value, { ...modifierContext(state, playerId, m), particulars })
+    }
+    return Math.max(0, value)
+}
+
 export function foldNumber(
     seam:
         | 'supplyCost'
         | 'musterWarbands'
         | 'tradeFavor'
         | 'tradeSecrets'
+        | 'tradeSideFavor'
         | 'drawCount'
         | 'recoverSecrets',
     base: number,
@@ -341,16 +427,18 @@ export function runAfter(
     playerId: string,
     active: readonly ActiveModifier[],
     particulars: Partial<EffectContext['particulars']> = {}
-): { notes: string[]; endsActPhase: boolean } {
+): { notes: string[]; endsActPhase: boolean; warbandOwners: WarbandOwner[] } {
     const notes: string[] = []
+    const warbandOwners: WarbandOwner[] = []
     let endsActPhase = false
     for (const m of active) {
         const r = m.hooks.after?.({ ...modifierContext(state, playerId, m), particulars })
         if (!r) continue
         if (r.summary) notes.push(r.summary)
         if (r.endsActPhase) endsActPhase = true
+        if (r.warbandOwner !== undefined) warbandOwners.push(r.warbandOwner)
     }
-    return { notes, endsActPhase }
+    return { notes, endsActPhase, warbandOwners }
 }
 
 export function modifierSummary(active: readonly ActiveModifier[]): string[] {

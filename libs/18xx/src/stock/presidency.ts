@@ -39,17 +39,25 @@ export type PresidencyResult = {
     reason?: string
 }
 
+/**
+ * Ordinary certificates of a company making up exactly the shares; with ``largestFirst``, larger
+ * certificates are tried first, as a presidency exchange must include a vice-president's.
+ */
 export function certificatesForShares(
     certificates: readonly Portfolio[number][],
     companyId: string,
-    shares: number
+    shares: number,
+    largestFirst = false
 ): string[] | undefined {
-    const ordinary = certificates.filter(
+    const matching = certificates.filter(
         (certificate) =>
             certificate.kind === 'share' &&
             !certificate.president &&
             certificate.companyId === companyId
     )
+    const ordinary = largestFirst
+        ? matching.toSorted((a, b) => sharesOf(b) - sharesOf(a))
+        : matching
     function choose(index: number, remaining: number): string[] | undefined {
         if (remaining === 0) return []
         for (let i = index; i < ordinary.length; i++) {
@@ -62,25 +70,26 @@ export function certificatesForShares(
     }
     return choose(0, shares)
 }
+function sharesOf(certificate: Portfolio[number]): number {
+    return certificate.kind === 'share' ? certificate.shares : 0
+}
+
 export function evaluatePresidency(
     state: FinancialState,
     companyId: string,
     candidates: readonly President[],
-    remaining?: { owner: Owner; shares: number }
+    remaining?: { owner: Owner; shares: number },
+    largestFirst = false
 ): PresidencyResult {
     const company = getCompany(state, companyId)
     const previous = company.president
     const president = state.certificates.find(
         (certificate) =>
-            !certificate.retired &&
             certificate.kind === 'share' &&
             certificate.president &&
             certificate.companyId === companyId
     )
-    assert(
-        president && !president.retired && president.kind === 'share',
-        'Missing president certificate'
-    )
+    assert(president && president.kind === 'share', 'Missing president certificate')
     const owned = (owner: Owner) =>
         remaining && sameOwner(owner, remaining.owner)
             ? remaining.shares
@@ -93,7 +102,8 @@ export function evaluatePresidency(
     const exchangedCertificateIds = certificatesForShares(
         certificatesOwnedBy(state, next),
         companyId,
-        president.shares
+        president.shares,
+        largestFirst
     )
     if (!exchangedCertificateIds)
         return { reason: 'The new president cannot exchange the required shares.' }
@@ -125,7 +135,7 @@ export function evaluatePresidency(
 export function applyPresidencyChange(state: FinancialState, change: PresidencyChange): void {
     for (const id of [change.presidentCertificateId, ...change.exchangedCertificateIds]) {
         const certificate = state.certificates.find((certificate) => certificate.id === id)
-        assert(certificate && !certificate.retired, 'Missing presidency exchange certificate')
+        assert(certificate, 'Missing presidency exchange certificate')
         certificate.owner = id === change.presidentCertificateId ? change.next : change.previous
         delete certificate.poolId
     }
@@ -155,7 +165,7 @@ export function applyPresidencyClaim(state: FinancialState, claim: PresidencyCla
     assertExists(pool, 'Presidency claim requires a certificate pool')
     for (const id of [claim.presidentCertificateId, ...claim.exchangedCertificateIds]) {
         const certificate = state.certificates.find((certificate) => certificate.id === id)
-        assert(certificate && !certificate.retired, 'Presidency claim requires a live certificate')
+        assert(certificate, 'Presidency claim requires a live certificate')
         if (id === claim.presidentCertificateId) {
             certificate.owner = claim.next
             delete certificate.poolId

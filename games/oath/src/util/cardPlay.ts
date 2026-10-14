@@ -26,23 +26,30 @@ import {
     effectiveAdviserLimit
 } from './continuous.js'
 import {
+    advisersOfSuit,
     afterCardPlayedPersistent,
     reasonPersistentForbidsFacedownAdviser,
     reasonPersistentForbidsFaceupVision,
     reasonPersistentForbidsSecretCost,
     reasonPersistentForbidsBannerTake,
-    reasonPersistentForbidsRelicTake
+    reasonPersistentForbidsRelicTake,
+    persistentRefusesBannerTake,
+    persistentRefusesRelicTake,
+    persistentRefusesSecretCost
 } from './persistent.js'
 import { categoryAt, homelandPayout } from './sitePowers.js'
 import { takeRelicsFrom } from './relics.js'
+import { isAtLeastOathRevision, OathRevision } from './revision.js'
 
-/** R-5.1.4.IV — two faceup advisers whose suits each match one of the target's. */
-export function conspiracyMatchIsValid(
+/** R-5.1.4.IV — "at least two advisers that match the suit of any of their advisers". */
+const CONSPIRACY_MATCHES_NEEDED = 2
+
+/** R-5.1.4.IV — how many of the player's faceup advisers match a suit of the target's faceup advisers. */
+export function conspiracyMatchCount(
     state: HydratedOathGameState,
     playerId: string,
     targetPlayerId: string
-): boolean {
-    const player = state.getPlayerState(playerId)
+): number {
     const target = state.getPlayerState(targetPlayerId)
 
     const targetSuits = new Set(
@@ -52,12 +59,91 @@ export function conspiracyMatchIsValid(
             .filter((suit) => suit !== undefined)
     )
 
-    const matching = player.faceupAdviserIds().filter((cardId) => {
-        const suit = suitOf(cardId)
-        return suit !== undefined && targetSuits.has(suit)
-    }).length
+    return [...targetSuits].reduce(
+        (count, suit) => count + advisersOfSuit(state, playerId, suit),
+        0
+    )
+}
 
-    return matching >= 2
+/** R-5.1.4.IV — two faceup advisers whose suits each match one of the target's. */
+export function conspiracyMatchIsValid(
+    state: HydratedOathGameState,
+    playerId: string,
+    targetPlayerId: string
+): boolean {
+    return conspiracyMatchCount(state, playerId, targetPlayerId) >= CONSPIRACY_MATCHES_NEEDED
+}
+
+/** A prize the target holds, the card whose persistent power forbids taking it, and its refusal. */
+export interface ConspiracyTakeGuard {
+    take: ConspiracyTake
+    cardId: string
+    reason: string
+}
+
+/**
+ * Why the Conspiracy's take from a player at the site is refused, by cause, in the order
+ * `reasonCannotPlayConspiracy` checks: the secret, a power barring secret costs (Spell Breaker),
+ * the match, then the prizes (none held, or every one guarded).
+ */
+export type ConspiracyTakeRefusal =
+    | { cause: 'secret'; has: number }
+    | { cause: 'secretCost'; cardId: string }
+    | { cause: 'match'; needs: number; has: number }
+    | { cause: 'nothingHeld' }
+    | { cause: 'guarded'; guards: ConspiracyTakeGuard[] }
+
+/** The first cause that refuses every take from a player at the site; none when some take is open. */
+export function conspiracyTakeRefusal(
+    state: HydratedOathGameState,
+    playerId: string,
+    targetPlayerId: string
+): ConspiracyTakeRefusal | undefined {
+    const secrets = state.getPlayerState(playerId).secrets
+    // R-7.1.2.a — facedown secrets cannot pay a cost.
+    if (secrets < 1) return { cause: 'secret', has: secrets }
+    const barred = persistentRefusesSecretCost(state, playerId)
+    if (barred) return { cause: 'secretCost', cardId: barred.cardId }
+    const matching = conspiracyMatchCount(state, playerId, targetPlayerId)
+    if (matching < CONSPIRACY_MATCHES_NEEDED) {
+        return { cause: 'match', needs: CONSPIRACY_MATCHES_NEEDED, has: matching }
+    }
+
+    const prizes = conspiracyPrizesHeld(state, targetPlayerId)
+    if (prizes.length === 0) return { cause: 'nothingHeld' }
+    const guards: ConspiracyTakeGuard[] = []
+    for (const take of prizes) {
+        const guard = conspiracyTakeGuard(state, playerId, targetPlayerId, take)
+        if (!guard) return undefined
+        guards.push({ take, ...guard })
+    }
+    return { cause: 'guarded', guards }
+}
+
+/** R-5.1.4.IV — "any one relic or banner" the target holds. */
+function conspiracyPrizesHeld(
+    state: HydratedOathGameState,
+    targetPlayerId: string
+): ConspiracyTake[] {
+    const relics = state
+        .getPlayerState(targetPlayerId)
+        .relicIds.map((cardId): ConspiracyTake => ({ kind: 'relic', cardId }))
+    const banners = Object.values(Banner)
+        .filter((banner) => bannerHolder(state, banner) === targetPlayerId)
+        .map((banner): ConspiracyTake => ({ kind: 'banner', banner }))
+    return [...relics, ...banners]
+}
+
+// As `reasonCannotTakeByConspiracy` judges a prize the target holds.
+function conspiracyTakeGuard(
+    state: HydratedOathGameState,
+    playerId: string,
+    targetPlayerId: string,
+    take: ConspiracyTake
+) {
+    return take.kind === 'relic'
+        ? persistentRefusesRelicTake(state, playerId, targetPlayerId, take.cardId)
+        : persistentRefusesBannerTake(state, playerId, take.banner, 'seize', targetPlayerId)
 }
 
 export function reasonCannotPlayConspiracy(
@@ -115,7 +201,7 @@ export function reasonCannotTakeByConspiracy(
     if (bannerHolder(state, take.banner) !== targetPlayerId) {
         return `that player does not hold the ${take.banner}`
     }
-    return reasonPersistentForbidsBannerTake(state, playerId, take.banner, targetPlayerId)
+    return reasonPersistentForbidsBannerTake(state, playerId, take.banner, 'seize', targetPlayerId)
 }
 
 /** R-5.1.4 */
@@ -240,10 +326,21 @@ export function playCard(
         }
     }
 
+    const faceupPlay = isFaceupPlay(play, options.faceUp)
+    // R-7.1.4 — "After another player plays a … card" (Saddle Makers). Faceup only: a facedown card has no suit.
+    // A Vision revealed, or the Conspiracy played, is a faceup play too (Book Binders).
+    const playedFaceup =
+        faceupPlay || play === SearchPlay.RevealedVision || play === SearchPlay.Conspiracy
+    const cardPlayedTriggers = () =>
+        playedFaceup ? afterCardPlayedPersistent(state, playerId, cardId) : []
+    // Saddle Makers' Q&A — it pays once the card is played, before its When Played power.
+    const triggeredFirst = isAtLeastOathRevision(state, OathRevision.CardFixes1)
+        ? cardPlayedTriggers()
+        : undefined
+
     let whenPlayed: string | undefined
     let endsActPhase = false
     let outcome: PowerOutcome = {}
-    const faceupPlay = isFaceupPlay(play, options.faceUp)
     if (faceupPlay) {
         const power = powersWithTiming(cardId, PowerTiming.WhenPlayed)[0]
         const effect = power ? effectFor(power) : undefined
@@ -266,11 +363,7 @@ export function playCard(
         }
     }
 
-    // R-7.1.4 — "After another player plays a … card" (Saddle Makers). Faceup only: a facedown card has no suit.
-    // A Vision revealed, or the Conspiracy played, is a faceup play too (Book Binders).
-    const playedFaceup =
-        faceupPlay || play === SearchPlay.RevealedVision || play === SearchPlay.Conspiracy
-    const triggered = playedFaceup ? afterCardPlayedPersistent(state, playerId, cardId) : []
+    const triggered = triggeredFirst ?? cardPlayedTriggers()
     return {
         favorGained,
         secretsGained,

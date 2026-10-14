@@ -9,12 +9,10 @@
         fountainPawnPositions,
         MaxPawnsShown
     } from '$lib/utils/fountainPawns.js'
-    import { CandidateHaloFilterId } from '$lib/utils/boardGeometry.js'
     import { PulsePeakSeconds, PulseSeconds } from '$lib/utils/routePreview.js'
     import {
         eightPointedStar,
         EntranceRadii,
-        FountainGlintsPatternId,
         FountainRadii,
         FountainRimShadeId,
         FountainRippleRadii,
@@ -105,7 +103,7 @@
 {#snippet basin()}
     {#if halo && destination}
         <path
-            class="destination-pulse"
+            class="destination-pulse candidate-halo"
             style:--pulse-seconds="{PulseSeconds}s"
             style:--pulse-delay="{PulsePeakSeconds - PulseSeconds / 2}s"
             d={fountainOutline(center, definition.entrance)}
@@ -113,7 +111,6 @@
             stroke="#ffffff"
             stroke-width="12"
             stroke-linejoin="round"
-            filter="url(#{CandidateHaloFilterId})"
         ></path>
     {/if}
     {#if halo && highlighted && !selected}
@@ -123,7 +120,7 @@
             stroke="#ffffff"
             stroke-width="8"
             stroke-linejoin="round"
-            filter="url(#{CandidateHaloFilterId})"
+            class="candidate-halo"
         ></path>
     {/if}
     {@const outer = fountainOutline(center, definition.entrance)}
@@ -148,7 +145,6 @@
         stroke="#8f6c66"
         stroke-width="1"
     ></path>
-    <path d={outline(center, radii.water)} fill="url(#{FountainGlintsPatternId})"></path>
     {#each FountainRippleRadii as radius (radius)}
         <circle
             cx={center.x}

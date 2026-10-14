@@ -1,9 +1,13 @@
 <script lang="ts">
     import { getCompany } from '@tabletop/18xx'
-    import { AuctionBidControl, CompanyToken } from '@tabletop/18xx-ui'
+    import {
+        AuctionBidControl,
+        CompanyActionCard,
+        CompanyToken,
+        type CardAction
+    } from '@tabletop/18xx-ui'
     import { EighteenSeventeenLoanRules } from '@tabletop/1817'
     import { takeLoanAction } from './cardActions.js'
-    import CompanyActionCard, { type CardAction } from './CompanyActionCard.svelte'
     import { companyFinanceFacts } from './roundFacts.js'
     import RoundPanel from './RoundPanel.svelte'
     import type { EighteenSeventeenSession } from './session.svelte.js'
@@ -16,7 +20,7 @@
     const sale = $derived(session.companySale)
     const choice = $derived(session.acquirerChoice)
     const acquisition = $derived(session.buyerLoans)
-    const name = (id: string) => getCompany(gameState, id).name
+    const name = (id: string) => session.companyName(id)
     const zones = {
         offered: 'Offered for sale',
         acquisition: 'In the acquisition zone',

@@ -1,8 +1,9 @@
 <script lang="ts">
     import { getShop, type Route, type ShopVisit } from '@tabletop/marracash'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { LineHaloFilterId } from '$lib/utils/boardGeometry.js'
     import PawnCountChip from '$lib/components/PawnCountChip.svelte'
+    import RouteGlow from '$lib/components/RouteGlow.svelte'
+    import type { Point } from '@tabletop/common'
     import {
         BranchDash,
         flowPoints,
@@ -17,7 +18,8 @@
 
     const gameSession = getGameSession()
 
-    let points = $derived(flowPoints(routeLine(route)))
+    let line = $derived(routeLine(route))
+    let points = $derived(flowPoints(line))
     let branches = $derived(
         visits.map((visit) => {
             const line = shopBranch(route, visit.shopId)
@@ -25,6 +27,7 @@
             return {
                 visit,
                 marketColor,
+                line,
                 end: line[1],
                 points: flowPoints(line),
                 color: gameSession.marketPalettes[marketColor].fill
@@ -33,7 +36,15 @@
     )
 </script>
 
-{#snippet flowLine(linePoints: string, color: string, width: number, pattern: DashPattern)}
+{#snippet flowLine(
+    id: string,
+    line: Point[],
+    linePoints: string,
+    color: string,
+    width: number,
+    pattern: DashPattern
+)}
+    <RouteGlow {id} {line} {color} {width} />
     <polyline
         points={linePoints}
         fill="none"
@@ -42,7 +53,6 @@
         stroke-linecap="round"
         stroke-linejoin="round"
         opacity="0.35"
-        filter="url(#{LineHaloFilterId})"
     ></polyline>
     <polyline
         class="flow"
@@ -55,15 +65,21 @@
         stroke-dasharray="{pattern.dash} {pattern.gap}"
         style:--flow-period="{pattern.dash + pattern.gap}px"
         style:--flow-seconds="{flowSeconds(pattern)}s"
-        filter="url(#{LineHaloFilterId})"
     ></polyline>
 {/snippet}
 
 <g pointer-events="none">
     {#each branches as branch (branch.visit.shopId)}
-        {@render flowLine(branch.points, branch.color, 5, BranchDash)}
+        {@render flowLine(
+            `marracash-route-glow-${branch.visit.shopId}`,
+            branch.line,
+            branch.points,
+            branch.color,
+            5,
+            BranchDash
+        )}
     {/each}
-    {@render flowLine(points, '#ffffff', 6, RouteDash)}
+    {@render flowLine('marracash-route-glow', line, points, '#ffffff', 6, RouteDash)}
     {#each branches as branch (branch.visit.shopId)}
         <PawnCountChip
             color={branch.marketColor}

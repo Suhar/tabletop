@@ -10,7 +10,9 @@ import {
     createGameFork,
     GameForkError,
     GameStorage,
-    GameCategory
+    GameCategory,
+    assertExists,
+    type ScenarioData
 } from '@tabletop/common'
 import { SvelteMap } from 'svelte/reactivity'
 import type { GameService } from '$lib/services/gameService.js'
@@ -157,9 +159,21 @@ export class HarnessGameService implements GameService {
             throw new Error('Game ID is required to fork a local game')
         }
 
-        const { game: actualGame, actions } = await this.loadGame(game.id)
+        const fork = await this.forkOf(game.id, actionIndex, name)
+        await this.saveGameLocally(fork)
+        return fork.game
+    }
+
+    /** The game as it stands, with every action behind it, ready to be saved as a scenario file. */
+    async scenarioOf(gameId: string): Promise<ScenarioData> {
+        return this.forkOf(gameId, 'latest')
+    }
+
+    private async forkOf(gameId: string, at: number | 'latest', name?: string) {
+        const { game: actualGame, actions } = await this.loadGame(gameId)
+        const actionIndex = at === 'latest' ? actions.length - 1 : at
         if (!actualGame) {
-            throw new Error(`Local game not found for id ${game.id}`)
+            throw new Error(`Local game not found for id ${gameId}`)
         }
 
         const definition = this.libraryService.getTitle(actualGame.typeId)
@@ -168,7 +182,7 @@ export class HarnessGameService implements GameService {
         }
 
         if (!actualGame.state) throw new GameForkError(actualGame.id, actionIndex)
-        const fork = createGameFork({
+        return createGameFork({
             game: actualGame,
             state: actualGame.state,
             actions,
@@ -176,8 +190,6 @@ export class HarnessGameService implements GameService {
             runtime: await definition.runtime(),
             name
         })
-        await this.saveGameLocally(fork)
-        return fork.game
     }
 
     async updateGame(_game: Partial<Game>): Promise<Game> {
@@ -210,6 +222,21 @@ export class HarnessGameService implements GameService {
             state: stateData
         })
         this.gamesById.set(gameData.id, gameData)
+    }
+
+    /** Saves a scenario as a local game of the harness user, replacing the copy loaded before, so loading it again starts it over. */
+    async loadScenario({ game, state, actions }: ScenarioData): Promise<Game> {
+        const user = this.authorizationService.getSessionUser()
+        assertExists(user, 'The harness has a session user')
+        const owned: Game = {
+            ...game,
+            ownerId: user.id,
+            storage: GameStorage.Local,
+            hotseat: true,
+            players: game.players.map((player) => ({ ...player, userId: user.id }))
+        }
+        await this.saveGameLocally({ game: owned, state, actions })
+        return owned
     }
 
     async deleteGame(gameId: string): Promise<void> {

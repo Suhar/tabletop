@@ -1,6 +1,7 @@
 import { HydratedOathGameState } from '../model/gameState.js'
 import type { Banner, Region, Suit } from '../model/oathEnums.js'
 import type { PersistentContext } from '../util/persistent.js'
+import type { BannerTake } from '../util/seize.js'
 import type { HiddenRequest, HiddenReveal, PileDeposit } from '../model/hidden.js'
 import {
     type BattlePlanSide,
@@ -14,6 +15,7 @@ import type { RollRules, WarbandGroup } from '../model/campaign.js'
 import type { WarbandOwner } from '../model/warbandCounts.js'
 import type { PowerOutcome } from '../model/powerOutcome.js'
 import type { DiscardTarget } from '../util/discard.js'
+import type { TollOccasion } from '../util/tolls.js'
 import { assert } from '@tabletop/common'
 import type { ChoiceSpec, PowerChoice, PowerChoiceKind } from '../util/powerChoice.js'
 export interface ModifierParticulars {
@@ -21,6 +23,8 @@ export interface ModifierParticulars {
     cardId?: string
     /** `TradeOption`'s value. */
     tradeOption?: string
+    /** Master of Disguise — the player whose advisers a Trade acts with. */
+    advisersOf?: string
     /** `SearchSource`'s value. */
     drawFrom?: string
     playedCardId?: string
@@ -58,7 +62,7 @@ export interface BattlePlanContext extends Omit<EffectContext, 'playerId'> {
     campaign: CampaignContext
 }
 
-/** A declared plan, or one at the outcome step, which the bandits' plans never reach. */
+/** A declared plan, or a player's at the outcome step; the bandits' reach it through `onBanditOutcome` alone. */
 export interface PlayerPlanContext extends EffectContext {
     campaign: CampaignContext
 }
@@ -85,16 +89,22 @@ export interface ModifierHooks {
     condition?: (ctx: EffectContext) => string | undefined
     /** R-5.1.1 to R-5.6.1 */
     supplyCost?: (base: number, ctx: EffectContext) => number
+    /** R-7.6.2 — beats every `supplyCost`, whichever is declared first. */
+    spendsNoSupply?: (ctx: EffectContext) => boolean
     /** R-5.2.2 — before the personal-bank cap. */
     musterWarbands?: (base: number, ctx: EffectContext) => number
     /** R-5.3.2 — before the bank cap. */
     tradeFavor?: (base: number, ctx: EffectContext) => number
     /** R-5.3.2 */
     tradeSecrets?: (base: number, ctx: EffectContext) => number
+    /** Careless — favor a Trade gains beside its own gain, before the bank cap (R-9.3). */
+    tradeSideFavor?: (base: number, ctx: EffectContext) => number
     /** Magician's Code — beyond those paid. */
     recoverSecrets?: (base: number, ctx: EffectContext) => number
     /** R-5.1.2 — the Vision stop still applies. */
     drawCount?: (base: number, ctx: EffectContext) => number
+    /** Mushrooms — replaces the count before any `drawCount` adds to it. */
+    setsDrawCount?: number
     /** Truthful Harp — the kept card too. */
     revealsDraw?: boolean
     /** R-7.1.2.a */
@@ -127,8 +137,10 @@ export interface ModifierHooks {
     secondPlay?: boolean
     /** Part of the price: runs after costs, before the action. */
     before?: (ctx: EffectContext) => string | undefined
-    /** R-4.2 — runs once the action has finished. */
-    after?: (ctx: EffectContext) => { summary?: string; endsActPhase?: boolean } | undefined
+    /** R-4.2 — runs once the action has finished; `warbandOwner` is whose warbands it killed. */
+    after?: (
+        ctx: EffectContext
+    ) => { summary?: string; endsActPhase?: boolean; warbandOwner?: WarbandOwner } | undefined
     /** Portal */
     ignoresSitePowers?: boolean
 }
@@ -151,6 +163,8 @@ export interface BattlePlanHooks {
     defeatKills?: 'none' | 'all'
     /** Runs once the sacrifice decides the battle. */
     onOutcome?: (ctx: PlayerPlanContext, victorious: boolean) => string | OutcomeResult | undefined
+    /** R-5.5.6, R-10.3-H1 — the same for the bandits' compelled plan, on the plans whose outcome is ruled for them. */
+    onBanditOutcome?: (ctx: BattlePlanContext, victorious: boolean) => string | undefined
     /** Specialist */
     locksEnemyPlans?: boolean
     /** Code of Honor, R-10.28-H1 — binds the user's whole side. */
@@ -170,6 +184,11 @@ export interface BattlePlanHooks {
         ctx: PlayerPlanContext,
         owedCardIds: readonly string[]
     ) => { planCardIds: string[]; insteadCardIds: string[] } | undefined
+    /** The same for the bandits' compelled plan: nobody is asked, and `insteadCardId` goes. */
+    banditSparesEndDiscards?: (
+        ctx: BattlePlanContext,
+        owedCardIds: readonly string[]
+    ) => { planCardIds: string[]; insteadCardId: string } | undefined
     /** Obsidian Cage — R-5.5.6 then moves none home. */
     takesEnemySurvivors?: (ctx: PlayerPlanContext, survivors: readonly WarbandGroup[]) => string
 }
@@ -204,11 +223,12 @@ export interface PersistentHooks {
         actorId: string,
         cardId: string
     ) => string | undefined
-    /** Recover and Campaign targets; `holderId` is absent when nobody holds it. */
+    /** A Recover, a Campaign target or the Conspiracy's take; `holderId` is absent when nobody holds it. */
     forbidsBannerTake?: (
         ctx: PersistentContext,
         actorId: string,
         banner: Banner,
+        how: BannerTake,
         holderId?: string
     ) => string | undefined
     /** Any target or take of another player's relic: a Campaign, Blackmail, Relic Thief, the Conspiracy. */
@@ -236,11 +256,11 @@ export interface PersistentHooks {
         parties: CampaignParties,
         side: BattlePlanSide
     ) => string | undefined
-    /** Giant Python */
+    /** Giant Python — the dice the targets add; before revision 5, the whole pool (R-X.4). */
     forbidsTargets?: (
         ctx: PersistentContext,
         parties: CampaignParties,
-        defensePool: number
+        targetDice: number
     ) => string | undefined
     /** Gleaming Armor, Insect Swarm */
     battlePlanExtraCost?: (
@@ -273,7 +293,7 @@ export interface PersistentHooks {
         ctx: PersistentContext,
         actorId: string,
         banner: Banner,
-        paid: number
+        placed: number
     ) => string | undefined
     /** Jinx */
     offersReroll?: (ctx: PersistentContext, rollerId: string) => boolean
@@ -329,6 +349,8 @@ export interface EffectDefinition {
     /** The vault's answer reaches `resolve` as `ctx.reveal`. */
     hidden?: (ctx: EffectContext) => HiddenRequest | undefined
     reasonCannotResolve?: (ctx: EffectContext) => string | undefined
+    /** R-7.1.4 — the tolls its use owes, paid with its cost (Forced Labor on Oracle). */
+    tollOccasion?: TollOccasion
     resolve: (ctx: EffectContext) => EffectResult
     /** A copy of the state as `ctx.choices` leave it, which `sequential` choices are read on. */
     stateAfter?: (ctx: EffectContext) => HydratedOathGameState
@@ -336,6 +358,11 @@ export interface EffectDefinition {
     modifier?: ModifierHooks
     /** R-7.4.1's "must": applied unasked, never declared. */
     mandatory?: boolean
+    /**
+     * An optional modifier that costs nothing, asks nothing and only gains, so a menu may start it
+     * in use. Nothing in play reads it: a modifier applies only when declared (R-7.4.1).
+     */
+    freeGain?: boolean
     /** R-7.5 */
     battlePlan?: BattlePlanHooks
     /** R-7.1.4-H1 */
@@ -375,6 +402,7 @@ export function registerModifier(
         choices?: ChoiceSpec[]
         reasonCannotResolve?: (ctx: EffectContext) => string | undefined
         mandatory?: boolean
+        freeGain?: boolean
     }
 ): void {
     registerEffect(cardId, index, {
@@ -386,7 +414,8 @@ export function registerModifier(
             )
         },
         modifier: definition.hooks,
-        mandatory: definition.mandatory
+        mandatory: definition.mandatory,
+        freeGain: definition.freeGain
     })
 }
 
@@ -396,6 +425,8 @@ export function registerBattlePlan(
     definition: {
         hooks: BattlePlanHooks
         choices?: ChoiceSpec[]
+        /** Warning Signals — the state its `sequential` choices are read on. */
+        stateAfter?: EffectDefinition['stateAfter']
     }
 ): void {
     registerEffect(cardId, index, {
@@ -405,6 +436,7 @@ export function registerBattlePlan(
                 `${cardId} is a battle plan: it is used in a Campaign's battle-plan step (R-5.5.3), not on its own`
             )
         },
+        stateAfter: definition.stateAfter,
         battlePlan: definition.hooks
     })
 }

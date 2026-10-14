@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { untrack } from 'svelte'
+    import AuctionNotice from '$lib/components/AuctionNotice.svelte'
+    import {
+        AuctionNoticeAnimator,
+        setAuctionNoticeAnimator
+    } from '$lib/animators/auctionNoticeAnimator.svelte.js'
+    import { onDestroy, untrack } from 'svelte'
     import type { Attachment } from 'svelte/attachments'
     import {
         CustomFont,
@@ -42,6 +47,11 @@
 
     const marracashSession = untrack(() => ensureMarracashGameSession(gameSession))
     setGameSession(marracashSession)
+
+    const auctionNotice = new AuctionNoticeAnimator(marracashSession)
+    auctionNotice.register()
+    onDestroy(() => auctionNotice.unregister())
+    setAuctionNoticeAnimator(auctionNotice)
 
     // The shared wrapper exposes full screen only as its dialog becoming modal.
     let expanded = $state(false)
@@ -158,6 +168,9 @@
                         justify="center"
                         controls="bottom-left"
                         coverBelowScale={0.45}
+                        maxScale={1.5}
+                        maxFitScale={1.5}
+                        renderAtViewScale
                         expandable
                     >
                         <div class="px-2 pt-3 pb-11" inert={marracashSession.playerAidOpen}>
@@ -171,6 +184,7 @@
                                     {#if marracashSession.playerAidOpen}
                                         <PlayerAid />
                                     {/if}
+                                    <AuctionNotice animator={auctionNotice} />
                                 {/if}
                             </div>
                         {/snippet}
@@ -178,6 +192,9 @@
                 </div>
                 {#if marracashSession.playerAidOpen && !expanded}
                     <PlayerAid />
+                {/if}
+                {#if !expanded}
+                    <AuctionNotice animator={auctionNotice} />
                 {/if}
             </div>
         {/snippet}

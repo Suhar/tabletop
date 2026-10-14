@@ -47,6 +47,8 @@ export function destinationFountains(page: Page): Locator {
 }
 
 export async function finishBidding(page: Page) {
+    // The bid panel waits for the auction's announcement
+    await expect(actionPanel(page).getByText('Sealed bid')).toBeVisible()
     while (await actionPanel(page).getByText('Sealed bid').count()) {
         const place = page.getByRole('button', { name: 'Place bid' })
         const before = await actionPanel(page).innerText()
@@ -69,5 +71,5 @@ export async function playOpeningRound(page: Page, players = 4) {
 }
 
 export function incomingVisitors(page: Page): Locator {
-    return page.locator('g[aria-label="Visitor queue"] path[filter*="candidate-halo"]')
+    return page.locator('g[aria-label="Visitor queue"] path.candidate-halo')
 }

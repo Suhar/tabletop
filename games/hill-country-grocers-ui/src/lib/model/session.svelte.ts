@@ -1,6 +1,12 @@
-import { sameCoordinates, type AxialCoordinates } from '@tabletop/common'
+import {
+    assertExists,
+    sameCoordinates,
+    type AuctionParticipant,
+    type AxialCoordinates
+} from '@tabletop/common'
 import { GameSession } from '@tabletop/frontend-components'
 import {
+    AuctionKind,
     BuildNetwork,
     ChooseAction,
     CompanyId,
@@ -12,6 +18,7 @@ import {
     SkipBonusCube,
     TakeDevelopmentCash,
     city,
+    seatOrderFrom,
     type ActionSpace,
     type HcgGameState,
     type HydratedHcgGameState
@@ -32,6 +39,17 @@ import {
     type BuildSelection,
     type DevelopSelection
 } from './selection.js'
+
+export type AuctionView = {
+    companyId: CompanyId
+    kind: AuctionKind
+    seats: AuctionParticipant[]
+    currentBidderId: string | undefined
+    hasBid: boolean
+    minimumBid: number
+    opening: boolean
+    upcomingInitialAuctions: CompanyId[]
+}
 
 export class HcgGameSession extends GameSession<HcgGameState, HydratedHcgGameState> {
     private buildSelection: BuildSelection = $state({})
@@ -105,6 +123,13 @@ export class HcgGameSession extends GameSession<HcgGameState, HydratedHcgGameSta
             ? this.gameState.buildCost(this.buildCompany, this.chosenHexes)
             : undefined
     )
+
+    placementCost(coords: AxialCoordinates): number {
+        const companyId = this.buildCompany
+        assertExists(companyId, 'Store prices need a building company')
+        const withHex = this.gameState.buildCost(companyId, [...this.chosenHexes, coords])
+        return withHex.total - (this.chosenCost?.total ?? 0)
+    }
 
     selectBuildCompany(companyId: CompanyId) {
         if (this.buildCompanyOptions.includes(companyId)) {
@@ -220,6 +245,52 @@ export class HcgGameSession extends GameSession<HcgGameState, HydratedHcgGameSta
         if (this.auctionCompanyOptions.includes(companyId)) {
             this.auctionSelection = selectAuctionCompany(this.auctionSelection, companyId)
         }
+    }
+
+    auctionView: AuctionView | undefined = $derived.by(() => {
+        const auction = this.gameState.auction
+        if (auction) {
+            const bidding = this.gameState.bidding()
+            return {
+                companyId: auction.companyId,
+                kind: auction.kind,
+                seats: auction.bidding.participants,
+                currentBidderId: bidding.currentBidderId,
+                hasBid: bidding.hasBid,
+                minimumBid: this.gameState.smallestBid(),
+                opening: false,
+                upcomingInitialAuctions:
+                    auction.kind === AuctionKind.Initial
+                        ? this.gameState.initialAuctionOrder.filter(
+                              (companyId) =>
+                                  companyId !== auction.companyId &&
+                                  this.gameState.company(companyId).owners.length === 0
+                          )
+                        : []
+            }
+        }
+        const companyId = this.auctionCompany
+        if (!companyId) {
+            return undefined
+        }
+        const openerId = this.myPlayerId
+        assertExists(openerId, 'Only a seated player opens an auction')
+        return {
+            companyId,
+            kind: AuctionKind.Share,
+            seats: seatOrderFrom(this.gameState.turnManager.turnOrder, openerId).map(
+                (playerId) => ({ playerId, passed: false })
+            ),
+            currentBidderId: openerId,
+            hasBid: false,
+            minimumBid: 0,
+            opening: true,
+            upcomingInitialAuctions: []
+        }
+    })
+
+    displayName(playerId: string): string {
+        return playerId === this.myPlayerId ? 'You' : this.getPlayerName(playerId)
     }
 
     async openAuction(amount: number) {

@@ -84,7 +84,6 @@
         additionalStockActions = [],
         gameInformation,
         boardInformation,
-        spreadsheetCompanyOrder,
         auctionLotDescription,
         numberedShareLocation,
         actions,
@@ -95,7 +94,6 @@
         additionalStockActions?: readonly StockMenuOption[]
         gameInformation?: Snippet
         boardInformation?: Snippet
-        spreadsheetCompanyOrder?: readonly string[]
         auctionLotDescription?: (id: string) => string
         numberedShareLocation?: (companyId: string, number: number) => string | undefined
         actions: Snippet<[(locationId: string) => void, (trainId: string) => void]>
@@ -117,11 +115,14 @@
         poolName,
         trainColors,
         phaseColors,
-        phaseChart,
+        phaseChart: defaultPhaseChart,
         portfolioCompanyIds = [],
         includedPortfolioCompanyIds = [],
         privatePurchaseLabel = 'Buy privates'
     } = $derived(session.presentation)
+    const phaseChart = $derived(
+        session.presentation.phaseChartFor?.(session.gameState) ?? defaultPhaseChart
+    )
     const operatingRules = $derived(session.operatingRules)
     const valuationRules = $derived(session.valuationRules)
     const phaseTileColors = $derived(
@@ -605,10 +606,8 @@
             : operatingRules.companyOrder(gameState)
         ).map((id) => getCompany(gameState, id))
     )
-    // Company cards and the spreadsheet follow the operating order unless the title sets its own.
-    const displayedCompanyOrder = $derived(
-        spreadsheetCompanyOrder ?? companyOrder.map((company) => company.id)
-    )
+    // Company cards and the spreadsheet follow the operating order.
+    const displayedCompanyOrder = $derived(companyOrder.map((company) => company.id))
     const startedCompanies = $derived(
         spreadsheetCompanies(
             gameState,
@@ -756,7 +755,7 @@
         tokens={session.map.displayedTokens}
         stationAppearances={session.mapView.stations}
         reservations={[
-            ...(session.track.displayedPreview?.stationReservations ??
+            ...(session.track.displayedStations?.stationReservations ??
                 session.stations.displayState.stationReservations),
             ...powerReservations
         ]}
@@ -779,7 +778,10 @@
         onselect={interactive && !consentPreview
             ? (selection) =>
                   locationChoice?.locationIds.includes(selection.locationId)
-                      ? locationChoice.choose(selection.locationId)
+                      ? locationChoice.choose(
+                            selection.locationId,
+                            'nodeId' in selection ? selection.nodeId : undefined
+                        )
                       : session.map.select(selection, false)
             : undefined}
     />
@@ -791,19 +793,18 @@
             area={viewportRect(boardViewport, boardAreas.market)}
         >
             {@const corner = boardInformation
-                ? marketLowerRightSpace(
-                      session.gameState.stockMarket,
-                      session.presentation.marketCell
-                  )
+                ? marketLowerRightSpace(session.stockMarketChart, session.presentation.marketCell)
                 : undefined}
             <div class="board-market">
                 <StockMarketScene
                     cell={session.presentation.marketCell}
                     animation={session.marketAnimation}
                     appearances={session.mapView.stations}
+                    chart={session.stockMarketChart}
                     market={session.gameState.stockMarket}
-                    companies={session.gameState.companies}
+                    companyName={(companyId) => session.companyName(companyId)}
                     zones={session.presentation.marketZones}
+                    ledge={session.presentation.marketLedge}
                 />
                 {#if boardInformation && corner}<div
                         class="market-corner"
@@ -1038,6 +1039,7 @@
                                         {money}
                                         showDetails
                                         companies={companyOrder}
+                                        companyName={(companyId) => session.companyName(companyId)}
                                         {gameState}
                                         trainDepot={session.trainDepot}
                                         {trainColors}
@@ -1234,14 +1236,18 @@
                                             animation={session.marketAnimation}
                                             appearances={session.mapView.stations}
                                             renderScale={2}
+                                            chart={session.stockMarketChart}
                                             market={session.gameState.stockMarket}
-                                            companies={session.gameState.companies}
+                                            companyName={(companyId) =>
+                                                session.companyName(companyId)}
                                             zones={session.presentation.marketZones}
+                                            ledge={session.presentation.marketLedge}
                                         />
                                     </ScalingWrapper>
                                 </div>
-                                {#if session.presentation.marketZones?.length}<MarketLegend
-                                        zones={session.presentation.marketZones}
+                                {#if session.presentation.marketZones?.length || session.presentation.marketLedge}<MarketLegend
+                                        zones={session.presentation.marketZones ?? []}
+                                        ledge={session.presentation.marketLedge}
                                     />{/if}
                             </div>{:else if id === 'Spreadsheet'}<div
                                 class="workspace-view data-area"

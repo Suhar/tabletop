@@ -1,3 +1,4 @@
+import { EighteenSeventeenMarket } from './stockMarket.js'
 import type {
     HydratedEighteenSeventeenState,
     EighteenSeventeenStateHandler,
@@ -33,7 +34,6 @@ import {
     addCompanyStations,
     applyShareTransfer,
     canTakeLoan,
-    companyMarketSpace,
     evaluateShareTransfer,
     isTakeLoan,
     nextOperatingCompany,
@@ -44,7 +44,8 @@ import {
     ShareSaleDetails,
     applyShareSale,
     evaluateShareDisposal,
-    sharesOwned
+    sharesOwned,
+    SystemActionFirstHandler
 } from '@tabletop/18xx'
 import { liquidate } from './liquidation.js'
 import { EighteenSeventeenLoanRules } from './loanRules.js'
@@ -66,7 +67,6 @@ import {
     trimStations
 } from './mergerRules.js'
 import { EighteenSeventeenStockRules, marketSale } from './stockRules.js'
-import { SystemActionFirstHandler } from './systemActionFirstHandler.js'
 
 type State = HydratedGameState & EighteenSeventeenState
 type Context = MachineContext<HydratedEighteenSeventeenState>
@@ -293,7 +293,7 @@ export class HydratedConvertCompany
         const stationsOwed = stationsForConversion(state, this.companyId)
         beginConversion(state, {
             companyId: this.companyId,
-            price: companyMarketSpace(state.stockMarket, this.companyId).price,
+            price: EighteenSeventeenMarket.companySpace(state.stockMarket, this.companyId).price,
             stationsOwed
         })
         this.metadata = { shareIds, shareCount, stationsOwed }
@@ -481,7 +481,7 @@ export function convertedSharePurchase(
         return { reason: 'It is not this player’s turn to buy.' }
     const certificateId = treasuryShareIds(state, conversion.companyId)[0]
     const certificate = state.certificates.find((certificate) => certificate.id === certificateId)
-    if (!certificate || certificate.retired || certificate.kind !== 'share')
+    if (!certificate || certificate.kind !== 'share')
         return { reason: 'The company has no treasury shares left.' }
     const buyer = { kind: 'player' as const, playerId }
     return evaluateShareTransfer(
@@ -542,6 +542,7 @@ export function convertedShareSales(
             seller,
             [{ companyId: conversion.companyId, shares }],
             {
+                market: EighteenSeventeenMarket,
                 saleTerms: marketSale,
                 presidencyCandidates: EighteenSeventeenStockRules.presidencyCandidates
             }
@@ -597,7 +598,7 @@ export class HydratedSellConvertedShares
         const details = this.sale(state)
         assert(this.source === ActionSource.User && details, 'Choose a legal post-conversion sale')
         applyShareSale(state, details)
-        EighteenSeventeenStockRules.afterSale?.(state)
+        EighteenSeventeenStockRules.afterSale?.(state, details)
         requireConversion(state).traderIds.shift()
         this.metadata = details
     }

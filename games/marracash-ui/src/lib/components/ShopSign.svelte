@@ -5,13 +5,15 @@
     import SignFace from '$lib/components/SignFace.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { signEdgeColor, signFrameColor } from '$lib/utils/playerColors.js'
-    import { CastShadowFilterId } from '$lib/utils/boardGeometry.js'
     import {
         playerStandeeOutline,
         shopSignLayout,
         SignShadowOffset,
         signInitial
     } from '$lib/utils/shopSign.js'
+    import { centredBaseline, ElMessiriCentralShift } from '$lib/utils/textBaseline.js'
+
+    const InitialSize = 22
 
     let {
         ownerId,
@@ -45,12 +47,19 @@
         d={outline}
         transform="translate({SignShadowOffset.x} {SignShadowOffset.y})"
         fill="#000000"
+        stroke="#000000"
+        stroke-width="3"
+        stroke-opacity="0.45"
+        stroke-linejoin="round"
         opacity="0.35"
-        filter="url(#{CastShadowFilterId})"
     ></path>
     <SignFace {outline} {fill} {edge} {frame}>
-        <text x="0" y="-27" class="sign-initial marracash-initial" fill={ink}
-            >{signInitial(ownerName)}</text
+        <text
+            x="0"
+            y={centredBaseline(-27, InitialSize, ElMessiriCentralShift)}
+            font-size={InitialSize}
+            class="sign-initial marracash-initial"
+            fill={ink}>{signInitial(ownerName)}</text
         >
     </SignFace>
 </g>
@@ -67,8 +76,6 @@
 
 <style>
     .sign-initial {
-        font-size: 22px;
         text-anchor: middle;
-        dominant-baseline: central;
     }
 </style>

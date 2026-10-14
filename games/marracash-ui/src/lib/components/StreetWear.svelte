@@ -1,7 +1,7 @@
 <script lang="ts">
+    import { StreetDustPatternId } from '$lib/utils/ground.js'
     import { BoardColumns, BoardRows } from '@tabletop/marracash'
     import { CellSize, WallThickness } from '$lib/utils/boardGeometry.js'
-    import { StreetDustPatternId } from '$lib/utils/ground.js'
 
     const WallShadowId = 'marracash-wall-shadow'
     const WallShadowDepth = 14

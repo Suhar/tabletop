@@ -72,8 +72,8 @@ locally. The image tag is immutable: a version already in Artifact Registry is r
 
 Every manifest change appends to a publication history: per game a list of logic and UI
 version pairs, for the frontend a list of versions, newest first with the deploy time, commit,
-and tags. Only the five most recent are kept, which is also how far `rollback` can reach; the
-artifacts themselves stay in the bucket. A manifest written before history existed is seeded
+and tags. Only the five most recent are kept, which is also how far `rollback` can reach; older
+artifacts stay in the bucket until `prune` deletes them. A manifest written before history existed is seeded
 with its current publication.
 
 ```bash
@@ -94,6 +94,26 @@ compatibility. A UI's `catalog.json` identifies its embedded logic through
 the UI published with the following logic version cannot. Both game switch and
 rollback validate this metadata before writing the manifest. Missing metadata or
 an incompatible pair leaves the publication unchanged, even if both bundles exist.
+
+### Pruning old artifacts
+
+```bash
+node tools/deploy/esm/cli.js prune (--game=<id> | --frontend | --all) [--apply] [--grace-days=<n>]
+```
+
+`prune` deletes version directories the manifest no longer references. Per game it treats logic
+and UI separately, and keeps the current version, every version in the publication history, and
+any version uploaded in the last 7 days (`--grace-days`), because a browser that loaded a UI before
+a newer deploy can still fetch its lazy chunks. Without `--apply` it only prints the plan.
+It reads the manifest fresh, refuses a target whose current version is missing from the listing,
+leaves names that are not versions alone, and never touches games absent from the manifest or
+the manifest backups. `switch` can only select versions that are still in the bucket.
+
+Every successful game or frontend deploy (`release-game`, `deploy-game`, `deploy-ui`,
+`deploy-logic`, `release-frontend`, `deploy-frontend`) then prunes its own target with
+`--apply` and the default grace. A prune failure is logged as `prune FAILED (the deploy itself
+succeeded)` and does not fail the command. Pass `--no-prune` to skip it. Delete logs are
+`/tmp/prune-<target>-<batch>.log`.
 
 Backend history comes from Cloud Run. `list --backend` marks revisions receiving
 traffic and shows readiness; `switch --backend --version=1.5.1` switches both services
@@ -138,6 +158,8 @@ rollback (--game=<id> | --frontend | --backend)
                              Select the publication that served before the current one
 switch --game=<id> --ui-version=<v> [--logic-version=<v>] | --frontend --version=<v>
                              Select specific published versions
+prune (--game=<id> | --frontend | --all) [--apply] [--grace-days=<n>]
+                             Delete artifact versions the manifest no longer references
 preflight (--game=<id> | --frontend | --backend) [--json]
                              Report serving/local versions and changes since the last release
 release-game --game=<id> [--logic] (--major | --minor | --patch) [--no-deploy]
@@ -300,6 +322,8 @@ Notes:
 - Deploy logs write to `/tmp/*-deploy.log`.
 - A frontend deploy publishes only the Site Frontend Artifact. Each game needs a separate UI-only Publication to adopt shared Game Client changes bundled into its UI Artifact; see the [Game UI Host Bridge Contract](../../docs/adr/0004-game-ui-host-bridge-contract.md).
 - Package versions and release tags are the source of truth for what a checkout is; the bucket manifest is the source of truth for what production serves.
+- The bucket is publicly readable and browsers fetch game UI assets from it directly, so the object metadata set at upload is what they receive. Game UI artifacts are uploaded with `Cache-Control: public, max-age=31536000, immutable`, since a version directory never changes. The manifest is uploaded with `Cache-Control: no-store`, since it is the one object replaced in place and a publicly readable object without that header is edge-cached for an hour.
+- The bucket serves an object's bytes as stored and does not choose a compressed file per request. After a game UI upload, each script object (`x.js`) is therefore replaced by the bytes of its Brotli file (`x.js.br`) with `Content-Encoding: br`. The `.js.br` objects stay, because the backend picks them itself for requests it serves. A client that does not accept Brotli cannot read these scripts.
 - GCS deploys create explicit placeholder objects for each destination directory path, including nested subdirectories under rsync sources (for non-HNS buckets / explicit-directory gcsfuse mounts).
 - Placeholder creation uses a direct Cloud Storage API call and requests the current credential from `gcloud auth print-access-token` on every invocation unless `TABLETOP_GCS_ACCESS_TOKEN` is provided. The helper does not cache tokens across invocations, so `gcloud config configurations activate` takes effect on the next call. Explicit Cloud SDK environment overrides and `TABLETOP_GCS_ACCESS_TOKEN` still take precedence.
 - Run credential-selection regression tests with `pnpm --filter @tabletop/deploy test`; these use fake credentials and do not contact Google Cloud.

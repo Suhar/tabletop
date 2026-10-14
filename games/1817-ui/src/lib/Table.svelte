@@ -30,7 +30,7 @@
             {
                 companyName,
                 playerName: (id) => session.getPlayerName(id),
-                bankName: session.gameState.bank.name
+                bankName: 'Bank'
             },
             session.presentation.money,
             shared
@@ -42,26 +42,7 @@
     {session}
     {privateOperationDescription}
     {historyDescription}
-    additionalStockActions={[
-        ...(session.corporateActions.length
-            ? [
-                  {
-                      label: 'Act for a company',
-                      selected: session.stockPanel === 'company',
-                      onSelect: () => session.chooseStockPanel('company')
-                  }
-              ]
-            : []),
-        ...(session.shorts.length
-            ? [
-                  {
-                      label: 'Short',
-                      selected: session.stockPanel === 'short',
-                      onSelect: () => session.chooseStockPanel('short')
-                  }
-              ]
-            : [])
-    ]}
+    additionalStockActions={session.stockPanels.menuOptions}
 >
     {#snippet actions(_focusLocation, focusRoute)}
         {#if session.selectionAuction.active}
@@ -70,9 +51,9 @@
             {:else}
                 <SelectionAuctionLots {session} />
             {/if}
-        {:else if session.stockPanel === 'company'}
+        {:else if session.stockPanels.open === 'company'}
             <CorporateActions {session} />
-        {:else if session.stockPanel === 'short'}
+        {:else if session.stockPanels.open === 'short'}
             <ShortSelling {session} />
         {:else if session.companyExcess}
             <CompanyExcess {session} excess={session.companyExcess} />

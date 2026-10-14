@@ -3,7 +3,12 @@ import { PowerTiming, TRIBUNAL_ID, powerIndexOf } from '../data/cardPowers.js'
 import { isVision } from '../data/cardRegistry.js'
 import { PowerQuestionKind, type ExchangeAllowance } from '../model/question.js'
 import { one, optional, PowerChoiceKind, type ChoiceDomain } from '../util/powerChoice.js'
-import { askQuestion, scheduleGatheringFloor, turnOrderFrom } from '../util/questions.js'
+import {
+    askQuestion,
+    gatheringTurnOrder,
+    scheduleGatheringFloor,
+    turnOrderFrom
+} from '../util/questions.js'
 import {
     DEED_WRITER_ALLOWS,
     reasonExchangeInvalid,
@@ -13,14 +18,19 @@ import {
 import { registerEffect, registerPersistent, type EffectDefinition, chosen } from './registry.js'
 import { otherPlayersAtYourSite, pawnSiteId } from './vocabulary.js'
 import { reasonPersistentForbidsRelicTake } from '../util/persistent.js'
+import { isAtLeastOathRevision, OathRevision } from '../util/revision.js'
 
 // "When played, each player, following turn order, may burn any number of [favor] to gain an equal number of [secret]."
 const REVELATION = 'denizen.arcane.revelation'
 registerEffect(REVELATION, powerIndexOf(REVELATION, PowerTiming.WhenPlayed), {
     choices: [],
     resolve: (ctx) => {
+        // Its Q&A — the round starts with the Chancellor.
+        const first = isAtLeastOathRevision(ctx.state, OathRevision.CardFixes1)
+            ? ctx.state.chancellorId()
+            : ctx.playerId
         const notes: string[] = []
-        for (const playerId of turnOrderFrom(ctx.state, ctx.playerId)) {
+        for (const playerId of turnOrderFrom(ctx.state, first)) {
             const note = askQuestion(ctx.state, ctx.playerId, {
                 kind: PowerQuestionKind.BurnFavorForSecrets,
                 cardId: REVELATION,
@@ -95,7 +105,7 @@ registerPersistent(HERALD, powerIndexOf(HERALD, PowerTiming.Persistent), {
                 askedPlayerId: owner,
                 amount: 1
             })
-            notes.push(note ?? `${owner} gains a favor from a bank of their choice`)
+            notes.push(note ?? `${owner} may gain 1 favor from a bank of their choice`)
         }
         return notes.length ? `Herald: ${notes.join('; ')}` : undefined
     }
@@ -178,7 +188,7 @@ registerEffect(GATHERING, powerIndexOf(GATHERING, PowerTiming.WhenPlayed), {
     choices: [],
     resolve: (ctx) => {
         const siteId = pawnSiteId(ctx.state, ctx.playerId)
-        for (const playerId of turnOrderFrom(ctx.state, ctx.playerId)) {
+        for (const playerId of gatheringTurnOrder(ctx.state, ctx.playerId)) {
             if (playerId === ctx.playerId) continue
             askQuestion(ctx.state, ctx.playerId, {
                 kind: PowerQuestionKind.JoinSite,

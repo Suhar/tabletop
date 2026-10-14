@@ -11,27 +11,26 @@ import {
 } from '@tabletop/common'
 import {
     StockMarketMove,
-    companyMarketSpace,
     getCompany,
     placeStockMarker,
     trainsOwnedBy,
     type OperatingState,
     type StockMarket,
     type StockState,
-    type TrainState
+    type TrainState,
+    SystemActionFirstHandler
 } from '@tabletop/18xx'
-import { isLiquidationSpace } from './stockMarket.js'
-import { SystemActionFirstHandler } from './systemActionFirstHandler.js'
+import { isLiquidationSpace, EighteenSeventeenMarket } from './stockMarket.js'
 
 export function isLiquidated(market: StockMarket, companyId: string): boolean {
-    return isLiquidationSpace(companyMarketSpace(market, companyId))
+    return isLiquidationSpace(EighteenSeventeenMarket.companySpace(market, companyId))
 }
 
 /** Moves a started company to the liquidation space, where it stops operating. */
 export function liquidate(state: StockState, companyId: string): StockMarketMove {
     assert(getCompany(state, companyId).started, 'Only a started company is liquidated')
-    const from = companyMarketSpace(state.stockMarket, companyId)
-    const to = state.stockMarket.spaces.find(isLiquidationSpace)
+    const from = EighteenSeventeenMarket.companySpace(state.stockMarket, companyId)
+    const to = EighteenSeventeenMarket.spaces.find(isLiquidationSpace)
     assertExists(to, 'The market has a liquidation space')
     placeStockMarker(state.stockMarket, companyId, to.id)
     return { companyId, fromMarketSpaceId: from.id, toMarketSpaceId: to.id }

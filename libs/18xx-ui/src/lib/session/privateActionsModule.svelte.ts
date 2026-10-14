@@ -17,7 +17,7 @@ export type TitlePrivatePower = PrivateTrackPower & { label: string; prompt: str
               kind: 'track'
               construction: Pick<
                   TrackConstruction,
-                  'choices' | 'canReach' | 'evaluate' | 'inventoryAfter'
+                  'choices' | 'canReach' | 'evaluate' | 'inventoryAfter' | 'stationsAfter'
               >
               commit(details: TrackLayDetails): Promise<void>
               /** Ends a power that allows several lays with the lays staged so far. */
@@ -28,7 +28,8 @@ export type TitlePrivatePower = PrivateTrackPower & { label: string; prompt: str
         | {
               kind: 'location'
               locationIds: readonly string[]
-              choose(locationId: string): Promise<void>
+              /** Chooses a hex, with the city or town clicked within it when there was one. */
+              choose(locationId: string, nodeId?: string): Promise<void>
           }
         | {
               kind: 'confirm'
