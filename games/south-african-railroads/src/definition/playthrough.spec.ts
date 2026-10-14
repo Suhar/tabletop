@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-    GameEngine,
-    GameResult,
-    assert,
-    assertExists,
-    validateGameResult
-} from '@tabletop/common'
+import { GameEngine, GameResult, assert, assertExists, validateGameResult } from '@tabletop/common'
 import { RailroadId } from '../components/railroads.js'
 import { ACTION_BOXES, ActionBox } from '../model/actionBoxes.js'
 import type { SarGameState } from '../model/gameState.js'

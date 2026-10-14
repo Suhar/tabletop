@@ -4,8 +4,9 @@
 
 - **Action area.** The turn header and the action panel come first. The four action boxes sit in a strip directly below the panel, above the map. Directions for the current decision appear only in the action panel, never on the map or the boxes. Each box shows its name, its action-track advance and its locomotive slots.
 - **Map.** The map carries no controls other than its targets: links, external connections and developable settlements. The legend stands in a single column on the map's left edge, below the dividends track.
-- **Player tickets.** Each investor is an Edmondson railway ticket. A band in the player's colour carries their name and cash. Below it, one line per railroad held shows a certificate per share, a star where the player controls the railroad, and what those shares would pay at the next dividend. A DIVIDEND DUE total follows. When the sixth payout is next, the lines show the final payoff and the total reads FINAL PAYOFF DUE. The total is followed by fine print with the player's worth at final payoff. The acting player's ticket has a border in their colour and a guard's punch hole.
-- **Investors sidebar.** The player tickets come first, then one card for each railroad. A card shows its treasury, income, value, dividend per share and five share certificates. Each certificate is marked in its owner's colour once sold. A closed ZASM card reads "Opens when track reaches Johannesburg". The other closed railroads read "Opens in the initial offering".
+- **Player tickets.** Each investor is an Edmondson railway ticket. A band in the player's colour carries their name and cash. Below it, one line per railroad held shows a certificate per share, a star where the player controls the railroad, and what those shares would pay at the next dividend. A DIVIDEND DUE total follows, at the same size as the cash in the band. When the sixth payout is next, the lines show the final payoff and the total reads FINAL PAYOFF DUE. The total is followed by fine print with the player's worth at final payoff. The acting player's ticket has a border in their colour, a guard's punch hole and a TO ACT tab.
+- **Investors sidebar.** The player tickets come first, then one card for each railroad. A card is a ledger page: the treasury sits in the railroad's band, a stack of the shares still for sale shrinks as they sell ("N left") and is stamped ALL SOLD once empty, and income, value and dividend per share share one money column. Below, each holder's initials are marked in their colour, one per share. A closed ZASM card reads "Opens when track reaches Johannesburg". The other closed railroads read "Opens in the initial offering".
+- **Auctions.** Every player sees the auction in the action area: the share as a certificate, then a seat card per bidder in bidding order with their bid. The bidder to act lifts with a gold border, and a pass is stamped PASSED. During the initial offering the railroads still to come follow under "Up next". The bidder gets a stepper whose amount can also be typed, and Pass. On phones the certificate shrinks and the seat cards drop to their own row.
 
 ## Visual intents
 
@@ -13,7 +14,9 @@
 - **Choose a building railroad.** When the builder must pick among railroads, those railroad cards get a dashed gold border and become clickable. The action panel offers the same railroads as buttons, so the choice works when the sidebar is out of view. When a player who controls no buildable railroad must hand the build over, the cards and buttons are shown even when only one railroad can build. A lone railroad of the builder's own is chosen automatically and nothing is highlighted.
 - **Build track.** Buildable links and external connections are highlighted on the map. The action panel states the costs.
 - **Develop a settlement.** Developable settlements get a ring on the map. The action panel states the cost of a second development. The map shows no cost.
-- **Offer stock.** Railroads with an unsold share are highlighted in the sidebar. The action panel offers them as buttons, together with the player's own shares.
+- **Offer stock.** Railroads with an unsold share are highlighted in the sidebar. The action panel offers them as share certificates, and the player's own shares as certificates under "Yours".
+
+Targets are static. No target animates, because an endless animation over the board made WebKit redraw it every frame and reload the page on phones. Board pieces cast unblurred offset shadows rather than filtered ones for the same reason.
 
 ## Coexistence and precedence
 
@@ -34,4 +37,5 @@ Settlement names are placed once from static map data (`utils/mapLabels.ts`). Ea
 
 - Start a game and finish the initial offering: the action boxes show no locomotives. After the first player chooses Construct Track, only their locomotive appears there.
 - As a player who controls no buildable railroad, choose Construct Track: every buildable railroad is highlighted in the sidebar and offered as a button, even when only one can build.
+- `src/lib/model/session.spec.ts` checks the build selection and Undo order and the auction view against a real session.
 - `src/lib/utils/mapLabels.spec.ts` checks that every name stays clear of icons, link boxes, track lines and other names.

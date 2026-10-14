@@ -195,7 +195,9 @@ describe('choosing an action', () => {
         for (const railroad of state.railroads.filter((candidate) => candidate.open)) {
             railroad.owners = ['b', 'b', 'b', 'b', 'b']
         }
-        const after = hydrate(run(state, { type: ActionType.ChooseAction, box: ActionBox.OfferStock }))
+        const after = hydrate(
+            run(state, { type: ActionType.ChooseAction, box: ActionBox.OfferStock })
+        )
         expect(after.getPlayerState('a').locomotive).toBe(ActionBox.OfferStock)
         expect(after.machineState).toBe(MachineState.ChoosingAction)
         expect(after.activePlayerIds).toEqual(['b'])
