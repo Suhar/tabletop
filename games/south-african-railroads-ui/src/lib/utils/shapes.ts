@@ -16,3 +16,7 @@ export function starPoints(points: number, outer: number, inner: number) {
         return `${(radius * Math.cos(angle)).toFixed(1)},${(radius * Math.sin(angle)).toFixed(1)}`
     }).join(' ')
 }
+
+// Board pieces cast an unblurred offset shadow; a blur filter per piece makes WebKit's
+// redraws too slow on phones.
+export const SHADOW_OFFSET: Point = { x: 0, y: 1.5 }

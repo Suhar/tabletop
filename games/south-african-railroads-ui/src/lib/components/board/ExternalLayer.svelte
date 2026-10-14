@@ -3,7 +3,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CONNECTION_STAR_RADIUS, connectionLabel } from '$lib/utils/mapGeometry.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
-    import { starPoints } from '$lib/utils/shapes.js'
+    import { SHADOW_OFFSET, starPoints } from '$lib/utils/shapes.js'
     import Cube from '../icons/Cube.svelte'
 
     const gameSession = getGameSession()
@@ -42,7 +42,12 @@
             class:built={connection.style}
             stroke={connection.style?.fill ?? '#6c4f9c'}
         />
-        <g transform="translate({connection.x} {connection.y})" filter="url(#sar-shadow)">
+        <g transform="translate({connection.x} {connection.y})">
+            <polygon
+                points={starPoints(8, CONNECTION_STAR_RADIUS, 13)}
+                transform="translate({SHADOW_OFFSET.x} {SHADOW_OFFSET.y})"
+                class="shadow"
+            />
             <polygon points={starPoints(8, CONNECTION_STAR_RADIUS, 13)} class="star" />
             {#if connection.style}
                 <Cube x={0} y={1} size={18} color={connection.style.fill} edge={connection.style.dark} />
@@ -90,6 +95,10 @@
     .spur.built {
         stroke-width: 6;
         stroke-dasharray: none;
+    }
+
+    .shadow {
+        fill: rgba(42, 26, 8, 0.35);
     }
 
     .star {

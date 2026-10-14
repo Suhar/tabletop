@@ -14,6 +14,8 @@
 <!-- An isometric cube centred on (x, y): lit top, mid left face, shaded right face. -->
 <g transform="translate({x} {y})" class="cube" stroke={edge} stroke-width="1" stroke-linejoin="round">
     <path d="M0 {-h} L{h} {-q} L0 0 L{-h} {-q} Z" fill={color} />
-    <path d="M{-h} {-q} L0 0 L0 {h} L{-h} {q} Z" fill={color} style="filter: brightness(0.82)" />
-    <path d="M{h} {-q} L0 0 L0 {h} L{h} {q} Z" fill={color} style="filter: brightness(0.64)" />
+    <path d="M{-h} {-q} L0 0 L0 {h} L{-h} {q} Z" fill={color} />
+    <path d="M{-h} {-q} L0 0 L0 {h} L{-h} {q} Z" fill="#000" fill-opacity="0.18" stroke="none" />
+    <path d="M{h} {-q} L0 0 L0 {h} L{h} {q} Z" fill={color} />
+    <path d="M{h} {-q} L0 0 L0 {h} L{h} {q} Z" fill="#000" fill-opacity="0.36" stroke="none" />
 </g>

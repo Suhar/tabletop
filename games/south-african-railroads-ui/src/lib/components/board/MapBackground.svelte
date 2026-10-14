@@ -35,15 +35,6 @@
     <clipPath id="sar-inner">
         <rect x="15" y={BOARD_TOP + 15} width={BOARD_WIDTH - 30} height={BOARD_HEIGHT - 30} rx="10" />
     </clipPath>
-    <filter id="sar-shadow" x="-30%" y="-30%" width="160%" height="160%">
-        <feDropShadow
-            dx="0"
-            dy="1.5"
-            stdDeviation="1.6"
-            flood-color="#2a1a08"
-            flood-opacity="0.35"
-        />
-    </filter>
 </defs>
 
 <rect y={BOARD_TOP} width={BOARD_WIDTH} height={BOARD_HEIGHT} rx="18" fill="url(#sar-paper)" />

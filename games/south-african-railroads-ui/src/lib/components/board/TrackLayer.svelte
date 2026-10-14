@@ -135,14 +135,12 @@
         stroke-linecap: round;
         stroke-linejoin: round;
         opacity: 0.55;
-        animation: sar-pulse 1.4s ease-in-out infinite;
         pointer-events: none;
     }
 
     .target-glow.chosen {
         opacity: 0.9;
         stroke-width: 18;
-        animation: none;
     }
 
     .hit {
@@ -165,15 +163,5 @@
     .hit:hover .hit-box,
     .hit:focus-visible .hit-box {
         fill: rgba(255, 236, 160, 0.75);
-    }
-
-    @keyframes sar-pulse {
-        0%,
-        100% {
-            opacity: 0.25;
-        }
-        50% {
-            opacity: 0.7;
-        }
     }
 </style>

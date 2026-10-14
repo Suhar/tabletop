@@ -18,6 +18,7 @@
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { polygonPoints } from '$lib/utils/shapes.js'
     import Cube from '../icons/Cube.svelte'
+    import { SHADOW_OFFSET } from '$lib/utils/shapes.js'
 
     const gameSession = getGameSession()
 
@@ -43,8 +44,11 @@
         })
     )
 
-    function baseStyle(place: SettlementDefinition) {
-        return place.homeOf ? RAILROAD_STYLE[place.homeOf] : RAILROAD_STYLE.CMRC
+    function symbolFill(place: SettlementDefinition): string {
+        return (
+            SYMBOL_FILL[place.kind] ??
+            (place.homeOf ? RAILROAD_STYLE[place.homeOf] : RAILROAD_STYLE.CMRC).fill
+        )
     }
 
     function metroCells(place: SettlementDefinition) {
@@ -64,6 +68,18 @@
         }
     }
 </script>
+
+{#snippet symbol(place: SettlementDefinition, fill: string | undefined)}
+    {#if place.kind === SettlementKind.RailroadStation}
+        <rect x="-13.5" y="-13.5" width="27" height="27" rx="2" {fill} class:symbol={fill} />
+    {:else if place.kind === SettlementKind.AgriculturalRailhead}
+        <polygon points={polygonPoints(6, 18.5)} {fill} class:symbol={fill} />
+    {:else if place.kind === SettlementKind.MercantileCenter}
+        <circle r="16.3" {fill} class:symbol={fill} />
+    {:else}
+        <polygon points={polygonPoints(5, 23)} {fill} class:symbol={fill} />
+    {/if}
+{/snippet}
 
 <g class="settlement-layer">
     {#each BASE_NAMES as base (base.railroadId)}
@@ -86,10 +102,20 @@
     {/each}
 
     {#each settlements as place (place.id)}
-        <g class="settlement" filter="url(#sar-shadow)">
+        <g class="settlement">
             {#if place.kind === SettlementKind.MetroArea}
                 {@const frame = metroFrameBox(place)}
                 {@const caption = metroCaptionBox(place)}
+                {#each [caption, frame] as box, index (index)}
+                    <rect
+                        x={box.x + SHADOW_OFFSET.x}
+                        y={box.y + SHADOW_OFFSET.y}
+                        width={box.width}
+                        height={box.height}
+                        rx="4"
+                        class="shadow"
+                    />
+                {/each}
                 <rect
                     x={caption.x}
                     y={caption.y}
@@ -134,19 +160,10 @@
                 {/if}
             {:else}
                 <g transform="translate({place.x} {place.y})">
-                    {#if place.kind === SettlementKind.RailroadStation}
-                        <rect x="-13.5" y="-13.5" width="27" height="27" rx="2" fill={SYMBOL_FILL[place.kind]} class="symbol" />
-                    {:else if place.kind === SettlementKind.AgriculturalRailhead}
-                        <polygon points={polygonPoints(6, 18.5)} fill={SYMBOL_FILL[place.kind]} class="symbol" />
-                    {:else if place.kind === SettlementKind.MercantileCenter}
-                        <circle r="16.3" fill={SYMBOL_FILL[place.kind]} class="symbol" />
-                    {:else}
-                        <polygon
-                            points={polygonPoints(5, 23)}
-                            fill={baseStyle(place).fill}
-                            class="symbol"
-                        />
-                    {/if}
+                    <g transform="translate({SHADOW_OFFSET.x} {SHADOW_OFFSET.y})" class="shadow">
+                        {@render symbol(place, undefined)}
+                    </g>
+                    {@render symbol(place, symbolFill(place))}
                     <text
                         y="5"
                         class="income"
@@ -207,6 +224,10 @@
         stroke: #f6eed7;
         stroke-width: 4px;
         pointer-events: none;
+    }
+
+    .shadow {
+        fill: rgba(42, 26, 8, 0.35);
     }
 
     .symbol {
@@ -283,19 +304,10 @@
         stroke: #c8961a;
         stroke-width: 3;
         stroke-dasharray: 6 4;
-        animation: sar-ring 1.4s linear infinite;
     }
 
     .develop-target:hover .ring,
     .develop-target:focus-visible .ring {
         fill: rgba(255, 230, 140, 0.5);
-    }
-
-
-
-    @keyframes sar-ring {
-        to {
-            stroke-dashoffset: -20;
-        }
     }
 </style>
