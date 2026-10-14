@@ -10,23 +10,23 @@
     const playerId = $derived(playerState.playerId)
     const color = $derived(gameSession.colors.getPlayerUiColor(playerId))
     const textColor = $derived(gameSession.colors.getPlayerTextColorValue(playerId))
-    const acting = $derived(gameSession.gameState.activePlayerIds.includes(playerId))
+    const acting = $derived(gameSession.shownState.activePlayerIds.includes(playerId))
     const lines = $derived(
         RAILROADS.map((railroad) => {
-            const shares = gameSession.gameState.sharesHeld(railroad.id, playerId)
-            const each = gameSession.gameState.nextDividendPerShare(railroad.id)
+            const shares = gameSession.shownState.sharesHeld(railroad.id, playerId)
+            const each = gameSession.shownState.nextDividendPerShare(railroad.id)
             return {
                 railroad,
                 shares,
                 each,
                 amount: shares * each,
-                controls: gameSession.gameState.controls(railroad.id, playerId)
+                controls: gameSession.shownState.controls(railroad.id, playerId)
             }
         }).filter((line) => line.shares > 0)
     )
-    const finalPayoffNext = $derived(gameSession.gameState.isFinalPayoffNext())
-    const dividend = $derived(gameSession.gameState.nextDividend(playerId))
-    const projected = $derived(gameSession.gameState.projectedFinalCash(playerId))
+    const finalPayoffNext = $derived(gameSession.shownState.isFinalPayoffNext())
+    const dividend = $derived(gameSession.shownState.nextDividend(playerId))
+    const projected = $derived(gameSession.shownState.projectedFinalCash(playerId))
 </script>
 
 <div class="ticket" class:acting style:--player={color} style:--player-text={textColor}>
@@ -45,7 +45,6 @@
                 {#each Array.from({ length: line.shares }, (_, index) => index) as share (share)}
                     <ShareCertificate railroadId={line.railroad.id} />
                 {/each}
-                {#if line.controls}<span class="control" aria-label="controls">★</span>{/if}
             </span>
             <span class="leader"></span>
             <span class="amount">${line.amount}</span>
@@ -82,19 +81,6 @@
     .ticket.acting {
         border-color: var(--player);
         box-shadow: 0 2px 6px rgba(40, 24, 8, 0.4);
-    }
-
-    /* The guard's punch clips the acting player's ticket. */
-    .ticket.acting::after {
-        content: '';
-        position: absolute;
-        right: 14px;
-        bottom: 6px;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #e9dcbc;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
     }
 
     .band {
@@ -136,10 +122,6 @@
         flex-wrap: wrap;
         align-items: center;
         gap: 3px;
-    }
-
-    .control {
-        color: #c8961a;
     }
 
     .leader {

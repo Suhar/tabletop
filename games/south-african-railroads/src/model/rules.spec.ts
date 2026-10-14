@@ -11,7 +11,7 @@ import { ActionType } from '../definition/actions.js'
 import { Definition } from '../definition/definition.js'
 import { SarRuntime } from '../definition/runtime.js'
 import { MachineState } from '../definition/states.js'
-import { RailroadId } from '../components/railroads.js'
+import { RAILROADS, RailroadId } from '../components/railroads.js'
 import { ActionBox, boxCapacity } from './actionBoxes.js'
 import type { HydratedSarGameState, SarGameState } from './gameState.js'
 import { homeLinks } from './track.js'
@@ -300,6 +300,34 @@ describe('construction', () => {
         expect(after.machineState).toBe(MachineState.Bidding)
         expect(after.auction?.railroadId).toBe(RailroadId.ZASM)
         expect(after.activePlayerIds).toEqual(['a'])
+    })
+})
+
+describe('income gains shown before choosing', () => {
+    it('predicts what a link adds to its railroad income', () => {
+        const state = hydrate(afterInitialOffering())
+        for (const railroadId of [RailroadId.CSAR, RailroadId.NRC]) {
+            const before = state.income(railroadId)
+            for (const linkId of state.singleBuilds(railroadId).slice(0, 5)) {
+                const built = hydrate(structuredClone(state.dehydrate()))
+                built.track.push({ linkId, railroadId })
+                expect(built.income(railroadId) - before).toBe(state.buildIncomeGain(linkId))
+            }
+        }
+    })
+
+    it('predicts what a development adds to each railroad serving the settlement', () => {
+        const state = hydrate(afterInitialOffering())
+        const [settlementId] = state.developableSettlements()
+        const gains = state.developmentIncomeGains(settlementId)
+        const before = new Map(
+            RAILROADS.map((railroad) => [railroad.id, state.income(railroad.id)])
+        )
+        state.developments[settlementId] = state.developmentLevel(settlementId) + 1
+        for (const railroad of RAILROADS) {
+            const gain = gains.find((entry) => entry.railroadId === railroad.id)?.gain ?? 0
+            expect(state.income(railroad.id) - (before.get(railroad.id) ?? 0)).toBe(gain)
+        }
     })
 })
 

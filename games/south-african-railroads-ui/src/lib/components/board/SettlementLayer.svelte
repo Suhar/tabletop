@@ -17,7 +17,6 @@
     } from '$lib/utils/mapLabels.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { polygonPoints } from '$lib/utils/shapes.js'
-    import Cube from '../icons/Cube.svelte'
     import { SHADOW_OFFSET } from '$lib/utils/shapes.js'
 
     const gameSession = getGameSession()
@@ -29,7 +28,7 @@
     }
 
     const developTargets = $derived(
-        new Map(gameSession.developTargets.map((target) => [target.settlementId, target.cost]))
+        new Map(gameSession.developTargets.map((target) => [target.settlementId, target]))
     )
 
     const settlements = $derived(
@@ -39,10 +38,15 @@
                 ...place,
                 level,
                 income: incomeLevels(place.id)[level],
-                cost: developTargets.get(place.id)
+                target: developTargets.get(place.id)
             }
         })
     )
+
+    function developedRingRadius(place: SettlementDefinition): number {
+        const { width, height } = settlementIconBox(place)
+        return Math.max(width, height) / 2 + 5
+    }
 
     function symbolFill(place: SettlementDefinition): string {
         return (
@@ -156,7 +160,22 @@
                 {/each}
                 {#if place.level > 0}
                     {@const current = metroCells(place)[place.level]}
-                    <Cube x={current.x + METRO_CELL - 6} y={current.y + 8} size={17} />
+                    <rect
+                        x={current.x - 2}
+                        y={current.y - 2}
+                        width={METRO_CELL + 4}
+                        height={METRO_CELL + 4}
+                        rx="4"
+                        class="developed-halo"
+                    />
+                    <rect
+                        x={current.x - 2}
+                        y={current.y - 2}
+                        width={METRO_CELL + 4}
+                        height={METRO_CELL + 4}
+                        rx="4"
+                        class="developed-ring"
+                    />
                 {/if}
             {:else}
                 <g transform="translate({place.x} {place.y})">
@@ -170,7 +189,9 @@
                         class:dark={place.kind === SettlementKind.AgriculturalRailhead}>{place.income}</text
                     >
                     {#if place.level > 0}
-                        <Cube x={14} y={-15} size={18} />
+                        {@const radius = developedRingRadius(place)}
+                        <circle r={radius} class="developed-halo" />
+                        <circle r={radius} class="developed-ring" />
                     {/if}
                 </g>
             {/if}
@@ -178,7 +199,7 @@
     {/each}
 
     {#each settlements as place (place.id)}
-        {#if place.cost !== undefined}
+        {#if place.target}
             {@const bounds =
                 place.kind === SettlementKind.MetroArea
                     ? settlementIconBox(place)
@@ -187,7 +208,7 @@
                 class="develop-target"
                 role="button"
                 tabindex="0"
-                aria-label="Develop {place.name}{place.cost > 0 ? ` for $${place.cost}` : ''}"
+                aria-label="Develop {place.name}{place.target.cost > 0 ? ` for $${place.target.cost}` : ''}"
                 onclick={() => gameSession.develop(place.id)}
                 onkeydown={(event) => onKey(event, place.id)}
             >
@@ -199,6 +220,19 @@
                     rx="9"
                     class="ring"
                 />
+                {#each place.target.gains as entry, index (entry.railroadId)}
+                    {@const style = RAILROAD_STYLE[entry.railroadId]}
+                    <g
+                        transform="translate({bounds.x + bounds.width / 2} {bounds.y +
+                            bounds.height +
+                            12 +
+                            index * 17})"
+                        class="gain-chip"
+                    >
+                        <rect x="-19" y="-8" width="38" height="15" rx="3" fill={style.fill} />
+                        <text y="4" fill={style.text}>+{entry.gain}</text>
+                    </g>
+                {/each}
             </g>
         {/if}
     {/each}
@@ -228,6 +262,28 @@
 
     .shadow {
         fill: rgba(42, 26, 8, 0.35);
+    }
+
+    .developed-halo {
+        fill: none;
+        stroke: #fdfaf0;
+        stroke-width: 8;
+        pointer-events: none;
+    }
+
+    .developed-ring {
+        fill: none;
+        stroke: #7c7c7c;
+        stroke-width: 4;
+        pointer-events: none;
+    }
+
+    .gain-chip text {
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 12px;
+        font-weight: 700;
+        text-anchor: middle;
+        pointer-events: none;
     }
 
     .symbol {

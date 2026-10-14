@@ -21,7 +21,7 @@
     const gameSession = getGameSession()
 
     const SHARE_OFFSET_X = 4
-    const SHARE_OFFSET_Y = 3
+    const SHARE_OFFSET_Y = 9
     const STACK_STEPS = SHARES_PER_RAILROAD - 1
 
     const definition = $derived(railroadDefinition(railroadId))
@@ -84,17 +84,17 @@
             <div class="rows">
                 <div class="entry" title="Income: the settlements along its track">
                     <span>Income</span><span class="money"
-                        >${gameSession.gameState.income(railroadId)}</span
+                        >${gameSession.shownState.income(railroadId)}</span
                     >
                 </div>
                 <div class="entry" title="Value: its track and external connections">
                     <span>Value</span><span class="money"
-                        >${gameSession.gameState.value(railroadId)}</span
+                        >${gameSession.shownState.value(railroadId)}</span
                     >
                 </div>
                 <div class="entry" title="Dividend per share: income ÷ {SHARES_PER_RAILROAD}, rounded up">
                     <span>Dividend</span><span class="money"
-                        >${gameSession.gameState.dividendPerShare(railroadId)}</span
+                        >${gameSession.shownState.dividendPerShare(railroadId)}</span
                     >
                 </div>
                 <div
@@ -102,7 +102,7 @@
                     title="Endgame payout per share: (value + income) ÷ shares sold, rounded up"
                 >
                     <span>Endgame payout</span><span class="money"
-                        >${gameSession.gameState.finalPayoffPerShare(railroadId)}</span
+                        >${gameSession.shownState.finalPayoffPerShare(railroadId)}</span
                     >
                 </div>
             </div>

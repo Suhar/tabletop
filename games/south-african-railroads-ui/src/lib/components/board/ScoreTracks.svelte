@@ -21,7 +21,9 @@
     const actionMarker = $derived(
         actionCells[Math.min(gameSession.gameState.actionTrack, ACTION_TRACK_LIMIT)]
     )
+    const rounds = DIVIDENDS_BEFORE_FINAL + 1
     const round = $derived(Math.min(gameSession.gameState.dividendsPaid, DIVIDENDS_BEFORE_FINAL) + 1)
+    const finalRound = $derived(gameSession.gameState.isFinalPayoffNext())
 </script>
 
 <g class="action-track">
@@ -50,7 +52,12 @@
 </g>
 
 <g class="round-indicator">
-    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 24} class="round">Round {round}</text>
+    <text
+        x={ROUND_INDICATOR_ORIGIN.x}
+        y={ROUND_INDICATOR_ORIGIN.y + 24}
+        class="round"
+        class:final={finalRound}>{finalRound ? 'Final Round' : `Round ${round} of ${rounds}`}</text
+    >
     <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 60} class="note-left"
         >Dividend per share = income ÷ 5, rounded up.</text
     >
@@ -97,6 +104,10 @@
         font-size: 10.5px;
         fill: #5c3f1f;
         text-anchor: middle;
+    }
+
+    .round.final {
+        fill: #b0262e;
     }
 
     .round {

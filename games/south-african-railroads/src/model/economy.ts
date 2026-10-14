@@ -1,6 +1,5 @@
 import { incomeLevels, link } from '../components/map.js'
-import type { RailroadId } from '../components/railroads.js'
-import { SHARES_PER_RAILROAD } from '../components/railroads.js'
+import { RAILROADS, SHARES_PER_RAILROAD, type RailroadId } from '../components/railroads.js'
 import { railroadLinkIds, type TrackState } from './track.js'
 
 export type DevelopmentState = { developments: Record<string, number> }
@@ -16,6 +15,27 @@ export function settlementIncome(state: DevelopmentState, settlementId: string):
 export function linkIncome(state: DevelopmentState, linkId: string): number {
     const [a, b] = link(linkId).ends
     return settlementIncome(state, a) + settlementIncome(state, b)
+}
+
+export type IncomeGain = { railroadId: RailroadId; gain: number }
+
+// What one more development at a settlement adds to the income of each railroad serving it: the
+// step up its income track, once for every link of the railroad into it.
+export function developmentIncomeGains(
+    state: TrackState & DevelopmentState,
+    settlementId: string
+): IncomeGain[] {
+    const levels = incomeLevels(settlementId)
+    const level = developmentLevel(state, settlementId)
+    const step = levels[level + 1] - levels[level]
+    return RAILROADS.map((railroad) => ({
+        railroadId: railroad.id,
+        gain:
+            step *
+            railroadLinkIds(state, railroad.id).filter((linkId) =>
+                link(linkId).ends.includes(settlementId)
+            ).length
+    })).filter((entry) => entry.gain > 0)
 }
 
 export function railroadIncome(state: TrackState & DevelopmentState, railroadId: RailroadId) {

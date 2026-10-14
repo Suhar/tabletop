@@ -22,13 +22,16 @@ import {
 import { ACTION_BOXES, ActionBox, boxCapacity } from './actionBoxes.js'
 import { ShareAuction } from './auction.js'
 import {
+    developmentIncomeGains,
     developmentLevel,
     dividendPerShare,
+    linkIncome,
     finalPayoffPerShare,
     minimumBid,
     railroadIncome,
     settlementIncome,
-    specialDividendPerShare
+    specialDividendPerShare,
+    type IncomeGain
 } from './economy.js'
 import { HydratedSarPlayerState, SarPlayerState } from './playerState.js'
 import { BuiltConnection, BuiltLink, RailroadState } from './railroadState.js'
@@ -127,6 +130,14 @@ export class HydratedSarGameState
 
     developmentLevel(settlementId: string): number {
         return developmentLevel(this, settlementId)
+    }
+
+    buildIncomeGain(linkId: string): number {
+        return linkIncome(this, linkId)
+    }
+
+    developmentIncomeGains(settlementId: string): IncomeGain[] {
+        return developmentIncomeGains(this, settlementId)
     }
 
     income(railroadId: RailroadId): number {

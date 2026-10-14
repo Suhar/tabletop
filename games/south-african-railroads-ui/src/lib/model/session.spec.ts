@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { assertExists } from '@tabletop/common'
 import { GameSession } from '@tabletop/frontend-components'
 import { ActionBox, MachineState, RailroadId } from '@tabletop/south-african-railroads'
 import {
@@ -71,6 +72,24 @@ describe('building with a choice of railroads', () => {
         expect(session.firstLink).toBeUndefined()
     })
 
+    it('shows incomes and dividends as if the staged first link were built', async () => {
+        const session = openSessionOn(buildTable())
+        session.selectRailroad(RailroadId.CSAR)
+        const before = session.shownState.income(RailroadId.CSAR)
+        expect(session.shownState).toBe(session.gameState)
+
+        await stageFirstLink(session, RailroadId.CSAR)
+        const first = session.firstLink
+        assertExists(first, 'A first link is staged')
+        expect(session.shownState.income(RailroadId.CSAR) - before).toBe(
+            session.gameState.buildIncomeGain(first)
+        )
+        expect(session.gameState.income(RailroadId.CSAR)).toBe(before)
+
+        session.cancelFirstLink()
+        expect(session.shownState).toBe(session.gameState)
+    })
+
     it('ignores a railroad that is not on offer', () => {
         const session = openSessionOn(buildTable())
         session.selectRailroad(RailroadId.NRC)
@@ -94,5 +113,19 @@ describe('the auction view', () => {
     it('has nothing to show outside an auction', () => {
         const session = openSessionOn(firstTurnTable())
         expect(session.auctionView).toBeUndefined()
+    })
+})
+
+describe('developing', () => {
+    it('shows each railroad what a development would add to its income', async () => {
+        const session = openSessionOn(choose(firstTurnTable(), ActionBox.DevelopSettlements))
+        expect(session.gameState.machineState).toBe(MachineState.DevelopingSettlements)
+        expect(session.developTargets.length).toBeGreaterThan(0)
+        for (const target of session.developTargets) {
+            expect(target.gains).toEqual(
+                session.gameState.developmentIncomeGains(target.settlementId)
+            )
+        }
+        expect(session.developTargets.some((target) => target.gains.length > 0)).toBe(true)
     })
 })

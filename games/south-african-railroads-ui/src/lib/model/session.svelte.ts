@@ -15,9 +15,10 @@ import {
     OfferShare,
     PassBid,
     PlaceBid,
+    HydratedSarGameState,
     freeBuildHome,
     homeLinks,
-    type HydratedSarGameState,
+    type IncomeGain,
     type HydratedSarPlayerState,
     type RailroadId,
     type SarGameState
@@ -31,7 +32,7 @@ import {
     type BuildSelection
 } from './selection.js'
 
-export type DevelopTarget = { settlementId: string; cost: number }
+export type DevelopTarget = { settlementId: string; cost: number; gains: IncomeGain[] }
 
 export type AuctionView = {
     railroadId: RailroadId
@@ -123,6 +124,19 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
     firstLink: string | undefined = $derived(
         this.selectedRailroad && !this.delegating ? this.buildSelection.firstLink?.value : undefined
     )
+
+    // The game as it stands once the staged first link of a double build is laid, so incomes and
+    // dividends show what the build would do.
+    shownState: HydratedSarGameState = $derived.by(() => {
+        const railroadId = this.selectedRailroad
+        const linkId = this.firstLink
+        if (!railroadId || !linkId) {
+            return this.gameState
+        }
+        const preview = new HydratedSarGameState(structuredClone(this.gameState.dehydrate()))
+        preview.track.push({ linkId, railroadId })
+        return preview
+    })
 
     private doubleStarts: Map<string, string[]> = $derived.by(() => {
         const railroadId = this.selectedRailroad
@@ -244,7 +258,8 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         }
         return this.gameState.affordableDevelopments(playerId).map((settlementId) => ({
             settlementId,
-            cost: this.gameState.developmentCost(settlementId)
+            cost: this.gameState.developmentCost(settlementId),
+            gains: this.gameState.developmentIncomeGains(settlementId)
         }))
     })
 

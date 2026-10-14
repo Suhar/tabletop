@@ -21,6 +21,7 @@
                 label: trackLink.ends.map((id) => settlement(id).name).join(' to '),
                 style: owner ? RAILROAD_STYLE[owner] : undefined,
                 target: targets.has(trackLink.id),
+                gain: gameSession.gameState.buildIncomeGain(trackLink.id),
                 chosen: gameSession.firstLink === trackLink.id
             }
         })
@@ -95,7 +96,7 @@
                 class="hit"
                 role="button"
                 tabindex="0"
-                aria-label="Build {trackLink.label}"
+                aria-label="Build {trackLink.label}, adding ${trackLink.gain} income"
                 onclick={() => gameSession.clickLink(trackLink.id)}
                 onkeydown={(event) => onKey(event, trackLink.id)}
             >
@@ -109,6 +110,9 @@
                     class="hit-box"
                     stroke={builderStyle?.fill ?? '#c8961a'}
                 />
+                <text x={trackLink.box.x} y={trackLink.box.y + 5} class="gain"
+                    >+{trackLink.gain}</text
+                >
             </g>
         {/if}
     {/each}
@@ -180,6 +184,15 @@
         fill: rgba(255, 244, 200, 0.35);
         stroke-width: 3;
         stroke-dasharray: 5 3;
+    }
+
+    .gain {
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 14px;
+        font-weight: 700;
+        fill: #2a1a08;
+        text-anchor: middle;
+        pointer-events: none;
     }
 
     .hit:hover .hit-box,
