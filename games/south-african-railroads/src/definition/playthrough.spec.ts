@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { GameEngine, GameResult, assert, assertExists, validateGameResult } from '@tabletop/common'
+import {
+    GameEngine,
+    GameResult,
+    type GameAction,
+    assert,
+    assertExists,
+    validateGameResult
+} from '@tabletop/common'
 import { RailroadId } from '../components/railroads.js'
 import { ACTION_BOXES, ActionBox } from '../model/actionBoxes.js'
 import type { SarGameState } from '../model/gameState.js'
@@ -40,6 +47,32 @@ describe.each([3, 4, 5, 6])('a %i player game', (count) => {
         expect(finished.winningPlayerIds.every((playerId) => scores[playerId] === best)).toBe(true)
         const again = playToEnd(count)
         expect({ ...again, id: finished.id }).toEqual(finished)
+    })
+
+    it('replays and undoes every processed action', () => {
+        const game = createGame(count)
+        const initial = engine.startGame(game, { masterSeed }).initialState
+        const history: { action: GameAction; before: SarGameState }[] = []
+        let state = initial
+        for (let step = 0; state.result === undefined; step++) {
+            assert(step < 5000, 'Playthrough did not finish')
+            const [playerId] = state.activePlayerIds
+            const action = botAction(SarRuntime.hydrator.hydrateState(state), playerId, step)
+            const result = engine.executeCanonicalAction({ game, state, action })
+            let replay = state
+            for (const processed of result.processedActions) {
+                history.push({ action: processed, before: replay })
+                replay = engine.applyProcessedAction({ game, state: replay, action: processed })
+            }
+            expect(replay).toEqual(result.updatedState)
+            state = result.updatedState
+        }
+        let undone = state
+        for (const { action, before } of history.toReversed()) {
+            undone = engine.undoProcessedAction({ state: undone, action })
+            expect(undone).toEqual(before)
+        }
+        expect(undone).toEqual(initial)
     })
 
     it('keeps every action box within its capacity', () => {
