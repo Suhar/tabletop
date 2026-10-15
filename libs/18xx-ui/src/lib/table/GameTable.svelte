@@ -308,6 +308,9 @@
         if (area) wrapper.focusRect(viewportRect(boardViewport, area), { animate: true })
         else wrapper.fitToContent({ animate: true })
     }
+    const boardFocusTarget = $derived(
+        boardFocus?.target ?? (boardViewer()?.isZoomedOut() ? 'Full' : undefined)
+    )
     const boardFocusOptions = $derived(
         (
             [
@@ -319,7 +322,7 @@
             .filter(([target, area]) => target === 'Full' || area)
             .map(([target, area]) => ({
                 label: target,
-                selected: boardFocus?.target === target,
+                selected: boardFocusTarget === target,
                 onSelect: () => focusBoard(target, area)
             }))
     )
@@ -1320,6 +1323,7 @@
                                     .filter(
                                         (tab) =>
                                             tab.id !== 'Actions' &&
+                                            tab.id !== 'Player Aid' &&
                                             !(boardAvailable && tab.id === 'Market')
                                     )
                                     .map((tab) =>
