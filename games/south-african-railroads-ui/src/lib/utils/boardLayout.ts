@@ -7,7 +7,7 @@ export const BOARD_HEIGHT = 1124 - BOARD_TOP
 export const ACTION_TRACK_ORIGIN = { x: 1062, y: 176 }
 export const ACTION_TRACK_CELL = 24
 
-export const ROUND_INDICATOR_ORIGIN = { x: 214, y: 166 }
+export const ROUND_INDICATOR_ORIGIN = { x: 36, y: 166 }
 
 export const LINK_BOX_SIZE = 28
 

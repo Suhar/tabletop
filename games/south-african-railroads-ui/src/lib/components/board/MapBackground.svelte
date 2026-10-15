@@ -7,7 +7,7 @@
     const REGIONS: RegionLabel[] = [
         { lines: ['TRANSVAAL', 'REPUBLIC'], x: 1180, y: 560 },
         { lines: ['ORANGE', 'FREE', 'STATE'], x: 336, y: 596 },
-        { lines: ['CAPE COLONY'], x: 300, y: 380, rotate: -24 },
+        { lines: ['CAPE COLONY'], x: 122, y: 504, rotate: -24 },
         { lines: ['BASUTOLAND'], x: 540, y: 992 },
         { lines: ['NATAL'], x: 884, y: 1004 },
         { lines: ['SWAZILAND'], x: 1268, y: 888 },

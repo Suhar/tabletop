@@ -58,12 +58,6 @@
         class="round"
         class:final={finalRound}>{finalRound ? 'Final Round' : `Round ${round} of ${rounds}`}</text
     >
-    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 60} class="note-left"
-        >Dividend per share = income ÷ 5, rounded up.</text
-    >
-    <text x={ROUND_INDICATOR_ORIGIN.x} y={ROUND_INDICATOR_ORIGIN.y + 75} class="note-left"
-        >Final payoff per share = (income + value) ÷ shares sold, rounded up.</text
-    >
 </g>
 
 <style>
@@ -80,13 +74,6 @@
         font-style: italic;
         fill: #6b4a28;
         text-anchor: end;
-    }
-
-    .note-left {
-        font-family: 'Libre Baskerville', Georgia, serif;
-        font-size: 11.5px;
-        font-style: italic;
-        fill: #6b4a28;
     }
 
     .cell {

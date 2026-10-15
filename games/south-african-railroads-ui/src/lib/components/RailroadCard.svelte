@@ -99,9 +99,9 @@
                 </div>
                 <div
                     class="entry"
-                    title="Endgame payout per share: (value + income) ÷ shares sold, rounded up"
+                    title="Final payoff per share: (value + income) ÷ shares sold, rounded up"
                 >
-                    <span>Endgame payout</span><span class="money"
+                    <span>Final Payoff</span><span class="money"
                         >${gameSession.shownState.finalPayoffPerShare(railroadId)}</span
                     >
                 </div>

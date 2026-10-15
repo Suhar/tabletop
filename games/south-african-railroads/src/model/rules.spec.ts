@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     ActionSource,
     GameEngine,
+    GameResult,
     MachineContext,
     PlayerStatus,
     assertExists,
@@ -14,6 +15,13 @@ import { MachineState } from '../definition/states.js'
 import { RAILROADS, RailroadId } from '../components/railroads.js'
 import { ActionBox, boxCapacity } from './actionBoxes.js'
 import type { HydratedSarGameState, SarGameState } from './gameState.js'
+import { HydratedChooseAction } from '../actions/chooseAction.js'
+import { HydratedDelegateBuild } from '../actions/delegateBuild.js'
+import { LINKS, SETTLEMENTS } from '../components/mapData.js'
+import { maxDevelopments } from '../components/map.js'
+import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
+import { minimumBid } from './economy.js'
+import { seatOrderFrom } from './shareAuctionRules.js'
 import { homeLinks } from './track.js'
 import { freeBuildHome } from './freeBuild.js'
 
@@ -219,9 +227,42 @@ describe('choosing an action', () => {
         expect(after.activePlayerIds).toEqual(['b'])
     })
 
-    it('opens every Offer Stock slot the redrawn board prints', () => {
+    it('ends the turn of a Construct Track with no link a funded railroad can build', () => {
+        const hydrated = hydrate(afterInitialOffering())
+        hydrated.track = LINKS.map((link) => ({ linkId: link.id, railroadId: RailroadId.CdFM }))
+        for (const railroad of hydrated.railroads) {
+            railroad.treasury = railroad.id === RailroadId.CdFM ? 0 : 100
+        }
+        expect(hydrated.buildableRailroads()).toEqual([])
+        expect(HydratedChooseAction.nothingToDo(hydrated, ActionBox.ConstructTrack, 'a')).toBe(true)
+        const after = hydrate(
+            run(hydrated.dehydrate(), {
+                type: ActionType.ChooseAction,
+                box: ActionBox.ConstructTrack
+            })
+        )
+        expect(after.machineState).toBe(MachineState.ChoosingAction)
+        expect(after.activePlayerIds).toEqual(['b'])
+    })
+
+    it('ends the turn of a Develop Settlements with nothing left to develop', () => {
+        const hydrated = hydrate(afterInitialOffering())
+        hydrated.developments = Object.fromEntries(
+            SETTLEMENTS.map((settlement) => [settlement.id, maxDevelopments(settlement.id)])
+        )
+        const after = hydrate(
+            run(hydrated.dehydrate(), {
+                type: ActionType.ChooseAction,
+                box: ActionBox.DevelopSettlements
+            })
+        )
+        expect(after.machineState).toBe(MachineState.ChoosingAction)
+        expect(after.activePlayerIds).toEqual(['b'])
+    })
+
+    it('opens the third Offer Stock slot in every game but the three-player one', () => {
         expect([3, 4, 5, 6].map((count) => boxCapacity(ActionBox.OfferStock, count))).toEqual([
-            2, 3, 3, 2
+            2, 3, 3, 3
         ])
     })
 })
@@ -348,6 +389,19 @@ describe('developing settlements', () => {
         expect(after.machineState).toBe(MachineState.ChoosingAction)
     })
 
+    it('develops Johannesburg twice in one action when it is also the first choice', () => {
+        let state = afterInitialOffering()
+        state = run(state, { type: ActionType.ChooseAction, box: ActionBox.DevelopSettlements })
+        state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
+        const hydrated = hydrate(state)
+        expect(hydrated.developmentCost('johannesburg')).toBe(0)
+        expect(hydrated.mayFinishDeveloping()).toBe(false)
+        state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
+        const after = hydrate(state)
+        expect(after.developmentLevel('johannesburg')).toBe(2)
+        expect(after.machineState).toBe(MachineState.ChoosingAction)
+    })
+
     it('lets the player stop after one development once Johannesburg is full', () => {
         const state = hydrate(afterInitialOffering())
         state.developments = { johannesburg: 8 }
@@ -359,5 +413,54 @@ describe('developing settlements', () => {
                 new MachineContext({ gameConfig: {}, gameState: state })
             )
         ).toContain(ActionType.FinishDevelopment)
+    })
+})
+
+describe('auctions', () => {
+    it('bids clockwise in seat order from the opener', () => {
+        expect(seatOrderFrom(['a', 'b', 'c', 'd'], 'c')).toEqual(['c', 'd', 'a', 'b'])
+    })
+
+    it('rounds a fifth of the value up for the minimum bid', () => {
+        expect(minimumBid(15)).toBe(3)
+        expect(minimumBid(7)).toBe(2)
+    })
+})
+
+describe('construction control', () => {
+    it('makes a controlling player build with their own railroad rather than hand the build over', () => {
+        const state = hydrate(afterInitialOffering())
+        for (const railroad of state.openRailroads()) {
+            railroad.treasury = 5
+        }
+        state.railroad(RailroadId.NRC).owners = ['b']
+        expect(state.controls(RailroadId.NRC, 'a')).toBe(false)
+        expect(state.buildableRailroads()).toContain(RailroadId.NRC)
+        expect(HydratedDelegateBuild.canDelegate(state, 'a')).toBe(false)
+        expect(state.builderRailroads('a')).not.toContain(RailroadId.NRC)
+        expect(state.builderRailroads('a').length).toBeGreaterThan(0)
+    })
+})
+
+describe('the end of the game', () => {
+    function finish(cash: Record<string, number>) {
+        const state = hydrate(afterInitialOffering())
+        for (const player of state.players) {
+            player.cash = cash[player.playerId]
+        }
+        new EndOfGameStateHandler().enter(new MachineContext({ gameConfig: {}, gameState: state }))
+        return state
+    }
+
+    it('declares the player with the most money the winner', () => {
+        const state = finish({ a: 90, b: 120, c: 100, d: 80 })
+        expect(state.result).toBe(GameResult.Win)
+        expect(state.winningPlayerIds).toEqual(['b'])
+    })
+
+    it('shares the win between players tied on money', () => {
+        const state = finish({ a: 120, b: 120, c: 100, d: 80 })
+        expect(state.result).toBe(GameResult.Draw)
+        expect([...state.winningPlayerIds].sort()).toEqual(['a', 'b'])
     })
 })

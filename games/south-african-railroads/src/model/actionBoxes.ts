@@ -21,9 +21,9 @@ export const ACTION_TRACK_ADVANCE: Record<ActionBox, number> = {
 
 export const ACTION_TRACK_LIMIT = 35
 
-// The redrawn board marks the third Offer Stock slot "4p, 5p"; the rulebook text limits only
-// the three-player game. The board is followed so every slot drawn on it is honoured.
-const OFFER_STOCK_SLOTS: Record<number, number> = { 3: 2, 4: 3, 5: 3, 6: 2 }
+// The rulebook limits only the three-player game to two Offer Stock slots. The redrawn board
+// marks the third slot "4p, 5p", but a six-player game has it too.
+const OFFER_STOCK_SLOTS: Record<number, number> = { 3: 2, 4: 3, 5: 3, 6: 3 }
 
 export function boxCapacity(box: ActionBox, playerCount: number): number {
     switch (box) {

@@ -16,7 +16,8 @@ import {
     BOARD_WIDTH,
     LINK_BOX_SIZE,
     METRO_CELL,
-    METRO_GRIDS
+    METRO_GRIDS,
+    ROUND_INDICATOR_ORIGIN
 } from './boardLayout.js'
 import { CONNECTION_STAR_RADIUS, connectionLabelBox } from './mapGeometry.js'
 
@@ -111,8 +112,8 @@ export const LEGEND_ORIGIN = { x: 36, y: 286 }
 
 // Printed furniture the names must stay off: legend, both score tracks and the title cartouche.
 const FURNITURE: BoundingBox[] = [
-    { x: LEGEND_ORIGIN.x - 2, y: LEGEND_ORIGIN.y - 2, width: 226, height: 192 },
-    { x: 210, y: 136, width: 420, height: 112 },
+    { x: LEGEND_ORIGIN.x - 2, y: LEGEND_ORIGIN.y - 2, width: 226, height: 162 },
+    { x: ROUND_INDICATOR_ORIGIN.x - 2, y: ROUND_INDICATOR_ORIGIN.y - 4, width: 200, height: 48 },
     { x: 1058, y: 150, width: 440, height: 78 },
     { x: 322, y: 1008, width: 340, height: 58 }
 ]
