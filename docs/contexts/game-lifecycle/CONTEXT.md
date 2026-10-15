@@ -49,7 +49,11 @@ A Player accepted by its associated User.
 A Reserved Player whose associated User declined. In a Public Game the position returns to Open; in an Invite-Only Game the declined association remains until the Owner changes it.
 
 **Public Game**:
-A discoverable Game Instance with Open Players that eligible Users may claim.
+A Game Instance with Open Players that eligible Users may claim. It is listed for public discovery unless it is an Unlisted Game.
+
+**Unlisted Game**:
+A Public Game absent from public discovery, whose Open Players any User holding its link may claim. An Administrator or Developer creates one to recruit Players for a Game Title of any catalog visibility.
+_Avoid_: Hidden public game, private game
 
 **Invite-Only Game**:
 A Game Instance absent from public discovery, with Players offered to specific Users. Invite-only governs discovery and participation, not confidentiality.
@@ -70,7 +74,7 @@ The pre-play state in which at least one configured Player is not Joined.
 The pre-play state in which every configured Player is Joined. Readiness is derived from Player participation.
 
 **Automatic Start**:
-A Public Game, or a game whose Game Owner is not a Player, starts one minute after it becomes Ready. The countdown is cancelled if the game first stops being Ready or stops qualifying, and restarts in full if it becomes Ready again. The Game Owner may start it sooner. Changing Game Configuration does not affect the countdown.
+A Public or Unlisted Game, or a game whose Game Owner is not a Player, starts one minute after it becomes Ready. The countdown is cancelled if the game first stops being Ready or stops qualifying, and restarts in full if it becomes Ready again. The Game Owner may start it sooner. Changing Game Configuration does not affect the countdown.
 
 **In Progress**:
 The lifecycle state of a Game Instance after it starts and before its Game State contains a result.
