@@ -11,6 +11,7 @@ import type { RemoteApiService } from '../services/remoteApiService.js'
 import { GameActionResults } from './gameActionResults.svelte.js'
 import type { GameContext } from './gameContext.svelte.js'
 import { GameReconciliation, ServerActionHandling } from './gameReconciliation.js'
+import type { TransitionRequest } from './transitionPresenter.js'
 
 type State = GameState & { card?: string; effect?: string; cubes?: (string | null | undefined)[] }
 type Context = GameContext<State, HydratedGameState<State> & State>
@@ -29,14 +30,15 @@ function stateWith(fields: Partial<State>): State {
 }
 
 // The server's projected action carries a JSON forward patch built from the State as it is stored.
-function submission(before: State, optimisticState: State) {
+function submission(before: State, optimisticState: State, revealing = false) {
     const action: GameAction = {
         id: 'activate',
         gameId: 'game',
         type: 'ActivateEffect',
         playerId: 'p1',
         source: ActionSource.User,
-        index: 0
+        index: 0,
+        ...(revealing ? { revealsInfo: true } : {})
     }
     const served: GameAction = {
         ...action,
@@ -56,8 +58,18 @@ function submission(before: State, optimisticState: State) {
         }
         return next
     }
+    const kinds: string[] = []
+    const remote = {
+        isPaused: () => false,
+        recover: vi.fn(),
+        acceptsPerspective: () => true,
+        present: (request: TransitionRequest, write: () => void) => {
+            kinds.push(request.kind)
+            write()
+        }
+    }
     const context = {
-        state: optimisticState,
+        state: revealing ? before : optimisticState,
         game: {},
         applyActionResults: vi.fn(),
         engine: {
@@ -73,12 +85,23 @@ function submission(before: State, optimisticState: State) {
     >
     return {
         context,
+        remote,
+        kinds,
         response,
         optimistic: {
             before: { state: before, game: {} } as unknown as Context,
             result: new GameActionResults<State>([action], optimisticState)
         }
     }
+}
+
+function reconciliationOf(f: ReturnType<typeof submission>) {
+    return new GameReconciliation(
+        f.context as unknown as Context,
+        f.remote as unknown as ConstructorParameters<
+            typeof GameReconciliation<State, HydratedGameState<State> & State>
+        >[1]
+    )
 }
 
 describe('GameReconciliation.acceptSubmission', () => {
@@ -116,17 +139,26 @@ describe('GameReconciliation.acceptSubmission', () => {
 
     it('replaces an optimistic State that differs from the server', () => {
         const before = stateWith({ card: 'Refraction' })
-        const { context, response, optimistic } = submission(before, {
-            ...before,
-            card: undefined,
-            actionCount: 1
-        })
-        optimistic.result.updatedState = { ...optimistic.result.updatedState, card: 'Flare' }
-        const reconciliation = new GameReconciliation(context as unknown as Context)
+        const f = submission(before, { ...before, card: undefined, actionCount: 1 })
+        f.optimistic.result.updatedState = { ...f.optimistic.result.updatedState, card: 'Flare' }
+        const reconciliation = reconciliationOf(f)
 
-        reconciliation.acceptSubmission('activate', response, optimistic)
+        reconciliation.acceptSubmission('activate', f.response, f.optimistic)
 
-        expect(context.restoreFrom).toHaveBeenCalledOnce()
+        expect(f.context.restoreFrom).toHaveBeenCalledOnce()
+        expect(f.kinds).toEqual(['reconciliation'])
+    })
+
+    it("presents the host's acceptance of a revealing action as the player's own", () => {
+        const before = stateWith({ card: 'Refraction' })
+        const f = submission(before, { ...before, card: undefined, actionCount: 1 }, true)
+        const reconciliation = reconciliationOf(f)
+
+        reconciliation.acceptSubmission('activate', f.response, f.optimistic)
+
+        expect(f.context.restoreFrom).not.toHaveBeenCalled()
+        expect(f.context.applyActionResults).toHaveBeenCalledOnce()
+        expect(f.kinds).toEqual(['own-action'])
     })
 })
 
@@ -168,7 +200,8 @@ function afterUndo() {
     const remote = {
         isPaused: () => false,
         recover: vi.fn(),
-        acceptsPerspective: () => true
+        acceptsPerspective: () => true,
+        present: vi.fn((_request: TransitionRequest, write: () => void) => write())
     }
     const placement: GameAction = {
         id: 'place',
@@ -198,7 +231,7 @@ function afterUndo() {
         game: { ...game, updatedAt },
         perspective: { kind: 'player' as const, playerId: 'p1' }
     })
-    return { context, reconciliation, broadcast, replacement, placedAt, undoneAt }
+    return { context, reconciliation, remote, broadcast, replacement, placedAt, undoneAt }
 }
 
 describe('GameReconciliation server updates', () => {
@@ -225,5 +258,98 @@ describe('GameReconciliation server updates', () => {
         await reconciliation.enqueue(broadcast(new Date(undoneAt.getTime() + 1000)))
 
         expect(context.applyActionResults).toHaveBeenCalledOnce()
+    })
+
+    it("declares a delivered action as another participant's and a replacement as an Undo", async () => {
+        const { reconciliation, remote, broadcast, replacement, undoneAt } = afterUndo()
+        const later = new Date(undoneAt.getTime() + 1000)
+
+        await reconciliation.enqueue(broadcast(later))
+        await reconciliation.enqueue(replacement(later))
+
+        expect(remote.present.mock.calls.map(([request]) => request.kind)).toEqual([
+            'other-action',
+            'undo'
+        ])
+    })
+})
+
+// The player undid an action; the client already shows the result, and the server's push of the
+// Undo to the same player replays exactly that history.
+class FakeContext {
+    historyStartIndex = 0
+    updateGame = vi.fn()
+    restoreFrom = vi.fn()
+    verifyFullChecksum = () => {}
+
+    constructor(
+        public state: State,
+        public actions: GameAction[],
+        readonly game: Game,
+        readonly engine: {
+            applyProcessedAction(input: { action: GameAction; state: State }): State
+        }
+    ) {}
+
+    get nextActionIndex() {
+        return this.actions.length
+    }
+
+    undoLastAction() {
+        this.actions = this.actions.slice(0, -1)
+        this.state = stateWith({ actionCount: this.actions.length })
+    }
+
+    applyActionResults(results: { processedActions: GameAction[]; updatedState: State }) {
+        this.actions = [...this.actions, ...results.processedActions]
+        this.state = results.updatedState
+    }
+
+    clone(): FakeContext {
+        return new FakeContext(
+            structuredClone(this.state),
+            [...this.actions],
+            this.game,
+            this.engine
+        )
+    }
+}
+
+function afterOwnUndo(replayedRank: number) {
+    const game = { id: 'game', updatedAt: new Date('2026-10-14T21:00:01.000Z') } as Game
+    const kept: GameAction = {
+        id: 'kept',
+        gameId: 'game',
+        type: 'Build',
+        playerId: 'p1',
+        source: ActionSource.User,
+        index: 0
+    }
+    const engine = {
+        applyProcessedAction: ({ state }: { action: GameAction; state: State }) =>
+            ({ ...state, actionCount: state.actionCount + 1, rank: replayedRank }) as State
+    }
+    const shown = { ...stateWith({ actionCount: 1 }), rank: 0 } as State
+    const context = new FakeContext(shown, [kept], game, engine)
+    const reconciliation = new GameReconciliation(context as unknown as Context)
+    return { context, reconciliation, replay: { startIndex: 0, actions: [kept] }, game }
+}
+
+describe('GameReconciliation.replace', () => {
+    it('keeps the current State when the replay rebuilds exactly what the client has', () => {
+        const { context, reconciliation, replay, game } = afterOwnUndo(0)
+
+        reconciliation.replace(replay, 0, game)
+
+        expect(context.restoreFrom).not.toHaveBeenCalled()
+        expect(context.updateGame).toHaveBeenCalledWith(game)
+    })
+
+    it('replaces the State when the replay rebuilds something different', () => {
+        const { context, reconciliation, replay, game } = afterOwnUndo(2)
+
+        reconciliation.replace(replay, 0, game)
+
+        expect(context.restoreFrom).toHaveBeenCalledOnce()
     })
 })
