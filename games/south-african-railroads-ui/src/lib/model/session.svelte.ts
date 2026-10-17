@@ -10,6 +10,8 @@ import {
     DelegateBuild,
     Develop,
     FinishDevelopment,
+    FoundSpecialConnection,
+    LeaveTown,
     MachineState,
     OfferShare,
     PassBid,
@@ -180,6 +182,21 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
             : []
     )
 
+    specialConnectionPartners: RailroadId[] = $derived(
+        this.selectedRailroad && !this.delegating && !this.firstLink
+            ? this.gameState.specialConnectionPartners(this.selectedRailroad)
+            : []
+    )
+
+    async foundSpecialConnection(partnerId: RailroadId) {
+        const railroadId = this.selectedRailroad
+        if (railroadId && this.specialConnectionPartners.includes(partnerId)) {
+            await this.applyAction(
+                this.createPlayerAction(FoundSpecialConnection, { railroadId, partnerId })
+            )
+        }
+    }
+
     buildingRailroad: RailroadId | undefined = $derived(
         this.actingIn(MachineState.FreeBuild)
             ? this.gameState.freeBuild?.railroadId
@@ -267,6 +284,20 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
             gains: this.gameState.developmentIncomeGains(settlementId)
         }))
     })
+
+    // Leave Town takes the place of the first development, on maps that have it.
+    leaveTownTargets: string[] = $derived.by(() => {
+        const playerId = this.myPlayerId
+        return playerId && this.actingIn(MachineState.DevelopingSettlements)
+            ? this.gameState.leaveTownOptions(playerId)
+            : []
+    })
+
+    async leaveTown(settlementId: string) {
+        if (this.leaveTownTargets.includes(settlementId)) {
+            await this.applyAction(this.createPlayerAction(LeaveTown, { settlementId }))
+        }
+    }
 
     mayFinishDeveloping = $derived(
         this.actingIn(MachineState.DevelopingSettlements) && this.gameState.mayFinishDeveloping()

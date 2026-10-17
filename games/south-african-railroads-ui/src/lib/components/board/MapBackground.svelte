@@ -4,9 +4,11 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { boardLayout } from '$lib/utils/boardLayout.js'
     import SouthAfricaTerrain from './terrain/SouthAfricaTerrain.svelte'
+    import TexasSpecialTerrain from './terrain/TexasSpecialTerrain.svelte'
 
     const TERRAIN: Record<MapId, Component> = {
-        [MapId.SouthAfrica]: SouthAfricaTerrain
+        [MapId.SouthAfrica]: SouthAfricaTerrain,
+        [MapId.TexasSpecial]: TexasSpecialTerrain
     }
 
     const gameSession = getGameSession()

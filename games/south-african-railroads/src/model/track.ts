@@ -55,14 +55,14 @@ export function singleBuilds(state: TrackState, railroadId: RailroadId): string[
 }
 
 // Two consecutive links into settlements the railroad has not reached, never passing through
-// the hub.
+// the map's barrier settlement.
 export function doubleBuilds(state: TrackState, railroadId: RailroadId): DoubleBuild[] {
     const network = railroadSettlements(state, railroadId)
     const builds: DoubleBuild[] = []
     for (const firstId of singleBuilds(state, railroadId)) {
         const first = state.map.link(firstId)
         for (const middle of first.ends) {
-            if (network.has(middle) || middle === state.map.hubId) {
+            if (network.has(middle) || middle === state.map.definition.doubleBuildBarrierId) {
                 continue
             }
             for (const second of state.map.links) {

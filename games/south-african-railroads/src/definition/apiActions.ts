@@ -6,6 +6,8 @@ import { DeclineOffer } from '../actions/declineOffer.js'
 import { DelegateBuild } from '../actions/delegateBuild.js'
 import { Develop } from '../actions/develop.js'
 import { FinishDevelopment } from '../actions/finishDevelopment.js'
+import { FoundSpecialConnection } from '../actions/foundSpecialConnection.js'
+import { LeaveTown } from '../actions/leaveTown.js'
 import { OfferShare } from '../actions/offerShare.js'
 import { PassBid } from '../actions/passBid.js'
 import { PayDividends } from '../actions/payDividends.js'
@@ -20,6 +22,8 @@ export const SarApiActions = {
     [ActionType.DelegateBuild]: DelegateBuild,
     [ActionType.Develop]: Develop,
     [ActionType.FinishDevelopment]: FinishDevelopment,
+    [ActionType.LeaveTown]: LeaveTown,
+    [ActionType.FoundSpecialConnection]: FoundSpecialConnection,
     [ActionType.OfferShare]: OfferShare,
     [ActionType.DeclineOffer]: DeclineOffer,
     [ActionType.PayDividends]: PayDividends

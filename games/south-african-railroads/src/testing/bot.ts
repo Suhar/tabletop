@@ -5,6 +5,7 @@ import {
     assertExists,
     type GameAction
 } from '@tabletop/common'
+import { MapId } from '../maps/types.js'
 import { ActionBox } from '../model/actionBoxes.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
 import { homeLinks } from '../model/track.js'
@@ -13,14 +14,14 @@ import { Definition } from '../definition/definition.js'
 import { SarRuntime } from '../definition/runtime.js'
 import { MachineState } from '../definition/states.js'
 
-export function createGame(count: number) {
+export function createGame(count: number, mapId: MapId = MapId.SouthAfrica) {
     return SarRuntime.initializer.initializeGame(
         {
             id: 'sar-playthrough',
             typeId: Definition.info.id,
             ownerId: 'owner',
             seed: 11,
-            config: {},
+            config: { map: mapId },
             players: Array.from({ length: count }, (_, index) => ({
                 id: `p${index}`,
                 name: `Player ${index}`,
@@ -80,6 +81,15 @@ export function botAction(state: HydratedSarGameState, playerId: string, step: n
                 })
             }
             const [railroadId] = state.builderRailroads(playerId)
+            const [partnerId] = state.specialConnectionPartners(railroadId)
+            if (partnerId && step % 2 === 0) {
+                return act({
+                    ...base,
+                    type: ActionType.FoundSpecialConnection,
+                    railroadId,
+                    partnerId
+                })
+            }
             const connection = state.connectionBuilds(railroadId)[0]
             if (connection && step % 2 === 0) {
                 return act({
@@ -107,6 +117,10 @@ export function botAction(state: HydratedSarGameState, playerId: string, step: n
             })
         }
         case MachineState.DevelopingSettlements: {
+            const [leaveFrom] = state.leaveTownOptions(playerId)
+            if (leaveFrom && (step % 3 === 0 || !valid.includes(ActionType.Develop))) {
+                return act({ ...base, type: ActionType.LeaveTown, settlementId: leaveFrom })
+            }
             if (valid.includes(ActionType.FinishDevelopment) && step % 2 === 0) {
                 return act({ ...base, type: ActionType.FinishDevelopment })
             }

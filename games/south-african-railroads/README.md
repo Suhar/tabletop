@@ -8,4 +8,4 @@ The public `Definition` covers the initial offering, the Construct Track, Offer 
 
 ## Maps
 
-The South Africa map is the only one so far. [Maps](docs/maps.md) describes what a map defines and how to add one.
+Two maps are played: South Africa, the original board, and Texas Special, a map by James Geist, who granted permission for this implementation on 17 October 2026. [Maps](docs/maps.md) describes what a map defines and how to add one.

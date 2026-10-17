@@ -14,6 +14,10 @@ export const SarGameConfigOptions: GameConfigOptions = [
         name: 'Map',
         description: 'Which map to play on',
         default: MapId.SouthAfrica,
-        options: [{ name: 'South Africa', value: MapId.SouthAfrica }]
+        options: [
+            { name: 'South Africa', value: MapId.SouthAfrica },
+            { name: 'Texas Special', value: MapId.TexasSpecial }
+        ],
+        alwaysShow: true
     }
 ]

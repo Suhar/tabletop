@@ -7,23 +7,28 @@
     const layout = $derived(boardLayout(gameSession.gameState.mapId))
     const origin = $derived(layout.spec.logo)
 
-    // Two rails over ties, as wide as the title, as on a timetable heading.
-    const TRACK_WIDTH = LOGO_SIZE.width - 40
+    // Two rails over ties, about as wide as the title, as on a timetable heading.
+    const TITLE_CHAR_WIDTH = 15
     const TRACK_Y = 8
     const TIE_STEP = 6
-    const TIES = Array.from(
-        { length: Math.floor(TRACK_WIDTH / TIE_STEP) + 1 },
-        (_, index) => -TRACK_WIDTH / 2 + index * TIE_STEP
+    const trackWidth = $derived(
+        Math.min(LOGO_SIZE.width - 40, layout.spec.title.length * TITLE_CHAR_WIDTH)
+    )
+    const ties = $derived(
+        Array.from(
+            { length: Math.floor(trackWidth / TIE_STEP) + 1 },
+            (_, index) => -trackWidth / 2 + index * TIE_STEP
+        )
     )
 </script>
 
-<g transform="translate({origin.x} {origin.y})" role="img" aria-label="South African Railroads">
-    <text y="0" class="title">South African Railroads</text>
-    {#each TIES as x (x)}
+<g transform="translate({origin.x} {origin.y})" role="img" aria-label={layout.spec.title}>
+    <text y="0" class="title">{layout.spec.title}</text>
+    {#each ties as x (x)}
         <rect {x} y={TRACK_Y - 1} width="2" height="8" class="tie" />
     {/each}
-    <line x1={-TRACK_WIDTH / 2} x2={TRACK_WIDTH / 2} y1={TRACK_Y + 1} y2={TRACK_Y + 1} class="rail" />
-    <line x1={-TRACK_WIDTH / 2} x2={TRACK_WIDTH / 2} y1={TRACK_Y + 5} y2={TRACK_Y + 5} class="rail" />
+    <line x1={-trackWidth / 2} x2={trackWidth / 2} y1={TRACK_Y + 1} y2={TRACK_Y + 1} class="rail" />
+    <line x1={-trackWidth / 2} x2={trackWidth / 2} y1={TRACK_Y + 5} y2={TRACK_Y + 5} class="rail" />
     <text y="28" class="credit">{layout.spec.credit}</text>
 </g>
 

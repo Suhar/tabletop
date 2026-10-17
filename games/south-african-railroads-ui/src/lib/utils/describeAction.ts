@@ -1,7 +1,8 @@
-import type { GameAction } from '@tabletop/common'
+import { assertExists, type GameAction } from '@tabletop/common'
 import {
     ActionBox,
     AuctionKind,
+    LEAVE_TOWN_PAYOUT,
     isBuildConnection,
     isBuildTrack,
     isChooseAction,
@@ -9,6 +10,8 @@ import {
     isDelegateBuild,
     isDevelop,
     isFinishDevelopment,
+    isFoundSpecialConnection,
+    isLeaveTown,
     isOfferShare,
     isPassBid,
     isPayDividends,
@@ -36,6 +39,12 @@ export const BOX_SHORT_NAMES: Record<ActionBox, string> = {
     [ActionBox.PayDividends]: 'Dividends'
 }
 
+function freeDevelopmentName(map: SarMap): string {
+    const settlementId = map.definition.freeDevelopmentId
+    assertExists(settlementId, `The ${map.definition.name} map develops nowhere free`)
+    return map.settlement(settlementId).name
+}
+
 // What a box does, short enough for the action strip.
 export function boxTerms(map: SarMap, box: ActionBox, finalPayoffNext: boolean): string {
     switch (box) {
@@ -44,7 +53,9 @@ export function boxTerms(map: SarMap, box: ActionBox, finalPayoffNext: boolean):
         case ActionBox.OfferStock:
             return 'Auction one share'
         case ActionBox.DevelopSettlements:
-            return `2nd $3 · ${map.settlement(map.hubId).name} free`
+            return map.definition.leaveTown
+                ? '2nd $3 · or Leave Town'
+                : `2nd $3 · ${freeDevelopmentName(map)} free`
         case ActionBox.PayDividends:
             return finalPayoffNext ? 'Final payoff' : 'Income ÷ 5 a share'
     }
@@ -58,7 +69,9 @@ export function boxRules(map: SarMap, box: ActionBox, finalPayoffNext: boolean):
         case ActionBox.OfferStock:
             return 'Auction a railroad’s unsold share, or one of your own'
         case ActionBox.DevelopSettlements:
-            return `Raise a served settlement’s income; a second costs $3, ${map.settlement(map.hubId).name} is free`
+            return map.definition.leaveTown
+                ? 'Raise a served settlement’s income, a second for $3; or Leave Town with a cube that pays $3 a dividend'
+                : `Raise a served settlement’s income; a second costs $3, ${freeDevelopmentName(map)} is free`
         case ActionBox.PayDividends:
             return finalPayoffNext
                 ? 'Pay the final payoff and end the game'
@@ -142,7 +155,36 @@ export function describeAction(map: SarMap, action: GameAction): Description {
         return [`developed ${name}${cost}${income}`]
     }
     if (isFinishDevelopment(action)) {
-        return ['stopped after one development']
+        const automatic = action.metadata?.automatic
+        return automatic
+            ? [
+                  `declined a second development · ${map.settlement(automatic.settlementId).name} developed (now $${automatic.income})`
+              ]
+            : ['declined a second development']
+    }
+    if (isLeaveTown(action)) {
+        const name = map.settlement(action.settlementId).name
+        const automatic = action.metadata?.automatic
+        const developed = automatic
+            ? ` · ${map.settlement(automatic.settlementId).name} developed (now $${automatic.income})`
+            : ''
+        return [
+            `left ${name}, taking a cube that pays $${LEAVE_TOWN_PAYOUT} a dividend${developed}`
+        ]
+    }
+    if (isFoundSpecialConnection(action)) {
+        const special = map.definition.specialConnection
+        assertExists(special, 'This map has no special connection')
+        const rates = action.metadata?.rates
+            .map((rate) => `${map.railroad(rate.railroadId).shortName} $${rate.perShare}`)
+            .join(', ')
+        return [
+            `founded the ${special.name} joining the `,
+            { railroadId: action.railroadId },
+            ' and the ',
+            { railroadId: action.partnerId },
+            rates ? ` · special dividend per share: ${rates}` : ''
+        ]
     }
     if (isOfferShare(action)) {
         const minimum = action.metadata ? ` · minimum $${action.metadata.minimum}` : ''

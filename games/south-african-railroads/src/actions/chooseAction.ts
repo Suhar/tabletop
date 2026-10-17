@@ -65,7 +65,10 @@ export class HydratedChooseAction
             case ActionBox.OfferStock:
                 return state.unsoldOffers().length === 0 && state.holdings(playerId).length === 0
             case ActionBox.DevelopSettlements:
-                return state.developableSettlements().length === 0
+                return (
+                    state.developableSettlements().length === 0 &&
+                    state.leaveTownOptions(playerId).length === 0
+                )
             case ActionBox.PayDividends:
                 return false
         }

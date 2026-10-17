@@ -12,7 +12,7 @@ import {
 import { PassableBidding } from '@tabletop/18xx'
 import { MachineState } from '../definition/states.js'
 import { sarMap, type SarMap } from '../maps/maps.js'
-import { MapId, RailroadId } from '../maps/types.js'
+import { MapId, RailroadId, SettlementKind } from '../maps/types.js'
 import {
     ACTION_BOXES,
     ACTION_TRACK_ADVANCE,
@@ -42,12 +42,14 @@ import {
     connectionBuilds,
     doubleBuilds,
     isSettlementConnected,
+    railroadSettlements,
     singleBuilds,
     trackValue
 } from './track.js'
 import { Delegation, FreeBuildDue } from './turn.js'
 
 export const SECOND_DEVELOPMENT_COST = 3
+export const LEAVE_TOWN_PAYOUT = 3
 export const DIVIDENDS_BEFORE_FINAL = 5
 export const ROUNDS = DIVIDENDS_BEFORE_FINAL + 1
 
@@ -64,6 +66,8 @@ export const SarGameState = Type.Object({
     actionTrack: Type.Number(),
     dividendsPaid: Type.Number(),
     developmentsThisTurn: Type.Number(),
+    // The northern and southern railroads that founded the map's special connection.
+    specialConnection: Type.Optional(Type.Array(Type.Enum(RailroadId))),
     auction: Type.Optional(ShareAuction),
     freeBuild: Type.Optional(FreeBuildDue),
     delegation: Type.Optional(Delegation)
@@ -97,6 +101,7 @@ export class HydratedSarGameState
     declare actionTrack: number
     declare dividendsPaid: number
     declare developmentsThisTurn: number
+    declare specialConnection?: RailroadId[]
     declare auction?: ShareAuction
     declare freeBuild?: FreeBuildDue
     declare delegation?: Delegation
@@ -235,11 +240,41 @@ export class HydratedSarGameState
         )
     }
 
+    // The railroads this one may found the map's special connection with, paying its cost.
+    specialConnectionPartners(railroadId: RailroadId): RailroadId[] {
+        const special = this.map.definition.specialConnection
+        if (
+            !special ||
+            this.specialConnection ||
+            !this.railroad(railroadId).open ||
+            this.railroad(railroadId).treasury < special.cost
+        ) {
+            return []
+        }
+        const partners = special.northern.includes(railroadId)
+            ? special.southern
+            : special.southern.includes(railroadId)
+              ? special.northern
+              : []
+        const network = railroadSettlements(this, railroadId)
+        return partners.filter(
+            (partnerId) =>
+                this.railroad(partnerId).open &&
+                [...railroadSettlements(this, partnerId)].some((place) => network.has(place))
+        )
+    }
+
+    specialConnectionBonus(railroadId: RailroadId): number {
+        const special = this.map.definition.specialConnection
+        return special && this.specialConnection?.includes(railroadId) ? special.valueBonus : 0
+    }
+
     canBuild(railroadId: RailroadId): boolean {
         return (
             this.railroad(railroadId).open &&
             (this.singleBuilds(railroadId).length > 0 ||
-                this.connectionBuilds(railroadId).length > 0)
+                this.connectionBuilds(railroadId).length > 0 ||
+                this.specialConnectionPartners(railroadId).length > 0)
         )
     }
 
@@ -278,13 +313,15 @@ export class HydratedSarGameState
             .filter(
                 (candidate) =>
                     this.developmentLevel(candidate.id) < this.map.maxDevelopments(candidate.id) &&
-                    (candidate.id === this.map.hubId || isSettlementConnected(this, candidate.id))
+                    (candidate.id === this.map.definition.freeDevelopmentId ||
+                        isSettlementConnected(this, candidate.id))
             )
             .map((candidate) => candidate.id)
     }
 
     developmentCost(settlementId: string): number {
-        return this.developmentsThisTurn === 0 || settlementId === this.map.hubId
+        return this.developmentsThisTurn === 0 ||
+            settlementId === this.map.definition.freeDevelopmentId
             ? 0
             : SECOND_DEVELOPMENT_COST
     }
@@ -296,12 +333,38 @@ export class HydratedSarGameState
         )
     }
 
-    // A second development is optional only when the hub cannot take it for free.
+    // Declining the second development develops the next metro area automatically.
     mayFinishDeveloping(): boolean {
-        return (
-            this.developmentsThisTurn === 1 &&
-            !this.developableSettlements().includes(this.map.hubId)
+        return this.developmentsThisTurn === 1
+    }
+
+    // The metro area Automatic Metro Development would raise now, if any is not full.
+    automaticDevelopmentTarget(): string | undefined {
+        return this.map.definition.automaticDevelopment.find(
+            (settlementId) =>
+                this.developmentLevel(settlementId) < this.map.maxDevelopments(settlementId)
         )
+    }
+
+    // Developed settlements the player may take a cube from: never a natural resource, and only
+    // where a railroad they control has track.
+    leaveTownOptions(playerId: string): string[] {
+        if (!this.map.definition.leaveTown || this.developmentsThisTurn > 0) {
+            return []
+        }
+        const served = new Set(
+            this.map.railroads
+                .filter((railroad) => this.controls(railroad.id, playerId))
+                .flatMap((railroad) => [...railroadSettlements(this, railroad.id)])
+        )
+        return this.map.settlements
+            .filter(
+                (place) =>
+                    place.kind !== SettlementKind.NaturalResource &&
+                    this.developmentLevel(place.id) > 0 &&
+                    served.has(place.id)
+            )
+            .map((place) => place.id)
     }
 
     settlementName(settlementId: string): string {
@@ -337,7 +400,7 @@ export class HydratedSarGameState
 
     finalPayoffPerShare(railroadId: RailroadId): number {
         return finalPayoffPerShare(
-            this.value(railroadId),
+            this.value(railroadId) + this.specialConnectionBonus(railroadId),
             this.income(railroadId),
             this.railroad(railroadId).owners.length
         )
@@ -359,17 +422,22 @@ export class HydratedSarGameState
             : this.dividendPerShare(railroadId)
     }
 
+    leaveTownPayout(playerId: string): number {
+        return this.getPlayerState(playerId).leaveTownCubes * LEAVE_TOWN_PAYOUT
+    }
+
     nextDividend(playerId: string): number {
         return this.holdings(playerId).reduce(
             (sum, holding) => sum + holding.shares * this.nextDividendPerShare(holding.railroadId),
-            0
+            this.leaveTownPayout(playerId)
         )
     }
 
-    // Cash if the game ended now: the final payoff for every share held.
+    // Cash if the game ended now: the final payout for every share and Leave Town cube held.
     projectedFinalCash(playerId: string): number {
         return (
             this.getPlayerState(playerId).cash +
+            this.leaveTownPayout(playerId) +
             this.holdings(playerId).reduce(
                 (sum, holding) =>
                     sum + holding.shares * this.finalPayoffPerShare(holding.railroadId),

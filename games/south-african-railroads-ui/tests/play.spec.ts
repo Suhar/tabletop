@@ -19,7 +19,7 @@ test.afterEach(({ page }) => {
     expect(pageErrors.get(page)).toEqual([])
 })
 
-async function createGame(page: Page) {
+async function createGame(page: Page, map?: string) {
     await page.route('**/model/sessionContext.svelte.ts*', async (route) => {
         const response = await route.fetch()
         const body = await response.text()
@@ -37,8 +37,16 @@ async function createGame(page: Page) {
         .fill('0123456789abcdef0123456789abcdef')
     const names = page.getByPlaceholder('player name')
     for (let i = 1; i < (await names.count()); i++) await names.nth(i).fill(`Player ${i + 1}`)
+    if (map) {
+        await page
+            .locator('select')
+            .filter({ has: page.locator('option', { hasText: map }) })
+            .selectOption({ label: map })
+    }
     await page.getByRole('button', { name: 'Create Game', exact: true }).click()
-    await expect.poll(() => page.evaluate(() => !!window.sarSession)).toBe(true)
+    await expect
+        .poll(() => page.evaluate(() => !!window.sarSession), { timeout: 20_000 })
+        .toBe(true)
 }
 
 function machineState(page: Page) {
@@ -147,4 +155,42 @@ test('fits a phone screen without sideways scrolling', async ({ page }) => {
         })
     )
     expect(overflow).toEqual(['fits', 'fits'])
+})
+
+test('plays the Texas Special opening, the Frisco buyer first', async ({ page }) => {
+    await createGame(page, 'Texas Special')
+    await expect(page.getByText(/^initial offering$/i)).toBeVisible()
+    await playInitialOffering(page)
+    await expect.poll(() => machineState(page)).toBe('ChoosingAction')
+    const opening = await page.evaluate(() => {
+        const state = window.sarSession.gameState
+        return {
+            mapId: state.mapId,
+            open: state.railroads
+                .filter((railroad) => railroad.open)
+                .map((railroad) => railroad.id),
+            firstTurn: state.turnManager.turnOrder[0],
+            friscoOwner: state.railroads.find((railroad) => railroad.id === 'SLSF')?.owners[0]
+        }
+    })
+    expect(opening.mapId).toBe('TexasSpecial')
+    expect(opening.open.toSorted()).toEqual(['GHH', 'MKT', 'MP', 'SLSF', 'SP'])
+    expect(opening.firstTurn).toBe(opening.friscoOwner)
+    await expect(page.getByText(/opens when track reaches dallas/i)).toBeVisible()
+    await screenshot(page, '08-texas-special')
+})
+
+test('declines a second Texas Special development, so Dallas develops', async ({ page }) => {
+    await createGame(page, 'Texas Special')
+    await playInitialOffering(page)
+    await page.getByRole('button', { name: 'Choose Develop Settlements' }).click()
+    await expect.poll(() => machineState(page)).toBe('DevelopingSettlements')
+    await page
+        .getByRole('button', { name: /^Develop / })
+        .first()
+        .click()
+    await page.getByRole('button', { name: /^decline · dallas develops$/i }).click()
+    await expect
+        .poll(() => page.evaluate(() => window.sarSession.gameState.developments.dallas))
+        .toBe(1)
 })

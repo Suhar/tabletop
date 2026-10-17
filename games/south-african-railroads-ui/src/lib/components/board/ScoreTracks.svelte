@@ -1,20 +1,21 @@
 <script lang="ts">
     import { ACTION_TRACK_LIMIT, ROUNDS } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { ACTION_TRACK_CELL, ACTION_TRACK_PER_ROW, boardLayout } from '$lib/utils/boardLayout.js'
+    import { ACTION_TRACK_CELL, boardLayout } from '$lib/utils/boardLayout.js'
     import Cube from '../icons/Cube.svelte'
 
     const gameSession = getGameSession()
 
     const layout = $derived(boardLayout(gameSession.gameState.mapId))
     const trackOrigin = $derived(layout.spec.actionTrack)
+    const columns = $derived(layout.spec.actionTrackColumns)
     const roundOrigin = $derived(layout.spec.roundIndicator)
 
     const actionCells = $derived(
         Array.from({ length: ACTION_TRACK_LIMIT + 1 }, (_, value) => ({
             value,
-            x: trackOrigin.x + (value % ACTION_TRACK_PER_ROW) * ACTION_TRACK_CELL,
-            y: trackOrigin.y + Math.floor(value / ACTION_TRACK_PER_ROW) * ACTION_TRACK_CELL
+            x: trackOrigin.x + (value % columns) * ACTION_TRACK_CELL,
+            y: trackOrigin.y + Math.floor(value / columns) * ACTION_TRACK_CELL
         }))
     )
 
@@ -28,9 +29,9 @@
 <g class="action-track">
     <text x={trackOrigin.x} y={trackOrigin.y - 9} class="heading">Action Track</text>
     <text
-        x={trackOrigin.x + ACTION_TRACK_PER_ROW * ACTION_TRACK_CELL}
-        y={trackOrigin.y - 9}
-        class="note">dividends are paid once it passes 35</text
+        x={trackOrigin.x + columns * ACTION_TRACK_CELL}
+        y={trackOrigin.y + layout.actionTrackRows * ACTION_TRACK_CELL + 14}
+        class="note">dividends are paid once it passes {ACTION_TRACK_LIMIT}</text
     >
     {#each actionCells as cell (cell.value)}
         <rect

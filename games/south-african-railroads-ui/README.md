@@ -1,6 +1,6 @@
 # South African Railroads UI
 
-`@tabletop/south-african-railroads-ui` is the Svelte Game Client for South African Railroads by John Bohrer. It consumes the title logic from `@tabletop/south-african-railroads`.
+`@tabletop/south-african-railroads-ui` is the Svelte Game Client for South African Railroads by John Bohrer, with its original South Africa map and James Geist's Texas Special map, implemented with his permission granted on 17 October 2026. It consumes the title logic from `@tabletop/south-african-railroads`.
 
 ## Development
 

@@ -4,7 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { RailroadId } from '../maps/types.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
-import { Payout, payShareholders } from '../model/payouts.js'
+import { Payout, payLeaveTownCubes, payShareholders } from '../model/payouts.js'
 
 export type RailroadDividend = Type.Static<typeof RailroadDividend>
 export const RailroadDividend = Type.Object({
@@ -17,7 +17,8 @@ export const PayDividendsMetadata = Type.Object({
     final: Type.Boolean(),
     dividendNumber: Type.Number(),
     rates: Type.Array(RailroadDividend),
-    payouts: Type.Array(Payout)
+    payouts: Type.Array(Payout),
+    leaveTownPayouts: Type.Array(Payout)
 })
 
 export type PayDividends = Type.Static<typeof PayDividends>
@@ -57,6 +58,7 @@ export class HydratedPayDividends
                 : state.dividendPerShare(railroad.id)
         }))
         const payouts = payShareholders(state, rates)
+        const leaveTownPayouts = payLeaveTownCubes(state)
         if (final) {
             for (const railroad of state.railroads) {
                 railroad.treasury = 0
@@ -64,6 +66,12 @@ export class HydratedPayDividends
         }
         state.actionTrack = 0
         state.dividendsPaid += 1
-        this.metadata = { final, dividendNumber: state.dividendsPaid, rates, payouts }
+        this.metadata = {
+            final,
+            dividendNumber: state.dividendsPaid,
+            rates,
+            payouts,
+            leaveTownPayouts
+        }
     }
 }

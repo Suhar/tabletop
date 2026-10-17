@@ -7,6 +7,11 @@ import { HydratedDeclineOffer, isDeclineOffer } from '../actions/declineOffer.js
 import { HydratedDelegateBuild, isDelegateBuild } from '../actions/delegateBuild.js'
 import { HydratedDevelop, isDevelop } from '../actions/develop.js'
 import { HydratedFinishDevelopment, isFinishDevelopment } from '../actions/finishDevelopment.js'
+import {
+    HydratedFoundSpecialConnection,
+    isFoundSpecialConnection
+} from '../actions/foundSpecialConnection.js'
+import { HydratedLeaveTown, isLeaveTown } from '../actions/leaveTown.js'
 import { HydratedOfferShare, isOfferShare } from '../actions/offerShare.js'
 import { HydratedPassBid, isPassBid } from '../actions/passBid.js'
 import { HydratedPayDividends, isPayDividends } from '../actions/payDividends.js'
@@ -31,6 +36,10 @@ export class SarHydrator implements GameHydrator<SarGameState, HydratedSarGameSt
                 return new HydratedDevelop(data)
             case isFinishDevelopment(data):
                 return new HydratedFinishDevelopment(data)
+            case isLeaveTown(data):
+                return new HydratedLeaveTown(data)
+            case isFoundSpecialConnection(data):
+                return new HydratedFoundSpecialConnection(data)
             case isOfferShare(data):
                 return new HydratedOfferShare(data)
             case isDeclineOffer(data):

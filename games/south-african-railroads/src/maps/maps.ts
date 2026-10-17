@@ -1,5 +1,6 @@
 import { assertExists } from '@tabletop/common'
 import { SOUTH_AFRICA } from './southAfrica/map.js'
+import { TEXAS_SPECIAL } from './texasSpecial/map.js'
 import {
     MapId,
     SettlementKind,
@@ -46,10 +47,6 @@ export class SarMap {
 
     get initialOffering(): readonly RailroadId[] {
         return this.definition.initialOffering
-    }
-
-    get hubId(): string {
-        return this.definition.hubId
     }
 
     railroad(railroadId: RailroadId): RailroadDefinition {
@@ -103,7 +100,9 @@ export class SarMap {
             assertExists(levels, `No income track for metro area ${settlementId}`)
             return levels
         }
-        return this.definition.settlementIncome[kind]
+        const levels = this.definition.settlementIncome[kind]
+        assertExists(levels, `No income track for ${kind} on the ${this.definition.name} map`)
+        return levels
     }
 
     maxDevelopments(settlementId: string): number {
@@ -124,7 +123,8 @@ export class SarMap {
 }
 
 const MAPS: Record<MapId, SarMap> = {
-    [MapId.SouthAfrica]: new SarMap(SOUTH_AFRICA)
+    [MapId.SouthAfrica]: new SarMap(SOUTH_AFRICA),
+    [MapId.TexasSpecial]: new SarMap(TEXAS_SPECIAL)
 }
 
 export function sarMap(mapId: MapId): SarMap {

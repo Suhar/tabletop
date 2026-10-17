@@ -7,6 +7,8 @@ import {
     RailroadId,
     sarMap,
     type BuildTrack,
+    type FoundSpecialConnection,
+    type LeaveTown,
     type OfferShare
 } from '@tabletop/south-african-railroads'
 import { describeAction, saleDescription, winVerb } from './describeAction.js'
@@ -76,6 +78,48 @@ describe('player sentences', () => {
             ' · Johannesburg reached: the ',
             { railroadId: RailroadId.ZASM },
             ' opens'
+        ])
+    })
+
+    it('describes leaving town and the metro area it develops', () => {
+        const leave: LeaveTown = {
+            id: 'a3',
+            gameId: 'g',
+            source: ActionSource.User,
+            playerId: 'p1',
+            type: ActionType.LeaveTown,
+            settlementId: 'topeka',
+            metadata: { income: 2, automatic: { settlementId: 'dallas', income: 4 } }
+        }
+        expect(describeAction(sarMap(MapId.TexasSpecial), leave)).toEqual([
+            'left Topeka, taking a cube that pays $3 a dividend · Dallas developed (now $4)'
+        ])
+    })
+
+    it('describes founding the Texas Special with its special dividends', () => {
+        const founding: FoundSpecialConnection = {
+            id: 'a4',
+            gameId: 'g',
+            source: ActionSource.User,
+            playerId: 'p1',
+            type: ActionType.FoundSpecialConnection,
+            railroadId: RailroadId.MKT,
+            partnerId: RailroadId.SP,
+            metadata: {
+                cost: 30,
+                rates: [
+                    { railroadId: RailroadId.MKT, perShare: 2 },
+                    { railroadId: RailroadId.SP, perShare: 1 }
+                ],
+                payouts: []
+            }
+        }
+        expect(describeAction(sarMap(MapId.TexasSpecial), founding)).toEqual([
+            'founded the Texas Special joining the ',
+            { railroadId: RailroadId.MKT },
+            ' and the ',
+            { railroadId: RailroadId.SP },
+            ' · special dividend per share: Katy $2, SoPac $1'
         ])
     })
 

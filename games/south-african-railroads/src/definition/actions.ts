@@ -7,6 +7,8 @@ export enum ActionType {
     DelegateBuild = 'DelegateBuild',
     Develop = 'Develop',
     FinishDevelopment = 'FinishDevelopment',
+    LeaveTown = 'LeaveTown',
+    FoundSpecialConnection = 'FoundSpecialConnection',
     OfferShare = 'OfferShare',
     DeclineOffer = 'DeclineOffer',
     PayDividends = 'PayDividends'

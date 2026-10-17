@@ -10,6 +10,17 @@ export const Payout = Type.Object({
 
 export type PerShare = { railroadId: RailroadId; perShare: number }
 
+// Pays each player $3 for every Leave Town cube in their area, from the bank.
+export function payLeaveTownCubes(state: HydratedSarGameState): Payout[] {
+    return state.players
+        .map((player) => {
+            const amount = state.leaveTownPayout(player.playerId)
+            player.cash += amount
+            return { playerId: player.playerId, amount }
+        })
+        .filter((payout) => payout.amount > 0)
+}
+
 // Pays each player the per-share amount for every share they hold, from the bank.
 export function payShareholders(state: HydratedSarGameState, rates: readonly PerShare[]): Payout[] {
     return state.players.map((player) => {

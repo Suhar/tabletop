@@ -7,10 +7,12 @@ export const SOUTH_AFRICA_LAYOUT: BoardLayoutSpec = {
     top: 128,
     bottom: 1124,
     actionTrack: { x: 1062, y: 176 },
+    actionTrackColumns: 18,
     roundIndicator: { x: 36, y: 166 },
     legend: { x: 36, y: 286 },
     finalPayoff: { x: 272, y: 152 },
     logo: { x: 492, y: 1036 },
+    title: 'South African Railroads',
     credit: 'John Bohrer · Winsome Games · map redrawn by Stephan Suhar',
     metroGrids: {
         johannesburg: { columns: 3, origin: { x: 869.5, y: 506.5 } },

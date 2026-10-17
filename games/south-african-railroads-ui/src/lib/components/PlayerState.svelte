@@ -1,5 +1,6 @@
 <script lang="ts">
-    import type { HydratedSarPlayerState } from '@tabletop/south-african-railroads'
+    import { LEAVE_TOWN_PAYOUT, type HydratedSarPlayerState } from '@tabletop/south-african-railroads'
+    import Cube from './icons/Cube.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import ShareCertificate from './ShareCertificate.svelte'
 
@@ -53,8 +54,24 @@
             <span class="amount">+${line.amount}</span>
         </div>
     {:else}
-        <div class="none">No shares yet</div>
+        {#if playerState.leaveTownCubes === 0}
+            <div class="none">No shares yet</div>
+        {/if}
     {/each}
+    {#if playerState.leaveTownCubes > 0}
+        <div class="line" title="Leave Town cubes: ${LEAVE_TOWN_PAYOUT} each at every dividend">
+            <span class="certs">
+                {#each Array.from({ length: playerState.leaveTownCubes }, (_, index) => index) as cube (cube)}
+                    <svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"
+                        ><Cube x={0} y={0} size={14} color="#d9d2c3" edge="#5b4a33" /></svg
+                    >
+                {/each}
+                <span class="cube-label">Leave Town</span>
+            </span>
+            <span class="leader"></span>
+            <span class="amount">+${gameSession.shownState.leaveTownPayout(playerId)}</span>
+        </div>
+    {/if}
     <div
         class="total"
         title="What this player's shares would pay if {finalPayoffNext
@@ -143,6 +160,12 @@
         flex: 1;
         height: 8px;
         border-bottom: 1px dotted #8c6a45;
+    }
+
+    .cube-label {
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
     }
 
     .amount {

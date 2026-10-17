@@ -1,12 +1,13 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
-import { HydratedBuildConnection, isBuildConnection } from '../actions/buildConnection.js'
-import { HydratedBuildTrack, isBuildTrack } from '../actions/buildTrack.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
-import { afterBuild, buildActionsFor } from './constructingTrack.js'
-
-type BuildAction = HydratedBuildTrack | HydratedBuildConnection
+import {
+    afterBuild,
+    buildActionsFor,
+    isBuildAction,
+    type BuildAction
+} from './constructingTrack.js'
 
 export class DelegatedBuildStateHandler implements MachineStateHandler<
     BuildAction,
@@ -16,7 +17,7 @@ export class DelegatedBuildStateHandler implements MachineStateHandler<
         action: HydratedAction,
         _context: MachineContext<HydratedSarGameState>
     ): action is BuildAction {
-        return isBuildTrack(action) || isBuildConnection(action)
+        return isBuildAction(action)
     }
 
     validActionsForPlayer(

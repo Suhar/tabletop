@@ -58,7 +58,10 @@ export const SOUTH_AFRICA: MapDefinition = {
         RailroadId.CMRC
     ],
     startPlayerRailroad: RailroadId.CMRC,
-    hubId: 'johannesburg',
+    doubleBuildBarrierId: 'johannesburg',
+    freeDevelopmentId: 'johannesburg',
+    automaticDevelopment: ['johannesburg'],
+    leaveTown: false,
     settlements: SETTLEMENTS,
     links: LINKS,
     externalConnections: EXTERNAL_CONNECTIONS,

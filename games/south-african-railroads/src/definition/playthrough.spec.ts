@@ -7,7 +7,8 @@ import {
     assertExists,
     validateGameResult
 } from '@tabletop/common'
-import { RailroadId } from '../maps/types.js'
+import { MapId } from '../maps/types.js'
+import { sarMap } from '../maps/maps.js'
 import { ACTION_BOXES, ActionBox } from '../model/actionBoxes.js'
 import type { SarGameState } from '../model/gameState.js'
 import { botAction, createGame } from '../testing/bot.js'
@@ -17,8 +18,8 @@ import { MachineState } from './states.js'
 const engine = new GameEngine(SarRuntime)
 const masterSeed = '0123456789abcdef0123456789abcdef'
 
-function playToEnd(count: number): SarGameState {
-    const game = createGame(count)
+function playToEnd(count: number, mapId: MapId): SarGameState {
+    const game = createGame(count, mapId)
     let state = engine.startGame(game, { masterSeed }).initialState
     for (let step = 0; state.result === undefined; step++) {
         assert(step < 5000, 'Playthrough did not finish')
@@ -30,27 +31,30 @@ function playToEnd(count: number): SarGameState {
     return state
 }
 
-describe.each([3, 4, 5, 6])('a %i player game', (count) => {
+describe.each(
+    Object.values(MapId).flatMap((mapId) => [3, 4, 5, 6].map((count) => ({ mapId, count })))
+)('a $count player game on $mapId', ({ mapId, count }) => {
     it('plays through six dividends to a declared result', () => {
-        const finished = playToEnd(count)
+        const finished = playToEnd(count, mapId)
         expect(finished.machineState).toBe(MachineState.EndOfGame)
         expect(finished.dividendsPaid).toBe(6)
         expect([GameResult.Win, GameResult.Draw]).toContain(finished.result)
         expect(() => validateGameResult(finished)).not.toThrow()
         expect(finished.railroads.every((railroad) => railroad.treasury === 0)).toBe(true)
+        const [firstOffered] = sarMap(mapId).initialOffering
         expect(
-            finished.railroads.find((r) => r.id === RailroadId.CdFM)?.owners.length
+            finished.railroads.find((r) => r.id === firstOffered)?.owners.length
         ).toBeGreaterThan(0)
 
         const scores = SarRuntime.scoring.finalScores(finished)
         const best = Math.max(...Object.values(scores))
         expect(finished.winningPlayerIds.every((playerId) => scores[playerId] === best)).toBe(true)
-        const again = playToEnd(count)
+        const again = playToEnd(count, mapId)
         expect({ ...again, id: finished.id }).toEqual(finished)
     })
 
     it('replays and undoes every processed action', () => {
-        const game = createGame(count)
+        const game = createGame(count, mapId)
         const initial = engine.startGame(game, { masterSeed }).initialState
         const history: { action: GameAction; before: SarGameState }[] = []
         let state = initial
@@ -76,7 +80,7 @@ describe.each([3, 4, 5, 6])('a %i player game', (count) => {
     })
 
     it('keeps every action box within its capacity', () => {
-        const game = createGame(count)
+        const game = createGame(count, mapId)
         let state = engine.startGame(game, { masterSeed }).initialState
         for (let step = 0; state.result === undefined; step++) {
             const hydrated = SarRuntime.hydrator.hydrateState(state)

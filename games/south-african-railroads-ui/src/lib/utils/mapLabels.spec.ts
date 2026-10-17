@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MapId, SettlementKind, sarMap } from '@tabletop/south-african-railroads'
-import { boxesOverlap, mapLabels, nameBox, segmentCrossesBox } from './mapLabels.js'
+import { boxesOverlap, isNamedOnBoard, mapLabels, nameBox, segmentCrossesBox } from './mapLabels.js'
 
 describe.each(Object.values(MapId))('the %s map', (mapId) => {
     const map = sarMap(mapId)
@@ -18,10 +18,10 @@ describe.each(Object.values(MapId))('the %s map', (mapId) => {
         height: 20
     })
 
-    it('names every settlement but the metro areas, which carry plates', () => {
+    it('names every settlement but the metro areas, which carry plates, and natural resources', () => {
         expect(names.map((name) => name.id).toSorted()).toEqual(
             map.settlements
-                .filter((place) => place.kind !== SettlementKind.MetroArea)
+                .filter((place) => isNamedOnBoard(place))
                 .map((place) => place.id)
                 .toSorted()
         )

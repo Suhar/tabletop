@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GameEngine, assert, validateGameResult } from '@tabletop/common'
+import { MapId } from '../maps/types.js'
 import { SarGameStateValidator, type SarGameState } from '../model/gameState.js'
 import { botAction, createGame } from '../testing/bot.js'
 import { SarRuntime } from './runtime.js'
@@ -39,9 +40,11 @@ function playToEnd(game: ReturnType<typeof createGame>, initialState: SarGameSta
     return SarRuntime.hydrator.hydrateState(state).dehydrate()
 }
 
-describe.each([3, 4, 5, 6])('South African Railroads tournaments with %i players', (count) => {
+describe.each(
+    Object.values(MapId).flatMap((mapId) => [3, 4, 5, 6].map((count) => ({ mapId, count })))
+)('South African Railroads tournaments with $count players on $mapId', ({ mapId, count }) => {
     it('opens the first auction with seat one and bids in the assigned order', () => {
-        const game = createGame(count)
+        const game = createGame(count, mapId)
         for (const order of rotations(game.players.map((player) => player.id))) {
             const { initialState } = engine.startGame(game, {
                 masterSeed,
@@ -59,7 +62,7 @@ describe.each([3, 4, 5, 6])('South African Railroads tournaments with %i players
     })
 
     it('keeps ordinary seeded setup for every assigned order', () => {
-        const game = createGame(count)
+        const game = createGame(count, mapId)
         const uninitialized = engine.generateUninitializedState(game, masterSeed)
         const initialize = (playerIds?: string[]) =>
             SarRuntime.initializer
@@ -80,7 +83,7 @@ describe.each([3, 4, 5, 6])('South African Railroads tournaments with %i players
     })
 
     it('scores every player from a finished assigned game', () => {
-        const game = createGame(count)
+        const game = createGame(count, mapId)
         const order = game.players.map((player) => player.id).reverse()
         const { initialState } = engine.startGame(game, {
             masterSeed,

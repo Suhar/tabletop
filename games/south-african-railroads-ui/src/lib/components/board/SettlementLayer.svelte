@@ -12,13 +12,16 @@
     const SYMBOL_FILL: Partial<Record<SettlementKind, string>> = {
         [SettlementKind.AgriculturalRailhead]: '#f2b81e',
         [SettlementKind.RailroadStation]: '#2d58b0',
-        [SettlementKind.MercantileCenter]: '#d42a22'
+        [SettlementKind.MercantileCenter]: '#d42a22',
+        [SettlementKind.NaturalResource]: '#f5df1f'
     }
     const UNOWNED_BASE_FILL = '#8a7860'
 
     const map = $derived(gameSession.gameState.map)
     const layout = $derived(boardLayout(map.id))
     const labels = $derived(mapLabels(map.id))
+
+    const leaveTargets = $derived(new Set(gameSession.leaveTownTargets))
 
     const developTargets = $derived(
         new Map(gameSession.developTargets.map((target) => [target.settlementId, target]))
@@ -56,6 +59,19 @@
         }))
     }
 
+    function targetBounds(place: SettlementDefinition) {
+        return place.kind === SettlementKind.MetroArea
+            ? labels.settlementIconBox(place)
+            : { x: place.x - 22, y: place.y - 22, width: 44, height: 44 }
+    }
+
+    function onLeaveKey(event: KeyboardEvent, settlementId: string) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            void gameSession.leaveTown(settlementId)
+        }
+    }
+
     function onKey(event: KeyboardEvent, settlementId: string) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
@@ -67,7 +83,7 @@
 {#snippet symbol(place: SettlementDefinition, fill: string | undefined)}
     {#if place.kind === SettlementKind.RailroadStation}
         <rect x="-13.5" y="-13.5" width="27" height="27" rx="2" {fill} class:symbol={fill} />
-    {:else if place.kind === SettlementKind.AgriculturalRailhead}
+    {:else if place.kind === SettlementKind.AgriculturalRailhead || place.kind === SettlementKind.NaturalResource}
         <polygon points={polygonPoints(6, 18.5)} {fill} class:symbol={fill} />
     {:else if place.kind === SettlementKind.MercantileCenter}
         <circle r="16.3" {fill} class:symbol={fill} />
@@ -177,7 +193,8 @@
                     <text
                         y="5"
                         class="income"
-                        class:dark={place.kind === SettlementKind.AgriculturalRailhead}>{place.income}</text
+                        class:dark={place.kind === SettlementKind.AgriculturalRailhead ||
+                            place.kind === SettlementKind.NaturalResource}>{place.income}</text
                     >
                     {#if place.level > 0}
                         {@const radius = developedRingRadius(place)}
@@ -190,11 +207,33 @@
     {/each}
 
     {#each settlements as place (place.id)}
+        {#if leaveTargets.has(place.id)}
+            {@const bounds = targetBounds(place)}
+            <!-- Where a settlement can also be developed, the develop ring above takes the click and
+                 the action panel's Leave button leaves. -->
+            <g
+                class="leave-target"
+                role="button"
+                tabindex="0"
+                aria-label="Leave {place.name}"
+                onclick={() => gameSession.leaveTown(place.id)}
+                onkeydown={(event) => onLeaveKey(event, place.id)}
+            >
+                <rect
+                    x={bounds.x - 10}
+                    y={bounds.y - 10}
+                    width={bounds.width + 20}
+                    height={bounds.height + 20}
+                    rx="12"
+                    class="leave-ring"
+                />
+            </g>
+        {/if}
+    {/each}
+
+    {#each settlements as place (place.id)}
         {#if place.target}
-            {@const bounds =
-                place.kind === SettlementKind.MetroArea
-                    ? labels.settlementIconBox(place)
-                    : { x: place.x - 22, y: place.y - 22, width: 44, height: 44 }}
+            {@const bounds = targetBounds(place)}
             <g
                 class="develop-target"
                 role="button"
@@ -351,6 +390,23 @@
         stroke: #c8961a;
         stroke-width: 3;
         stroke-dasharray: 6 4;
+    }
+
+    .leave-target {
+        cursor: pointer;
+        outline: none;
+    }
+
+    .leave-ring {
+        fill: rgba(196, 42, 34, 0.08);
+        stroke: #b0262e;
+        stroke-width: 3;
+        stroke-dasharray: 2 4;
+    }
+
+    .leave-target:hover .leave-ring,
+    .leave-target:focus-visible .leave-ring {
+        fill: rgba(196, 42, 34, 0.22);
     }
 
     .develop-target:hover .ring,

@@ -41,7 +41,8 @@ export class SarGameInitializer
                     playerId: player.id,
                     color: colors[index],
                     cash: map.startingCash(game.players.length),
-                    locomotive: ActionBox.ConstructTrack
+                    locomotive: ActionBox.ConstructTrack,
+                    leaveTownCubes: 0
                 })
         )
         const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)

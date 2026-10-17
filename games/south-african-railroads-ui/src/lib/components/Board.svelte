@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { boardLayout } from '$lib/utils/boardLayout.js'
+    import AutomaticDevelopmentNote from './board/AutomaticDevelopmentNote.svelte'
     import ExternalLayer from './board/ExternalLayer.svelte'
     import FinalPayoffPanel from './board/FinalPayoffPanel.svelte'
     import Legend from './board/Legend.svelte'
@@ -8,6 +9,7 @@
     import MapBackground from './board/MapBackground.svelte'
     import ScoreTracks from './board/ScoreTracks.svelte'
     import SettlementLayer from './board/SettlementLayer.svelte'
+    import SpecialConnectionPanel from './board/SpecialConnectionPanel.svelte'
     import TrackLayer from './board/TrackLayer.svelte'
 
     const gameSession = getGameSession()
@@ -27,6 +29,8 @@
     <Logo />
     <Legend />
     <FinalPayoffPanel />
+    <SpecialConnectionPanel />
+    <AutomaticDevelopmentNote />
     <ScoreTracks />
     <ExternalLayer />
     <TrackLayer />

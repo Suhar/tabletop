@@ -29,6 +29,7 @@ const FRAME_INSET = 20
 const ICON_HALF_SIZE: Record<PointSettlementKind, number> = {
     [SettlementKind.RailroadStation]: 13.5,
     [SettlementKind.AgriculturalRailhead]: 18.5,
+    [SettlementKind.NaturalResource]: 18.5,
     [SettlementKind.MercantileCenter]: 16.3,
     [SettlementKind.RailroadBase]: 23
 }
@@ -114,6 +115,11 @@ export function boxesOverlap(a: BoundingBox, b: BoundingBox, gap = 0): boolean {
         a.y < b.y + b.height + gap &&
         b.y < a.y + a.height + gap
     )
+}
+
+// Metro areas carry their names on a plate; natural resources go unnamed, as printed.
+export function isNamedOnBoard(place: SettlementDefinition): boolean {
+    return place.kind !== SettlementKind.MetroArea && place.kind !== SettlementKind.NaturalResource
 }
 
 function labelFromBox(box: BoundingBox, vertical: boolean): MapLabel {
@@ -286,7 +292,7 @@ export class MapLabels {
             !this.trackSegments.some((segment) => segmentCrossesBox(segment, box, LABEL_GAP))
         const printed = this.layout.spec.printedLabels
         const options = this.map.settlements
-            .filter((place) => place.kind !== SettlementKind.MetroArea)
+            .filter((place) => isNamedOnBoard(place))
             .map((place) => ({
                 place,
                 labels: [

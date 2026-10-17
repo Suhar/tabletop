@@ -9,7 +9,8 @@ export const SarPlayerState = Type.Evaluate(
         PlayerState,
         Type.Object({
             cash: Type.Number(),
-            locomotive: Type.Enum(ActionBox)
+            locomotive: Type.Enum(ActionBox),
+            leaveTownCubes: Type.Number()
         })
     ])
 )
@@ -24,6 +25,7 @@ export class HydratedSarPlayerState
     declare color: Color
     declare cash: number
     declare locomotive: ActionBox
+    declare leaveTownCubes: number
 
     constructor(data: SarPlayerState) {
         super(data, SarPlayerStateValidator)

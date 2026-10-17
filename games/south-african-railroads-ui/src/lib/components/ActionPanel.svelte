@@ -12,7 +12,13 @@
 
     const state = $derived(gameSession.gameState)
     const map = $derived(state.map)
-    const hubName = $derived(map.settlement(map.hubId).name)
+    const freeName = $derived(
+        map.definition.freeDevelopmentId
+            ? map.settlement(map.definition.freeDevelopmentId).name
+            : undefined
+    )
+    const automaticTarget = $derived(state.automaticDevelopmentTarget())
+    const special = $derived(map.definition.specialConnection)
     const machineState = $derived(state.machineState)
     const me = $derived(gameSession.myPlayerId)
     const holdings = $derived(me ? state.holdings(me) : [])
@@ -111,22 +117,54 @@
                 ).treasury}): one link $5{#if state.doubleBuilds(gameSession.selectedRailroad).length > 0}, two
                     links $15{/if}{#if gameSession.connectionTargets.length > 0}, or a connection{/if}.
             </p>
+            {#if special && gameSession.specialConnectionPartners.length > 0}
+                <div class="row" role="group" aria-label="The {special.name}">
+                    {#each gameSession.specialConnectionPartners as partnerId (partnerId)}
+                        <button
+                            type="button"
+                            class="secondary"
+                            onclick={() => gameSession.foundSpecialConnection(partnerId)}
+                            >Found the {special.name} with the <RailroadBadge
+                                railroadId={partnerId}
+                            /> · ${special.cost}</button
+                        >
+                    {/each}
+                </div>
+            {/if}
         {/if}
     {:else if machineState === MachineState.DevelopingSettlements}
         <p class="prompt">
             {#if state.developmentsThisTurn === 0}
-                Develop a settlement served by a railroad, or {hubName}.
+                Develop a settlement served by a railroad{#if freeName}, or {freeName}{/if}.
+                {#if gameSession.leaveTownTargets.length > 0}
+                    Or leave town: take a cube from a settlement your railroad serves.
+                {/if}
             {:else}
-                Develop a second settlement for $3 of your own cash, or {hubName} free.
+                Develop a second settlement for $3 of your own cash{#if freeName}, or {freeName}
+                    free{/if}.
             {/if}
         </p>
         <p class="effects">
             It moves to its next income, and every railroad link into it earns the difference.
         </p>
+        {#if gameSession.leaveTownTargets.length > 0}
+            <div class="row" role="group" aria-label="Leave town">
+                {#each gameSession.leaveTownTargets as settlementId (settlementId)}
+                    <button
+                        type="button"
+                        class="secondary"
+                        onclick={() => gameSession.leaveTown(settlementId)}
+                        >Leave {map.settlement(settlementId).name}</button
+                    >
+                {/each}
+            </div>
+        {/if}
         {#if gameSession.mayFinishDeveloping}
             <div class="row">
                 <button type="button" class="secondary" onclick={() => gameSession.finishDevelopment()}
-                    >Stop after one</button
+                    >{automaticTarget
+                        ? `Decline · ${map.settlement(automaticTarget).name} develops`
+                        : 'Decline'}</button
                 >
             </div>
         {/if}

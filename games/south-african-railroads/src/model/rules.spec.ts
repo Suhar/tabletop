@@ -412,7 +412,7 @@ describe('developing settlements', () => {
         const hydrated = hydrate(state)
         expect(hydrated.developmentCost('johannesburg')).toBe(0)
         expect(hydrated.developmentCost('komatipoort')).toBe(3)
-        expect(hydrated.mayFinishDeveloping()).toBe(false)
+        expect(hydrated.automaticDevelopmentTarget()).toBe('johannesburg')
         const cash = hydrated.getPlayerState('a').cash
         state = run(state, { type: ActionType.Develop, settlementId: 'komatipoort' })
         const after = hydrate(state)
@@ -427,10 +427,20 @@ describe('developing settlements', () => {
         state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
         const hydrated = hydrate(state)
         expect(hydrated.developmentCost('johannesburg')).toBe(0)
-        expect(hydrated.mayFinishDeveloping()).toBe(false)
+        expect(hydrated.automaticDevelopmentTarget()).toBe('johannesburg')
         state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
         const after = hydrate(state)
         expect(after.developmentLevel('johannesburg')).toBe(2)
+        expect(after.machineState).toBe(MachineState.ChoosingAction)
+    })
+
+    it('develops Johannesburg when the player declines the paid second development', () => {
+        let state = afterInitialOffering()
+        state = run(state, { type: ActionType.ChooseAction, box: ActionBox.DevelopSettlements })
+        state = run(state, { type: ActionType.Develop, settlementId: 'lourenco-marques' })
+        state = run(state, { type: ActionType.FinishDevelopment })
+        const after = hydrate(state)
+        expect(after.developmentLevel('johannesburg')).toBe(1)
         expect(after.machineState).toBe(MachineState.ChoosingAction)
     })
 
@@ -517,7 +527,14 @@ describe('the map', () => {
         for (const railroad of map.railroads) {
             expect(ids.has(railroad.homeId)).toBe(true)
         }
-        expect(map.settlement(map.hubId).kind).toBe(SettlementKind.MetroArea)
+        const metros = [
+            ...map.definition.automaticDevelopment,
+            ...(map.definition.freeDevelopmentId ? [map.definition.freeDevelopmentId] : [])
+        ]
+        for (const metroId of metros) {
+            expect(map.settlement(metroId).kind).toBe(SettlementKind.MetroArea)
+        }
+        expect(ids.has(map.definition.doubleBuildBarrierId)).toBe(true)
         for (const place of map.settlements) {
             expect(map.incomeLevels(place.id).length).toBeGreaterThan(1)
         }
