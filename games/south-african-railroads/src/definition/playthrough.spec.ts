@@ -7,7 +7,7 @@ import {
     assertExists,
     validateGameResult
 } from '@tabletop/common'
-import { RailroadId } from '../components/railroads.js'
+import { RailroadId } from '../maps/types.js'
 import { ACTION_BOXES, ActionBox } from '../model/actionBoxes.js'
 import type { SarGameState } from '../model/gameState.js'
 import { botAction, createGame } from '../testing/bot.js'

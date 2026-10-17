@@ -27,7 +27,6 @@ import {
     PlaceBid,
     RailroadId,
     SarRuntime,
-    freeBuildHome,
     homeLinks,
     type SarGameState
 } from '@tabletop/south-african-railroads'
@@ -122,7 +121,7 @@ function initialStep(table: PlayedTable): GameAction {
     if (state.machineState === MachineState.FreeBuild) {
         const due = state.freeBuild
         assertExists(due, 'A free build is due')
-        const [linkId] = homeLinks(state, freeBuildHome(due.railroadId))
+        const [linkId] = homeLinks(state, state.map.home(due.railroadId))
         return createAction(BuildTrack, {
             ...envelope(table, playerId),
             railroadId: due.railroadId,

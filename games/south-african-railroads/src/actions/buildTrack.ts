@@ -2,16 +2,15 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext, assert } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
-import { RailroadId } from '../components/railroads.js'
+import { RailroadId } from '../maps/types.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
 import { DOUBLE_LINK_COST, LINK_COST, homeLinks, isDoubleBuild } from '../model/track.js'
-import { freeBuildHome } from '../model/freeBuild.js'
 
 export type BuildTrackMetadata = Type.Static<typeof BuildTrackMetadata>
 export const BuildTrackMetadata = Type.Object({
     cost: Type.Number(),
     income: Type.Number(),
-    opensZasm: Type.Boolean()
+    opensRailroad: Type.Optional(Type.Enum(RailroadId))
 })
 
 export type BuildTrack = Type.Static<typeof BuildTrack>
@@ -46,8 +45,9 @@ export class HydratedBuildTrack extends HydratableAction<typeof BuildTrack> impl
     }
 
     apply(state: HydratedSarGameState, _context?: MachineContext) {
-        const cost = state.freeBuild ? this.validateFreeBuild(state) : this.validatePaidBuild(state)
-        const zasmWasClosed = !state.railroad(RailroadId.ZASM).open
+        const free = state.freeBuild !== undefined
+        const cost = free ? this.validateFreeBuild(state) : this.validatePaidBuild(state)
+        const opensRailroad = free ? undefined : state.railroadOpenedBy(this.linkIds)
         state.railroad(this.railroadId).treasury -= cost
         for (const linkId of this.linkIds) {
             state.track.push({ linkId, railroadId: this.railroadId })
@@ -57,7 +57,7 @@ export class HydratedBuildTrack extends HydratableAction<typeof BuildTrack> impl
         this.metadata = {
             cost,
             income: state.income(this.railroadId),
-            opensZasm: zasmWasClosed && state.reachesJohannesburg(this.linkIds)
+            ...(opensRailroad ? { opensRailroad } : {})
         }
     }
 
@@ -69,7 +69,7 @@ export class HydratedBuildTrack extends HydratableAction<typeof BuildTrack> impl
         )
         assert(
             this.linkIds.length === 1 &&
-                homeLinks(state, freeBuildHome(this.railroadId)).includes(this.linkIds[0]),
+                homeLinks(state, state.map.home(this.railroadId)).includes(this.linkIds[0]),
             'The free link must leave the railroad’s home'
         )
         return 0

@@ -8,6 +8,8 @@ Where the rulebook is silent or ambiguous, the implementation makes the choices 
 - **Bidding goes clockwise in seat order**, which is the turn order, starting from the opener.
 - **The minimum bid for an offered share is a fifth of the railroad's value, rounded up.** Values are always multiples of $5, so rounding never changes the amount.
 
+- **The start player heads the turn order.** The CMRC's opening shareholder takes the first turn, so the turn order is turned to start with them. Seat order, and so bidding order, is unchanged.
+
 ## Choosing an action
 
 - **The third Offer Stock slot is open with four, five and six players.** The rulebook text limits only the three-player game. The redrawn board marks the slot "4p, 5p", but six players get it too.

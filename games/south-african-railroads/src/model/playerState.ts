@@ -3,8 +3,6 @@ import { Compile } from 'typebox/compile'
 import { Color, Hydratable, PlayerState } from '@tabletop/common'
 import { ActionBox } from './actionBoxes.js'
 
-export const STARTING_CASH: Record<number, number> = { 3: 80, 4: 70, 5: 60, 6: 50 }
-
 export type SarPlayerState = Type.Static<typeof SarPlayerState>
 export const SarPlayerState = Type.Evaluate(
     Type.Intersect([

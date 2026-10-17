@@ -8,7 +8,6 @@ import {
 import { ActionBox } from '../model/actionBoxes.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
 import { homeLinks } from '../model/track.js'
-import { freeBuildHome } from '../model/freeBuild.js'
 import { ActionType } from '../definition/actions.js'
 import { Definition } from '../definition/definition.js'
 import { SarRuntime } from '../definition/runtime.js'
@@ -56,7 +55,7 @@ export function botAction(state: HydratedSarGameState, playerId: string, step: n
         case MachineState.FreeBuild: {
             const due = state.freeBuild
             assertExists(due, 'A free build is due')
-            const [linkId] = homeLinks(state, freeBuildHome(due.railroadId))
+            const [linkId] = homeLinks(state, state.map.home(due.railroadId))
             return act({
                 ...base,
                 type: ActionType.BuildTrack,

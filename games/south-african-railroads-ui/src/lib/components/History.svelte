@@ -69,7 +69,7 @@
                 onkeydown={(event) => onKey(event, entry)}
             >
                 <span class="number">No. {entryNumbers.get(entry.key)}</span>
-                <Description description={describeAction(entry.action)} />
+                <Description description={describeAction(gameSession.gameState.map, entry.action)} />
             </div>
         {:else}
             <section class="entry">
@@ -94,7 +94,7 @@
                     {@const sale = actionSale(action)}
                     <div class="line">
                         {#if action.playerId}<PlayerName playerId={action.playerId} />{/if}
-                        <Description description={describeAction(action)} />
+                        <Description description={describeAction(gameSession.gameState.map, action)} />
                     </div>
                     {#each withdrawnBidders(action) as playerId (playerId)}
                         <div class="line sub"><PlayerName {playerId} /> cannot afford to bid on</div>
@@ -141,7 +141,7 @@
     }
 
     .number {
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         font-size: 11px;
         font-weight: 700;
         opacity: 0.7;

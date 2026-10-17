@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { RAILROADS, type RailroadId } from '@tabletop/south-african-railroads'
+    import type { RailroadId } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import RailroadCard from './RailroadCard.svelte'
 
@@ -26,7 +26,7 @@
 </script>
 
 <section class="railroads" aria-label="Railroads">
-    {#each RAILROADS as railroad (railroad.id)}
+    {#each gameSession.gameState.map.railroads as railroad (railroad.id)}
         <RailroadCard
             railroadId={railroad.id}
             choice={choiceFor(railroad.id)}

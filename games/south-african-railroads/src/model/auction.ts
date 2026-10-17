@@ -1,10 +1,10 @@
 import * as Type from 'typebox'
 import { SimpleAuction } from '@tabletop/common'
-import { RailroadId } from '../components/railroads.js'
+import { RailroadId } from '../maps/types.js'
 
 export enum AuctionKind {
     InitialOffering = 'InitialOffering',
-    ZasmOpening = 'ZasmOpening',
+    RailroadOpening = 'RailroadOpening',
     OfferStock = 'OfferStock'
 }
 
@@ -18,7 +18,7 @@ export const ShareAuction = Type.Object({
     bidding: SimpleAuction
 })
 
-// Initial and ZASM offerings hand the share to the opening bidder for free when nobody bids.
+// Initial and opening offerings hand the share to the opening bidder for free when nobody bids.
 export function goesFreeToOpener(kind: AuctionKind): boolean {
     return kind !== AuctionKind.OfferStock
 }

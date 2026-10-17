@@ -1,3 +1,5 @@
+import type { SarMap } from '../maps/maps.js'
+
 export enum ActionBox {
     ConstructTrack = 'ConstructTrack',
     OfferStock = 'OfferStock',
@@ -21,16 +23,12 @@ export const ACTION_TRACK_ADVANCE: Record<ActionBox, number> = {
 
 export const ACTION_TRACK_LIMIT = 35
 
-// The rulebook limits only the three-player game to two Offer Stock slots. The redrawn board
-// marks the third slot "4p, 5p", but a six-player game has it too.
-const OFFER_STOCK_SLOTS: Record<number, number> = { 3: 2, 4: 3, 5: 3, 6: 3 }
-
-export function boxCapacity(box: ActionBox, playerCount: number): number {
+export function boxCapacity(box: ActionBox, playerCount: number, map: SarMap): number {
     switch (box) {
         case ActionBox.ConstructTrack:
             return playerCount
         case ActionBox.OfferStock:
-            return OFFER_STOCK_SLOTS[playerCount] ?? 3
+            return map.offerStockSlots(playerCount)
         case ActionBox.DevelopSettlements:
             return 2
         case ActionBox.PayDividends:

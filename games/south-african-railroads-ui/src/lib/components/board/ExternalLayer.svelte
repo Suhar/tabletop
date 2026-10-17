@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { EXTERNAL_CONNECTIONS, settlement } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { boardLayout } from '$lib/utils/boardLayout.js'
     import { CONNECTION_STAR_RADIUS, connectionLabel } from '$lib/utils/mapGeometry.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { SHADOW_OFFSET, starPoints } from '$lib/utils/shapes.js'
@@ -8,17 +8,20 @@
 
     const gameSession = getGameSession()
 
+    const map = $derived(gameSession.gameState.map)
+    const boardWidth = $derived(boardLayout(map.id).width)
+
     const connections = $derived(
-        EXTERNAL_CONNECTIONS.map((connection) => {
+        map.externalConnections.map((connection) => {
             const owner = gameSession.gameState.connections.find(
                 (built) => built.connectionId === connection.id
             )?.railroadId
             return {
                 ...connection,
-                from: settlement(connection.settlementId),
+                from: map.settlement(connection.settlementId),
                 style: owner ? RAILROAD_STYLE[owner] : undefined,
                 target: gameSession.connectionTargets.includes(connection.id),
-                label: connectionLabel(connection)
+                label: connectionLabel(connection, boardWidth)
             }
         })
     )

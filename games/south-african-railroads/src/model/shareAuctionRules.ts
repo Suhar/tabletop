@@ -1,7 +1,7 @@
 import * as Type from 'typebox'
 import { assertExists } from '@tabletop/common'
-import { PassableBidding } from '@tabletop/18xx'
-import { RailroadId } from '../components/railroads.js'
+import { PassableBidding, turnOrderFrom } from '@tabletop/18xx'
+import { RailroadId } from '../maps/types.js'
 import { AuctionKind, goesFreeToOpener } from './auction.js'
 import type { HydratedSarGameState } from './gameState.js'
 
@@ -30,7 +30,7 @@ export function openShareAuction(
         minimum: number
     }
 ): string[] {
-    const seatOrder = seatOrderFrom(state.turnManager.turnOrder, openerId).filter(
+    const seatOrder = turnOrderFrom(state.turnManager.turnOrder, openerId).filter(
         (playerId) => playerId !== sellerId
     )
     state.auction = {
@@ -120,9 +120,10 @@ function transferShare(state: HydratedSarGameState, sale: ShareSale) {
     }
     railroad.owners.push(buyerId)
     railroad.open = true
-}
-
-export function seatOrderFrom(turnOrder: readonly string[], playerId: string): string[] {
-    const start = turnOrder.indexOf(playerId)
-    return [...turnOrder.slice(start), ...turnOrder.slice(0, start)]
+    if (
+        sale.kind === AuctionKind.InitialOffering &&
+        sale.railroadId === state.map.definition.startPlayerRailroad
+    ) {
+        state.turnManager.newFirstPlayer(buyerId)
+    }
 }

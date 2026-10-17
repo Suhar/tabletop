@@ -1,20 +1,17 @@
-import { RailroadId } from './railroads.js'
 import {
     SettlementKind,
     type ExternalConnectionDefinition,
     type LinkDefinition,
     type SettlementDefinition
-} from './mapTypes.js'
+} from '../types.js'
 
-// Positions follow the 2023 redrawn board (1584 × 1224 points).
 export const SETTLEMENTS: readonly SettlementDefinition[] = [
     {
         id: 'norvals-point',
         name: "Norval's Point",
         kind: SettlementKind.RailroadBase,
         x: 78,
-        y: 882,
-        homeOf: RailroadId.CMRC
+        y: 882
     },
     { id: 'dreunberg', name: 'Dreunberg', kind: SettlementKind.RailroadStation, x: 145, y: 974 },
     {
@@ -36,16 +33,14 @@ export const SETTLEMENTS: readonly SettlementDefinition[] = [
         name: 'Kimberley',
         kind: SettlementKind.RailroadBase,
         x: 211,
-        y: 550,
-        homeOf: RailroadId.CTRD
+        y: 550
     },
     {
         id: 'aliwal-north',
         name: 'Aliwal North',
         kind: SettlementKind.RailroadBase,
         x: 223,
-        y: 1019,
-        homeOf: RailroadId.CSAR
+        y: 1019
     },
     { id: 'warrenton', name: 'Warrenton', kind: SettlementKind.RailroadStation, x: 305, y: 478 },
     { id: 'bloemfontein', name: 'Bloemfontein', kind: SettlementKind.MetroArea, x: 349, y: 750 },
@@ -134,8 +129,7 @@ export const SETTLEMENTS: readonly SettlementDefinition[] = [
         name: 'Ladysmith',
         kind: SettlementKind.RailroadBase,
         x: 846,
-        y: 1038,
-        homeOf: RailroadId.NRC
+        y: 1038
     },
     {
         id: 'magaliesburg',
@@ -150,8 +144,7 @@ export const SETTLEMENTS: readonly SettlementDefinition[] = [
         name: 'Johannesburg',
         kind: SettlementKind.MetroArea,
         x: 910,
-        y: 547,
-        homeOf: RailroadId.ZASM
+        y: 547
     },
     { id: 'boshoek', name: 'Boshoek', kind: SettlementKind.AgriculturalRailhead, x: 920, y: 373 },
     { id: 'balfour', name: 'Balfour', kind: SettlementKind.RailroadStation, x: 931, y: 668 },
@@ -256,8 +249,7 @@ export const SETTLEMENTS: readonly SettlementDefinition[] = [
         name: 'Lourenco Marques',
         kind: SettlementKind.RailroadBase,
         x: 1471,
-        y: 988,
-        homeOf: RailroadId.CdFM
+        y: 988
     }
 ]
 

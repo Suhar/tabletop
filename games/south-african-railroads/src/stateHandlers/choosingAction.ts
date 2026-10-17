@@ -1,7 +1,6 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
-import { RailroadId } from '../components/railroads.js'
 import { HydratedChooseAction, isChooseAction } from '../actions/chooseAction.js'
 import { ActionBox } from '../model/actionBoxes.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
@@ -37,15 +36,7 @@ export class ChoosingActionStateHandler implements MachineStateHandler<
     enter(context: MachineContext<HydratedSarGameState>) {
         const state = context.gameState
         if (!state.turnManager.currentTurn()) {
-            if (state.turnManager.series.length === 0) {
-                // The CMRC's opening shareholder takes the first turn.
-                state.turnManager.startTurn(
-                    state.railroad(RailroadId.CMRC).owners[0],
-                    state.actionCount
-                )
-            } else {
-                state.turnManager.startNextTurn(state.actionCount)
-            }
+            state.turnManager.startNextTurn(state.actionCount)
         }
         state.activePlayerIds = [state.turnPlayerId()]
     }

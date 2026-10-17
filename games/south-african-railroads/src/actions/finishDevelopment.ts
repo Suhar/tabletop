@@ -33,7 +33,7 @@ export class HydratedFinishDevelopment
     }
 
     apply(state: HydratedSarGameState, _context?: MachineContext) {
-        assert(state.mayFinishDeveloping(), 'Johannesburg takes the second development')
+        assert(state.mayFinishDeveloping(), 'The hub takes the second development')
     }
 
     static canFinish(state: HydratedSarGameState): boolean {

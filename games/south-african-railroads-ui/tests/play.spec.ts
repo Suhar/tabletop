@@ -76,7 +76,7 @@ async function playInitialOffering(page: Page) {
 
 test('plays the initial offering and a construction turn on the board', async ({ page }) => {
     await createGame(page)
-    await expect(page.getByText('Initial offering', { exact: true })).toBeVisible()
+    await expect(page.getByText(/^initial offering$/i)).toBeVisible()
     await screenshot(page, '01-initial-auction')
 
     await playInitialOffering(page)
@@ -100,7 +100,7 @@ test('plays the initial offering and a construction turn on the board', async ({
         .first()
         .locator('.hit-box')
         .click()
-    const oneLink = page.getByRole('button', { name: 'Build one link · $5' })
+    const oneLink = page.getByRole('button', { name: /^build one link/i })
     if ((await oneLink.count()) > 0) {
         await screenshot(page, '04-double-choice')
         await oneLink.click()
@@ -126,13 +126,25 @@ test('develops a settlement through the board', async ({ page }) => {
         .toBe(1)
 })
 
-test('fits a phone screen without sideways scrolling in the action area', async ({ page }) => {
+test('fits a phone screen without sideways scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 740 })
     await createGame(page)
+    await playInitialOffering(page)
+    await expect.poll(() => machineState(page)).toBe('ChoosingAction')
     await screenshot(page, '07-phone')
-    const overflow = await page.evaluate(() => {
-        const area = document.querySelector('.action-area')
-        return area ? area.scrollWidth - area.clientWidth : 0
-    })
-    expect(overflow).toBeLessThanOrEqual(1)
+    const overflow = await page.evaluate(() =>
+        ['.action-area', '[aria-label="Action boxes"]'].map((selector) => {
+            const element = document.querySelector(selector)
+            if (!element) {
+                return `${selector} missing`
+            }
+            const right = Math.max(
+                ...[element, ...element.querySelectorAll('*')].map(
+                    (part) => part.getBoundingClientRect().right
+                )
+            )
+            return right > window.innerWidth + 1 ? `${selector} overflows` : 'fits'
+        })
+    )
+    expect(overflow).toEqual(['fits', 'fits'])
 })

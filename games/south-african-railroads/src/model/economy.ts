@@ -1,19 +1,21 @@
-import { incomeLevels, link } from '../components/map.js'
-import { RAILROADS, SHARES_PER_RAILROAD, type RailroadId } from '../components/railroads.js'
+import type { SarMap } from '../maps/maps.js'
+import type { RailroadId } from '../maps/types.js'
 import { railroadLinkIds, type TrackState } from './track.js'
 
-export type DevelopmentState = { developments: Record<string, number> }
+export const SHARES_PER_RAILROAD = 5
+
+export type DevelopmentState = { map: SarMap; developments: Record<string, number> }
 
 export function developmentLevel(state: DevelopmentState, settlementId: string): number {
     return state.developments[settlementId] ?? 0
 }
 
 export function settlementIncome(state: DevelopmentState, settlementId: string): number {
-    return incomeLevels(settlementId)[developmentLevel(state, settlementId)]
+    return state.map.incomeLevels(settlementId)[developmentLevel(state, settlementId)]
 }
 
 export function linkIncome(state: DevelopmentState, linkId: string): number {
-    const [a, b] = link(linkId).ends
+    const [a, b] = state.map.link(linkId).ends
     return settlementIncome(state, a) + settlementIncome(state, b)
 }
 
@@ -25,17 +27,19 @@ export function developmentIncomeGains(
     state: TrackState & DevelopmentState,
     settlementId: string
 ): IncomeGain[] {
-    const levels = incomeLevels(settlementId)
+    const levels = state.map.incomeLevels(settlementId)
     const level = developmentLevel(state, settlementId)
     const step = levels[level + 1] - levels[level]
-    return RAILROADS.map((railroad) => ({
-        railroadId: railroad.id,
-        gain:
-            step *
-            railroadLinkIds(state, railroad.id).filter((linkId) =>
-                link(linkId).ends.includes(settlementId)
-            ).length
-    })).filter((entry) => entry.gain > 0)
+    return state.map.railroads
+        .map((railroad) => ({
+            railroadId: railroad.id,
+            gain:
+                step *
+                railroadLinkIds(state, railroad.id).filter((linkId) =>
+                    state.map.link(linkId).ends.includes(settlementId)
+                ).length
+        }))
+        .filter((entry) => entry.gain > 0)
 }
 
 export function railroadIncome(state: TrackState & DevelopmentState, railroadId: RailroadId) {

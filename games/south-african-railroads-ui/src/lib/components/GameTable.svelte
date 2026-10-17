@@ -18,12 +18,13 @@
     import ActionPanel from '$lib/components/ActionPanel.svelte'
     import ActionBoxes from '$lib/components/ActionBoxes.svelte'
     import GameEndPanel from '$lib/components/GameEndPanel.svelte'
+    import RailroadsPanel from '$lib/components/RailroadsPanel.svelte'
+    import { railroadPaneOnRight } from '$lib/utils/tableLayout.svelte.js'
     import { SarGameSession } from '$lib/model/session.svelte'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import LibreBaskervilleFont from '$lib/fonts/LibreBaskerville.woff2'
     import LibreBaskervilleItalicFont from '$lib/fonts/LibreBaskerville-Italic.woff2'
-    import CourierPrimeFont from '$lib/fonts/CourierPrime-Regular.woff2'
-    import CourierPrimeBoldFont from '$lib/fonts/CourierPrime-Bold.woff2'
+    import BitterFont from '$lib/fonts/Bitter.woff2'
 
     let { gameSession }: { gameSession: GameSession<SarGameState, HydratedSarGameState> } =
         $props()
@@ -47,6 +48,10 @@
 
 {#snippet turnControls()}
     <Header />
+    {@render actionControls()}
+{/snippet}
+
+{#snippet actionControls()}
     <div class="action-area">
         {#if gameSession.gameState.result}
             <GameEndPanel />
@@ -72,13 +77,7 @@
     fontWeight="400 700"
     fontStyle="italic"
 />
-<CustomFont fontFamily="Courier Prime" url={CourierPrimeFont} format="woff2" fontWeight="400" />
-<CustomFont
-    fontFamily="Courier Prime"
-    url={CourierPrimeBoldFont}
-    format="woff2"
-    fontWeight="700"
-/>
+<CustomFont fontFamily="SAR Bitter" url={BitterFont} format="woff2" fontWeight="100 900" />
 
 <div class="bg-[#e9dcbc]">
     <DefaultTableLayout>
@@ -120,23 +119,42 @@
             </DefaultTabs>
         {/snippet}
         {#snippet gameContent()}
-            <div class="shrink-0">
-                {@render turnControls()}
-            </div>
-            <div class="grow-0 overflow-hidden pt-2" style="flex:1; min-height: 40dvh;">
-                <ScalingWrapper justify="center" controls="bottom-left" renderAtViewScale expandable>
-                    <Board />
-                    {#snippet toolbar()}
-                        <!-- Full screen is a modal dialog, so the turn controls must come inside it. -->
-                        <div {@attach watchExpansion}>
-                            {#if expanded}
-                                <div class="fullscreen-controls">
-                                    {@render turnControls()}
-                                </div>
-                            {/if}
+            <div class="table-column">
+                <div class="shrink-0">
+                    <Header />
+                </div>
+                <div class="split">
+                    <div class="play">
+                        <div class="shrink-0">
+                            {@render actionControls()}
                         </div>
-                    {/snippet}
-                </ScalingWrapper>
+                        <div class="grow-0 overflow-hidden pt-2" style="flex:1; min-height: 40dvh;">
+                            <ScalingWrapper
+                                justify="center"
+                                controls="bottom-left"
+                                renderAtViewScale
+                                expandable
+                            >
+                                <Board />
+                                {#snippet toolbar()}
+                                    <!-- Full screen is a modal dialog, so the turn controls must come inside it. -->
+                                    <div {@attach watchExpansion}>
+                                        {#if expanded}
+                                            <div class="fullscreen-controls">
+                                                {@render turnControls()}
+                                            </div>
+                                        {/if}
+                                    </div>
+                                {/snippet}
+                            </ScalingWrapper>
+                        </div>
+                    </div>
+                    {#if railroadPaneOnRight.current}
+                        <aside class="ledger" aria-label="Railroads">
+                            <RailroadsPanel />
+                        </aside>
+                    {/if}
+                </div>
             </div>
         {/snippet}
     </DefaultTableLayout>
@@ -149,6 +167,35 @@
         border-radius: 12px;
         background: #fbf5e3;
         box-shadow: 0 2px 6px rgba(40, 24, 8, 0.18);
+    }
+
+    .table-column {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .split {
+        display: flex;
+        flex: 1;
+        gap: 8px;
+        min-height: 0;
+    }
+
+    .play {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .ledger {
+        flex: none;
+        width: 280px;
+        overflow-y: auto;
+        padding: 0 2px 8px;
     }
 
     .fullscreen-controls {

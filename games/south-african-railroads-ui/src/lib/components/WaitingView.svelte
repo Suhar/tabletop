@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { ActionSource } from '@tabletop/common'
     import { PlayerName } from '@tabletop/frontend-components'
     import { MachineState } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -16,20 +17,30 @@
         [MachineState.OfferingStock]: 'is offering a share'
     }
 
-    const lastAction = $derived(gameSession.actions.at(-1))
-    const sale = $derived(lastAction ? actionSale(lastAction) : undefined)
+    // The last player action and the system actions it set off, such as a free first link or a
+    // dividend the action track triggered.
+    const lastStep = $derived.by(() => {
+        const actions = gameSession.actions
+        const start = actions.findLastIndex((action) => action.source === ActionSource.User)
+        return actions.slice(start < 0 ? -1 : start).map((action) => ({
+            action,
+            description: describeAction(gameSession.gameState.map, action),
+            sale: actionSale(action)
+        }))
+    })
     const waitingOn = $derived(gameSession.gameState.activePlayerIds[0])
     const waitingText = $derived(WAITING_FOR[gameSession.gameState.machineState])
 </script>
 
 <div class="waiting">
-    {#if lastAction}
+    {#each lastStep as entry (entry.action.id)}
         <div class="last">
-            {#if lastAction.playerId}<PlayerName playerId={lastAction.playerId} />{/if}
-            <Description description={describeAction(lastAction)} />
-            {#if sale}<span>·</span> <Description description={saleDescription(sale)} />{/if}
+            {#if entry.action.playerId}<PlayerName playerId={entry.action.playerId} />{/if}
+            <Description description={entry.description} />
+            {#if entry.sale}<span>·</span>
+                <Description description={saleDescription(entry.sale)} />{/if}
         </div>
-    {/if}
+    {/each}
     {#if !gameSession.isViewingHistory && waitingOn && waitingText}
         <div class="next"><PlayerName playerId={waitingOn} /> {waitingText}</div>
     {/if}

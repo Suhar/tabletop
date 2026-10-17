@@ -1,20 +1,8 @@
 <script lang="ts">
-    import {
-        SETTLEMENTS,
-        SettlementKind,
-        incomeLevels,
-        railroadDefinition,
-        type SettlementDefinition
-    } from '@tabletop/south-african-railroads'
+    import { SettlementKind, type SettlementDefinition } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { METRO_CELL, METRO_GRIDS } from '$lib/utils/boardLayout.js'
-    import {
-        BASE_NAMES,
-        SETTLEMENT_LABELS,
-        metroCaptionBox,
-        metroFrameBox,
-        settlementIconBox
-    } from '$lib/utils/mapLabels.js'
+    import { METRO_CELL, boardLayout } from '$lib/utils/boardLayout.js'
+    import { mapLabels } from '$lib/utils/mapLabels.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import { polygonPoints } from '$lib/utils/shapes.js'
     import { SHADOW_OFFSET } from '$lib/utils/shapes.js'
@@ -26,38 +14,41 @@
         [SettlementKind.RailroadStation]: '#2d58b0',
         [SettlementKind.MercantileCenter]: '#d42a22'
     }
+    const UNOWNED_BASE_FILL = '#8a7860'
+
+    const map = $derived(gameSession.gameState.map)
+    const layout = $derived(boardLayout(map.id))
+    const labels = $derived(mapLabels(map.id))
 
     const developTargets = $derived(
         new Map(gameSession.developTargets.map((target) => [target.settlementId, target]))
     )
 
     const settlements = $derived(
-        SETTLEMENTS.map((place) => {
+        map.settlements.map((place) => {
             const level = gameSession.gameState.developmentLevel(place.id)
             return {
                 ...place,
                 level,
-                income: incomeLevels(place.id)[level],
+                income: map.incomeLevels(place.id)[level],
                 target: developTargets.get(place.id)
             }
         })
     )
 
     function developedRingRadius(place: SettlementDefinition): number {
-        const { width, height } = settlementIconBox(place)
+        const { width, height } = labels.settlementIconBox(place)
         return Math.max(width, height) / 2 + 5
     }
 
     function symbolFill(place: SettlementDefinition): string {
-        return (
-            SYMBOL_FILL[place.kind] ??
-            (place.homeOf ? RAILROAD_STYLE[place.homeOf] : RAILROAD_STYLE.CMRC).fill
-        )
+        const homeOf = map.homeOf(place.id)
+        return SYMBOL_FILL[place.kind] ?? (homeOf ? RAILROAD_STYLE[homeOf].fill : UNOWNED_BASE_FILL)
     }
 
     function metroCells(place: SettlementDefinition) {
-        const grid = METRO_GRIDS[place.id]
-        return incomeLevels(place.id).map((value, index) => ({
+        const grid = layout.metroGrid(place.id)
+        return map.incomeLevels(place.id).map((value, index) => ({
             value,
             index,
             x: grid.origin.x + (index % grid.columns) * METRO_CELL,
@@ -86,14 +77,14 @@
 {/snippet}
 
 <g class="settlement-layer">
-    {#each BASE_NAMES as base (base.railroadId)}
+    {#each labels.baseNames as base (base.railroadId)}
         <text x={base.x} y={base.y} class="base-name" fill={RAILROAD_STYLE[base.railroadId].fill}
-            >{railroadDefinition(base.railroadId).shortName}</text
+            >{map.railroad(base.railroadId).shortName}</text
         >
     {/each}
 
     {#each settlements as place (place.id)}
-        {@const label = SETTLEMENT_LABELS[place.id]}
+        {@const label = labels.settlementLabels[place.id]}
         {#if label}
             <text
                 x={label.x}
@@ -108,8 +99,8 @@
     {#each settlements as place (place.id)}
         <g class="settlement">
             {#if place.kind === SettlementKind.MetroArea}
-                {@const frame = metroFrameBox(place)}
-                {@const caption = metroCaptionBox(place)}
+                {@const frame = labels.metroFrameBox(place)}
+                {@const caption = labels.metroCaptionBox(place)}
                 {#each [caption, frame] as box, index (index)}
                     <rect
                         x={box.x + SHADOW_OFFSET.x}
@@ -202,7 +193,7 @@
         {#if place.target}
             {@const bounds =
                 place.kind === SettlementKind.MetroArea
-                    ? settlementIconBox(place)
+                    ? labels.settlementIconBox(place)
                     : { x: place.x - 22, y: place.y - 22, width: 44, height: 44 }}
             <g
                 class="develop-target"

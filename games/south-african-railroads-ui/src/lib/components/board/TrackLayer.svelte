@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { LINKS, linkOwner, settlement } from '@tabletop/south-african-railroads'
+    import { linkOwner } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { LINK_BOX_SIZE } from '$lib/utils/boardLayout.js'
     import { linkPath } from '$lib/utils/mapGeometry.js'
@@ -12,13 +12,15 @@
     const builder = $derived(gameSession.buildingRailroad)
     const builderStyle = $derived(builder ? RAILROAD_STYLE[builder] : undefined)
 
+    const map = $derived(gameSession.gameState.map)
+
     const links = $derived(
-        LINKS.map((trackLink) => {
+        map.links.map((trackLink) => {
             const owner = linkOwner(gameSession.gameState, trackLink.id)
             return {
                 ...trackLink,
-                path: linkPath(trackLink.id),
-                label: trackLink.ends.map((id) => settlement(id).name).join(' to '),
+                path: linkPath(map, trackLink.id),
+                label: trackLink.ends.map((id) => map.settlement(id).name).join(' to '),
                 style: owner ? RAILROAD_STYLE[owner] : undefined,
                 target: targets.has(trackLink.id),
                 gain: gameSession.gameState.buildIncomeGain(trackLink.id),

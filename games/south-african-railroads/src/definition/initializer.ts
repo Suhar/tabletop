@@ -9,13 +9,14 @@ import {
     type StartingPositionAssignment,
     type UninitializedGameState
 } from '@tabletop/common'
-import { INITIAL_OFFERING, RAILROADS } from '../components/railroads.js'
+import { sarMap } from '../maps/maps.js'
 import { ActionBox } from '../model/actionBoxes.js'
 import { AuctionKind } from '../model/auction.js'
 import { HydratedSarGameState, type SarGameState } from '../model/gameState.js'
-import { HydratedSarPlayerState, STARTING_CASH } from '../model/playerState.js'
+import { HydratedSarPlayerState } from '../model/playerState.js'
 import { openShareAuction } from '../model/shareAuctionRules.js'
 import { SarColors } from './colors.js'
+import { readSarSetup } from './setup.js'
 import { MachineState } from './states.js'
 
 export class SarGameInitializer
@@ -29,6 +30,8 @@ export class SarGameInitializer
         state: UninitializedGameState,
         assignment?: StartingPositionAssignment
     ): HydratedSarGameState {
+        const { mapId } = readSarSetup(game.config)
+        const map = sarMap(mapId)
         const prng = new Prng(state.prng)
         const colors = [...SarColors]
         shuffle(colors, prng.random)
@@ -37,7 +40,7 @@ export class SarGameInitializer
                 new HydratedSarPlayerState({
                     playerId: player.id,
                     color: colors[index],
-                    cash: STARTING_CASH[game.players.length],
+                    cash: map.startingCash(game.players.length),
                     locomotive: ActionBox.ConstructTrack
                 })
         )
@@ -49,8 +52,9 @@ export class SarGameInitializer
                 return player
             }),
             machineState: MachineState.Bidding,
+            mapId,
             turnManager,
-            railroads: RAILROADS.map((railroad) => ({
+            railroads: map.railroads.map((railroad) => ({
                 id: railroad.id,
                 open: false,
                 treasury: 0,
@@ -64,11 +68,10 @@ export class SarGameInitializer
             developmentsThisTurn: 0
         })
         const hydrated = new HydratedSarGameState(sarState)
-        // The first seat opens the bidding for the CdFM.
         const [openerId] = turnManager.turnOrder
         openShareAuction(hydrated, {
             kind: AuctionKind.InitialOffering,
-            railroadId: INITIAL_OFFERING[0],
+            railroadId: map.initialOffering[0],
             openerId,
             minimum: 0
         })

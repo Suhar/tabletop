@@ -1,54 +1,60 @@
 import { describe, expect, it } from 'vitest'
-import { LINKS, SETTLEMENTS, SettlementKind } from '@tabletop/south-african-railroads'
-import {
-    SETTLEMENT_LABELS,
-    TRACK_SEGMENTS,
-    boxesOverlap,
-    metroCaptionBox,
-    nameBox,
-    segmentCrossesBox,
-    settlementIconBox
-} from './mapLabels.js'
+import { MapId, SettlementKind, sarMap } from '@tabletop/south-african-railroads'
+import { boxesOverlap, mapLabels, nameBox, segmentCrossesBox } from './mapLabels.js'
 
-const names = SETTLEMENTS.filter((place) => SETTLEMENT_LABELS[place.id]).map((place) => ({
-    id: place.id,
-    box: nameBox(place.name, SETTLEMENT_LABELS[place.id])
-}))
+describe.each(Object.values(MapId))('the %s map', (mapId) => {
+    const map = sarMap(mapId)
+    const labels = mapLabels(mapId)
+    const names = map.settlements
+        .filter((place) => labels.settlementLabels[place.id])
+        .map((place) => ({
+            id: place.id,
+            box: nameBox(place.name, labels.settlementLabels[place.id])
+        }))
+    const linkBox = (box: { x: number; y: number }) => ({
+        x: box.x - 10,
+        y: box.y - 10,
+        width: 20,
+        height: 20
+    })
 
-describe('settlement names', () => {
-    it('stay clear of every settlement icon', () => {
+    it('names every settlement but the metro areas, which carry plates', () => {
+        expect(names.map((name) => name.id).toSorted()).toEqual(
+            map.settlements
+                .filter((place) => place.kind !== SettlementKind.MetroArea)
+                .map((place) => place.id)
+                .toSorted()
+        )
+    })
+
+    it('keeps names clear of every settlement icon', () => {
         const clashes = names.flatMap((name) =>
-            SETTLEMENTS.filter((place) => boxesOverlap(name.box, settlementIconBox(place))).map(
-                (place) => `${name.id} on ${place.id}`
-            )
+            map.settlements
+                .filter((place) => boxesOverlap(name.box, labels.settlementIconBox(place)))
+                .map((place) => `${name.id} on ${place.id}`)
         )
         expect(clashes).toEqual([])
     })
 
-    it('stay clear of the link building boxes', () => {
+    it('keeps names clear of the link building boxes', () => {
         const clashes = names.flatMap((name) =>
-            LINKS.filter((trackLink) =>
-                boxesOverlap(name.box, {
-                    x: trackLink.box.x - 10,
-                    y: trackLink.box.y - 10,
-                    width: 20,
-                    height: 20
-                })
-            ).map((trackLink) => `${name.id} on ${trackLink.id}`)
+            map.links
+                .filter((trackLink) => boxesOverlap(name.box, linkBox(trackLink.box)))
+                .map((trackLink) => `${name.id} on ${trackLink.id}`)
         )
         expect(clashes).toEqual([])
     })
 
-    it('stay clear of the track lines', () => {
+    it('keeps names clear of the track lines', () => {
         const clashes = names
             .filter((name) =>
-                TRACK_SEGMENTS.some((segment) => segmentCrossesBox(segment, name.box))
+                labels.trackSegments.some((segment) => segmentCrossesBox(segment, name.box))
             )
             .map((name) => name.id)
         expect(clashes).toEqual([])
     })
 
-    it('stay clear of each other', () => {
+    it('keeps names clear of each other', () => {
         const clashes = names.flatMap((name, index) =>
             names
                 .slice(index + 1)
@@ -57,27 +63,22 @@ describe('settlement names', () => {
         )
         expect(clashes).toEqual([])
     })
-})
 
-describe('metro name plates', () => {
-    const metros = SETTLEMENTS.filter((place) => place.kind === SettlementKind.MetroArea)
-
-    it('stay clear of the link building boxes and other icons', () => {
+    it('keeps metro name plates clear of the link building boxes and other icons', () => {
+        const metros = map.settlements.filter((place) => place.kind === SettlementKind.MetroArea)
         const clashes = metros.flatMap((metro) => {
-            const plate = metroCaptionBox(metro)
+            const plate = labels.metroCaptionBox(metro)
             return [
-                ...LINKS.filter((trackLink) =>
-                    boxesOverlap(plate, {
-                        x: trackLink.box.x - 10,
-                        y: trackLink.box.y - 10,
-                        width: 20,
-                        height: 20
-                    })
-                ).map((trackLink) => `${metro.id} on ${trackLink.id}`),
-                ...SETTLEMENTS.filter(
-                    (place) =>
-                        place.id !== metro.id && boxesOverlap(plate, settlementIconBox(place))
-                ).map((place) => `${metro.id} on ${place.id}`)
+                ...map.links
+                    .filter((trackLink) => boxesOverlap(plate, linkBox(trackLink.box)))
+                    .map((trackLink) => `${metro.id} on ${trackLink.id}`),
+                ...map.settlements
+                    .filter(
+                        (place) =>
+                            place.id !== metro.id &&
+                            boxesOverlap(plate, labels.settlementIconBox(place))
+                    )
+                    .map((place) => `${metro.id} on ${place.id}`)
             ]
         })
         expect(clashes).toEqual([])

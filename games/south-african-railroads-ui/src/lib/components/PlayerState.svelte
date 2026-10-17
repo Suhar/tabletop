@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { RAILROADS, type HydratedSarPlayerState } from '@tabletop/south-african-railroads'
+    import type { HydratedSarPlayerState } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import ShareCertificate from './ShareCertificate.svelte'
 
@@ -11,7 +11,7 @@
     const color = $derived(gameSession.colors.getPlayerUiColor(playerId))
     const acting = $derived(gameSession.shownState.activePlayerIds.includes(playerId))
     const lines = $derived(
-        RAILROADS.map((railroad) => {
+        gameSession.shownState.map.railroads.map((railroad) => {
             const shares = gameSession.shownState.sharesHeld(railroad.id, playerId)
             const each = gameSession.shownState.nextDividendPerShare(railroad.id)
             return {
@@ -31,12 +31,16 @@
 <div class="ticket" class:acting style:--player={color}>
     <div class="band">
         <span class="name">{gameSession.getPlayerName(playerId)}</span>
-        <span class="cash" title="Cash in hand">${playerState.cash}</span>
+        <span class="cash" title="Cash in hand"
+            ><span class="cash-label">Cash</span>${playerState.cash}</span
+        >
     </div>
     {#each lines as line (line.railroad.id)}
         <div
             class="line"
-            title="{line.railroad.shortName}: ${line.each} a share{line.controls
+            title="{line.railroad.shortName}: ${line.each} a share at the next {finalPayoffNext
+                ? 'final payout'
+                : 'dividend'}{line.controls
                 ? ' · controls the railroad'
                 : ''}"
         >
@@ -46,7 +50,7 @@
                 {/each}
             </span>
             <span class="leader"></span>
-            <span class="amount">${line.amount}</span>
+            <span class="amount">+${line.amount}</span>
         </div>
     {:else}
         <div class="none">No shares yet</div>
@@ -57,8 +61,8 @@
             ? 'the final payoff'
             : 'dividends'} were paid now"
     >
-        <span>{finalPayoffNext ? 'FINAL PAYOFF DUE' : 'DIVIDEND DUE'}</span>
-        <span>${dividend}</span>
+        <span>{finalPayoffNext ? 'Next Final Payout' : 'Next Dividend'}</span>
+        <span class="total-amount">+${dividend}</span>
     </div>
     <div class="fine-print" title="Cash plus every share's final payoff if the game ended now">
         Score if game ended now ${projected}
@@ -70,21 +74,12 @@
         position: relative;
         overflow: hidden;
         border: 3px solid #f3e7c4;
+        border-left: 12px solid var(--player);
         border-radius: 5px;
-        padding-left: 16px;
         background: #f3e7c4;
         color: #3b2410;
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         box-shadow: 0 2px 4px rgba(40, 24, 8, 0.3);
-    }
-
-    .ticket::before {
-        content: '';
-        position: absolute;
-        inset: 0 auto 0 0;
-        width: 16px;
-        background: var(--player);
-        box-shadow: inset -1.5px 0 0 rgba(0, 0, 0, 0.3);
     }
 
     .ticket.acting {
@@ -113,8 +108,20 @@
     }
 
     .cash {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
         font-size: 15px;
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cash-label {
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.9;
     }
 
     .line {
@@ -151,11 +158,18 @@
 
     .total {
         display: flex;
+        align-items: baseline;
         justify-content: space-between;
         padding: 4px 10px 2px;
         border-top: 1px dashed #a88a5c;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+    }
+
+    .total-amount {
         font-size: 15px;
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
     }
 
     .fine-print {

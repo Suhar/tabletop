@@ -1,9 +1,5 @@
 <script lang="ts">
-    import {
-        RailroadId,
-        SHARES_PER_RAILROAD,
-        railroadDefinition
-    } from '@tabletop/south-african-railroads'
+    import { SHARES_PER_RAILROAD, type RailroadId } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
     import ShareCertificate, {
@@ -24,7 +20,8 @@
     const SHARE_OFFSET_Y = 9
     const STACK_STEPS = SHARES_PER_RAILROAD - 1
 
-    const definition = $derived(railroadDefinition(railroadId))
+    const map = $derived(gameSession.gameState.map)
+    const definition = $derived(map.railroad(railroadId))
     const style = $derived(RAILROAD_STYLE[railroadId])
     const railroad = $derived(gameSession.gameState.railroad(railroadId))
     const sharesLeft = $derived(gameSession.gameState.unsoldShares(railroadId))
@@ -108,9 +105,9 @@
             </div>
         {:else}
             <div class="closed-note">
-                {railroadId === RailroadId.ZASM
-                    ? 'Opens when track reaches Johannesburg'
-                    : 'Opens in the initial offering'}
+                {map.opensInInitialOffering(railroadId)
+                    ? 'Opens in the initial offering'
+                    : `Opens when track reaches ${map.settlement(definition.homeId).name}`}
             </div>
         {/if}
     </div>
@@ -149,7 +146,7 @@
         border-radius: 6px;
         background: #fbf5e3;
         color: #3b2410;
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         font-size: 13px;
         box-shadow: 0 1px 3px rgba(40, 24, 8, 0.15);
     }
@@ -196,7 +193,7 @@
         align-self: stretch;
         gap: 6px;
         min-height: 24px;
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
     }
 
     .treasury-label {
@@ -282,6 +279,10 @@
         border-bottom: 0;
     }
 
+    .entry:nth-child(even) {
+        background: rgba(120, 80, 30, 0.07);
+    }
+
     .money {
         display: flex;
         align-items: center;
@@ -292,6 +293,7 @@
         border-left: 1px solid #d9b98a;
         font-size: 15px;
         font-weight: 700;
+        font-variant-numeric: tabular-nums;
     }
 
     .closed-note {

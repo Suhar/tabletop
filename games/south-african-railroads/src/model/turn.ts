@@ -1,5 +1,5 @@
 import * as Type from 'typebox'
-import { RailroadId } from '../components/railroads.js'
+import { RailroadId } from '../maps/types.js'
 
 // A railroad chosen to build for a player who controls no railroad able to build.
 export type Delegation = Type.Static<typeof Delegation>

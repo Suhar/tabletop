@@ -10,13 +10,11 @@ import {
     DelegateBuild,
     Develop,
     FinishDevelopment,
-    INITIAL_OFFERING,
     MachineState,
     OfferShare,
     PassBid,
     PlaceBid,
     HydratedSarGameState,
-    freeBuildHome,
     homeLinks,
     type IncomeGain,
     type HydratedSarPlayerState,
@@ -62,6 +60,17 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
         return playerId && this.actingIn(MachineState.ChoosingAction)
             ? this.gameState.availableBoxes(playerId)
             : []
+    })
+
+    // Boxes the turn player may choose that would pay dividends at once, shown to every viewer.
+    dividendBoxes: ActionBox[] = $derived.by(() => {
+        const state = this.gameState
+        if (state.machineState !== MachineState.ChoosingAction || state.result) {
+            return []
+        }
+        return state
+            .availableBoxes(state.turnPlayerId())
+            .filter((box) => state.triggersDividends(box))
     })
 
     // Every locomotive starts in Construct Track, but the boxes show a player only once they have
@@ -151,7 +160,7 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
     linkTargets: string[] = $derived.by(() => {
         const due = this.gameState.freeBuild
         if (due && this.actingIn(MachineState.FreeBuild) && due.playerId === this.myPlayerId) {
-            return homeLinks(this.gameState, freeBuildHome(due.railroadId))
+            return homeLinks(this.gameState, this.gameState.map.home(due.railroadId))
         }
         const railroadId = this.selectedRailroad
         if (!railroadId || this.delegating) {
@@ -307,7 +316,7 @@ export class SarGameSession extends GameSession<SarGameState, HydratedSarGameSta
             smallestBid: this.gameState.smallestBid(),
             upcomingOfferings:
                 auction.kind === AuctionKind.InitialOffering
-                    ? INITIAL_OFFERING.filter(
+                    ? this.gameState.map.initialOffering.filter(
                           (railroadId) =>
                               railroadId !== auction.railroadId &&
                               !this.gameState.railroad(railroadId).open

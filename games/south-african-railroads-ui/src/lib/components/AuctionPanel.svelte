@@ -15,17 +15,22 @@
     )
     const myBid = $derived(gameSession.bidding && view?.currentBidderId === gameSession.myPlayerId)
 
-    const HEADINGS: Record<AuctionKind, string> = {
-        [AuctionKind.InitialOffering]: 'Initial offering',
-        [AuctionKind.ZasmOpening]: 'The ZASM opens',
-        [AuctionKind.OfferStock]: 'Share on offer'
-    }
+    const heading = $derived.by(() => {
+        switch (view?.kind) {
+            case AuctionKind.InitialOffering:
+                return 'Initial offering'
+            case AuctionKind.RailroadOpening:
+                return `The ${gameSession.gameState.map.railroad(view.railroadId).shortName} opens`
+            default:
+                return 'Share on offer'
+        }
+    })
 </script>
 
 {#if view}
     <div class="auction">
         <div class="table">
-            <div class="heading">{HEADINGS[view.kind]}</div>
+            <div class="heading">{heading}</div>
             <BigShareCertificate railroadId={view.railroadId} />
             <div class="seats">
                 {#each view.seats as seat (seat.playerId)}
@@ -138,7 +143,7 @@
     }
 
     .name {
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.06em;
@@ -171,7 +176,7 @@
 
     .upcoming-label {
         margin-right: 2px;
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.06em;

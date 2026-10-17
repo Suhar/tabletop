@@ -3,7 +3,10 @@ import { ActionSource } from '@tabletop/common'
 import {
     ActionType,
     AuctionKind,
+    MapId,
     RailroadId,
+    sarMap,
+    type BuildTrack,
     type OfferShare
 } from '@tabletop/south-african-railroads'
 import { describeAction, saleDescription, winVerb } from './describeAction.js'
@@ -48,10 +51,31 @@ describe('player sentences', () => {
             railroadId: RailroadId.NRC,
             ownShare: true
         }
-        expect(describeAction(resale)).toEqual([
+        expect(describeAction(sarMap(MapId.SouthAfrica), resale)).toEqual([
             'offered a ',
             { railroadId: RailroadId.NRC },
             ' share for resale'
+        ])
+    })
+
+    it('names the railroad a build opens and the home it reached', () => {
+        const build: BuildTrack = {
+            id: 'a2',
+            gameId: 'g',
+            source: ActionSource.User,
+            playerId: 'p1',
+            type: ActionType.BuildTrack,
+            railroadId: RailroadId.CdFM,
+            linkIds: ['johannesburg~witbank'],
+            metadata: { cost: 5, income: 9, opensRailroad: RailroadId.ZASM }
+        }
+        expect(describeAction(sarMap(MapId.SouthAfrica), build)).toEqual([
+            'built Johannesburg–Witbank for the ',
+            { railroadId: RailroadId.CdFM },
+            ' for $5',
+            ' · Johannesburg reached: the ',
+            { railroadId: RailroadId.ZASM },
+            ' opens'
         ])
     })
 

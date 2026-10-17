@@ -1,5 +1,5 @@
 import * as Type from 'typebox'
-import type { RailroadId } from '../components/railroads.js'
+import type { RailroadId } from '../maps/types.js'
 import type { HydratedSarGameState } from './gameState.js'
 
 export type Payout = Type.Static<typeof Payout>

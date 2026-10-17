@@ -11,15 +11,15 @@ import {
 } from '@tabletop/common'
 import { PassableBidding } from '@tabletop/18xx'
 import { MachineState } from '../definition/states.js'
-import { SETTLEMENTS } from '../components/mapData.js'
-import { JOHANNESBURG, link, maxDevelopments, settlement } from '../components/map.js'
+import { sarMap, type SarMap } from '../maps/maps.js'
+import { MapId, RailroadId } from '../maps/types.js'
 import {
-    INITIAL_OFFERING,
-    RAILROADS,
-    RailroadId,
-    SHARES_PER_RAILROAD
-} from '../components/railroads.js'
-import { ACTION_BOXES, ActionBox, boxCapacity } from './actionBoxes.js'
+    ACTION_BOXES,
+    ACTION_TRACK_ADVANCE,
+    ACTION_TRACK_LIMIT,
+    ActionBox,
+    boxCapacity
+} from './actionBoxes.js'
 import { ShareAuction } from './auction.js'
 import {
     developmentIncomeGains,
@@ -27,6 +27,7 @@ import {
     dividendPerShare,
     linkIncome,
     finalPayoffPerShare,
+    SHARES_PER_RAILROAD,
     minimumBid,
     railroadIncome,
     settlementIncome,
@@ -48,12 +49,14 @@ import { Delegation, FreeBuildDue } from './turn.js'
 
 export const SECOND_DEVELOPMENT_COST = 3
 export const DIVIDENDS_BEFORE_FINAL = 5
+export const ROUNDS = DIVIDENDS_BEFORE_FINAL + 1
 
 export type SarGameState = Type.Static<typeof SarGameState>
 export const SarGameState = Type.Object({
     ...Type.Omit(GameState, ['players', 'machineState']).properties,
     players: Type.Array(SarPlayerState),
     machineState: Type.Enum(MachineState),
+    mapId: Type.Enum(MapId),
     railroads: Type.Array(RailroadState),
     track: Type.Array(BuiltLink),
     connections: Type.Array(BuiltConnection),
@@ -84,6 +87,7 @@ export class HydratedSarGameState
     declare players: HydratedSarPlayerState[]
     declare turnManager: HydratedTurnManager
     declare machineState: MachineState
+    declare mapId: MapId
     declare result?: GameResult
     declare winningPlayerIds: string[]
     declare railroads: RailroadState[]
@@ -102,6 +106,10 @@ export class HydratedSarGameState
         this.players = data.players.map((player) => new HydratedSarPlayerState(player))
     }
 
+    get map(): SarMap {
+        return sarMap(this.mapId)
+    }
+
     railroad(railroadId: RailroadId): RailroadState {
         const railroad = this.railroads.find((candidate) => candidate.id === railroadId)
         assertExists(railroad, `Unknown railroad ${railroadId}`)
@@ -113,7 +121,7 @@ export class HydratedSarGameState
     }
 
     nextInitialOffering(): RailroadId | undefined {
-        return INITIAL_OFFERING.find((railroadId) => !this.railroad(railroadId).open)
+        return this.map.initialOffering.find((railroadId) => !this.railroad(railroadId).open)
     }
 
     turnPlayerId(): string {
@@ -159,10 +167,12 @@ export class HydratedSarGameState
     }
 
     holdings(playerId: string): ShareHolding[] {
-        return RAILROADS.map((railroad) => ({
-            railroadId: railroad.id,
-            shares: this.sharesHeld(railroad.id, playerId)
-        })).filter((holding) => holding.shares > 0)
+        return this.map.railroads
+            .map((railroad) => ({
+                railroadId: railroad.id,
+                shares: this.sharesHeld(railroad.id, playerId)
+            }))
+            .filter((holding) => holding.shares > 0)
     }
 
     controllers(railroadId: RailroadId): string[] {
@@ -191,8 +201,21 @@ export class HydratedSarGameState
         return ACTION_BOXES.filter(
             (box) =>
                 (box === ActionBox.ConstructTrack || box !== player.locomotive) &&
-                this.locomotivesIn(box, playerId) < boxCapacity(box, this.players.length)
+                this.locomotivesIn(box, playerId) < this.boxCapacity(box)
         )
+    }
+
+    // Choosing the box pays dividends at once: Pay Dividends, or a box whose advance takes the
+    // action track past its limit.
+    triggersDividends(box: ActionBox): boolean {
+        return (
+            box === ActionBox.PayDividends ||
+            this.actionTrack + ACTION_TRACK_ADVANCE[box] > ACTION_TRACK_LIMIT
+        )
+    }
+
+    boxCapacity(box: ActionBox): number {
+        return boxCapacity(box, this.players.length, this.map)
     }
 
     singleBuilds(railroadId: RailroadId): string[] {
@@ -221,9 +244,9 @@ export class HydratedSarGameState
     }
 
     buildableRailroads(): RailroadId[] {
-        return RAILROADS.map((railroad) => railroad.id).filter((railroadId) =>
-            this.canBuild(railroadId)
-        )
+        return this.map.railroads
+            .map((railroad) => railroad.id)
+            .filter((railroadId) => this.canBuild(railroadId))
     }
 
     // The railroads the acting player may build with directly; empty when they must hand the
@@ -239,20 +262,29 @@ export class HydratedSarGameState
         return this.ownBuildableRailroads(playerId)
     }
 
-    reachesJohannesburg(linkIds: readonly string[]): boolean {
-        return linkIds.some((linkId) => link(linkId).ends.includes(JOHANNESBURG))
+    // A closed railroad outside the initial offering opens once track reaches its home.
+    railroadOpenedBy(linkIds: readonly string[]): RailroadId | undefined {
+        const reached = new Set(linkIds.flatMap((linkId) => this.map.link(linkId).ends))
+        return this.map.railroads.find(
+            (railroad) =>
+                !this.map.opensInInitialOffering(railroad.id) &&
+                !this.railroad(railroad.id).open &&
+                reached.has(railroad.homeId)
+        )?.id
     }
 
     developableSettlements(): string[] {
-        return SETTLEMENTS.filter(
-            (candidate) =>
-                this.developmentLevel(candidate.id) < maxDevelopments(candidate.id) &&
-                (candidate.id === JOHANNESBURG || isSettlementConnected(this, candidate.id))
-        ).map((candidate) => candidate.id)
+        return this.map.settlements
+            .filter(
+                (candidate) =>
+                    this.developmentLevel(candidate.id) < this.map.maxDevelopments(candidate.id) &&
+                    (candidate.id === this.map.hubId || isSettlementConnected(this, candidate.id))
+            )
+            .map((candidate) => candidate.id)
     }
 
     developmentCost(settlementId: string): number {
-        return this.developmentsThisTurn === 0 || settlementId === JOHANNESBURG
+        return this.developmentsThisTurn === 0 || settlementId === this.map.hubId
             ? 0
             : SECOND_DEVELOPMENT_COST
     }
@@ -264,15 +296,16 @@ export class HydratedSarGameState
         )
     }
 
-    // A second development is optional only when Johannesburg cannot take it for free.
+    // A second development is optional only when the hub cannot take it for free.
     mayFinishDeveloping(): boolean {
         return (
-            this.developmentsThisTurn === 1 && !this.developableSettlements().includes(JOHANNESBURG)
+            this.developmentsThisTurn === 1 &&
+            !this.developableSettlements().includes(this.map.hubId)
         )
     }
 
     settlementName(settlementId: string): string {
-        return settlement(settlementId).name
+        return this.map.settlement(settlementId).name
     }
 
     bidding(): PassableBidding {
@@ -308,6 +341,11 @@ export class HydratedSarGameState
             this.income(railroadId),
             this.railroad(railroadId).owners.length
         )
+    }
+
+    // Each round ends in a payout; the last ends in the final payoff.
+    round(): number {
+        return Math.min(this.dividendsPaid, DIVIDENDS_BEFORE_FINAL) + 1
     }
 
     isFinalPayoffNext(): boolean {

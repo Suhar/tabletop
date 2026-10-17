@@ -1,11 +1,13 @@
 <script lang="ts">
-    import { railroadDefinition, type RailroadId } from '@tabletop/south-african-railroads'
+    import type { RailroadId } from '@tabletop/south-african-railroads'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { RAILROAD_STYLE } from '$lib/utils/railroadStyle.js'
 
     let { railroadId, title }: { railroadId: RailroadId; title?: boolean } = $props()
 
     const style = $derived(RAILROAD_STYLE[railroadId])
-    const definition = $derived(railroadDefinition(railroadId))
+    const gameSession = getGameSession()
+    const definition = $derived(gameSession.gameState.map.railroad(railroadId))
 </script>
 
 <span

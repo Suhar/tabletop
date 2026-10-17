@@ -1,13 +1,8 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
-    import {
-        MachineState,
-        freeBuildHome,
-        railroadDefinition,
-        settlement
-    } from '@tabletop/south-african-railroads'
+    import { ACTION_BOXES, MachineState } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { linkName } from '$lib/utils/describeAction.js'
+    import { BOX_SHORT_NAMES, boxRules, linkName } from '$lib/utils/describeAction.js'
     import AuctionPanel from './AuctionPanel.svelte'
     import BigShareCertificate from './BigShareCertificate.svelte'
     import RailroadBadge from './RailroadBadge.svelte'
@@ -16,9 +11,20 @@
     const gameSession = getGameSession()
 
     const state = $derived(gameSession.gameState)
+    const map = $derived(state.map)
+    const hubName = $derived(map.settlement(map.hubId).name)
     const machineState = $derived(state.machineState)
     const me = $derived(gameSession.myPlayerId)
     const holdings = $derived(me ? state.holdings(me) : [])
+    const boxGuide = $derived(
+        ACTION_BOXES.map((box) => ({
+            box,
+            name: BOX_SHORT_NAMES[box],
+            rules: boxRules(map, box, state.isFinalPayoffNext()),
+            open: gameSession.selectableBoxes.includes(box),
+            paysDividends: gameSession.dividendBoxes.includes(box)
+        }))
+    )
 </script>
 
 {#snippet railroadChoices()}
@@ -44,10 +50,22 @@
     {:else if machineState === MachineState.FreeBuild && state.freeBuild}
         <p class="prompt">
             Lay the <RailroadBadge railroadId={state.freeBuild.railroadId} /> free first link out of
-            {settlement(freeBuildHome(state.freeBuild.railroadId)).name}: choose a highlighted link.
+            {map.settlement(map.home(state.freeBuild.railroadId)).name}: choose a highlighted link.
         </p>
     {:else if machineState === MachineState.ChoosingAction}
-        <p class="prompt">Choose an action below.</p>
+        <p class="prompt">
+            Choose an action below. A <span class="bubble pays">red</span> box pays {state.isFinalPayoffNext()
+                ? 'the final payoff'
+                : 'dividends'} at once.
+        </p>
+        <dl class="guide">
+            {#each boxGuide as entry (entry.box)}
+                <div class:closed={!entry.open}>
+                    <dt class:pays={entry.paysDividends}>{entry.name}</dt>
+                    <dd>{entry.rules}</dd>
+                </div>
+            {/each}
+        </dl>
     {:else if machineState === MachineState.ConstructingTrack || machineState === MachineState.DelegatedBuild}
         {#if gameSession.delegating}
             {#if gameSession.selectedRailroad && gameSession.delegateBuilders.length > 1}
@@ -78,7 +96,7 @@
             {@render railroadChoices()}
         {:else if gameSession.firstLink}
             <p class="prompt">
-                {linkName(gameSession.firstLink)} chosen. Add a second link for $15 in all, or build
+                {linkName(map, gameSession.firstLink)} chosen. Add a second link for $15 in all, or build
                 this one alone.
             </p>
             <div class="row">
@@ -97,9 +115,9 @@
     {:else if machineState === MachineState.DevelopingSettlements}
         <p class="prompt">
             {#if state.developmentsThisTurn === 0}
-                Develop a settlement served by a railroad, or Johannesburg.
+                Develop a settlement served by a railroad, or {hubName}.
             {:else}
-                Develop a second settlement for $3 of your own cash, or Johannesburg free.
+                Develop a second settlement for $3 of your own cash, or {hubName} free.
             {/if}
         </p>
         <p class="effects">
@@ -128,7 +146,7 @@
                     <BigShareCertificate
                         {railroadId}
                         choice={{
-                            label: `Offer a ${railroadDefinition(railroadId).shortName} share`,
+                            label: `Offer a ${map.railroad(railroadId).shortName} share`,
                             onclick: () => gameSession.offerShare(railroadId, false)
                         }}
                     />
@@ -142,7 +160,7 @@
                     <BigShareCertificate
                         railroadId={holding.railroadId}
                         choice={{
-                            label: `Sell one of your ${railroadDefinition(holding.railroadId).shortName} shares`,
+                            label: `Sell one of your ${map.railroad(holding.railroadId).shortName} shares`,
                             onclick: () => gameSession.offerShare(holding.railroadId, true)
                         }}
                     />
@@ -186,6 +204,25 @@
         text-align: center;
     }
 
+    .bubble {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0 6px;
+        font-family: 'SAR Bitter', Georgia, serif;
+        font-size: 0.85em;
+        font-weight: 700;
+    }
+
+    .bubble.pays {
+        background: #c42a22;
+        color: #ffffff;
+    }
+
+    .guide {
+        display: none;
+    }
+
     .row {
         display: flex;
         flex-wrap: wrap;
@@ -195,7 +232,7 @@
     }
 
     .group-label {
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'SAR Bitter', Georgia, serif;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.06em;
@@ -210,6 +247,36 @@
 
         .prompt {
             font-size: 14px;
+        }
+
+        .guide {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1px 8px;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .guide div {
+            display: contents;
+        }
+
+        .guide dt {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .guide dt.pays {
+            color: #b0262e;
+        }
+
+        .guide dd {
+            margin: 0;
+        }
+
+        .guide .closed > * {
+            color: #a8916c;
         }
     }
 </style>

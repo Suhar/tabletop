@@ -2,6 +2,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import PlayerState from './PlayerState.svelte'
     import RailroadsPanel from './RailroadsPanel.svelte'
+    import { railroadPaneOnRight } from '$lib/utils/tableLayout.svelte.js'
 
     const gameSession = getGameSession()
 
@@ -16,5 +17,7 @@
     {#each orderedPlayers as playerState (playerState.playerId)}
         <PlayerState {playerState} />
     {/each}
-    <RailroadsPanel />
+    {#if !railroadPaneOnRight.current}
+        <RailroadsPanel />
+    {/if}
 </div>

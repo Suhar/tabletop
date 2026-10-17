@@ -5,7 +5,7 @@ import { HydratedBuildConnection, isBuildConnection } from '../actions/buildConn
 import { HydratedBuildTrack, isBuildTrack } from '../actions/buildTrack.js'
 import { HydratedDelegateBuild, isDelegateBuild } from '../actions/delegateBuild.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
-import { finishTurnAction, openZasm } from './flow.js'
+import { finishTurnAction, openRailroad } from './flow.js'
 
 type BuildAction = HydratedBuildTrack | HydratedBuildConnection
 type ConstructingAction = BuildAction | HydratedDelegateBuild
@@ -19,9 +19,8 @@ export function buildActionsFor(state: HydratedSarGameState, playerId: string): 
 }
 
 export function afterBuild(action: BuildAction, state: HydratedSarGameState): MachineState {
-    return isBuildTrack(action) && action.metadata?.opensZasm
-        ? openZasm(state)
-        : finishTurnAction(state)
+    const opened = isBuildTrack(action) ? action.metadata?.opensRailroad : undefined
+    return opened ? openRailroad(state, opened) : finishTurnAction(state)
 }
 
 export class ConstructingTrackStateHandler implements MachineStateHandler<

@@ -1,36 +1,35 @@
 <script lang="ts">
-    import { ACTION_TRACK_LIMIT, DIVIDENDS_BEFORE_FINAL } from '@tabletop/south-african-railroads'
+    import { ACTION_TRACK_LIMIT, ROUNDS } from '@tabletop/south-african-railroads'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import {
-        ACTION_TRACK_CELL,
-        ACTION_TRACK_ORIGIN,
-        ROUND_INDICATOR_ORIGIN
-    } from '$lib/utils/boardLayout.js'
+    import { ACTION_TRACK_CELL, ACTION_TRACK_PER_ROW, boardLayout } from '$lib/utils/boardLayout.js'
     import Cube from '../icons/Cube.svelte'
 
     const gameSession = getGameSession()
 
-    const PER_ROW = 18
+    const layout = $derived(boardLayout(gameSession.gameState.mapId))
+    const trackOrigin = $derived(layout.spec.actionTrack)
+    const roundOrigin = $derived(layout.spec.roundIndicator)
 
-    const actionCells = Array.from({ length: ACTION_TRACK_LIMIT + 1 }, (_, value) => ({
-        value,
-        x: ACTION_TRACK_ORIGIN.x + (value % PER_ROW) * ACTION_TRACK_CELL,
-        y: ACTION_TRACK_ORIGIN.y + Math.floor(value / PER_ROW) * ACTION_TRACK_CELL
-    }))
+    const actionCells = $derived(
+        Array.from({ length: ACTION_TRACK_LIMIT + 1 }, (_, value) => ({
+            value,
+            x: trackOrigin.x + (value % ACTION_TRACK_PER_ROW) * ACTION_TRACK_CELL,
+            y: trackOrigin.y + Math.floor(value / ACTION_TRACK_PER_ROW) * ACTION_TRACK_CELL
+        }))
+    )
 
     const actionMarker = $derived(
         actionCells[Math.min(gameSession.gameState.actionTrack, ACTION_TRACK_LIMIT)]
     )
-    const rounds = DIVIDENDS_BEFORE_FINAL + 1
-    const round = $derived(Math.min(gameSession.gameState.dividendsPaid, DIVIDENDS_BEFORE_FINAL) + 1)
+    const round = $derived(gameSession.gameState.round())
     const finalRound = $derived(gameSession.gameState.isFinalPayoffNext())
 </script>
 
 <g class="action-track">
-    <text x={ACTION_TRACK_ORIGIN.x} y={ACTION_TRACK_ORIGIN.y - 9} class="heading">Action Track</text>
+    <text x={trackOrigin.x} y={trackOrigin.y - 9} class="heading">Action Track</text>
     <text
-        x={ACTION_TRACK_ORIGIN.x + PER_ROW * ACTION_TRACK_CELL}
-        y={ACTION_TRACK_ORIGIN.y - 9}
+        x={trackOrigin.x + ACTION_TRACK_PER_ROW * ACTION_TRACK_CELL}
+        y={trackOrigin.y - 9}
         class="note">dividends are paid once it passes 35</text
     >
     {#each actionCells as cell (cell.value)}
@@ -53,10 +52,10 @@
 
 <g class="round-indicator">
     <text
-        x={ROUND_INDICATOR_ORIGIN.x}
-        y={ROUND_INDICATOR_ORIGIN.y + 24}
+        x={roundOrigin.x}
+        y={roundOrigin.y + 24}
         class="round"
-        class:final={finalRound}>{finalRound ? 'Final Round' : `Round ${round} of ${rounds}`}</text
+        class:final={finalRound}>{finalRound ? 'Final Round' : `Round ${round} of ${ROUNDS}`}</text
     >
 </g>
 

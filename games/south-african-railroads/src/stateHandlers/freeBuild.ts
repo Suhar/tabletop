@@ -2,7 +2,6 @@ import { type HydratedAction, type MachineStateHandler, MachineContext } from '@
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { BuildTrack, HydratedBuildTrack, isBuildTrack } from '../actions/buildTrack.js'
-import { freeBuildHome } from '../model/freeBuild.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
 import { homeLinks } from '../model/track.js'
 import { afterFreeBuild } from './flow.js'
@@ -34,7 +33,7 @@ export class FreeBuildStateHandler implements MachineStateHandler<
         if (!due) {
             return
         }
-        const links = homeLinks(state, freeBuildHome(due.railroadId))
+        const links = homeLinks(state, state.map.home(due.railroadId))
         if (links.length === 1) {
             context.addSystemAction(BuildTrack, {
                 playerId: due.playerId,

@@ -12,19 +12,19 @@ import { ActionType } from '../definition/actions.js'
 import { Definition } from '../definition/definition.js'
 import { SarRuntime } from '../definition/runtime.js'
 import { MachineState } from '../definition/states.js'
-import { RAILROADS, RailroadId } from '../components/railroads.js'
-import { ActionBox, boxCapacity } from './actionBoxes.js'
+import { MapId, RailroadId, SettlementKind } from '../maps/types.js'
+import { sarMap } from '../maps/maps.js'
+import { ACTION_BOXES, ActionBox, boxCapacity } from './actionBoxes.js'
 import type { HydratedSarGameState, SarGameState } from './gameState.js'
 import { HydratedChooseAction } from '../actions/chooseAction.js'
 import { HydratedDelegateBuild } from '../actions/delegateBuild.js'
-import { LINKS, SETTLEMENTS } from '../components/mapData.js'
-import { maxDevelopments } from '../components/map.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
 import { minimumBid } from './economy.js'
-import { seatOrderFrom } from './shareAuctionRules.js'
+import { openShareAuction } from './shareAuctionRules.js'
+import { AuctionKind } from './auction.js'
 import { homeLinks } from './track.js'
-import { freeBuildHome } from './freeBuild.js'
 
+const SOUTH_AFRICA = sarMap(MapId.SouthAfrica)
 const engine = new GameEngine(SarRuntime)
 const game = SarRuntime.initializer.initializeGame(
     {
@@ -56,19 +56,23 @@ function run(state: SarGameState, action: Record<string, unknown>): SarGameState
     return engine.executeCanonicalAction({ game, state, action: full }).updatedState
 }
 
-// Every opening share goes unbid to its opener, who builds the first home link listed.
-function afterInitialOffering(): SarGameState {
+// Every opening share goes unbid to its opener, who builds the first home link listed, unless
+// a bid is given for that railroad: then its bidder takes it at $1 and the others pass.
+function afterInitialOffering(bids: Partial<Record<RailroadId, string>> = {}): SarGameState {
     let state = engine.startGame(game, {
         masterSeed: '0123456789abcdef0123456789abcdef',
         startingPositions: { playerIds: ['a', 'b', 'c', 'd'] }
     }).initialState
     while (state.machineState !== MachineState.ChoosingAction) {
         if (state.machineState === MachineState.Bidding) {
-            state = run(state, { type: ActionType.PassBid })
+            const bidder = state.auction ? bids[state.auction.railroadId] : undefined
+            const placesBid =
+                bidder === state.activePlayerIds[0] && !hydrate(state).bidding().hasBid
+            state = run(state, placesBid ? { type: ActionType.PlaceBid, amount: 1 } : {})
         } else {
             const due = state.freeBuild
             assertExists(due, 'Free build due')
-            const linkId = homeLinks(state, freeBuildHome(due.railroadId))[0]
+            const linkId = homeLinks(hydrate(state), SOUTH_AFRICA.home(due.railroadId))[0]
             state = run(state, {
                 type: ActionType.BuildTrack,
                 railroadId: due.railroadId,
@@ -90,6 +94,18 @@ describe('the initial offering', () => {
         expect(state.railroad(RailroadId.CMRC).owners).toEqual(['a'])
         expect(state.railroad(RailroadId.ZASM).open).toBe(false)
         expect(state.activePlayerIds).toEqual(['a'])
+    })
+
+    it('gives the first turn to the CMRC buyer and keeps them first in the turn order', () => {
+        let state = afterInitialOffering({ [RailroadId.CMRC]: 'c' })
+        const hydrated = hydrate(state)
+        expect(hydrated.railroad(RailroadId.CMRC).owners).toEqual(['c'])
+        expect(hydrated.turnManager.turnOrder).toEqual(['c', 'd', 'a', 'b'])
+        expect(hydrated.activePlayerIds).toEqual(['c'])
+        state = run(state, { type: ActionType.ChooseAction, box: ActionBox.DevelopSettlements })
+        state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
+        state = run(state, { type: ActionType.Develop, settlementId: 'johannesburg' })
+        expect(state.activePlayerIds).toEqual(['d'])
     })
 
     it('records the starting incomes the rulebook lists', () => {
@@ -229,7 +245,10 @@ describe('choosing an action', () => {
 
     it('ends the turn of a Construct Track with no link a funded railroad can build', () => {
         const hydrated = hydrate(afterInitialOffering())
-        hydrated.track = LINKS.map((link) => ({ linkId: link.id, railroadId: RailroadId.CdFM }))
+        hydrated.track = SOUTH_AFRICA.links.map((link) => ({
+            linkId: link.id,
+            railroadId: RailroadId.CdFM
+        }))
         for (const railroad of hydrated.railroads) {
             railroad.treasury = railroad.id === RailroadId.CdFM ? 0 : 100
         }
@@ -248,7 +267,10 @@ describe('choosing an action', () => {
     it('ends the turn of a Develop Settlements with nothing left to develop', () => {
         const hydrated = hydrate(afterInitialOffering())
         hydrated.developments = Object.fromEntries(
-            SETTLEMENTS.map((settlement) => [settlement.id, maxDevelopments(settlement.id)])
+            SOUTH_AFRICA.settlements.map((place) => [
+                place.id,
+                SOUTH_AFRICA.maxDevelopments(place.id)
+            ])
         )
         const after = hydrate(
             run(hydrated.dehydrate(), {
@@ -260,10 +282,20 @@ describe('choosing an action', () => {
         expect(after.activePlayerIds).toEqual(['b'])
     })
 
+    it('knows which boxes pay dividends at once when chosen', () => {
+        const state = hydrate(afterInitialOffering())
+        state.actionTrack = 31
+        expect(ACTION_BOXES.filter((box) => state.triggersDividends(box)).toSorted()).toEqual(
+            [ActionBox.DevelopSettlements, ActionBox.PayDividends].toSorted()
+        )
+        state.actionTrack = 33
+        expect(state.triggersDividends(ActionBox.ConstructTrack)).toBe(true)
+    })
+
     it('opens the third Offer Stock slot in every game but the three-player one', () => {
-        expect([3, 4, 5, 6].map((count) => boxCapacity(ActionBox.OfferStock, count))).toEqual([
-            2, 3, 3, 3
-        ])
+        expect(
+            [3, 4, 5, 6].map((count) => boxCapacity(ActionBox.OfferStock, count, SOUTH_AFRICA))
+        ).toEqual([2, 3, 3, 3])
     })
 })
 
@@ -362,10 +394,10 @@ describe('income gains shown before choosing', () => {
         const [settlementId] = state.developableSettlements()
         const gains = state.developmentIncomeGains(settlementId)
         const before = new Map(
-            RAILROADS.map((railroad) => [railroad.id, state.income(railroad.id)])
+            SOUTH_AFRICA.railroads.map((railroad) => [railroad.id, state.income(railroad.id)])
         )
         state.developments[settlementId] = state.developmentLevel(settlementId) + 1
-        for (const railroad of RAILROADS) {
+        for (const railroad of SOUTH_AFRICA.railroads) {
             const gain = gains.find((entry) => entry.railroadId === railroad.id)?.gain ?? 0
             expect(state.income(railroad.id) - (before.get(railroad.id) ?? 0)).toBe(gain)
         }
@@ -418,7 +450,14 @@ describe('developing settlements', () => {
 
 describe('auctions', () => {
     it('bids clockwise in seat order from the opener', () => {
-        expect(seatOrderFrom(['a', 'b', 'c', 'd'], 'c')).toEqual(['c', 'd', 'a', 'b'])
+        const state = hydrate(afterInitialOffering())
+        openShareAuction(state, {
+            kind: AuctionKind.OfferStock,
+            railroadId: RailroadId.CdFM,
+            openerId: 'c',
+            minimum: 0
+        })
+        expect(state.bidding().remainingPlayerIds).toEqual(['c', 'd', 'a', 'b'])
     })
 
     it('rounds a fifth of the value up for the minimum bid', () => {
@@ -462,5 +501,36 @@ describe('the end of the game', () => {
         const state = finish({ a: 120, b: 120, c: 100, d: 80 })
         expect(state.result).toBe(GameResult.Draw)
         expect([...state.winningPlayerIds].sort()).toEqual(['a', 'b'])
+    })
+})
+
+describe('the map', () => {
+    it.each(Object.values(MapId))('%s refers only to places it defines', (mapId) => {
+        const map = sarMap(mapId)
+        const ids = new Set(map.settlements.map((place) => place.id))
+        for (const trackLink of map.links) {
+            expect(trackLink.ends.every((end) => ids.has(end))).toBe(true)
+        }
+        for (const connection of map.externalConnections) {
+            expect(ids.has(connection.settlementId)).toBe(true)
+        }
+        for (const railroad of map.railroads) {
+            expect(ids.has(railroad.homeId)).toBe(true)
+        }
+        expect(map.settlement(map.hubId).kind).toBe(SettlementKind.MetroArea)
+        for (const place of map.settlements) {
+            expect(map.incomeLevels(place.id).length).toBeGreaterThan(1)
+        }
+        const railroadIds = map.railroads.map((railroad) => railroad.id)
+        expect(map.initialOffering.every((id) => railroadIds.includes(id))).toBe(true)
+        expect(map.initialOffering).toContain(map.definition.startPlayerRailroad)
+    })
+
+    it('opens a railroad outside the initial offering only when track first reaches its home', () => {
+        const state = hydrate(afterInitialOffering())
+        expect(state.railroadOpenedBy(['johannesburg~witbank'])).toBe(RailroadId.ZASM)
+        expect(state.railroadOpenedBy(['belfast~witbank'])).toBeUndefined()
+        state.railroad(RailroadId.ZASM).open = true
+        expect(state.railroadOpenedBy(['johannesburg~witbank'])).toBeUndefined()
     })
 })

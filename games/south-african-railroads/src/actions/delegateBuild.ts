@@ -2,7 +2,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext, assert } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
-import { RailroadId } from '../components/railroads.js'
+import { RailroadId } from '../maps/types.js'
 import type { HydratedSarGameState } from '../model/gameState.js'
 
 export type DelegateBuild = Type.Static<typeof DelegateBuild>

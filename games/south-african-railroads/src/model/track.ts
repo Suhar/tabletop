@@ -1,7 +1,5 @@
-import { EXTERNAL_CONNECTIONS, LINKS } from '../components/mapData.js'
-import { JOHANNESBURG, externalConnection, link, otherEnd } from '../components/map.js'
-import type { ExternalConnectionDefinition } from '../components/mapTypes.js'
-import type { RailroadId } from '../components/railroads.js'
+import type { SarMap } from '../maps/maps.js'
+import type { ExternalConnectionDefinition, RailroadId } from '../maps/types.js'
 import type { BuiltConnection, BuiltLink } from './railroadState.js'
 
 export const LINK_COST = 5
@@ -9,6 +7,7 @@ export const DOUBLE_LINK_COST = 15
 export const LINK_VALUE = 5
 
 export type TrackState = {
+    map: SarMap
     track: readonly BuiltLink[]
     connections: readonly BuiltConnection[]
 }
@@ -28,7 +27,9 @@ export function railroadConnectionIds(state: TrackState, railroadId: RailroadId)
 }
 
 export function railroadSettlements(state: TrackState, railroadId: RailroadId): Set<string> {
-    return new Set(railroadLinkIds(state, railroadId).flatMap((linkId) => link(linkId).ends))
+    return new Set(
+        railroadLinkIds(state, railroadId).flatMap((linkId) => state.map.link(linkId).ends)
+    )
 }
 
 export function isLinkBuilt(state: TrackState, linkId: string): boolean {
@@ -36,7 +37,7 @@ export function isLinkBuilt(state: TrackState, linkId: string): boolean {
 }
 
 export function isSettlementConnected(state: TrackState, settlementId: string): boolean {
-    return state.track.some((built) => link(built.linkId).ends.includes(settlementId))
+    return state.track.some((built) => state.map.link(built.linkId).ends.includes(settlementId))
 }
 
 export function linkOwner(state: TrackState, linkId: string): RailroadId | undefined {
@@ -45,25 +46,29 @@ export function linkOwner(state: TrackState, linkId: string): RailroadId | undef
 
 export function singleBuilds(state: TrackState, railroadId: RailroadId): string[] {
     const network = railroadSettlements(state, railroadId)
-    return LINKS.filter(
-        (candidate) =>
-            !isLinkBuilt(state, candidate.id) && candidate.ends.some((end) => network.has(end))
-    ).map((candidate) => candidate.id)
+    return state.map.links
+        .filter(
+            (candidate) =>
+                !isLinkBuilt(state, candidate.id) && candidate.ends.some((end) => network.has(end))
+        )
+        .map((candidate) => candidate.id)
 }
 
 // Two consecutive links into settlements the railroad has not reached, never passing through
-// Johannesburg.
+// the hub.
 export function doubleBuilds(state: TrackState, railroadId: RailroadId): DoubleBuild[] {
     const network = railroadSettlements(state, railroadId)
     const builds: DoubleBuild[] = []
     for (const firstId of singleBuilds(state, railroadId)) {
-        const first = link(firstId)
+        const first = state.map.link(firstId)
         for (const middle of first.ends) {
-            if (network.has(middle) || middle === JOHANNESBURG) {
+            if (network.has(middle) || middle === state.map.hubId) {
                 continue
             }
-            for (const second of LINKS) {
-                const end = second.ends.includes(middle) ? otherEnd(second, middle) : undefined
+            for (const second of state.map.links) {
+                const end = second.ends.includes(middle)
+                    ? state.map.otherEnd(second, middle)
+                    : undefined
                 if (
                     end !== undefined &&
                     second.id !== firstId &&
@@ -93,7 +98,7 @@ export function connectionBuilds(
     railroadId: RailroadId
 ): ExternalConnectionDefinition[] {
     const network = railroadSettlements(state, railroadId)
-    return EXTERNAL_CONNECTIONS.filter(
+    return state.map.externalConnections.filter(
         (connection) =>
             network.has(connection.settlementId) &&
             !state.connections.some((built) => built.connectionId === connection.id)
@@ -101,16 +106,19 @@ export function connectionBuilds(
 }
 
 export function homeLinks(state: TrackState, settlementId: string): string[] {
-    return LINKS.filter(
-        (candidate) => candidate.ends.includes(settlementId) && !isLinkBuilt(state, candidate.id)
-    ).map((candidate) => candidate.id)
+    return state.map.links
+        .filter(
+            (candidate) =>
+                candidate.ends.includes(settlementId) && !isLinkBuilt(state, candidate.id)
+        )
+        .map((candidate) => candidate.id)
 }
 
 export function trackValue(state: TrackState, railroadId: RailroadId): number {
     return (
         railroadLinkIds(state, railroadId).length * LINK_VALUE +
         railroadConnectionIds(state, railroadId).reduce(
-            (sum, connectionId) => sum + externalConnection(connectionId).value,
+            (sum, connectionId) => sum + state.map.externalConnection(connectionId).value,
             0
         )
     )

@@ -2,7 +2,6 @@ import type { GameAction } from '@tabletop/common'
 import {
     ActionBox,
     AuctionKind,
-    externalConnection,
     isBuildConnection,
     isBuildTrack,
     isChooseAction,
@@ -14,10 +13,8 @@ import {
     isPassBid,
     isPayDividends,
     isPlaceBid,
-    link,
-    railroadDefinition,
-    settlement,
     type RailroadId,
+    type SarMap,
     type ShareSale
 } from '@tabletop/south-african-railroads'
 
@@ -32,9 +29,47 @@ export const BOX_NAMES: Record<ActionBox, string> = {
     [ActionBox.PayDividends]: 'Pay Dividends'
 }
 
-export function linkName(linkId: string): string {
-    return link(linkId)
-        .ends.map((id) => settlement(id).name)
+export const BOX_SHORT_NAMES: Record<ActionBox, string> = {
+    [ActionBox.ConstructTrack]: 'Build',
+    [ActionBox.OfferStock]: 'Offer',
+    [ActionBox.DevelopSettlements]: 'Develop',
+    [ActionBox.PayDividends]: 'Dividends'
+}
+
+// What a box does, short enough for the action strip.
+export function boxTerms(map: SarMap, box: ActionBox, finalPayoffNext: boolean): string {
+    switch (box) {
+        case ActionBox.ConstructTrack:
+            return '$5 a link · $15 for two'
+        case ActionBox.OfferStock:
+            return 'Auction one share'
+        case ActionBox.DevelopSettlements:
+            return `2nd $3 · ${map.settlement(map.hubId).name} free`
+        case ActionBox.PayDividends:
+            return finalPayoffNext ? 'Final payoff' : 'Income ÷ 5 a share'
+    }
+}
+
+// One line per box for the strip's tooltips and the phone's rules guide.
+export function boxRules(map: SarMap, box: ActionBox, finalPayoffNext: boolean): string {
+    switch (box) {
+        case ActionBox.ConstructTrack:
+            return 'A railroad you control lays a link for $5, two for $15, or a connection'
+        case ActionBox.OfferStock:
+            return 'Auction a railroad’s unsold share, or one of your own'
+        case ActionBox.DevelopSettlements:
+            return `Raise a served settlement’s income; a second costs $3, ${map.settlement(map.hubId).name} is free`
+        case ActionBox.PayDividends:
+            return finalPayoffNext
+                ? 'Pay the final payoff and end the game'
+                : 'Every share pays its railroad’s income ÷ 5, rounded up'
+    }
+}
+
+export function linkName(map: SarMap, linkId: string): string {
+    return map
+        .link(linkId)
+        .ends.map((id) => map.settlement(id).name)
         .join('–')
 }
 
@@ -57,7 +92,7 @@ export function winVerb(winnerIds: readonly string[], myPlayerId: string | undef
     return winnerIds[0] === myPlayerId ? 'win' : 'wins'
 }
 
-export function describeAction(action: GameAction): Description {
+export function describeAction(map: SarMap, action: GameAction): Description {
     if (isPlaceBid(action)) {
         return [`bid $${action.amount}`]
     }
@@ -71,13 +106,20 @@ export function describeAction(action: GameAction): Description {
     }
     if (isBuildTrack(action)) {
         const cost = action.metadata?.cost ?? 0
-        const links = action.linkIds.map(linkName).join(' and ')
+        const links = action.linkIds.map((linkId) => linkName(map, linkId)).join(' and ')
         const price = cost === 0 ? ' free' : ` for $${cost}`
-        const zasm = action.metadata?.opensZasm ? ' · Johannesburg reached: the ZASM opens' : ''
-        return [`built ${links} for the `, { railroadId: action.railroadId }, `${price}${zasm}`]
+        const opened = action.metadata?.opensRailroad
+        const opening: Description = opened
+            ? [
+                  ` · ${map.settlement(map.home(opened)).name} reached: the `,
+                  { railroadId: opened },
+                  ' opens'
+              ]
+            : []
+        return [`built ${links} for the `, { railroadId: action.railroadId }, price, ...opening]
     }
     if (isBuildConnection(action)) {
-        const connection = externalConnection(action.connectionId)
+        const connection = map.externalConnection(action.connectionId)
         const perShare = action.metadata?.perShare ?? 0
         return [
             `connected the `,
@@ -94,7 +136,7 @@ export function describeAction(action: GameAction): Description {
         ]
     }
     if (isDevelop(action)) {
-        const name = settlement(action.settlementId).name
+        const name = map.settlement(action.settlementId).name
         const cost = action.metadata?.cost ? ` for $${action.metadata.cost}` : ''
         const income = action.metadata ? ` (now $${action.metadata.income})` : ''
         return [`developed ${name}${cost}${income}`]
@@ -117,7 +159,7 @@ export function describeAction(action: GameAction): Description {
             return ['Dividends paid']
         }
         const rates = metadata.rates
-            .map((rate) => `${railroadDefinition(rate.railroadId).shortName} $${rate.perShare}`)
+            .map((rate) => `${map.railroad(rate.railroadId).shortName} $${rate.perShare}`)
             .join(', ')
         return [
             metadata.final
