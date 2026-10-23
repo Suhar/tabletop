@@ -82,14 +82,16 @@
         }
         if (isChoosePlanet(action)) {
             const chosen = action as ChoosePlanet
+            if (chosen.metadata?.declined) return 'chose not to survey'
+            if (chosen.metadata?.alreadyExplored) return 'surveyed an explored planet'
             const flipped = chosen.metadata?.flipped?.length ?? 0
-            return `explored a planet, turning over ${flipped} ${flipped === 1 ? 'card' : 'cards'}`
+            return `surveyed and explored a planet, turning over ${flipped} ${flipped === 1 ? 'card' : 'cards'}`
         }
         if (isChooseTechnology(action)) {
             const chosen = action as ChooseTechnology
             return chosen.metadata?.noTechnologyAvailable
                 ? 'found nothing the planet could hold'
-                : `housed ${techName(chosen.metadata?.technologyId)} on the planet`
+                : `staked a claim on ${chosen.metadata?.technologyId ? claimedName(chosen.metadata.technologyId) : 'nothing'}`
         }
         if (isAttackPiece(action)) {
             const shot = action as AttackPiece
@@ -107,12 +109,17 @@
             const count = drew.metadata?.drawn?.length ?? 0
             const drawn = `drew ${count} ${count === 1 ? 'ship' : 'ships'}`
 
-            // A technology claimed as the turn opened is the more interesting half of this
-            // action, and nobody was watching the board when it was earned - it is the payoff
-            // for a planet held through everyone else's turns, so it gets said out loud.
+            // A claim settled as the turn opened is the more interesting half of this action, and
+            // nobody was watching the board when it was decided - it is the outcome of a planet
+            // surveyed and defended through everyone else's turns, so it gets said out loud.
             const claimed = drew.metadata?.technologiesClaimed ?? []
-            if (claimed.length === 0) return drawn
-            return `${drawn}, and held ${claimed.map(claimedName).join(' and ')}`
+            const lapsed = drew.metadata?.technologiesLapsed ?? []
+            const parts = [drawn]
+            if (claimed.length > 0) parts.push(`gained ${claimed.map(claimedName).join(' and ')}`)
+            if (lapsed.length > 0) {
+                parts.push(`lost the claim on ${lapsed.map(claimedName).join(' and ')}`)
+            }
+            return parts.join(', ')
         }
         if (isUseImmediateDownload(action)) {
             const read = action as UseImmediateDownload

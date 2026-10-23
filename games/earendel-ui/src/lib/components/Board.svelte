@@ -4,12 +4,14 @@
     import {
         HexKind,
         type Hex,
+        PieceLevel,
         PieceType,
         PlanetColor,
         type AttackPiece,
         isAttackPiece,
         isPlacePiece,
         type PlacePiece,
+        powerOf,
         sameHex,
         technologyAbility,
         technologyName,
@@ -17,16 +19,27 @@
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { hexGeometry, verticesToPoints } from '$lib/utils/hexDefinition.js'
+    import { trussEnds } from '$lib/utils/stationGeometry.js'
+    import StationShape from './StationShape.svelte'
+    import TrussGirder from './TrussGirder.svelte'
+    import FighterShape from './FighterShape.svelte'
+    import ProbeShape from './ProbeShape.svelte'
+    import {
+        animateTrussClip,
+        TrussGrowthAnimator
+    } from '$lib/animators/trussGrowthAnimator.svelte.js'
 
     let gameSession = getGameSession()
 
     // Planet colours are the game's own five, not player colours - a planet belongs to nobody.
+    // All cool, where every player colour is warm (see EarendelColors), so a piece never matches
+    // the planet it stands beside.
     const PLANET_FILL: Record<PlanetColor, string> = {
-        [PlanetColor.Azure]: '#3d8bd4',
-        [PlanetColor.Crimson]: '#d1453f',
-        [PlanetColor.Verdant]: '#4aa568',
-        [PlanetColor.Gold]: '#dfa72c',
-        [PlanetColor.Violet]: '#8b5cc4'
+        [PlanetColor.Periwinkle]: '#859bfd',
+        [PlanetColor.Aqua]: '#22d6fd',
+        [PlanetColor.Mint]: '#9aff93',
+        [PlanetColor.Teal]: '#1e948d',
+        [PlanetColor.Violet]: '#9e58da'
     }
 
     const PADDING = 60
@@ -102,9 +115,7 @@
     // Only while a ship is being placed: a tile placement, an exploration choice, a shot and a
     // technology step are all choices BETWEEN hexes, where the hexes themselves are the thing
     // to look at and there is no single piece to preview.
-    let ghostPiece = $derived(
-        gameSession.isPlacing ? gameSession.pieceToPlace : undefined
-    )
+    let ghostPiece = $derived(gameSession.isPlacing ? gameSession.pieceToPlace : undefined)
     let showGhost = $derived(ghostPiece !== undefined)
 
     // Locked to the hovered hex, and only when that hex would actually accept the piece - a
@@ -120,12 +131,16 @@
         hovered ? gameSession.previewTargetsFor(hovered) : []
     )
 
-    // The planets a probe would explore from the hovered hex. The fighter's equivalent is
+    // The planets a probe could be sent to from the hovered hex. The fighter's equivalent is
     // previewTargets just above; between them they let a player see what a placement will DO
     // before committing, instead of finding out once it is too late to choose differently.
-    let previewExplorables: AxialCoordinates[] = $derived(
-        hovered ? gameSession.previewExplorablesFor(hovered) : []
+    let previewProbeDestinations: AxialCoordinates[] = $derived(
+        hovered ? gameSession.previewProbeDestinationsFor(hovered) : []
     )
+
+    // Control lines appear only for the piece under the cursor and the friendly pieces holding
+    // the same planets - drawn for the whole board at once, they made it unreadable.
+    let shownControlEdges = $derived(hovered ? gameSession.controlEdgesFor(hovered) : [])
 
     // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
     // so the wavelength stays constant however long or however angled the line is.
@@ -171,25 +186,31 @@
         })
     }
 
-    // The run of a habitat tube: the segment between two adjacent station squares, stopping at
-    // each one's edge rather than at its centre. A station is drawn 38px across, so 18 from the
-    // centre is just inside its own edge - enough to look plugged in without covering the square.
-    function tubeRun(from: AxialCoordinates, to: AxialCoordinates) {
-        const start = hexGeometry(from).center
-        const end = hexGeometry(to).center
-        const dx = end.x - start.x
-        const dy = end.y - start.y
-        const length = Math.hypot(dx, dy) || 1
-        const ux = dx / length
-        const uy = dy / length
-        const inset = 18
+    // The directions, from a station's hex, of the friendly stations it is linked to - the sides
+    // its girders leave from, which therefore carry no docking stub.
+    function linkedAngles(coords: AxialCoordinates, playerId: string): number[] {
+        return anglesTo(coords, gameSession.linkedStationNeighbors(coords, playerId))
+    }
 
-        return {
-            x1: start.x + ux * inset,
-            y1: start.y + uy * inset,
-            x2: end.x - ux * inset,
-            y2: end.y - uy * inset
-        }
+    // A hex's outline pulled in toward its centre by `inset` pixels.
+    function insetPoints(coords: AxialCoordinates, inset: number): string {
+        const { center, vertices } = hexGeometry(coords)
+        return vertices
+            .map((vertex) => {
+                const dx = vertex.x - center.x
+                const dy = vertex.y - center.y
+                const scale = (Math.hypot(dx, dy) - inset) / Math.hypot(dx, dy)
+                return `${center.x + dx * scale},${center.y + dy * scale}`
+            })
+            .join(' ')
+    }
+
+    function anglesTo(coords: AxialCoordinates, neighbors: AxialCoordinates[]): number[] {
+        const from = hexGeometry(coords).center
+        return neighbors.map((neighbor) => {
+            const to = hexGeometry(neighbor).center
+            return Math.atan2(to.y - from.y, to.x - from.x)
+        })
     }
 
     // The shared edge between two neighbouring hexes: the two vertices they have in common.
@@ -207,7 +228,12 @@
     // Same sine sampling as wavePath, over two arbitrary points. A short edge needs a shorter
     // wavelength and a smaller amplitude than a sight line spanning the board, so both scale
     // with the distance instead of being fixed.
-    function waveBetween(start: { x: number; y: number }, end: { x: number; y: number }, amplitude = 9, wavelength = 46): string {
+    function waveBetween(
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        amplitude = 9,
+        wavelength = 46
+    ): string {
         const dx = end.x - start.x
         const dy = end.y - start.y
         const length = Math.hypot(dx, dy)
@@ -313,6 +339,15 @@
             float(placed.coords, chain.points, 'chain', playerId)
         }
     }
+
+    // New girders grow out of the station that made them. See TrussGrowthAnimator.
+    const trussGrowth = new TrussGrowthAnimator()
+
+    onMount(() => {
+        const growTrusses = trussGrowth.onGameStateChange.bind(trussGrowth)
+        gameSession.addGameStateChangeListener(growTrusses)
+        return () => gameSession.removeGameStateChangeListener(growTrusses)
+    })
 
     onMount(() => {
         const listener = async ({ action }: { action?: GameAction }) => {
@@ -489,6 +524,20 @@
                 stroke="#2b3752"
                 stroke-width="2"
             />
+            {#if hex.kind === HexKind.Planet}
+                <!-- A brighter boundary in the planet's own colour, so planet hexes stand out from
+                     open space. Inset from the shared edge rather than drawn on it: a neighbouring
+                     hex is drawn later and its dim edge would paint over half of a line on the
+                     boundary itself. -->
+                <polygon
+                    points={insetPoints(hex.coords, 2.5)}
+                    fill="none"
+                    stroke={planetColor}
+                    stroke-width="3"
+                    stroke-opacity="0.85"
+                    stroke-linejoin="round"
+                />
+            {/if}
 
             {#if hex.kind === HexKind.Planet}
                 <!-- Each colour gets its own silhouette, so a board can be read at a glance
@@ -501,7 +550,7 @@
                 {@const dash = hex.explored ? '' : '5 4'}
                 {@const spin = `transform-box: view-box; transform-origin: ${entry.center.x}px ${entry.center.y}px;`}
 
-                {#if hex.color === PlanetColor.Verdant}
+                {#if hex.color === PlanetColor.Mint}
                     <!-- Ringed, like Saturn: a tilted ellipse cutting across the body. Drawn
                          before the body so the near half of the ring reads as passing behind
                          it, then again after at partial opacity for the front half. -->
@@ -518,7 +567,7 @@
                     />
                 {/if}
 
-                {#if hex.color === PlanetColor.Crimson}
+                {#if hex.color === PlanetColor.Aqua}
                     <!-- Binary: two bodies of equal weight turning about their common centre,
                          so there is no single disc at all. -->
                     <g class="planet-binary" style={spin}>
@@ -557,7 +606,7 @@
                     />
                 {/if}
 
-                {#if hex.color === PlanetColor.Gold}
+                {#if hex.color === PlanetColor.Teal}
                     <!-- Aura: two haloes breathing out of phase, so the glow reads as radiating
                          rather than simply blinking. -->
                     <circle
@@ -582,7 +631,7 @@
                     />
                 {/if}
 
-                {#if hex.color === PlanetColor.Azure}
+                {#if hex.color === PlanetColor.Periwinkle}
                     <!-- A single moon, going round. One satellite rather than two, so it can't
                          be mistaken for the binary. -->
                     <g class="planet-moon" style={spin}>
@@ -616,9 +665,9 @@
                 {/if}
                 {@const claimant = gameSession.claimOn(hex.coords)}
                 {#if claimant}
-                    <!-- A claim ticking on this planet: whoever holds it outright takes its
-                         technology at the start of their next turn, unless somebody breaks the
-                         hold first. Drawn in that player's colour, so the board answers "whose
+                    <!-- A claim ticking on this planet: the player whose probe surveyed it takes
+                         its technology at the start of their next turn, if their probes still
+                         lead there. Drawn in that player's colour, so the board answers "whose
                          timer?" and not merely "a timer".
                          Tucked into the hex's lower-left, clear of the planet body in the middle
                          and of the technology mark on top of it. -->
@@ -690,62 +739,22 @@
             {:else if hex.piece}
                 {@const color = gameSession.colors.getPlayerUiColor(hex.piece.playerId)}
                 {#if hex.piece.type === PieceType.Probe}
-                    <!-- Probe: small and open, so it reads as the lightest piece on the board.
-                         It counts 1 towards control now rather than 0, but it is still the piece
-                         you send to look rather than to hold. -->
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="16"
-                        fill="none"
-                        stroke={color}
-                        stroke-width="6"
+                    <!-- A probe without a level of its own reveals at the weaker level, as the
+                         engine reads it. -->
+                    <ProbeShape
+                        center={entry.center}
+                        {color}
+                        level={hex.piece.level ?? PieceLevel.Two}
                     />
                 {:else if hex.piece.type === PieceType.Station}
-                    <rect
-                        x={entry.center.x - 19}
-                        y={entry.center.y - 19}
-                        width="38"
-                        height="38"
-                        rx="7"
-                        fill={color}
+                    <StationShape
+                        center={entry.center}
+                        {color}
+                        hub={hex.piece.hub}
+                        linkedAngles={linkedAngles(hex.coords, hex.piece.playerId)}
                     />
-                    {#if hex.piece.hub}
-                        <!-- A Station Hub: the same square with a thin ring standing off it, so it
-                             reads as a station with something added rather than a different piece. -->
-                        <rect
-                            x={entry.center.x - 26}
-                            y={entry.center.y - 26}
-                            width="52"
-                            height="52"
-                            rx="10"
-                            fill="none"
-                            stroke={color}
-                            stroke-width="3"
-                        />
-                    {/if}
                 {:else}
-                    <polygon
-                        points="{entry.center.x},{entry.center.y - 24} {entry.center.x +
-                            23},{entry.center.y + 16} {entry.center.x - 23},{entry.center.y + 16}"
-                        fill={color}
-                    />
-                {/if}
-                {#if hex.piece.level}
-                    <text
-                        x={entry.center.x}
-                        y={entry.center.y +
-                            (hex.piece.type === PieceType.Fighter
-                                ? 14
-                                : hex.piece.type === PieceType.Probe
-                                  ? 6
-                                  : 7)}
-                        text-anchor="middle"
-                        class="text-[17px] font-bold"
-                        fill={hex.piece.type === PieceType.Probe ? color : '#10182a'}
-                    >
-                        {hex.piece.level}
-                    </text>
+                    <FighterShape center={entry.center} {color} level={powerOf(hex.piece)} />
                 {/if}
             {/if}
 
@@ -884,58 +893,26 @@
         {@const ghostColor = gameSession.colors.getPlayerUiColor(ghostPiece.playerId)}
         <g class="place-ghost" style="pointer-events: none;">
             {#if ghostPiece.type === PieceType.Probe}
-                <circle
-                    cx={ghostEntry.center.x}
-                    cy={ghostEntry.center.y}
-                    r="16"
-                    fill="none"
-                    stroke={ghostColor}
-                    stroke-width="6"
+                <ProbeShape
+                    center={ghostEntry.center}
+                    color={ghostColor}
+                    level={ghostPiece.level ?? PieceLevel.Two}
                 />
             {:else if ghostPiece.type === PieceType.Station}
-                <rect
-                    x={ghostEntry.center.x - 19}
-                    y={ghostEntry.center.y - 19}
-                    width="38"
-                    height="38"
-                    rx="7"
-                    fill={ghostColor}
+                <!-- Docked to the stations it would link to, so the ghost shows the complex the
+                     placement would make. -->
+                <StationShape
+                    center={ghostEntry.center}
+                    color={ghostColor}
+                    hub={ghostPiece.hub}
+                    linkedAngles={linkedAngles(ghostEntry.hex.coords, ghostPiece.playerId)}
                 />
-                {#if ghostPiece.hub}
-                    <rect
-                        x={ghostEntry.center.x - 26}
-                        y={ghostEntry.center.y - 26}
-                        width="52"
-                        height="52"
-                        rx="10"
-                        fill="none"
-                        stroke={ghostColor}
-                        stroke-width="3"
-                    />
-                {/if}
             {:else}
-                <polygon
-                    points="{ghostEntry.center.x},{ghostEntry.center.y - 24} {ghostEntry.center
-                        .x + 23},{ghostEntry.center.y + 16} {ghostEntry.center.x -
-                        23},{ghostEntry.center.y + 16}"
-                    fill={ghostColor}
+                <FighterShape
+                    center={ghostEntry.center}
+                    color={ghostColor}
+                    level={powerOf(ghostPiece)}
                 />
-            {/if}
-            {#if ghostPiece.level}
-                <text
-                    x={ghostEntry.center.x}
-                    y={ghostEntry.center.y +
-                        (ghostPiece.type === PieceType.Fighter
-                            ? 14
-                            : ghostPiece.type === PieceType.Probe
-                              ? 6
-                              : 7)}
-                    text-anchor="middle"
-                    class="text-[17px] font-bold"
-                    fill={ghostPiece.type === PieceType.Probe ? ghostColor : '#10182a'}
-                >
-                    {ghostPiece.level}
-                </text>
             {/if}
         </g>
     {/if}
@@ -1006,14 +983,15 @@
     {/each}
 
     <!-- Who holds each planet, drawn on the boundary itself: a wiggly line in the controller's
-         colour along every edge where one of their pieces meets the planet.
+         colour along every edge where one of their pieces meets the planet. Shown only around
+         the hovered piece (see shownControlEdges), not for the whole board at once.
          Only the controller's edges are drawn, so this says who is winning rather than showing
          the whole contest - a planet with three enemy ships around it and one of mine gets one
          line. A tie draws both players' lines, which is what a shared planet should look like,
          since a tie pays both in full.
          The wave is the same figure the station sight lines use, at a shorter wavelength and
          smaller amplitude to suit an edge rather than a span of board. -->
-    {#each gameSession.controlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
+    {#each shownControlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
         {@const edgeColor = gameSession.colors.getPlayerUiColor(edge.playerId)}
 
         {#if SHOW_CONTROL_WAVE}
@@ -1078,7 +1056,7 @@
             />
         {/each}
 
-        {#each previewExplorables as target, index (target.q + ',' + target.r)}
+        {#each previewProbeDestinations as target, index (target.q + ',' + target.r)}
             {@const pointer = reachPointer(hovered!, target)}
             <polygon
                 points={pointer.points}
@@ -1240,48 +1218,58 @@
                         stroke-width="2.5"
                         stroke-linecap="round"
                     >
-                        <line x1={mid.x - 7} y1={mid.y - 7} x2={mid.x + 7} y2={mid.y + 7} />
-                        <line x1={mid.x + 7} y1={mid.y - 7} x2={mid.x - 7} y2={mid.y + 7} />
+                        <line x1={mid.x - 7} y1={mid.y - 7} x2={mid.x + 7} y2={mid.y + 7}></line>
+                        <line x1={mid.x + 7} y1={mid.y - 7} x2={mid.x - 7} y2={mid.y + 7}></line>
                     </g>
                 {/if}
             </g>
         {/each}
     {/if}
 
-    <!-- Habitat tubes: two of a player's stations standing side by side are joined by a pressurised
-         run between them. They count as one complex for scoring whether they touch or see each
-         other across a gap, and the beam only ever showed the gap kind - so the plainest link on
-         the board was the one with nothing drawn on it.
-         Inset at both ends so the tube spans the space BETWEEN the two squares rather than lying
-         over them: it has to look plugged into each station, and a line drawn centre to centre
-         would cross straight over both. -->
+    <!-- Truss girders: two of a player's stations standing side by side are joined by a girder
+         from one core to the other, so a complex reads as one built structure. They count as one
+         complex for scoring whether they touch or see each other across a gap, and the beam only
+         ever showed the gap kind - so without these the plainest link on the board had nothing
+         drawn on it.
+         Drawn here rather than with each station because a girder crosses into the neighbouring
+         hex, whose own fill would otherwise paint over half of it. -->
     {#each gameSession.stationTubes as tube, index (tube.playerId + index)}
         {@const color = gameSession.colors.getPlayerUiColor(tube.playerId)}
-        {@const run = tubeRun(tube.from, tube.to)}
-        <!-- Casing, then a lit core down the middle - the two together read as something hollow
-             with light inside, where a single stroke reads as a painted line. -->
-        <line
-            x1={run.x1}
-            y1={run.y1}
-            x2={run.x2}
-            y2={run.y2}
-            stroke={color}
-            stroke-width="17"
-            stroke-opacity="0.55"
-            stroke-linecap="round"
-            pointer-events="none"
+        {@const ends = trussEnds(
+            hexGeometry(tube.from).center,
+            hexGeometry(tube.to).center,
+            tube.fromHub,
+            tube.toHub
+        )}
+        <TrussGirder start={ends.start} end={ends.end} {color} />
+    {/each}
+
+    <!-- Girders being made by the action now animating, with the stations that made them: the
+         visible board still holds the state before the action, so neither exists there yet.
+         Each girder is revealed by a clip that widens along it from the new station outward. -->
+    {#each trussGrowth.arriving as station (station.coords.q + ',' + station.coords.r)}
+        <StationShape
+            center={hexGeometry(station.coords).center}
+            color={gameSession.colors.getPlayerUiColor(station.playerId)}
+            hub={station.hub}
+            linkedAngles={anglesTo(station.coords, station.linked)}
         />
-        <line
-            x1={run.x1}
-            y1={run.y1}
-            x2={run.x2}
-            y2={run.y2}
-            stroke="#e9f1ff"
-            stroke-width="6"
-            stroke-opacity="0.3"
-            stroke-linecap="round"
-            pointer-events="none"
-        />
+    {/each}
+    {#each trussGrowth.growing as truss (truss.key)}
+        {@const color = gameSession.colors.getPlayerUiColor(truss.playerId)}
+        <clipPath id="truss-grow-{truss.key}">
+            <rect
+                use:animateTrussClip={{ animator: trussGrowth, key: truss.key }}
+                x="0"
+                y="-8"
+                width="0"
+                height="16"
+                transform="translate({truss.start.x} {truss.start.y}) rotate({truss.degrees})"
+            />
+        </clipPath>
+        <g clip-path="url(#truss-grow-{truss.key})">
+            <TrussGirder start={truss.start} end={truss.end} {color} />
+        </g>
     {/each}
 
     {#each gameSession.sightLines as line, index (line.playerId + index)}
@@ -1369,8 +1357,11 @@
         }
     }
 
+    /* `backwards` holds each dot at its first, dim keyframe through its staggered delay. Without
+       it a dot shows unstyled - fully lit - until its delay runs out, so the run flickers as the
+       dots start one after another when a piece is first hovered. */
     .control-dot {
-        animation: control-dot-frames 1.5s ease-out infinite;
+        animation: control-dot-frames 1.5s ease-out infinite backwards;
     }
 
     /* Planet motion. All of it is slow on purpose: a board with a dozen planets on it would be

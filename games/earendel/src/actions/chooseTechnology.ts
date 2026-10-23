@@ -34,8 +34,8 @@ export function isChooseTechnology(action?: GameAction): action is ChooseTechnol
     return action?.type === ActionType.ChooseTechnology
 }
 
-// Houses one of the revealed technologies on the planet just explored, and discards the rest.
-// The planet keeps it permanently; whoever controls the planet has access to it.
+// Houses one of the revealed technologies on the planet just surveyed, discards the rest, and
+// stakes the surveying player's claim on it. The planet keeps the technology permanently.
 export class HydratedChooseTechnology
     extends HydratableAction<typeof ChooseTechnology>
     implements ChooseTechnology
@@ -61,16 +61,18 @@ export class HydratedChooseTechnology
 
         if (chosen) {
             state.board.hexes[hexKey(pending.exploringPlanet!)].technology = chosen
-        }
 
-        // Exploring decides what the planet HOLDS; it no longer hands that technology over.
-        // Choosing is still the explorer's privilege and still the reward for going first -
-        // they pick which of the matching cards this planet will be worth for the rest of the
-        // game, and they are usually the one standing next to it when the turn comes round.
-        // But the card is won by holding the planet outright from one of your turns to the
-        // next, which the explorer has to do like anyone else (see claimRipeTechnologies).
-        // Nothing is set up here for an immediate effect either: those fire when the
-        // technology is actually claimed, not when it is chosen.
+            // Surveying stakes a claim rather than handing the technology over. The player gains
+            // it at the start of their next turn if their probes still lead on the planet (see
+            // claimProbeTechnologies), which gives everyone else a round to outweigh them.
+            // Nothing is set up here for an immediate effect either: those fire when the
+            // technology is actually gained, not when it is chosen.
+            state.probeClaims.push({
+                playerId: this.playerId,
+                coords: pending.exploringPlanet!,
+                technologyId: chosen.id
+            })
+        }
 
         // Everything turned over goes to the discard except the one card the planet keeps -
         // including the matching cards that weren't chosen.

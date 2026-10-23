@@ -16,6 +16,7 @@ List each interaction mode separately.
 | Intent | Trigger | What should be emphasized | What should be dimmed | What must remain unaffected |
 | --- | --- | --- | --- | --- |
 | example_intent | example trigger | example emphasis | example dimming | example unaffected elements |
+| control_lines_on_hover | Hovering a hex that holds a piece | Control dots from that piece's owner into every planet beside the hovered piece, including the friendly pieces sharing those planets | Nothing; every other control line is hidden, not dimmed | Hourglass claim markers, placement previews, and the planet-pair lines from a hovered hex |
 
 ## 2. Visual Primitives
 

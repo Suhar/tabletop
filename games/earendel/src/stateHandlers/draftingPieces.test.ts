@@ -264,23 +264,30 @@ describe('a drafted turn', () => {
             coords: at(0, 3),
             tileId: 't1',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure,
+            color: PlanetColor.Periwinkle,
             explored: true,
             technology: {
                 id: 'shift',
-                colors: [PlanetColor.Azure],
+                colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
         }
-        // Holding the planet outright since before this turn, so the claim is due on the draw.
+        // Surveyed by the mover's probe last turn, and it still leads, so the claim is due on the
+        // draw.
         board.hexes[hexKey(at(0, 4))] = {
             coords: at(0, 4),
             tileId: 't1',
             kind: HexKind.Open,
-            piece: { id: `${mover}-holder`, playerId: mover, type: PieceType.Station }
+            piece: {
+                id: `${mover}-holder`,
+                playerId: mover,
+                type: PieceType.Probe,
+                level: PieceLevel.Two
+            }
         }
         game.state.board = board
+        game.state.probeClaims = [{ playerId: mover, coords: at(0, 3), technologyId: 'shift' }]
         game.state.tileSupply = []
         game.state.technologyDeck = []
         game.state.technologyDiscard = []

@@ -78,6 +78,7 @@ export class EarendelGameInitializer
             queuedTechnologyEffects: [],
             planetControllers: {},
             scoredPlanetPairs: [],
+            probeClaims: [],
         })
 
         // I suppose the engine could actually do the hydration with the hydrator, but this is how it

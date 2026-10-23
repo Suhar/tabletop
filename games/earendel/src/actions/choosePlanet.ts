@@ -16,7 +16,12 @@ export const ChoosePlanetMetadata = Type.Object({
     // The cards the player may actually take. Fewer than the probe's level when the deck and
     // discard couldn't produce enough matches - or when an elevated card turned up, which
     // puts the standard matches out of reach.
-    candidates: Type.Optional(Type.Array(TechnologyCard))
+    candidates: Type.Optional(Type.Array(TechnologyCard)),
+    // The planet had already been explored, so nothing was turned over: the technology staked
+    // out is the one it already holds.
+    alreadyExplored: Type.Optional(Type.Boolean()),
+    // The player chose not to survey any planet.
+    declined: Type.Optional(Type.Boolean())
 })
 
 export type ChoosePlanet = Type.Static<typeof ChoosePlanet>
@@ -31,7 +36,8 @@ export const ChoosePlanet = Type.Evaluate(
             // reading the deck. When both piles are spent nothing becomes public, so there is
             // nothing to protect and the placement stays takeable back.
             revealsInfo: Type.Optional(Type.Boolean()),
-            coords: AxialCoordinates,
+            // Absent means surveying nothing - it is always optional.
+            coords: Type.Optional(AxialCoordinates),
             metadata: Type.Optional(ChoosePlanetMetadata)
         })
     ])
@@ -43,15 +49,20 @@ export function isChoosePlanet(action?: GameAction): action is ChoosePlanet {
     return action?.type === ActionType.ChoosePlanet
 }
 
-// Settles WHICH planet a just-placed probe explores, when it landed beside more than one.
-// The others stay unexplored for a later probe. Deciding the planet is also what makes the
-// reveal possible - the planet's colour is what the flip is looking for - so the cards come
-// off the deck here, and choosing among them is the next action.
+// Settles whether a just-placed probe surveys a planet beside it, and which. It may only survey a
+// planet where its player has strictly the most probe influence (see probeDestinations). The
+// probe stays where it is either way; its level sets how many cards the reveal looks for.
+// Deciding the planet is also what makes the reveal possible - the planet's colour is what the
+// flip is looking for - so the cards come off the deck here, and choosing among them is the next
+// action, which also stakes the player's claim on the technology.
+//
+// Surveying a planet that is already explored turns nothing over: the one technology on offer is
+// the one the planet already holds.
 export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> implements ChoosePlanet {
     declare type: ActionType.ChoosePlanet
     declare playerId: string
     declare revealsInfo?: boolean
-    declare coords: AxialCoordinates
+    declare coords?: AxialCoordinates
     declare metadata?: ChoosePlanetMetadata
 
     constructor(data: ChoosePlanet) {
@@ -65,7 +76,25 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         }
 
         const pending = state.pendingExploration!
+        // Only a real flip reveals anything; set below when one happens.
+        this.revealsInfo = false
+
+        if (!this.coords) {
+            state.pendingExploration = undefined
+            this.metadata = { declined: true }
+            return
+        }
+
+        pending.exploringPlanet = this.coords
+
         const planet = getHex(state.board, this.coords)!
+        if (planet.explored) {
+            const held = planet.technology ? [planet.technology] : []
+            pending.revealed = held
+            pending.candidates = held
+            this.metadata = { candidates: held, alreadyExplored: true }
+            return
+        }
 
         markExplored(state.board, this.coords)
 
@@ -79,7 +108,6 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         // set the player does. `revealed` still holds every flip, so nothing is lost.
         const choosable = choosableFrom(result.candidates)
 
-        pending.exploringPlanet = this.coords
         pending.revealed = result.flipped
         pending.candidates = choosable
 
@@ -96,8 +124,10 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         if (!pending) return 'No probe is waiting to explore.'
         if (pending.playerId !== this.playerId) return "That probe isn't yours."
         if (pending.exploringPlanet) return 'That probe has already chosen its planet.'
-        if (!pending.candidatePlanets.some((candidate) => sameHex(candidate, this.coords))) {
-            return "That planet isn't in reach of the probe you just placed."
+        const coords = this.coords
+        if (!coords) return undefined
+        if (!pending.candidatePlanets.some((candidate) => sameHex(candidate, coords))) {
+            return "Your probes don't lead on that planet, so this probe can't survey it."
         }
         return undefined
     }

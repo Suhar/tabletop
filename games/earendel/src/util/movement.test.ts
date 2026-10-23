@@ -8,6 +8,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { MovePiece } from '../actions/movePiece.js'
+import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { TestGame } from './testHarness.js'
 
@@ -43,7 +44,7 @@ describe('destinationsFrom', () => {
             [at(0, 0), { ship: ship('p1', PieceType.Station) }],
             [at(1, 0), {}],
             [at(0, 1), { ship: ship('p2', PieceType.Station) }],
-            [at(1, -1), { planet: PlanetColor.Azure }]
+            [at(1, -1), { planet: PlanetColor.Periwinkle }]
         ])
 
         // Only (1,0): the planet can't be stood on and the other hex is occupied.
@@ -98,21 +99,17 @@ describe('destinationsFrom', () => {
 
 describe('an immediate technology', () => {
     // The effect no longer fires when the card is chosen - it fires when the technology is
-    // actually CLAIMED, at the top of a turn, having held the planet since the last one. So
-    // every test here explores, hands the turn round, and comes back.
-    //
-    // Note the mover needs a STATION beside the planet to hold it at all: the probe that does
-    // the exploring has no power, so a player who only ever sends a probe chooses what a planet
-    // holds and then never claims it.
+    // actually GAINED, at the top of the surveying player's next turn, their probe having kept
+    // the lead on the planet since. So every test here surveys, hands the turn round, and comes
+    // back.
     function scenario() {
         const game = new TestGame()
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), {}],
-            [at(0, 1), { ship: ship(mover, PieceType.Station) }],
             [at(5, 5), { ship: ship(mover, PieceType.Station) }],
             [at(6, 5), {}],
             [at(7, 7), {}],
@@ -121,7 +118,7 @@ describe('an immediate technology', () => {
         game.state.technologyDeck = [
             {
                 id: 'mover-tech',
-                colors: [PlanetColor.Azure],
+                colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
@@ -137,15 +134,21 @@ describe('an immediate technology', () => {
         return { game, mover, other }
     }
 
-    // Explores the planet, lets the other player take a turn elsewhere, then opens the mover's
-    // next turn - the moment the claim falls due and the effect becomes pending.
-    function exploreAndComeRound(game: TestGame, mover: string, other: string) {
+    // Places the mover's probe beside the planet and sends it there - sending is never automatic.
+    function explore(game: TestGame, mover: string) {
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
             coords: at(1, 0),
             pieceSource: PieceSource.Bag
         })
+        game.run(ChoosePlanet, { type: ActionType.ChoosePlanet, playerId: mover, coords: at(0, 0) })
+    }
+
+    // Explores the planet, lets the other player take a turn elsewhere, then opens the mover's
+    // next turn - the moment the claim falls due and the effect becomes pending.
+    function exploreAndComeRound(game: TestGame, mover: string, other: string) {
+        explore(game, mover)
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: other,
@@ -158,14 +161,9 @@ describe('an immediate technology', () => {
     it('is not owed at the moment the card is chosen', () => {
         const { game, mover } = scenario()
 
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
-        })
+        explore(game, mover)
 
-        // Chosen and housed, but nothing is owed: the planet has to be held to term first.
+        // Chosen and housed, but nothing is owed: the probe lead has to last a round first.
         expect(game.state.board.hexes[hexKey(at(0, 0))].technology?.id).toBe('mover-tech')
         expect(game.state.pendingTechnology).toBeUndefined()
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
@@ -260,18 +258,19 @@ describe('an immediate technology', () => {
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
-        // The mover's station holds the planet, and there is nowhere at all for anything to
-        // step to once the probe lands.
+        // Neither the mover's station nor the probe that surveys the planet has anywhere at all
+        // to step to. The loose hex far off is somewhere for the turn's own placement to go.
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
-            [at(1, 0), {}],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            [at(1, -1), {}],
             [at(0, 1), { ship: ship(mover, PieceType.Station) }],
+            [at(7, 7), {}],
             [at(9, 9), {}]
         ])
         game.state.technologyDeck = [
             {
                 id: 'mover-tech',
-                colors: [PlanetColor.Azure],
+                colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
@@ -287,9 +286,10 @@ describe('an immediate technology', () => {
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: mover,
-            coords: at(1, 0),
+            coords: at(1, -1),
             pieceSource: PieceSource.Bag
         })
+        game.run(ChoosePlanet, { type: ActionType.ChoosePlanet, playerId: mover, coords: at(0, 0) })
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: other,
@@ -297,9 +297,8 @@ describe('an immediate technology', () => {
             pieceSource: PieceSource.Bag
         })
 
-        // The claim and the fizzled move both resolve inside the draw that opens the turn -
-        // and then the placement that follows fizzles too, since this board has no open hex
-        // left to put the drawn ship on. All three are system actions inside one submission.
+        // The claim and the fizzled move both resolve inside the draw that opens the turn, as
+        // system actions in one submission - leaving the placement still to make.
         const processed = game.run(DrawPieces, {
             type: ActionType.DrawPieces,
             playerId: mover
@@ -307,9 +306,9 @@ describe('an immediate technology', () => {
 
         expect(processed.map((action) => action.type)).toEqual([
             ActionType.DrawPieces,
-            ActionType.MovePiece,
-            ActionType.Pass
+            ActionType.MovePiece
         ])
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect((processed[1] as MovePiece).metadata?.noMoveAvailable).toBe(true)
         expect(game.state.pendingTechnology).toBeUndefined()
     })

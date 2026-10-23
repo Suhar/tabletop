@@ -5,7 +5,8 @@ import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
-import { UseTradeRouteWormhole } from './useTradeRouteWormhole.js'
+import { isUseTradeRouteWormhole, UseTradeRouteWormhole } from './useTradeRouteWormhole.js'
+import { ChoosePlanet } from './choosePlanet.js'
 import { wormholeDestinations } from '../util/wormhole.js'
 import { TestGame } from '../util/testHarness.js'
 
@@ -35,19 +36,19 @@ const planet = (board: EarendelBoard, coords: AxialCoordinates, color: PlanetCol
     board.hexes[hexKey(coords)] = { coords, tileId: 't1', kind: HexKind.Planet, color }
 }
 
-// Two azure planets far apart in row 0, one gold planet between them, and the mover's ship
-// standing beside the first azure.
+// Two periwinkle planets far apart in row 0, one teal planet between them, and the mover's ship
+// standing beside the first periwinkle.
 //
-//   (0,0) ship | (1,0) AZURE | ... | (6,0) GOLD | ... | (11,0) AZURE
+//   (0,0) ship | (1,0) PERIWINKLE | ... | (6,0) TEAL | ... | (11,0) PERIWINKLE
 function scenario(mine: PieceType = PieceType.Station, level?: PieceLevel) {
     const game = new TestGame()
     const mover = game.activePlayerId
     const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
     const board = openRow()
-    planet(board, at(1, 0), PlanetColor.Azure)
-    planet(board, at(6, 0), PlanetColor.Gold)
-    planet(board, at(11, 0), PlanetColor.Azure)
+    planet(board, at(1, 0), PlanetColor.Periwinkle)
+    planet(board, at(6, 0), PlanetColor.Teal)
+    planet(board, at(11, 0), PlanetColor.Periwinkle)
     board.hexes[hexKey(at(0, 0))].piece = ship(mover, mine, level)
 
     game.state.board = board
@@ -92,8 +93,8 @@ describe('Trade Route Wormhole', () => {
         const { game, mover } = scenario()
         const destinations = wormholeDestinations(game.state.board, at(0, 0), mover)
 
-        // Beside the far azure planet, and nothing else: the gold planet is a colour this ship
-        // isn't standing next to, and the near azure's own neighbours are a different hex to look
+        // Beside the far periwinkle planet, and nothing else: the teal planet is a colour this ship
+        // isn't standing next to, and the near periwinkle's own neighbours are a different hex to look
         // at the SAME planet from, which is not a route.
         expect(destinations.map((coords) => hexKey(coords)).sort()).toEqual(
             [hexKey(at(10, 0)), hexKey(at(12, 0))].sort()
@@ -102,7 +103,7 @@ describe('Trade Route Wormhole', () => {
 
     it('arrives as if newly placed, scoring its new station complex', () => {
         const { game, mover } = scenario()
-        // A station of the mover's already sitting beside the far azure planet, so the traveller
+        // A station of the mover's already sitting beside the far periwinkle planet, so the traveller
         // joins a complex on landing.
         game.state.board.hexes[hexKey(at(12, 0))].piece = ship(mover, PieceType.Station)
         const before = game.state.players.find((p) => p.playerId === mover)!.score
@@ -117,12 +118,29 @@ describe('Trade Route Wormhole', () => {
     it('explores from a probe that lands beside an unexplored planet', () => {
         const { game, mover } = scenario(PieceType.Probe)
 
-        game.run(UseTradeRouteWormhole, hop(mover, at(0, 0), at(12, 0)))
+        const arrival = game
+            .run(UseTradeRouteWormhole, hop(mover, at(0, 0), at(12, 0)))
+            .find(isUseTradeRouteWormhole)
 
-        // One candidate planet and an empty technology deck, so the exploration resolves itself
-        // and the turn is back at its placement by the time control returns.
+        // Landing beside the far planet offers it, just as a placement would - and whether to
+        // send the probe there is the player's to say.
+        expect(arrival?.metadata?.probeDestinations).toEqual([at(11, 0)])
+        expect(game.state.machineState).toBe(MachineState.Exploring)
+        expect(game.validActionsFor(mover)).toEqual([ActionType.ChoosePlanet])
+
+        game.run(ChoosePlanet, {
+            type: ActionType.ChoosePlanet,
+            playerId: mover,
+            coords: at(11, 0)
+        })
+
+        // An empty technology deck leaves nothing to choose, so the rest of the exploration
+        // resolves itself and the turn is back at its placement by the time control returns.
         expect(game.state.board.hexes[hexKey(at(11, 0))].explored).toBe(true)
+        // The probe surveys from where it landed.
+        expect(game.state.board.hexes[hexKey(at(12, 0))].piece?.playerId).toBe(mover)
         expect(game.state.pendingExploration).toBeUndefined()
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
 
     it('arrives shooting when the traveller is a fighter', () => {
@@ -143,7 +161,7 @@ describe('Trade Route Wormhole', () => {
         game.state.board.hexes[hexKey(at(0, 3))].piece = ship(mover, PieceType.Station)
 
         expect(() => game.run(UseTradeRouteWormhole, hop(mover, at(0, 3), at(12, 0)))).toThrow()
-        // Beside the GOLD planet, which this ship is not standing next to.
+        // Beside the TEAL planet, which this ship is not standing next to.
         expect(() => game.run(UseTradeRouteWormhole, hop(mover, at(0, 0), at(5, 0)))).toThrow()
         // A different hex beside the SAME planet is not a different planet.
         expect(() => game.run(UseTradeRouteWormhole, hop(mover, at(0, 0), at(2, 0)))).toThrow()

@@ -5,7 +5,7 @@ import { PieceLevel, PieceType } from '../model/pieces.js'
 import { attackableTargets } from './attack.js'
 import { chainsCompletedBy } from './chains.js'
 import { refreshPlanetControl } from './control.js'
-import { explorablePlanets } from './exploration.js'
+import { probeDestinations } from './exploration.js'
 import { stationGroupPoints } from './stations.js'
 import type { CompletedChain } from './chains.js'
 
@@ -25,7 +25,7 @@ export type Arrival = {
     // Carries pairKey, which the caller strips before recording in metadata - history shows the
     // chain, the key is bookkeeping.
     chains: CompletedChain[]
-    explorable: AxialCoordinates[]
+    probeDestinations: AxialCoordinates[]
 }
 
 export function resolveArrival(
@@ -56,10 +56,9 @@ export function resolveArrival(
         state.scoredPlanetPairs.push(chain.pairKey)
     }
 
-    // Taking outright hold of an explored planet no longer hands its technology over on the
-    // spot: it is claimed at the start of a turn by whoever is still holding the planet then
-    // (see claimRipeTechnologies). So an arrival that seizes a planet wins nothing yet - it
-    // starts a wait, and announces itself when the wait pays.
+    // Taking hold of a planet never hands its technology over: technologies are won only by
+    // surveying with probes and keeping the probe lead for a round (see claimProbeTechnologies).
+    // An arrival can still break someone else's lead, which is how a pending claim is stopped.
 
     // A fighter arrives shooting: it may destroy one adjacent piece weaker than itself.
     // Optional, and the target is the player's choice, so it parks a decision rather than
@@ -69,19 +68,19 @@ export function resolveArrival(
         state.pendingAttack = { playerId, fighterCoords: coords, targets }
     }
 
-    // A probe landing beside unexplored planets doesn't resolve anything here: which planet it
-    // explores is the player's choice, and the reveal that follows consumes the technology deck.
-    // Both belong in their own actions so each is separately undoable and the deck is only
-    // touched once the target is settled.
-    const explorable = explorablePlanets(state.board, coords, piece.type)
-    if (explorable.length > 0) {
+    // A probe landing beside planets it leads doesn't resolve anything here: whether it surveys
+    // one, and which, is the player's choice, and exploring consumes the technology deck. Both belong
+    // in their own actions so each is separately undoable and the deck is only touched once the
+    // target is settled.
+    const destinations = probeDestinations(state, coords, piece)
+    if (destinations.length > 0) {
         state.pendingExploration = {
             playerId,
             probeCoords: coords,
             // A probe won from a technology may not carry a level of its own; the weaker level
             // is the safe reading.
             probeLevel: piece.level ?? PieceLevel.Two,
-            candidatePlanets: explorable
+            candidatePlanets: destinations
         }
     }
 
@@ -89,5 +88,5 @@ export function resolveArrival(
     // holding it, so this cannot be read off the board later.
     refreshPlanetControl(state)
 
-    return { stationPoints, chains, explorable }
+    return { stationPoints, chains, probeDestinations: destinations }
 }

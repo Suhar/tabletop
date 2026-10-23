@@ -2,17 +2,17 @@
 // on each other: a hex holds a technology card, and a card lists planet colours, so anything
 // shared by the two has to sit below them both.
 export enum PlanetColor {
-    Azure = 'azure',
-    Crimson = 'crimson',
-    Verdant = 'verdant',
-    Gold = 'gold',
+    Periwinkle = 'periwinkle',
+    Aqua = 'aqua',
+    Mint = 'mint',
+    Teal = 'teal',
     Violet = 'violet'
 }
 
 export const PLANET_COLORS: PlanetColor[] = [
-    PlanetColor.Azure,
-    PlanetColor.Crimson,
-    PlanetColor.Verdant,
-    PlanetColor.Gold,
+    PlanetColor.Periwinkle,
+    PlanetColor.Aqua,
+    PlanetColor.Mint,
+    PlanetColor.Teal,
     PlanetColor.Violet
 ]

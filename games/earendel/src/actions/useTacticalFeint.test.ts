@@ -6,7 +6,8 @@ import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { AttackPiece } from './attackPiece.js'
-import { UseTacticalFeint } from './useTacticalFeint.js'
+import { isUseTacticalFeint, UseTacticalFeint } from './useTacticalFeint.js'
+import { ChoosePlanet } from './choosePlanet.js'
 import { TestGame } from '../util/testHarness.js'
 import { controllerKey } from '../util/control.js'
 
@@ -106,16 +107,29 @@ describe('Tactical Feint', () => {
             coords: at(2, 0),
             tileId: 't1',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure
+            color: PlanetColor.Periwinkle
         }
 
-        game.run(UseTacticalFeint, feint(mover, at(0, 0), at(1, 0)))
+        const arrival = game
+            .run(UseTacticalFeint, feint(mover, at(0, 0), at(1, 0)))
+            .find(isUseTacticalFeint)
 
-        // Explored on the spot rather than left as a decision: one candidate planet and an empty
-        // technology deck, so the whole exploration is taken on the player's behalf and the turn
-        // is back at its placement by the time control returns here.
+        // The swapped-in probe is offered the planet just as a placed one would be, and sending
+        // it is the player's call.
+        expect(arrival?.metadata?.probeDestinations).toEqual([at(2, 0)])
+        expect(game.state.machineState).toBe(MachineState.Exploring)
+        expect(game.validActionsFor(mover)).toEqual([ActionType.ChoosePlanet])
+
+        game.run(ChoosePlanet, { type: ActionType.ChoosePlanet, playerId: mover, coords: at(2, 0) })
+
+        // An empty technology deck leaves nothing to choose, so the rest of the exploration is
+        // taken on the player's behalf and the turn is back at its placement by the time control
+        // returns here.
         expect(game.state.board.hexes[hexKey(at(2, 0))].explored).toBe(true)
+        // The probe surveys from where it stands.
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece?.playerId).toBe(mover)
         expect(game.state.pendingExploration).toBeUndefined()
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
 
     it('lands the displaced ship without giving it an arrival of its own', () => {
@@ -144,7 +158,7 @@ describe('Tactical Feint', () => {
             coords: at(2, 0),
             tileId: 't1',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure,
+            color: PlanetColor.Periwinkle,
             explored: true
         }
         // Read straight out of the recorded controllers, which is where control now lives: it is

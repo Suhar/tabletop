@@ -17,49 +17,39 @@ import {
     TechnologyEffectKind
 } from '../model/technology.js'
 import type { PendingTechnology } from '../model/exploration.js'
-import { controllerOf } from './control.js'
+import { probeLeaderOf } from './probes.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
-// Every explored planet this player holds outright and whose technology they don't yet have -
-// the technologies that are ripe for them RIGHT NOW.
+// Settles this player's probe claims at the start of their turn: every claim whose planet their
+// probes still lead on - strictly the most probe influence - becomes theirs, and every other claim
+// lapses. Either way the claims are spent, since each was only ever good for this one turn.
 //
-// This is the whole of the timing rule. A technology is never handed over at the moment control
-// changes; it is handed over at the start of a turn, to whoever is holding the planet outright
-// when that turn begins. So exploring a planet no longer wins its technology - it decides what
-// the planet holds and starts a wait. Hold the planet until your next turn and it is yours; let
-// someone break your hold and they are the one waiting, from their next turn.
-//
-// Nothing needs to be remembered between turns for this. There is no timer in state, because
-// control is only ever asked about at one instant - the beginning of a turn - and a player who
-// loses and retakes a planet in between arrives at that instant holding it, which is all the
-// rule asks. (An earlier draft tracked a per-planet claim so that a broken hold voided the
-// wait; settled the other way, and this is much the simpler half of that bargain.)
-//
-// Read over the whole board rather than around one hex, because it is no longer answering
-// "what did that move just win?" but "what has this player held long enough to keep?".
-//
-// Asks the RECORDED controller rather than recomputing dominance from the board, because control
-// is sticky: a challenger who draws level takes nothing, and the incumbent's wait carries on. Read
-// off the board alone, a tie looked like nobody holding the planet and silently cancelled a timer
-// that should have kept running.
-export function technologiesRipeFor(
+// This is the whole of how a technology changes hands. Holding a planet with stations and fighters
+// scores it but does not win what it holds; surveying it with probes and keeping the lead for a
+// round does. A rival who outweighs your probes in between doesn't take the technology - they only
+// stop you getting it, unless they survey the planet and stake a claim of their own.
+export function probeTechnologiesFor(
     state: HydratedEarendelGameState,
-    playerId: string,
-    alreadyHeld: string[]
-): TechnologyCard[] {
-    const ripe: TechnologyCard[] = []
+    playerId: string
+): { gained: TechnologyCard[]; lapsed: TechnologyCard[] } {
+    const held = state.getPlayerState(playerId).technologies
+    const gained: TechnologyCard[] = []
+    const lapsed: TechnologyCard[] = []
 
-    for (const coords of planetCoordinates(state.board)) {
-        const hex = getHex(state.board, coords)
-        if (!hex?.technology) continue
-        if (alreadyHeld.includes(hex.technology.id)) continue
-        if (ripe.some((card) => card.id === hex.technology!.id)) continue
-        if (controllerOf(state, coords) !== playerId) continue
+    for (const claim of state.probeClaims) {
+        if (claim.playerId !== playerId) continue
+        const card = getHex(state.board, claim.coords)?.technology
+        if (!card || card.id !== claim.technologyId) continue
+        if (held.includes(card.id) || gained.some((other) => other.id === card.id)) continue
 
-        ripe.push(hex.technology)
+        if (probeLeaderOf(state.board, claim.coords) === playerId) {
+            gained.push(card)
+        } else {
+            lapsed.push(card)
+        }
     }
 
-    return ripe
+    return { gained, lapsed }
 }
 
 // Hands one technology to one player: the id for the ledger, and anything the card stores for
@@ -106,23 +96,22 @@ function grantedPiece(
     return undefined
 }
 
-// Hands this player every technology ripe for them, and lines up any that act at once.
-// Called at the top of a turn, which is the only moment a technology ever changes hands.
+// Settles this player's probe claims, hands over every technology they kept, and lines up any
+// that act at once. Called at the top of a turn, which is the only moment a technology ever
+// changes hands.
 //
-// Returns the ids gained so the action that triggered it can report them: a technology
-// arriving is worth announcing, and unlike the old model nobody was looking at the board when
-// it happened - it is the consequence of a hold that survived a full round.
-export function claimRipeTechnologies(
+// Returns the ids gained and lapsed so the action that triggered it can report them: nobody was
+// looking at the board when either was decided - each is the outcome of a round of other turns.
+export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
-): string[] {
-    const playerState = state.getPlayerState(playerId)
-    const ripe = technologiesRipeFor(state, playerId, playerState.technologies)
-    if (ripe.length === 0) return []
+): { gained: string[]; lapsed: string[] } {
+    const { gained, lapsed } = probeTechnologiesFor(state, playerId)
+    state.probeClaims = state.probeClaims.filter((claim) => claim.playerId !== playerId)
 
     const effects: PendingTechnology[] = []
 
-    for (const card of ripe) {
+    for (const card of gained) {
         grantTechnology(state, playerId, card)
 
         // GrowBoard is handled apart from the others because it needs a tile drawn for it, and
@@ -137,7 +126,7 @@ export function claimRipeTechnologies(
     state.queuedTechnologyEffects = rest
     if (first) activateTechnologyEffect(state, first)
 
-    return ripe.map((card) => card.id)
+    return { gained: gained.map((card) => card.id), lapsed: lapsed.map((card) => card.id) }
 }
 
 // Puts one owed effect into the slot its resolving state watches. GrowBoard wants a tile in

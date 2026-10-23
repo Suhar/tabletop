@@ -4,7 +4,8 @@ import { EarendelGameState, HydratedEarendelGameState } from '../model/gameState
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { EarendelBoard, HexKind, hexKey, neighborsOf } from '../model/board.js'
-import { PieceType, PieceLevel } from '../model/pieces.js'
+import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
+import { TechnologyTier } from '../model/technology.js'
 import { HydratedPlacePiece, PieceSource } from './placePiece.js'
 
 const ORIGIN: AxialCoordinates = { q: 0, r: 0 }
@@ -49,6 +50,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         queuedTechnologyEffects: [],
         planetControllers: {},
         scoredPlanetPairs: [],
+        probeClaims: [],
         tileSupply: [],
         // The turn's draw happens when the turn opens, so a placement always arrives with
         // something already in hand.
@@ -103,7 +105,7 @@ describe('HydratedPlacePiece', () => {
         )
     })
 
-    it('offers every reachable unexplored planet as a candidate, exploring none of them yet', () => {
+    it('offers every planet in reach as a destination, exploring none of them yet', () => {
         const state = buildState()
         const target = neighborsOf(ORIGIN)[0]
         // A second planet touching the same hex, so one probe reaches two.
@@ -119,9 +121,9 @@ describe('HydratedPlacePiece', () => {
         const action = makePlacePiece('p1', target)
         action.apply(state)
 
-        // A probe explores ONE planet - which one is the player's choice, so nothing is
-        // explored and no cards are flipped until they make it.
-        expect(action.metadata?.explorable).toHaveLength(2)
+        // A probe goes to ONE planet at most - whether and which is the player's choice, so
+        // nothing is explored and no cards are flipped until they make it.
+        expect(action.metadata?.probeDestinations).toHaveLength(2)
         expect(state.board.hexes[hexKey(ORIGIN)].explored).toBeUndefined()
         expect(state.board.hexes[hexKey(secondPlanet)].explored).toBeUndefined()
         expect(state.pendingExploration?.candidatePlanets).toHaveLength(2)
@@ -139,21 +141,108 @@ describe('HydratedPlacePiece', () => {
 
         expect(action.metadata?.pieceType).toBe(PieceType.Fighter)
         expect(state.board.hexes[hexKey(ORIGIN)].explored).toBeUndefined()
-        expect(action.metadata?.explorable).toBeUndefined()
+        expect(action.metadata?.probeDestinations).toBeUndefined()
         expect(state.pendingExploration).toBeUndefined()
     })
 
-    it('offers nothing when the only planet in reach is already explored', () => {
+    it('offers an explored planet only for a technology the player lacks', () => {
         const state = buildState()
         state.board.hexes[hexKey(ORIGIN)].explored = true
+        state.board.hexes[hexKey(ORIGIN)].technology = {
+            id: 'tech-a',
+            colors: [],
+            tier: TechnologyTier.Standard
+        }
 
         const action = makePlacePiece('p1', neighborsOf(ORIGIN)[0])
         action.apply(state)
 
-        // A planet is explored once and never again, so this probe has nothing to do and the
-        // turn isn't held open.
-        expect(action.metadata?.explorable).toBeUndefined()
+        // Surveying it explores nothing new, but stakes a claim on what it holds.
+        expect(action.metadata?.probeDestinations).toEqual([ORIGIN])
+        expect(state.pendingExploration?.candidatePlanets).toEqual([ORIGIN])
+    })
+
+    it('offers no explored planet with nothing on it to win', () => {
+        const held = buildState()
+        held.board.hexes[hexKey(ORIGIN)].explored = true
+        held.board.hexes[hexKey(ORIGIN)].technology = {
+            id: 'tech-a',
+            colors: [],
+            tier: TechnologyTier.Standard
+        }
+        held.getPlayerState('p1').technologies = ['tech-a']
+        // Explored, but the deck had nothing for it.
+        const empty = buildState()
+        empty.board.hexes[hexKey(ORIGIN)].explored = true
+
+        for (const state of [held, empty]) {
+            const action = makePlacePiece('p1', neighborsOf(ORIGIN)[0])
+            action.apply(state)
+
+            expect(action.metadata?.probeDestinations).toBeUndefined()
+            expect(state.pendingExploration).toBeUndefined()
+        }
+    })
+
+    it('does not offer a planet the player already has a claim waiting on', () => {
+        const state = buildState()
+        state.board.hexes[hexKey(ORIGIN)].explored = true
+        state.board.hexes[hexKey(ORIGIN)].technology = {
+            id: 'tech-a',
+            colors: [],
+            tier: TechnologyTier.Standard
+        }
+        state.board.hexes[hexKey(neighborsOf(ORIGIN)[3])].piece = {
+            id: 'p1-old-probe',
+            playerId: 'p1',
+            type: PieceType.Probe,
+            level: PieceLevel.Two
+        }
+        state.probeClaims = [{ playerId: 'p1', coords: ORIGIN, technologyId: 'tech-a' }]
+
+        const action = makePlacePiece('p1', neighborsOf(ORIGIN)[0])
+        action.apply(state)
+
+        expect(action.metadata?.probeDestinations).toBeUndefined()
         expect(state.pendingExploration).toBeUndefined()
+    })
+
+    it('offers a planet only where the player strictly leads on probe influence', () => {
+        const probe = (id: string, playerId: string, level: PieceLevel): Piece => ({
+            id,
+            playerId,
+            type: PieceType.Probe,
+            level
+        })
+        const target = neighborsOf(ORIGIN)[0]
+        const destinationsWith = (others: Piece[]) => {
+            const state = buildState()
+            others.forEach((piece, index) => {
+                state.board.hexes[hexKey(neighborsOf(ORIGIN)[index + 2])].piece = piece
+            })
+            const action = makePlacePiece('p1', target)
+            action.apply(state)
+            return action.metadata?.probeDestinations
+        }
+
+        // A level 2 against a level 2 is a tie, and a tie stakes out nothing.
+        expect(destinationsWith([probe('p2-a', 'p2', PieceLevel.Two)])).toBeUndefined()
+        // A single level 3 outweighs the level 2 being placed.
+        expect(destinationsWith([probe('p2-a', 'p2', PieceLevel.Three)])).toBeUndefined()
+        // Levels add up: the placed level 2 and another level 2 make 4, beating one level 3.
+        expect(
+            destinationsWith([
+                probe('p2-a', 'p2', PieceLevel.Three),
+                probe('p1-b', 'p1', PieceLevel.Two)
+            ])
+        ).toEqual([ORIGIN])
+        // Stations and fighters weigh nothing here, however strong.
+        expect(
+            destinationsWith([
+                { id: 'p2-s', playerId: 'p2', type: PieceType.Station },
+                probe('p2-a', 'p2', PieceLevel.One)
+            ])
+        ).toEqual([ORIGIN])
     })
 
     it('refuses a planet hex, an occupied hex, and a hex off the board', () => {

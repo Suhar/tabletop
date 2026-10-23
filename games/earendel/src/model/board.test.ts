@@ -34,8 +34,8 @@ describe('planetControl', () => {
     })
 
     it('lets an unchallenged probe hold a planet on its own', () => {
-        // A probe counts 1. It used to count nothing, which left a probe able to explore a planet
-        // and then unable to claim what it found; a lone probe now holds what it discovered.
+        // A probe counts 1 toward control, so a lone probe holds the planet it stands beside for
+        // scoring. (Its technology is a separate matter, settled by probe influence alone.)
         const board = boardWithPlanetAtOrigin()
         place(board, 0, 'p1', PieceType.Probe)
         place(board, 1, 'p1', PieceType.Probe)
@@ -48,7 +48,7 @@ describe('planetControl', () => {
 
     it('lets a probe tie a station, so neither player holds the planet', () => {
         // The other edge of counting probes: one point is enough to match a station, so the
-        // cheapest piece in the game can deny a claim without being able to take it.
+        // cheapest piece in the game can deny a rival control without being able to take it.
         const board = boardWithPlanetAtOrigin()
         place(board, 0, 'p1', PieceType.Station)
         place(board, 1, 'p2', PieceType.Probe)

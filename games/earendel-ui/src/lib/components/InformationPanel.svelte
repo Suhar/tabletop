@@ -59,7 +59,8 @@
                  is owed, clicking throws that ship out; otherwise clicking picks it up.
                  The unchosen ships were dimmed to 60%, which read as greyed-out-and-unavailable
                  rather than as merely not-selected - they are perfectly playable, and one of them
-                 is about to be played. The white border is what marks the selection, so the
+                 is about to be played. The border is what marks the selection - white on red,
+                 dark on the lighter warm colours, matching the text - so the
                  dimming only has to be a whisper. A ship with nowhere legal to go stays visibly
                  struck out, since that one genuinely cannot be used.
                  While a discard is owed, hovering a ship greys it out - a preview of what it
@@ -72,8 +73,10 @@
             <button
                 disabled={stuck && !gameSession.isDiscarding}
                 title={stuck ? 'Nowhere legal for this ship to go' : ''}
-                class="relative flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {chosen
-                    ? 'border-white'
+                class="relative flex items-center gap-2 rounded-lg px-3 py-1.5 border-2 {gameSession.colors.getPlayerTextColor(
+                    piece.playerId
+                )} {chosen
+                    ? gameSession.colors.getPlayerBorderContrastColor(piece.playerId)
                     : 'border-transparent opacity-90'} {stuck
                     ? 'line-through opacity-55'
                     : ''} {gameSession.isDiscarding ? 'discardable' : ''}"
@@ -101,9 +104,10 @@
 
             {#each specials as special (special.id)}
                 <button
-                    class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 border-2 {gameSession.chosenSpecialId ===
-                    special.id
-                        ? 'border-white'
+                    class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 border-2 {gameSession.colors.getPlayerTextColor(
+                        special.playerId
+                    )} {gameSession.chosenSpecialId === special.id
+                        ? gameSession.colors.getPlayerBorderContrastColor(special.playerId)
                         : 'border-transparent opacity-90'}"
                     style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
                     onclick={() => gameSession.toggleSpecial(special.id)}
@@ -344,6 +348,15 @@
             onclick={() => gameSession.toggleRailgun()}
         >
             {gameSession.railgunArmed ? 'Railgun armed' : 'Arm Railgun'}
+        </button>
+    {/if}
+
+    {#if gameSession.choosablePlanets.length > 0}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+            onclick={() => gameSession.skipSurvey()}
+        >
+            Don't survey
         </button>
     {/if}
 

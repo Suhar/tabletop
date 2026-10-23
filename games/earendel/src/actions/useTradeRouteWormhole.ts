@@ -18,7 +18,7 @@ export const UseTradeRouteWormholeMetadata = Type.Object({
     // The same arrival bookkeeping a placement records, because the ship arrives as if placed.
     stationGroupPoints: Type.Optional(Type.Number()),
     chains: Type.Optional(Type.Array(ScoredChain)),
-    explorable: Type.Optional(Type.Array(AxialCoordinates))
+    probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
 export type UseTradeRouteWormhole = Type.Static<typeof UseTradeRouteWormhole>
@@ -83,7 +83,7 @@ export class HydratedUseTradeRouteWormhole
 
         // After the hop, so the board the arrival is measured against is the one the hop made -
         // including the gap the ship left behind, which can break a chain it was part of.
-        const { stationPoints, chains, explorable } = resolveArrival(state, this.playerId, this.to)
+        const { stationPoints, chains, probeDestinations } = resolveArrival(state, this.playerId, this.to)
 
         this.metadata = {
             pieceType: piece.type,
@@ -91,7 +91,7 @@ export class HydratedUseTradeRouteWormhole
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
-            ...(explorable.length > 0 ? { explorable } : {})
+            ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
     }
 

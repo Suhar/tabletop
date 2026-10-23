@@ -1,6 +1,11 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { GameSession } from '@tabletop/frontend-components'
 import {
+    linkedStationNeighbors,
+    stationTubesOf,
+    type StationTube
+} from '$lib/utils/stationLinks.js'
+import {
     ActionType,
     ChoosePlanet,
     ChooseTechnology,
@@ -15,7 +20,7 @@ import {
     TechnologyEffectKind,
     turnsUntilReady,
     attackableTargets,
-    explorablePlanets,
+    probeDestinations,
     technologyName,
     UseUpdatedLogistics,
     UseTacticalFeint,
@@ -59,10 +64,7 @@ import {
     type TechnologyCard
 } from '@tabletop/earendel'
 
-export class EarendelGameSession extends GameSession<
-    EarendelGameState,
-    HydratedEarendelGameState
-> {
+export class EarendelGameSession extends GameSession<EarendelGameState, HydratedEarendelGameState> {
     // A planet whose technology the player has clicked to keep open. Hovering shows one
     // too; pinning is for reading it without holding the mouse still.
     pinnedPlanet: AxialCoordinates | undefined = $state(undefined)
@@ -197,8 +199,9 @@ export class EarendelGameSession extends GameSession<
         this.isMyTurn && this.validActionTypes.includes(ActionType.PlacePiece)
     )
 
-    // Planets this probe could explore, when more than one was in reach. Empty at every other
-    // moment - the engine settles a lone candidate itself.
+    // Planets this probe could survey: those its player now leads on probe influence. Empty at
+    // every other moment. Never settled by the engine, even when there is only one: skipping is
+    // always an option.
     choosablePlanets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
         if (!this.isMyTurn || !pending || pending.exploringPlanet) return []
@@ -316,33 +319,13 @@ export class EarendelGameSession extends GameSession<
     // the wavy beam is drawn only for the ones with a GAP between them, so the plainest kind of
     // link was the invisible one, and a row of touching stations looked like separate pieces that
     // happened to be near each other.
-    //
-    // One entry per pair: the walk meets each pair from both ends, and drawing a tube twice would
-    // double its opacity.
-    stationTubes: { from: AxialCoordinates; to: AxialCoordinates; playerId: string }[] =
-        $derived.by(() => {
-            const tubes: { from: AxialCoordinates; to: AxialCoordinates; playerId: string }[] = []
-            const seen = new Set<string>()
+    stationTubes: StationTube[] = $derived(stationTubesOf(this.gameState.board))
 
-            for (const hex of Object.values(this.gameState.board.hexes)) {
-                const station = hex.piece
-                if (station?.type !== PieceType.Station) continue
-
-                for (const neighbor of neighborsOf(hex.coords)) {
-                    const other = getHex(this.gameState.board, neighbor)?.piece
-                    if (other?.type !== PieceType.Station) continue
-                    if (other.playerId !== station.playerId) continue
-
-                    const key = [hexKey(hex.coords), hexKey(neighbor)].sort((a, b) => a - b).join(':')
-                    if (seen.has(key)) continue
-                    seen.add(key)
-
-                    tubes.push({ from: hex.coords, to: neighbor, playerId: station.playerId })
-                }
-            }
-
-            return tubes
-        })
+    // The neighbours of a hex holding one of this player's stations: the links a station there
+    // has, or would have if it were placed - the placement ghost asks the same question.
+    linkedStationNeighbors(coords: AxialCoordinates, playerId: string): AxialCoordinates[] {
+        return linkedStationNeighbors(this.gameState.board, coords, playerId)
+    }
 
     // Hexes this player's probes are shut out of. Only meaningful while holding a probe, so
     // the board isn't cluttered with a restriction that doesn't apply to the piece in hand.
@@ -453,17 +436,17 @@ export class EarendelGameSession extends GameSession<
         return attackableTargets(board, coords, piece.playerId)
     }
 
-    // Which planets a probe would explore if it landed here - the same question
+    // Which planets a probe could survey if it landed here - the same question
     // previewTargetsFor asks about a fighter's shot, so a player can see the consequence of a
     // placement before committing to it rather than discovering it afterwards.
     //
-    // Unlike the fighter's, this needs no hypothetical board: whether a planet is explorable
-    // depends on the planet and on the probe's own type, not on anything the probe changes by
+    // Unlike the fighter's, this needs no hypothetical board: which planets are in reach
+    // depends on the board and on the probe's own type, not on anything the probe changes by
     // arriving. It is asked of the engine's own rule all the same.
-    previewExplorablesFor(coords: AxialCoordinates): AxialCoordinates[] {
+    previewProbeDestinationsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
         if (!piece || piece.type !== PieceType.Probe || !this.isPlacing) return []
-        return explorablePlanets(this.gameState.board, coords, piece.type)
+        return probeDestinations(this.gameState, coords, piece)
     }
 
     // Full Torpedo Spread. Available only with more than one piece in reach, matching the engine:
@@ -512,32 +495,13 @@ export class EarendelGameSession extends GameSession<
         await this.applyAction(action)
     }
 
-    // Planets where a claim is ticking: someone holds it outright, it holds a technology, and
-    // they don't have that technology yet - so it becomes theirs at the start of their next turn
-    // unless somebody breaks the hold first.
-    //
-    // Derived from the board rather than stored, because that is exactly what the rule is: there
-    // is no timer in state to read, only "who holds this right now", asked freshly. Which also
-    // means this cannot drift out of step with what the engine will actually pay out.
-    pendingClaims: { coords: AxialCoordinates; playerId: string }[] = $derived.by(() => {
-        const held = new Map(
-            this.gameState.players.map((player) => [player.playerId, player.technologies])
-        )
-
-        return planetCoordinates(this.gameState.board)
-            .map((coords) => {
-                const hex = getHex(this.gameState.board, coords)
-                if (!hex?.technology) return undefined
-                // The RECORDED controller, not dominance recomputed from the board: control is
-                // sticky, so an incumbent who has merely been drawn level still holds the planet
-                // and their timer is still running.
-                const playerId = controllerOf(this.gameState, coords)
-                if (!playerId) return undefined
-                if ((held.get(playerId) ?? []).includes(hex.technology.id)) return undefined
-                return { coords, playerId }
-            })
-            .filter((claim): claim is { coords: AxialCoordinates; playerId: string } => !!claim)
-    })
+    // Planets where a claim is ticking: a player's probe surveyed it and staked its technology,
+    // which becomes theirs at the start of their next turn if their probes still lead there.
+    // Read straight from the engine's record of claims, since the choice of planet is not
+    // something the board alone can say.
+    pendingClaims: { coords: AxialCoordinates; playerId: string }[] = $derived(
+        this.gameState.probeClaims.map(({ coords, playerId }) => ({ coords, playerId }))
+    )
 
     // Every boundary where a CONTROLLING piece meets the planet it controls: the planet, the
     // neighbouring hex the piece stands on, and whose it is.
@@ -572,6 +536,24 @@ export class EarendelGameSession extends GameSession<
             return edges
         })
 
+    // The control lines worth showing while a piece is hovered: its owner's lines into every
+    // planet beside it. That is the hovered piece's own hold, and the friendly pieces sharing in
+    // it - the rest of the board's lines stay hidden, because drawn all at once they buried
+    // everything else. Nothing when the hex holds no piece.
+    controlEdgesFor(
+        coords: AxialCoordinates
+    ): { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] {
+        const piece = getHex(this.gameState.board, coords)?.piece
+        if (!piece) return []
+
+        const planets = neighborsOf(coords)
+        return this.controlEdges.filter(
+            (edge) =>
+                edge.playerId === piece.playerId &&
+                planets.some((planet) => sameHex(planet, edge.planet))
+        )
+    }
+
     claimOn(coords: AxialCoordinates): string | undefined {
         return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
     }
@@ -595,7 +577,9 @@ export class EarendelGameSession extends GameSession<
             .filter((hex) => hex.piece?.playerId === playerId)
             .filter((hex) => hex.piece?.type === PieceType.Fighter)
             .map((hex) => hex.coords)
-            .filter((coords) => attackableTargets(this.gameState.board, coords, playerId).length > 0)
+            .filter(
+                (coords) => attackableTargets(this.gameState.board, coords, playerId).length > 0
+            )
     })
 
     toggleUpdatedLogistics() {
@@ -826,7 +810,9 @@ export class EarendelGameSession extends GameSession<
         if (this.gameState.result) return 'The game is over.'
         if (!this.isMyTurn) return 'Waiting for the other players.'
         if (this.choosablePlanets.length > 0) {
-            return 'Your probe reached more than one planet — choose which one it explores.'
+            return this.choosablePlanets.length > 1
+                ? 'Your probes lead on more than one planet — choose one to survey, or skip.'
+                : 'Your probes lead on this planet — survey it, or skip.'
         }
         if (this.technologyChoices.length > 0) {
             return this.technologyChoices.length > 1 && this.technologyChoices.every(isElevated)
@@ -936,9 +922,7 @@ export class EarendelGameSession extends GameSession<
     }
 
     async drawPieces() {
-        await this.applyAction(
-            this.createPlayerAction(DrawPieces, { type: ActionType.DrawPieces })
-        )
+        await this.applyAction(this.createPlayerAction(DrawPieces, { type: ActionType.DrawPieces }))
     }
 
     async useLogisticsUpgrade() {
@@ -974,6 +958,13 @@ export class EarendelGameSession extends GameSession<
     async choosePlanet(coords: AxialCoordinates) {
         await this.applyAction(
             this.createPlayerAction(ChoosePlanet, { type: ActionType.ChoosePlanet, coords })
+        )
+    }
+
+    // Surveying nothing. Always allowed; the probe stays where it is either way.
+    async skipSurvey() {
+        await this.applyAction(
+            this.createPlayerAction(ChoosePlanet, { type: ActionType.ChoosePlanet })
         )
     }
 
@@ -1014,9 +1005,7 @@ export class EarendelGameSession extends GameSession<
     // Holding position rather than stepping. Always allowed: a forced move could only hurt.
     async holdPosition() {
         this.movingFrom = undefined
-        await this.applyAction(
-            this.createPlayerAction(MovePiece, { type: ActionType.MovePiece })
-        )
+        await this.applyAction(this.createPlayerAction(MovePiece, { type: ActionType.MovePiece }))
     }
 
     async movePiece(to: AxialCoordinates) {
@@ -1093,9 +1082,11 @@ export class EarendelGameSession extends GameSession<
                 await this.movePiece(coords)
                 return
             }
-            if (legalMovesFor(this.gameState.board, this.myPlayer?.id ?? '').some((move) =>
-                sameHex(move.from, coords)
-            )) {
+            if (
+                legalMovesFor(this.gameState.board, this.myPlayer?.id ?? '').some((move) =>
+                    sameHex(move.from, coords)
+                )
+            ) {
                 this.movingFrom = coords
             }
             return
@@ -1118,7 +1109,11 @@ export class EarendelGameSession extends GameSession<
         }
         // isHighlighted rather than isOpenHex, so the restriction to a newly laid tile is
         // honoured by the same list the board drew from.
-        if (this.isPlacing && isOpenHex(this.gameState.board, coords) && this.isHighlighted(coords)) {
+        if (
+            this.isPlacing &&
+            isOpenHex(this.gameState.board, coords) &&
+            this.isHighlighted(coords)
+        ) {
             await this.place(coords)
         }
     }

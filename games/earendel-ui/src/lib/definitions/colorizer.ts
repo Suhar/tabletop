@@ -1,30 +1,22 @@
 import { Color } from '@tabletop/common'
 import { DefaultColorizer } from '@tabletop/frontend-components'
 
+// The warm half of Earendel's palette (see EarendelColors): every player colour is warm or white,
+// leaving the cool colours to the planets. Class names are spelled out in full rather than built
+// from the hex values, because Tailwind only generates classes it finds written in the source.
 export class EarendelGameColorizer extends DefaultColorizer {
     override getUiColor(color?: string): string {
         switch (color) {
-            case Color.Blue:
-                return '#539ad1'
             case Color.Red:
-                return '#e55649'
+                return '#de3b45'
+            case Color.Orange:
+                return '#e68203'
             case Color.Yellow:
-                return '#f3c244'
-            case Color.Green:
-                return '#63b878'
-            case Color.Purple:
-                return '#804796'
-            // A light grey rather than a dark one. The fifth player used to be near-black, which
-            // on a starfield read as a hole in the board rather than as somebody's ships - and its
-            // control lines and score pills were almost unreadable.
-            //
-            // Both slots get it: the colour list now hands out Gray, but a game already in
-            // progress has Black stored against a player, and that player should not be left
-            // invisible for the rest of it.
-            case Color.Gray:
-                return '#c9d2e2'
-            case Color.Black:
-                return '#c9d2e2'
+                return '#dfc400'
+            case Color.Pink:
+                return '#fba0b7'
+            case Color.White:
+                return '#eef2f8'
             default:
                 return '#555555'
         }
@@ -32,20 +24,16 @@ export class EarendelGameColorizer extends DefaultColorizer {
 
     override getBgColor(color?: string): string {
         switch (color) {
-            case Color.Blue:
-                return 'bg-[#539ad1]'
             case Color.Red:
-                return 'bg-[#e55649]'
+                return 'bg-[#de3b45]'
+            case Color.Orange:
+                return 'bg-[#e68203]'
             case Color.Yellow:
-                return 'bg-[#f3c244]'
-            case Color.Green:
-                return 'bg-[#63b878]'
-            case Color.Purple:
-                return 'bg-[#804796]'
-            case Color.Gray:
-                return 'bg-[#c9d2e2]'
-            case Color.Black:
-                return 'bg-[#c9d2e2]'
+                return 'bg-[#dfc400]'
+            case Color.Pink:
+                return 'bg-[#fba0b7]'
+            case Color.White:
+                return 'bg-[#eef2f8]'
             default:
                 return 'bg-[#555555]'
         }
@@ -53,22 +41,42 @@ export class EarendelGameColorizer extends DefaultColorizer {
 
     override getBorderColor(color?: string): string {
         switch (color) {
-            case Color.Blue:
-                return 'border-[#539ad1]'
             case Color.Red:
-                return 'border-[#e55649]'
+                return 'border-[#de3b45]'
+            case Color.Orange:
+                return 'border-[#e68203]'
             case Color.Yellow:
-                return 'border-[#f3c244]'
-            case Color.Green:
-                return 'border-[#63b878]'
-            case Color.Purple:
-                return 'border-[#804796]'
-            case Color.Gray:
-                return 'border-[#c9d2e2]'
-            case Color.Black:
-                return 'border-[#c9d2e2]'
+                return 'border-[#dfc400]'
+            case Color.Pink:
+                return 'border-[#fba0b7]'
+            case Color.White:
+                return 'border-[#eef2f8]'
             default:
                 return 'border-[#555555]'
         }
+    }
+
+    // As a player colour, text is drawn in the colour itself. Otherwise it is text set ON that
+    // colour, and only red is dark enough to carry white; the rest of the warm colours are light.
+    override getTextColor(color?: Color, asPlayerColor: boolean = false): string {
+        if (!asPlayerColor) return color === Color.Red ? 'text-white' : 'text-black'
+        switch (color) {
+            case Color.Red:
+                return 'text-[#de3b45]'
+            case Color.Orange:
+                return 'text-[#e68203]'
+            case Color.Yellow:
+                return 'text-[#dfc400]'
+            case Color.Pink:
+                return 'text-[#fba0b7]'
+            case Color.White:
+                return 'text-[#eef2f8]'
+            default:
+                return 'text-[#555555]'
+        }
+    }
+
+    override getBorderContrastColor(color?: Color): string {
+        return color === Color.Red ? 'border-white' : 'border-black'
     }
 }

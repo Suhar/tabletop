@@ -1,21 +1,44 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { EarendelBoard, getHex, HexKind, hexKey, neighborsOf } from '../model/board.js'
-import { PieceType } from '../model/pieces.js'
+import { type EarendelBoard, getHex, HexKind, hexKey, neighborsOf, sameHex } from '../model/board.js'
+import type { HydratedEarendelGameState } from '../model/gameState.js'
+import { type Piece, PieceType } from '../model/pieces.js'
+import { probeLeaderOf } from './probes.js'
 
-// Landing a probe beside an unexplored planet is what triggers exploration - the player
-// doesn't choose WHETHER to explore. But a hex touches six others, so a probe can land beside
-// several unexplored planets at once, and it still explores only ONE of them. These are the
-// planets it could explore; which one it does is the player's call.
-export function explorablePlanets(
-    board: EarendelBoard,
+// The planets a probe on `coords` may survey: those beside it where its player has strictly the
+// most probe influence, counting this probe. A planet where they don't lead is not offered at all.
+//
+// An unexplored planet is explored - its technology chosen from cards revealed by the probe's
+// level - and an explored one offers the technology it already holds. Either way the player then
+// has a claim on that technology, gained at the start of their next turn if they still lead (see
+// claimProbeTechnologies). So an explored planet is only worth surveying for a technology the
+// player doesn't have, and a planet they already have a claim on is not offered again.
+//
+// Works before the probe is placed as well as after, so the board can preview a placement: a
+// probe not yet standing on `coords` is counted there as if it were.
+export function probeDestinations(
+    state: HydratedEarendelGameState,
     coords: AxialCoordinates,
-    pieceType: PieceType
+    piece: Piece
 ): AxialCoordinates[] {
-    if (pieceType !== PieceType.Probe) return []
+    if (piece.type !== PieceType.Probe) return []
+
+    const onBoard = getHex(state.board, coords)?.piece?.id === piece.id
+    const arriving = onBoard ? undefined : { coords, piece }
+    const held = state.getPlayerState(piece.playerId).technologies
 
     return neighborsOf(coords).filter((neighbor) => {
-        const hex = getHex(board, neighbor)
-        return hex?.kind === HexKind.Planet && !hex.explored
+        const hex = getHex(state.board, neighbor)
+        if (hex?.kind !== HexKind.Planet) return false
+        if (probeLeaderOf(state.board, neighbor, arriving) !== piece.playerId) return false
+        if (
+            state.probeClaims.some(
+                (claim) => claim.playerId === piece.playerId && sameHex(claim.coords, neighbor)
+            )
+        ) {
+            return false
+        }
+        if (!hex.explored) return true
+        return hex.technology !== undefined && !held.includes(hex.technology.id)
     })
 }
 

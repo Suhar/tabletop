@@ -86,7 +86,7 @@ describe('stationGroupPoints', () => {
     it('does not link around a planet, which no ship can stand on', () => {
         const board = boardOf([
             [at(0, 0), { ship: station('p1') }],
-            [at(1, 0), { planet: PlanetColor.Azure }],
+            [at(1, 0), { planet: PlanetColor.Periwinkle }],
             [at(2, 0), { ship: station('p1') }]
         ])
 
@@ -255,10 +255,10 @@ describe('scoring stations in play', () => {
         const mover = game.activePlayerId
 
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), {}],
             [at(2, 0), { ship: station(mover) }],
-            [at(3, 0), { planet: PlanetColor.Azure }],
+            [at(3, 0), { planet: PlanetColor.Periwinkle }],
             [at(2, -1), {}],
             [at(2, -2), { ship: station(mover) }],
             [at(9, 9), {}]

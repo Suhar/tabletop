@@ -20,12 +20,25 @@ export const PendingTechnology = Type.Object({
     kind: Type.Enum(TechnologyEffectKind)
 })
 
+// A technology a player's probe has staked out, waiting on the start of their next turn. They
+// gain it then if they still have strictly the most probe influence on the planet (see
+// util/probes.ts); if not, the claim lapses and the planet keeps its technology for anyone else.
+// Stored rather than derived because it records a choice - which planet the probe surveyed -
+// that nothing on the board remembers.
+export type ProbeClaim = Type.Static<typeof ProbeClaim>
+export const ProbeClaim = Type.Object({
+    playerId: Type.String(),
+    coords: AxialCoordinates,
+    technologyId: Type.String()
+})
+
 export type PendingExploration = Type.Static<typeof PendingExploration>
 export const PendingExploration = Type.Object({
     playerId: Type.String(),
     probeCoords: AxialCoordinates,
     probeLevel: Type.Enum(PieceLevel),
-    // The planets this probe could explore. Exactly one will be.
+    // The planets this probe may survey: those its player leads on probe influence. At most one
+    // will be.
     candidatePlanets: Type.Array(AxialCoordinates),
     // Set once the planet is settled and its cards are face up: the planet being explored,
     // and the matching cards the player is choosing between.

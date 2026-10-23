@@ -15,14 +15,14 @@ settling it first.
 three hexes of open space; *which* hex is the planet varies from tile to tile.
 
 **Planets** — every planet hex has one of **five colors**. A planet is either unexplored or
-explored; once explored it can never be explored again.
+explored; once explored, the technology it holds never changes.
 
 **Pieces (ships)** — each occupies a single hex of open space. Ships are never placed on
 planets. Each contributes *power* toward controlling adjacent planets:
 
 | Piece | Power | Notes |
 | --- | --- | --- |
-| Probe | 0 | An explorer, not a claim. Its **level** (2 or 3) is how many technology cards it reveals. |
+| Probe | 1 | An explorer. Its **level** (2 or 3) is how many technology cards it reveals, and its weight in probe influence. |
 | Station | 1 | |
 | Fighter (level 1) | 1 | Only reached by damage. Destroys an enemy probe on arrival. |
 | Fighter (level 2) | 2 | Destroys an enemy probe; damages a level 1 fighter to destruction. |
@@ -131,12 +131,22 @@ carve out exceptions later, but there is no general adjacency requirement to bui
 
 ### Exploration
 
-Placing a **probe** adjacent to an unexplored planet explores it. Landing there is what
-triggers exploration — the player doesn't decide *whether* to explore.
+**Probe influence** is how strongly a player is surveying a planet: the sum of the **levels** of
+their probes adjacent to it. A level 3 probe counts 3 and a level 2 counts 2; stations and
+fighters count nothing. It is separate from control, which decides who scores a planet.
 
-A hex touches six others, so a probe may land beside **several** unexplored planets. It
-still explores only **one**: the player chooses which. The others remain unexplored and can
-be reached later by another probe.
+A **probe** placed adjacent to a planet may **survey** it — but only a planet where its player
+now has **strictly the most probe influence**, counting the probe just placed. A planet where
+they are behind or tied is not offered at all. Surveying is always optional, and the probe stays
+where it was placed either way.
+
+A hex touches six others, so a probe may land beside **several** planets it leads on. It
+surveys **one** at most: the player chooses which.
+
+Surveying an **unexplored** planet explores it, as below. Surveying a planet that is **already
+explored** turns nothing over: the technology at stake is the one the planet already holds. Such
+a planet is only offered for a technology the player doesn't already have, and a planet the
+player already has a claim on is not offered again.
 
 Exploring reveals the chosen planet's nature:
 
@@ -300,42 +310,32 @@ up in practice.
 
 ### Gaining a technology
 
-Exploring a planet decides what it **holds**. It does not hand that technology to anybody.
+Surveying a planet decides what it **holds** (if it was unexplored) and **stakes a claim** on
+that technology for the surveying player. It does not hand the technology over yet.
 
-A technology is claimed by **holding its planet outright from one of your turns to the next**.
-At the start of every turn, before anything else, each explored planet you hold outright pays
-you its technology — provided you don't already have it. That is the whole rule, and it applies
-to the explorer exactly as it applies to everyone else.
+At the start of the claimant's **next turn**, before anything else, the claim is settled. If they
+**still have strictly the most probe influence** on the planet, the technology is theirs. If not
+— a rival's probes have drawn level or overtaken theirs — the claim **lapses**: the planet keeps
+its technology, and nobody gains it. Either way the claim is spent.
 
-Outright means **strictly more power than any other player** — not merely tied for the most.
-This is stricter than control for scoring purposes (see below): matching an opponent's presence
-beside a planet is *not* a way to copy what they hold.
+So a technology is won by surveying a planet and **keeping the probe lead for a round**. Rivals
+have one round of turns to answer: placing probes beside the planet to match or outweigh yours
+stops your claim, and a rival who now leads may survey it themselves and stake a claim of their
+own. Several players can have claims on the same planet at once; each is settled on its own
+claimant's turn.
 
-So a planet is won by keeping it, not by reaching it. Explore on your turn and the planet's card
-is chosen, but a rival who drops a fighter beside it before your next turn takes the claim away
-from you and starts a wait of their own. You must break their hold again to be back in line, and
-they must survive a full round of everyone else's turns to collect. A planet under real
-contention can sit explored and unclaimed for a long time, changing hands and paying nobody.
-
-**Nothing is tracked between turns.** There is no timer to remember: the question is only ever
-asked at the moment a turn begins, so a player who loses a planet and takes it back before their
-own turn comes round arrives holding it, and is paid. The wait is the round of other players'
-turns you have to survive, not a clock that a momentary loss resets.
-
-**A probe alone can never claim what it discovers.** Probes have no power, so a probe beside a
-planet holds nothing. A player who explores with a probe and sends nothing else has chosen what
-the planet is worth for the rest of the game and handed the claiming of it to whoever brings a
-station or a fighter. This is a real cost of exploring cheaply, and the sharpest edge of the
-rule.
+**Holding a planet does not win its technology.** Stations and fighters control planets for
+points, chains and the rest, but only probes stake out what a planet holds. A fighter can still
+stop a claim the blunt way, by destroying the probes that carry it.
 
 A claimed technology is **never lost** — not when the planet is, not ever. Whatever it grants (a
 special piece, a continuous power) stays with the player who claimed it. Several players can
 therefore hold the same planet's technology, and over a game technologies only accumulate.
 
-A planet pays each player **once and once only**. Losing a planet and taking it back gains
-nothing the second time, so a planet can't be farmed by control passing back and forth.
+A planet's technology pays each player **once and once only**: a player who already has it is
+never offered it again.
 
-**A technology that acts at once acts when it is claimed**, at the very top of the claiming
+**A technology that acts at once acts when it is gained**, at the very top of the claiming
 player's turn — *before* the draft discard as well as before the placement. A tile, a Station Hub
 or a free move all change what the hand is worth, and being asked to throw a ship away before
 seeing what the turn has brought is choosing blind. A turn that claims two such technologies
@@ -343,17 +343,18 @@ carries both out, in turn, before anything else happens.
 
 **Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
 the planet will hold — picking a technology that suits their position, from cards nobody
-else has seen — and that they know what is coming while everyone else must react to it.
+else has seen — and gets the first claim on it.
 
 **OPEN:** whether a technology may carry an extra reward for the explorer specifically — for
 example granting the explorer two copies of a special piece where a later controller gets
 one. This is a reason for a probe's *level* to matter beyond the size of the reveal: a level
 3 probe sees more cards, so it is likelier to find a technology worth exploring for.
 
-Both exploration decisions — which planet, then which card — belong to the placing player
-and happen inside their own turn. Neither is ever *presented* when it has only one answer: a
-probe beside a single unexplored planet explores it without asking, and a reveal that turns
-up one matching card (or none) houses it without asking. Only genuine choices interrupt.
+Both survey decisions — whether and which planet to survey, then which card — belong to the
+placing player and happen inside their own turn. The first is always asked, since not surveying
+is always an answer. The second is never *presented* when it has only one answer: a reveal that
+turns up one matching card (or none) houses it without asking, and an explored planet offers
+only the technology it holds.
 
 Other piece types resolve their own effects on placement; only probes explore.
 

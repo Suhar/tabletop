@@ -43,9 +43,9 @@ describe('triangular', () => {
 describe('chainsCompletedBy', () => {
     it('scores a single ship that touches two planets of one colour', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Azure }]
+            [at(2, 0), { planet: PlanetColor.Periwinkle }]
         ])
 
         const chains = chainsCompletedBy(board, 'p1', at(1, 0), [])
@@ -53,15 +53,15 @@ describe('chainsCompletedBy', () => {
         expect(chains).toHaveLength(1)
         expect(chains[0].length).toBe(1)
         expect(chains[0].points).toBe(1)
-        expect(chains[0].color).toBe(PlanetColor.Azure)
+        expect(chains[0].color).toBe(PlanetColor.Periwinkle)
     })
 
     it('counts the ships between the planets and not the planets themselves', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
             [at(2, 0), { ship: 'p1' }],
-            [at(3, 0), { planet: PlanetColor.Azure }]
+            [at(3, 0), { planet: PlanetColor.Periwinkle }]
         ])
 
         const chains = chainsCompletedBy(board, 'p1', at(2, 0), [])
@@ -72,9 +72,9 @@ describe('chainsCompletedBy', () => {
 
     it('ignores planets of different colours', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Gold }]
+            [at(2, 0), { planet: PlanetColor.Teal }]
         ])
 
         expect(chainsCompletedBy(board, 'p1', at(1, 0), [])).toEqual([])
@@ -84,9 +84,9 @@ describe('chainsCompletedBy', () => {
         // A direct link at (1,0) plus a longer loop around the top. The pair is worth what
         // the short route says, not what the scenic one does.
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Azure }],
+            [at(2, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, -1), { ship: 'p1' }],
             [at(2, -1), { ship: 'p1' }]
         ])
@@ -98,12 +98,12 @@ describe('chainsCompletedBy', () => {
     })
 
     it('cannot route a chain through a planet', () => {
-        // A third planet sits directly between the two Azure ones, so the chain has to go
+        // A third planet sits directly between the two Periwinkle ones, so the chain has to go
         // around it - planets are walls, since no ship can ever stand on one.
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
-            [at(1, 0), { planet: PlanetColor.Verdant }],
-            [at(2, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            [at(1, 0), { planet: PlanetColor.Mint }],
+            [at(2, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, -1), { ship: 'p1' }],
             [at(2, -1), { ship: 'p1' }]
         ])
@@ -117,10 +117,10 @@ describe('chainsCompletedBy', () => {
 
     it('does not run a chain through another player’s ships', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
             [at(2, 0), { ship: 'p2' }],
-            [at(3, 0), { planet: PlanetColor.Azure }]
+            [at(3, 0), { planet: PlanetColor.Periwinkle }]
         ])
 
         expect(chainsCompletedBy(board, 'p1', at(1, 0), [])).toEqual([])
@@ -128,12 +128,12 @@ describe('chainsCompletedBy', () => {
     })
 
     it('scores every pair a placement joins at once', () => {
-        // One ship touching three Azure planets joins three pairs, not one.
+        // One ship touching three Periwinkle planets joins three pairs, not one.
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Azure }],
-            [at(1, 1), { planet: PlanetColor.Azure }]
+            [at(2, 0), { planet: PlanetColor.Periwinkle }],
+            [at(1, 1), { planet: PlanetColor.Periwinkle }]
         ])
 
         const chains = chainsCompletedBy(board, 'p1', at(1, 0), [])
@@ -144,9 +144,9 @@ describe('chainsCompletedBy', () => {
 
     it('never pays for a pair of planets that has already been joined', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Azure }]
+            [at(2, 0), { planet: PlanetColor.Periwinkle }]
         ])
 
         const spent = [planetPairKey(at(0, 0), at(2, 0))]
@@ -162,10 +162,10 @@ describe('scoring a chain in play', () => {
     it('pays the placing player and says so in the history', () => {
         const game = new TestGame()
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), {}],
             [at(2, 0), {}],
-            [at(3, 0), { planet: PlanetColor.Azure }],
+            [at(3, 0), { planet: PlanetColor.Periwinkle }],
             // Spare space well clear of the planets, so filling the board doesn't end the
             // game before the chain is paid.
             [at(9, 9), {}],
@@ -212,7 +212,7 @@ describe('scoring a chain in play', () => {
         expect(game.state.players.find((p) => p.playerId === mover)!.score).toBe(3)
         expect(game.state.players.find((p) => p.playerId === other)!.score).toBe(0)
         expect((completing as PlacePiece).metadata).toMatchObject({
-            chains: [{ length: 2, points: 3, color: PlanetColor.Azure }]
+            chains: [{ length: 2, points: 3, color: PlanetColor.Periwinkle }]
         })
         expect(game.state.scoredPlanetPairs).toEqual([planetPairKey(at(0, 0), at(3, 0))])
     })

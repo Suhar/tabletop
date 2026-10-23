@@ -40,9 +40,9 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
 describe('planetPointsByPlayer', () => {
     it('pays a point for each planet a player controls', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }],
-            [at(2, 0), { planet: PlanetColor.Gold }],
+            [at(2, 0), { planet: PlanetColor.Teal }],
             [at(3, 0), { ship: ['p1', PieceType.Station] }]
         ])
 
@@ -52,7 +52,7 @@ describe('planetPointsByPlayer', () => {
 
     it('pays every tied player in full', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: ['p1', PieceType.Station] }],
             [at(0, 1), { ship: ['p2', PieceType.Station] }]
         ])
@@ -65,7 +65,7 @@ describe('planetPointsByPlayer', () => {
         // A probe counts 1, so it both holds a planet and scores it - the point of raising it
         // from 0 was that a probe which explores a planet can go on to keep it.
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: ['p1', PieceType.Probe] }]
         ])
 
@@ -74,7 +74,7 @@ describe('planetPointsByPlayer', () => {
 
     it('pays nobody for a planet nothing touches', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), {}]
         ])
 
@@ -83,9 +83,9 @@ describe('planetPointsByPlayer', () => {
 
     it('pays the same for an unexplored planet as an explored one', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure, explored: true }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, explored: true }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }],
-            [at(2, 0), { planet: PlanetColor.Gold }]
+            [at(2, 0), { planet: PlanetColor.Teal }]
         ])
 
         expect(planetPointsByPlayer(board)).toEqual({ p1: 2 })
@@ -93,7 +93,7 @@ describe('planetPointsByPlayer', () => {
 
     it('gives a stronger neighbour the planet outright', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }],
             [at(0, 1), { ship: ['p2', PieceType.Station] }]
         ])
@@ -106,7 +106,7 @@ describe('planet points at the end of the game', () => {
     it('are added when the last piece is played, and decide the winner', () => {
         const game = new TestGame()
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), {}],
             [at(9, 9), {}]
         ])

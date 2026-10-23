@@ -53,9 +53,8 @@ describe('powerOf', () => {
     it('reads a fighter’s level as its power, and leaves the others alone', () => {
         expect(powerOf(ship('p1', PieceType.Fighter, PieceLevel.Two))).toBe(2)
         expect(powerOf(ship('p1', PieceType.Fighter, PieceLevel.Three))).toBe(3)
-        // A probe counts 1 whatever its level: level decides how many cards it turns over, not
-        // how hard it holds a planet. So a level 3 probe is a better explorer than a level 2 one
-        // and no better a claim.
+        // A probe counts 1 whatever its level: level decides how many cards it turns over and
+        // how much probe influence it carries, not how hard it holds a planet for scoring.
         expect(powerOf(ship('p1', PieceType.Probe, PieceLevel.Three))).toBe(1)
         expect(powerOf(ship('p1', PieceType.Probe, PieceLevel.Two))).toBe(1)
         expect(powerOf(ship('p1', PieceType.Station))).toBe(1)
@@ -346,21 +345,22 @@ describe('a fighter arriving', () => {
         expect(game.state.pendingAttack).toBeUndefined()
     })
 
-    it('leaves a bystander holding a planet, to claim on their own next turn', () => {
+    it('clears the way for a bystander’s claim, which pays on their own next turn', () => {
         const game = new TestGame(3)
         const [mover, blocker, bystander] = game.state.turnManager.turnOrder
 
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Azure, technologyId: 'tech-a' }],
-            // The blocker's fighter ties the bystander's, so nobody holds the planet outright
-            // and the bystander has never been able to take it.
-            [at(1, 0), { ship: ship(blocker, PieceType.Fighter, PieceLevel.Two) }],
-            [at(0, 1), { ship: ship(bystander, PieceType.Fighter, PieceLevel.Two) }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            // The bystander surveyed the planet, but the blocker's probe has since drawn level,
+            // so as things stand the bystander's claim would lapse.
+            [at(1, 0), { ship: ship(blocker, PieceType.Probe, PieceLevel.Two) }],
+            [at(0, 1), { ship: ship(bystander, PieceType.Probe, PieceLevel.Two) }],
             // Where the mover's fighter lands: adjacent to the blocker, not to the planet.
             [at(2, 0), {}],
             [at(5, 5), {}],
             [at(6, 5), {}]
         ])
+        game.state.probeClaims = [{ playerId: bystander, coords: at(0, 0), technologyId: 'tech-a' }]
         game.state.technologyDeck = []
         game.state.tileSupply = []
         // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
@@ -385,9 +385,9 @@ describe('a fighter arriving', () => {
             coords: at(1, 0)
         })
 
-        // The tie is broken and the bystander now holds the planet outright - but a shot hands
-        // nothing over. It has started someone else's wait, which is the strange and rather
-        // good part: the attacker has given a third party a technology they must now defend.
+        // The tie is broken and the bystander's probes lead again - but a shot hands nothing
+        // over. It has rescued someone else's claim, which is the strange and rather good part:
+        // the attacker has given a third party a technology they must now defend.
         expect(held(bystander)).toEqual([])
         expect(held(mover)).toEqual([])
 
@@ -399,7 +399,7 @@ describe('a fighter arriving', () => {
             pieceSource: PieceSource.Bag
         })
 
-        // And now it is the bystander's turn, so the hold pays.
+        // And now it is the bystander's turn, so the claim pays.
         game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: bystander })
         expect(held(bystander)).toEqual(['tech-a'])
         expect(held(mover)).toEqual([])

@@ -20,7 +20,7 @@ export const UseTacticalFeintMetadata = Type.Object({
     // placed and can therefore score on landing.
     stationGroupPoints: Type.Optional(Type.Number()),
     chains: Type.Optional(Type.Array(ScoredChain)),
-    explorable: Type.Optional(Type.Array(AxialCoordinates))
+    probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
 export type UseTacticalFeint = Type.Static<typeof UseTacticalFeint>
@@ -88,7 +88,7 @@ export class HydratedUseTacticalFeint
         // Resolved after the swap, so the arriving ship is read off the board where it now
         // stands - and so chains and station groups are measured on the board the swap made,
         // including the hole the ship left behind it.
-        const { stationPoints, chains, explorable } = resolveArrival(state, this.playerId, this.to)
+        const { stationPoints, chains, probeDestinations } = resolveArrival(state, this.playerId, this.to)
 
         this.metadata = {
             movedType: mine.type,
@@ -97,7 +97,7 @@ export class HydratedUseTacticalFeint
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
-            ...(explorable.length > 0 ? { explorable } : {})
+            ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
     }
 

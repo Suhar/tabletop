@@ -44,10 +44,10 @@ export const PlacePieceMetadata = Type.Object({
     stationGroupPoints: Type.Optional(Type.Number()),
     // Technologies gained by taking outright hold of an explored planet. Kept for good -
     // the planet can be taken away afterwards, the technology can't.
-    // Planets this probe could explore from where it landed. One of them will be explored -
-    // the player picks which - and the rest stay unexplored. Absent when the placement
-    // reached no unexplored planet, or wasn't a probe at all.
-    explorable: Type.Optional(Type.Array(AxialCoordinates))
+    // Planets this probe could be sent to from where it landed. The player may send it to one
+    // of them or keep it on the board. Absent when the placement reached no planet, or wasn't
+    // a probe at all.
+    probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
 export type PlacePiece = Type.Static<typeof PlacePiece>
@@ -126,7 +126,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         // Everything the arrival sets off - station points, chains, a fighter's shot, a probe's
         // exploration, control - lives in resolveArrival, because Tactical Feint has to be able
         // to do all of it to a ship it swapped into place rather than played from hand.
-        const { stationPoints, chains, explorable } = resolveArrival(
+        const { stationPoints, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.coords
@@ -139,7 +139,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
-            ...(explorable.length > 0 ? { explorable } : {})
+            ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
     }
 

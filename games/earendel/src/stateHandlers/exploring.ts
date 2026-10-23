@@ -2,7 +2,7 @@ import { type HydratedAction, type MachineStateHandler, MachineContext } from '@
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { ChoosePlanet, HydratedChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
+import { HydratedChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import {
     ChooseTechnology,
     HydratedChooseTechnology,
@@ -12,11 +12,12 @@ import { endPlacement } from '../util/turn.js'
 
 type ExploringAction = HydratedChoosePlanet | HydratedChooseTechnology
 
-// Still the placing player's turn: their probe found something, and they owe up to two
-// decisions - which planet to explore, then which revealed technology the planet keeps.
-// Either can be a non-choice, in which case it is taken for them rather than shown.
+// Still the placing player's turn: their probe landed beside a planet, and they owe up to two
+// decisions - whether to survey a planet it leads on and which, then which revealed technology the
+// planet keeps. The first is always a real choice, since not surveying is always allowed;
+// the second is taken for them rather than shown when it has one answer.
 //
-// Transitions: Exploring(ChoosePlanet)     -> Exploring
+// Transitions: Exploring(ChoosePlanet)     -> Exploring | PlacingPiece | EndOfGame
 //              Exploring(ChooseTechnology) -> PlacingPiece | EndOfGame
 export class ExploringStateHandler
     implements MachineStateHandler<ExploringAction, HydratedEarendelGameState>
@@ -48,18 +49,12 @@ export class ExploringStateHandler
         // after the planet is settled.
         gameState.activePlayerIds = [pending.playerId]
 
+        // Whether to survey is always the player's to say - not surveying is an answer too.
+        if (!pending.exploringPlanet) return
+
         // A decision with one answer isn't a decision. Taking it as a system action keeps the
-        // history complete (the flip is still recorded) without making the player click
-        // through a dialog that offers them nothing.
-        if (!pending.exploringPlanet) {
-            if (pending.candidatePlanets.length === 1) {
-                context.addSystemAction(ChoosePlanet, {
-                    playerId: pending.playerId,
-                    coords: pending.candidatePlanets[0]
-                })
-            }
-            return
-        }
+        // history complete without making the player click through a dialog that offers them
+        // nothing.
 
         const candidates = pending.candidates ?? []
         if (candidates.length <= 1) {
@@ -78,6 +73,10 @@ export class ExploringStateHandler
 
         switch (true) {
             case isChoosePlanet(action): {
+                // A probe kept on the board has nothing more to do.
+                if (!action.coords) {
+                    return endPlacement(gameState, context)
+                }
                 // The cards are face up now, so the second decision is waiting - same state,
                 // whose enter() will resolve it outright if there's nothing to weigh.
                 return MachineState.Exploring

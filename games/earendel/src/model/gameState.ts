@@ -12,7 +12,7 @@ import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { Piece } from './pieces.js'
 import { TechnologyCard } from './technology.js'
-import { PendingExploration, PendingTechnology } from './exploration.js'
+import { PendingExploration, PendingTechnology, ProbeClaim } from './exploration.js'
 import { Tile } from './tile.js'
 import { PendingAttack } from './attack.js'
 
@@ -77,7 +77,9 @@ export const EarendelGameState = Type.Evaluate(
             // Pairs of planets already joined by a chain (see planetPairKey). A pair pays
             // out once and is then spent for everyone, so the record is global rather than
             // per player - joining a colour first is the whole race.
-            scoredPlanetPairs: Type.Array(Type.String())
+            scoredPlanetPairs: Type.Array(Type.String()),
+            // Technologies staked out by probes, each waiting on its player's next turn.
+            probeClaims: Type.Array(ProbeClaim)
         })
     ])
 )
@@ -113,6 +115,7 @@ export class HydratedEarendelGameState
     declare bonusPlacementTileId?: string
     declare bonusPlacementPieceId?: string
     declare scoredPlanetPairs: string[]
+    declare probeClaims: ProbeClaim[]
     declare result?: GameResult
     declare winningPlayerIds: string[]
 

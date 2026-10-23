@@ -25,7 +25,7 @@ const ship = (playerId: string, type: PieceType): Piece => ({
 
 const card = (id: string, kind?: TechnologyEffectKind): TechnologyCard => ({
     id,
-    colors: [PlanetColor.Azure],
+    colors: [PlanetColor.Periwinkle],
     tier: TechnologyTier.Standard,
     ...(kind ? { effect: { kind } } : {})
 })
@@ -50,7 +50,7 @@ const planet = (
         coords,
         tileId: 't1',
         kind: HexKind.Planet,
-        color: PlanetColor.Azure,
+        color: PlanetColor.Periwinkle,
         ...(explored ? { explored } : {}),
         ...(technology ? { technology } : {})
     }

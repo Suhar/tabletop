@@ -20,17 +20,17 @@ describe('revealForExploration', () => {
     it('flips until enough cards show the planet’s colour', () => {
         const piles: TechnologyPiles = {
             deck: [
-                card('a', PlanetColor.Azure),
-                card('b', PlanetColor.Crimson),
-                card('c', PlanetColor.Azure, PlanetColor.Gold),
-                card('d', PlanetColor.Azure)
+                card('a', PlanetColor.Periwinkle),
+                card('b', PlanetColor.Aqua),
+                card('c', PlanetColor.Periwinkle, PlanetColor.Teal),
+                card('d', PlanetColor.Periwinkle)
             ],
             discard: []
         }
 
-        const result = revealForExploration(piles, PlanetColor.Azure, 2, prng())
+        const result = revealForExploration(piles, PlanetColor.Periwinkle, 2, prng())
 
-        // Stops the moment the second Azure card appears - 'd' is never turned over.
+        // Stops the moment the second Periwinkle card appears - 'd' is never turned over.
         expect(result.candidates.map((c) => c.id)).toEqual(['a', 'c'])
         expect(result.flipped.map((c) => c.id)).toEqual(['a', 'b', 'c'])
         expect(piles.deck.map((c) => c.id)).toEqual(['d'])
@@ -41,10 +41,10 @@ describe('revealForExploration', () => {
         // Cards without the colour are turned over on the way and are never choosable.
         const piles: TechnologyPiles = {
             deck: [
-                card('miss1', PlanetColor.Verdant),
+                card('miss1', PlanetColor.Mint),
                 card('hit1', PlanetColor.Violet),
-                card('miss2', PlanetColor.Gold),
-                card('hit2', PlanetColor.Violet, PlanetColor.Verdant)
+                card('miss2', PlanetColor.Teal),
+                card('hit2', PlanetColor.Violet, PlanetColor.Mint)
             ],
             discard: []
         }
@@ -57,11 +57,11 @@ describe('revealForExploration', () => {
 
     it('reshuffles the discard when the deck runs out mid-reveal', () => {
         const piles: TechnologyPiles = {
-            deck: [card('a', PlanetColor.Gold)],
-            discard: [card('b', PlanetColor.Gold), card('c', PlanetColor.Azure)]
+            deck: [card('a', PlanetColor.Teal)],
+            discard: [card('b', PlanetColor.Teal), card('c', PlanetColor.Periwinkle)]
         }
 
-        const result = revealForExploration(piles, PlanetColor.Gold, 2, prng())
+        const result = revealForExploration(piles, PlanetColor.Teal, 2, prng())
 
         expect(result.candidates).toHaveLength(2)
         expect(result.exhausted).toBe(false)
@@ -71,11 +71,11 @@ describe('revealForExploration', () => {
     it('explores with fewer candidates when both piles are spent', () => {
         // A level 3 probe on a colour with only one card left anywhere.
         const piles: TechnologyPiles = {
-            deck: [card('only', PlanetColor.Crimson), card('other', PlanetColor.Azure)],
+            deck: [card('only', PlanetColor.Aqua), card('other', PlanetColor.Periwinkle)],
             discard: []
         }
 
-        const result = revealForExploration(piles, PlanetColor.Crimson, 3, prng())
+        const result = revealForExploration(piles, PlanetColor.Aqua, 3, prng())
 
         expect(result.candidates.map((c) => c.id)).toEqual(['only'])
         expect(result.exhausted).toBe(true)
@@ -85,7 +85,7 @@ describe('revealForExploration', () => {
     it('explores with no candidates at all rather than hanging', () => {
         const piles: TechnologyPiles = { deck: [], discard: [] }
 
-        const result = revealForExploration(piles, PlanetColor.Azure, 2, prng())
+        const result = revealForExploration(piles, PlanetColor.Periwinkle, 2, prng())
 
         expect(result.candidates).toEqual([])
         expect(result.flipped).toEqual([])
@@ -97,11 +97,11 @@ describe('revealForExploration', () => {
         // can't hand the same card back - which would otherwise let one card satisfy a
         // level 3 probe by itself.
         const piles: TechnologyPiles = {
-            deck: [card('a', PlanetColor.Gold)],
+            deck: [card('a', PlanetColor.Teal)],
             discard: []
         }
 
-        const result = revealForExploration(piles, PlanetColor.Gold, 3, prng())
+        const result = revealForExploration(piles, PlanetColor.Teal, 3, prng())
 
         expect(result.candidates.map((c) => c.id)).toEqual(['a'])
         expect(result.flipped.map((c) => c.id)).toEqual(['a'])

@@ -22,6 +22,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
+import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { TurnStyle } from '../definition/config.js'
 import { TestGame } from './testHarness.js'
@@ -183,18 +184,10 @@ describe('growing the board in play', () => {
             coords: at(0, 0),
             tileId: 'start',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure
+            color: PlanetColor.Periwinkle
         }
-        // A station of the mover's on the planet's other approach hex. Without it they hold
-        // nothing - the probe that explores has no power - and the technology would never be
-        // claimed at all. Two loose hexes off to the side give the other player somewhere to
-        // spend their turn without touching the planet or the starting tile's last space.
-        board.hexes[hexKey(at(0, 1))] = {
-            coords: at(0, 1),
-            tileId: 'start',
-            kind: HexKind.Open,
-            piece: ship(mover, PieceType.Station)
-        }
+        // Two loose hexes off to the side give the other player somewhere to spend their turn
+        // without touching the planet or the starting tile's last spaces.
         for (const coords of [at(5, 5), at(6, 5)]) {
             board.hexes[hexKey(coords)] = { coords, tileId: 'start', kind: HexKind.Open }
         }
@@ -203,7 +196,7 @@ describe('growing the board in play', () => {
         game.state.technologyDeck = [
             {
                 id: 'grow-tech',
-                colors: [PlanetColor.Azure],
+                colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.GrowBoard }
             }
@@ -212,7 +205,7 @@ describe('growing the board in play', () => {
         game.state.tileSupply = Array.from({ length: supplyCount }, (_unused, index) => ({
             id: `spare-${index}`,
             planetOffset: 0,
-            color: PlanetColor.Gold
+            color: PlanetColor.Teal
         }))
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
@@ -223,8 +216,8 @@ describe('growing the board in play', () => {
         return { game, mover, other }
     }
 
-    // Explores the planet, hands the turn round, then opens the mover's next turn - the moment
-    // the claim falls due and the tile is handed over.
+    // Surveys the planet, hands the turn round, then opens the mover's next turn - the moment
+    // the claim falls due, the probe still leading, and the tile is handed over.
     function exploreAndComeRound(game: TestGame, mover: string, other: string) {
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -232,6 +225,8 @@ describe('growing the board in play', () => {
             coords: at(1, 0),
             pieceSource: PieceSource.Bag
         })
+        // Sending the probe is never automatic, even to the only planet in reach.
+        game.run(ChoosePlanet, { type: ActionType.ChoosePlanet, playerId: mover, coords: at(0, 0) })
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
             playerId: other,
@@ -244,8 +239,8 @@ describe('growing the board in play', () => {
     it('lays a tile and then places a drawn ship on it', () => {
         const { game, mover, other } = scenario()
 
-        // The probe explores and houses the card, but the technology is only claimed once the
-        // planet has been held to the mover's next turn - and the tile arrives with it.
+        // The probe explores and houses the card, but the technology is only gained once the
+        // probe lead has lasted to the mover's next turn - and the tile arrives with it.
         exploreAndComeRound(game, mover, other)
 
         expect(game.state.machineState).toBe(MachineState.PlacingTile)
@@ -371,26 +366,28 @@ describe('growing the board in play', () => {
             coords: at(0, 0),
             tileId: 'start',
             kind: HexKind.Planet,
-            color: PlanetColor.Azure,
+            color: PlanetColor.Periwinkle,
             explored: true,
             technology: {
                 id: 'grow-tech',
-                colors: [PlanetColor.Azure],
+                colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.GrowBoard }
             }
         }
-        // Held outright since before this turn, so the claim falls due as the turn opens.
+        // Surveyed by the mover's probe last turn, which still leads, so the claim falls due as
+        // the turn opens.
         board.hexes[hexKey(at(0, 1))] = {
             coords: at(0, 1),
             tileId: 'start',
             kind: HexKind.Open,
-            piece: ship(mover, PieceType.Station)
+            piece: ship(mover, PieceType.Probe, PieceLevel.Two)
         }
         game.state.board = board
+        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: 'grow-tech' }]
         game.state.technologyDeck = []
         game.state.technologyDiscard = []
-        game.state.tileSupply = [{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Gold }]
+        game.state.tileSupply = [{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }]
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station),
@@ -434,7 +431,7 @@ describe('growing the board in play', () => {
 
         const processed = exploreAndComeRound(game, mover, other)
 
-        // The technology is still claimed - it is theirs for scoring and for the ledger - but
+        // The technology is still gained - it is theirs for scoring and for the ledger - but
         // with no tile to draw it hands over nothing, and the turn carries on to its placement
         // rather than stalling on an effect that cannot happen.
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([

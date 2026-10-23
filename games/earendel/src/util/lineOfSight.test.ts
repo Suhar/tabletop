@@ -99,7 +99,7 @@ describe('probeBlockedBy', () => {
         const board = boardOf([
             [at(0, 0), { ship: station('p1') }],
             [at(1, 0), {}],
-            [at(2, 0), { planet: PlanetColor.Azure }],
+            [at(2, 0), { planet: PlanetColor.Periwinkle }],
             [at(3, 0), {}],
             [at(4, 0), { ship: station('p1') }]
         ])

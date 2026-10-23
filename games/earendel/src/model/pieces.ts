@@ -24,14 +24,9 @@ export enum PieceLevel {
 // Base power by type, for pieces that carry no level of their own - a special piece won from
 // a technology, say. Anything added later just needs an entry here.
 //
-// A probe counts 1, not 0. It used to count nothing, which meant a probe could explore a planet,
-// decide what it holds, and then be unable to claim it - the technology went to whoever first
-// brought a real ship. Giving a probe a single point of power lets an unchallenged one claim what
-// it found on the following turn, which is the reward exploring was missing.
-//
-// Note what else this does: a probe now TIES a station, so an enemy probe parked beside a planet
-// stops a station holding it outright, and neither claims. A probe is no longer only an explorer;
-// it is the cheapest way to deny.
+// A probe counts 1 towards control, like a station, so a probe parked beside a planet contests
+// it for points and chains. Technologies are another matter: those are staked out by probe
+// influence alone (see util/probes.ts), where a probe counts its level and nothing else counts.
 export const PIECE_POWER: Record<PieceType, number> = {
     [PieceType.Probe]: 1,
     [PieceType.Station]: 1,
@@ -56,9 +51,8 @@ export function isStationHub(piece: Piece): boolean {
 }
 
 // How much this piece contributes toward controlling an adjacent planet, and - for a fighter -
-// how much it has to beat to destroy something. A probe contributes nothing: it's an
-// explorer, not a claim. A fighter's level is its power, so a level 3 fighter both holds
-// planets harder and kills more.
+// how much it has to beat to destroy something. A fighter's level is its power, so a level 3
+// fighter both holds planets harder and kills more.
 export function powerOf(piece: Piece): number {
     if (piece.type === PieceType.Fighter) {
         return piece.level ?? PIECE_POWER[PieceType.Fighter]

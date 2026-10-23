@@ -1,6 +1,6 @@
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
-import { HexKind } from '../model/board.js'
+import { getHex, HexKind } from '../model/board.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
@@ -188,10 +188,15 @@ export function playRandomGame(
         } else if (game.state.machineState === MachineState.Exploring) {
             const pending = game.state.pendingExploration!
             if (!pending.exploringPlanet) {
+                // Explore when there is something to explore; otherwise survey an explored planet
+                // for its technology, since every destination offered is one the bot lacks.
+                const unexplored = pending.candidatePlanets.filter(
+                    (coords) => !getHex(game.state.board, coords)?.explored
+                )
                 game.run(ChoosePlanet, {
                     type: ActionType.ChoosePlanet,
                     playerId,
-                    coords: pick(pending.candidatePlanets)
+                    coords: pick(unexplored.length > 0 ? unexplored : pending.candidatePlanets)
                 })
             } else {
                 const candidates = pending.candidates ?? []

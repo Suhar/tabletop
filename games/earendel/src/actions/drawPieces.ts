@@ -5,17 +5,20 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
 import { drawCountForPlayer } from '../util/turn.js'
-import { claimRipeTechnologies } from '../util/technologyGrants.js'
+import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
 import type { EarendelGameConfig } from '../definition/config.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
     drawn: Type.Optional(Type.Array(Piece)),
-    // Technologies that became this player's as the turn opened, by having held their planets
-    // outright since their last turn. Reported so history and the board can announce them:
+    // Technologies that became this player's as the turn opened, because their probes still led
+    // on the planets they surveyed last turn. Reported so history and the board can announce them:
     // unlike a placement's rewards, nobody was watching the moment these were earned.
-    technologiesClaimed: Type.Optional(Type.Array(Type.String()))
+    technologiesClaimed: Type.Optional(Type.Array(Type.String())),
+    // Claims that lapsed as the turn opened, because another player's probes drew level or
+    // overtook theirs in between.
+    technologiesLapsed: Type.Optional(Type.Array(Type.String()))
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>
@@ -61,19 +64,22 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             throw Error(`Invalid DrawPieces action: ${invalidReason}`)
         }
 
-        // Claimed BEFORE the ships are drawn, because this is the start-of-turn reckoning:
-        // every planet this player has held outright since their last turn pays out now. It
+        // Claimed BEFORE the ships are drawn, because this is the start-of-turn reckoning: every
+        // planet this player surveyed last turn, and still leads with probes, pays out now. It
         // happens here rather than in StartOfTurnStateHandler.enter for two reasons - enter()
         // cannot change the machine state, and an immediate effect has to be able to send the
         // turn somewhere - and it costs nothing in fidelity, since between a turn beginning
         // and its owner drawing, nobody else can act.
-        // Brought up to date before the claim is judged. Every action that changes the board
-        // refreshes this already, so it is normally a no-op - but it also catches a planet that
-        // has never had a controller recorded, and it means the claim is always decided against a
-        // freshly settled answer rather than a remembered one.
+        // Control is brought up to date here too. Every action that changes the board refreshes
+        // it already, so it is normally a no-op - but it also catches a planet that has never had
+        // a controller recorded. Claims no longer read control; probe influence is read fresh
+        // off the board.
         refreshPlanetControl(state)
 
-        const technologiesClaimed = claimRipeTechnologies(state, this.playerId)
+        const { gained: technologiesClaimed, lapsed: technologiesLapsed } = claimProbeTechnologies(
+            state,
+            this.playerId
+        )
 
         const playerState = state.getPlayerState(this.playerId)
         const wanted = drawCountForPlayer(
@@ -97,7 +103,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         this.revealsInfo = state.heldPieces.length > 0
         this.metadata = {
             drawn: [...state.heldPieces],
-            ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {})
+            ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {}),
+            ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {})
         }
     }
 
