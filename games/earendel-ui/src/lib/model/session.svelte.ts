@@ -1,5 +1,20 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { GameSession } from '@tabletop/frontend-components'
+import {
+    GameSession,
+    undoableStagedSelection,
+    type PresentedTransition
+} from '@tabletop/frontend-components'
+import {
+    EarendelStageOrder,
+    hasManualEarendelSelection,
+    Power,
+    setEarendelSelection,
+    toggleEarendelTarget,
+    undoSelectionOrAction,
+    type EarendelSelection,
+    type EarendelSelectionValues
+} from './stagedSelection.js'
+import { describePiece } from '$lib/utils/describe.js'
 import {
     linkedStationNeighbors,
     stationTubesOf,
@@ -11,6 +26,9 @@ import {
     ChooseTechnology,
     AttackPiece,
     destinationsFrom,
+    feintableShips,
+    feintTargets,
+    wakeableFighters,
     AttackOutcome,
     attackOutcome,
     canUseCooldownEffect,
@@ -50,14 +68,12 @@ import {
     MovePiece,
     openHexesOfTile,
     PlaceTile,
-    tileFootprint,
     UseLogisticsUpgrade,
     TILE_ROTATIONS,
     type Piece,
     PieceSource,
     PieceType,
     PlacePiece,
-    type PlanetColor,
     sameHex,
     type SightLine,
     sightLines,
@@ -65,21 +81,77 @@ import {
 } from '@tabletop/earendel'
 
 export class EarendelGameSession extends GameSession<EarendelGameState, HydratedEarendelGameState> {
-    // A planet whose technology the player has clicked to keep open. Hovering shows one
-    // too; pinning is for reading it without holding the mouse still.
-    pinnedPlanet: AxialCoordinates | undefined = $state(undefined)
+    private selection: EarendelSelection = $state({})
+    private stagedSelection = undoableStagedSelection<EarendelSelectionValues>(
+        EarendelStageOrder,
+        () => this.selection,
+        (selection) => {
+            this.selection = selection
+        }
+    )
+    readonly hasManualSelection = $derived(hasManualEarendelSelection(this.selection))
+    readonly canUndo = $derived(
+        this.isPlayable &&
+            !this.isViewingHistory &&
+            (this.hasManualSelection || Boolean(this.undoableAction))
+    )
 
-    // The piece the player has picked up to move, while resolving a technology. Two clicks:
-    // choose the piece, then where it steps.
-    movingFrom: AxialCoordinates | undefined = $state(undefined)
+    private canChoose = $derived(
+        this.isPlayable && !this.isViewingHistory && this.isMyTurn && !this.busy
+    )
 
-    // A special piece the player has picked up and is about to place instead of their draw.
-    // Held here rather than in game state because until it lands it is only an intention.
-    chosenSpecialId: string | undefined = $state(undefined)
+    // A reading aid rather than a staged choice, so Undo leaves it alone.
+    private pinned: AxialCoordinates | undefined = $state(undefined)
+    pinnedPlanet: AxialCoordinates | undefined = $derived.by(() => {
+        const pinned = this.pinned
+        return pinned && getHex(this.gameState.board, pinned)?.technology ? pinned : undefined
+    })
 
-    // Which of the ships in hand the player has picked up to place. Only a decision when the
-    // hand has more than one, which is what a drafted turn leaves.
-    chosenHeldId: string | undefined = $state(undefined)
+    activePower: Power | undefined = $derived.by(() => {
+        const power = this.selection.power?.value
+        return this.canChoose && power !== undefined && this.isPowerAvailable(power)
+            ? power
+            : undefined
+    })
+
+    private originChoice: AxialCoordinates | undefined = $derived(
+        this.canChoose ? this.selection.origin?.value : undefined
+    )
+
+    previewHex: AxialCoordinates | undefined = $derived(
+        this.canChoose ? this.selection.preview?.value : undefined
+    )
+
+    chosenSpecialId: string | undefined = $derived.by(() => {
+        const choice = this.selection.piece?.value
+        if (!this.canChoose || choice?.source !== 'special' || !this.canPlaySpecial)
+            return undefined
+        return this.myPlayerState?.specialPieces.some((piece) => piece.id === choice.pieceId)
+            ? choice.pieceId
+            : undefined
+    })
+
+    chosenHeldId: string | undefined = $derived.by(() => {
+        const choice = this.selection.piece?.value
+        if (!this.canChoose || choice?.source !== 'held') return undefined
+        return this.gameState.heldPieces.some((piece) => piece.id === choice.pieceId)
+            ? choice.pieceId
+            : undefined
+    })
+
+    // The piece picked up to move while resolving a technology.
+    movingFrom: AxialCoordinates | undefined = $derived.by(() => {
+        const origin = this.originChoice
+        const playerId = this.myPlayer?.id
+        if (!origin || !playerId || this.activePower || !this.isMovingForTechnology) {
+            return undefined
+        }
+        return legalMovesFor(this.gameState.board, playerId).some((move) =>
+            sameHex(move.from, origin)
+        )
+            ? origin
+            : undefined
+    })
 
     myPlayerState: HydratedEarendelPlayerState | undefined = $derived.by(() => {
         const playerId = this.myPlayer?.id
@@ -116,7 +188,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     // Armed for the next shot. Held here rather than in game state because until the target is
     // clicked it is only an intention.
-    railgunArmed: boolean = $state(false)
+    railgunArmed: boolean = $derived(this.activePower === Power.Railgun)
 
     canArmRailgun: boolean = $derived.by(() => {
         const playerId = this.myPlayer?.id
@@ -245,7 +317,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     // What is left to be turned over. Shown beside the discard because the two together say how
     // much of the deck is still unknown - and the deck is reshuffled from the discard when it
     // runs dry, so neither number means much without the other.
-    technologyDeckCount: number = $derived(this.gameState.technologyDeck?.length ?? 0)
+    technologyDeckCount: number = $derived(this.gameState.technologyDeck.remaining)
 
     // The cards turned over on the way to this exploration's choice that are NOT part of it: a
     // probe on a red planet keeps drawing until it has enough reds, and everything that came up
@@ -343,10 +415,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     // The tile waiting to be laid, so the board can show what is about to land.
     pendingTile = $derived(this.gameState.pendingTile?.tile)
 
-    // How far the tile in hand is turned. A tile may be laid any of six ways, and the
-    // rhombus's half-turn symmetry means two of those cover the same hexes with the planet in
-    // opposite corners - so turning is worth doing even when the outline doesn't move.
-    tileRotation: number = $state(0)
+    tileRotation: number = $derived(this.isPlacingTile ? (this.selection.rotation?.value ?? 0) : 0)
 
     private allTilePlacements = $derived(
         this.isPlacingTile ? legalTilePlacements(this.gameState.board) : []
@@ -359,16 +428,10 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             .map((placement) => placement.origin)
     )
 
-    // The hex the cursor is over while laying a tile, so its footprint can be previewed.
-    tilePreviewOrigin: AxialCoordinates | undefined = $state(undefined)
-
-    tilePreviewHexes: AxialCoordinates[] = $derived(
-        this.tilePreviewOrigin ? tileFootprint(this.tilePreviewOrigin, this.tileRotation) : []
-    )
-
     rotateTile(step = 1) {
-        this.tileRotation = (this.tileRotation + step + TILE_ROTATIONS) % TILE_ROTATIONS
-        this.tilePreviewOrigin = undefined
+        if (!this.canChoose) return
+        const rotation = (this.tileRotation + step + TILE_ROTATIONS) % TILE_ROTATIONS
+        this.select('rotation', rotation)
     }
 
     // Set while the ship that follows a laid tile is owed, which may only land on that tile.
@@ -456,30 +519,25 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.AttackSpread)
     )
 
-    // Which targets the player has picked so far. Purely local until they confirm - "any or all"
-    // means this is a subset being assembled, and nothing is sent while it is being changed.
-    spreadTargets: AxialCoordinates[] = $state([])
-    spreading: boolean = $state(false)
+    spreading: boolean = $derived(this.activePower === Power.Spread)
+
+    spreadTargets: AxialCoordinates[] = $derived(
+        this.spreading
+            ? (this.selection.targets?.value ?? []).filter((target) =>
+                  this.attackTargets.some((candidate) => sameHex(candidate, target))
+              )
+            : []
+    )
 
     isSpreadTarget(coords: AxialCoordinates): boolean {
         return this.spreadTargets.some((target) => sameHex(target, coords))
     }
 
-    toggleSpreading() {
-        this.spreading = !this.spreading
-        // Leaving the mode throws the selection away rather than keeping it warm: a half-built
-        // volley that survives being cancelled is a trap waiting for the next click.
-        if (!this.spreading) this.spreadTargets = []
+    private toggleSpreadTarget(coords: AxialCoordinates) {
+        this.selection = toggleEarendelTarget(this.selection, coords)
     }
 
-    toggleSpreadTarget(coords: AxialCoordinates) {
-        this.spreadTargets = this.isSpreadTarget(coords)
-            ? this.spreadTargets.filter((target) => !sameHex(target, coords))
-            : [...this.spreadTargets, coords]
-    }
-
-    // Two is the floor, and it is the engine's rule rather than this component's - a spread of one
-    // is refused outright there.
+    // The engine refuses a spread of one.
     get canConfirmSpread(): boolean {
         return this.spreading && this.spreadTargets.length > 1
     }
@@ -490,8 +548,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const action = this.createPlayerAction(AttackSpread, {
             targets: $state.snapshot(this.spreadTargets)
         })
-        this.spreading = false
-        this.spreadTargets = []
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -565,32 +622,18 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseUpdatedLogistics)
     )
 
-    // Local intent, like the Railgun's arming: pressing the button asks WHICH fighter, and the
-    // board answers. Nothing is sent until one is clicked.
-    choosingUpdatedLogistics: boolean = $state(false)
+    choosingUpdatedLogistics: boolean = $derived(this.activePower === Power.Logistics)
 
     wakeableFighters: AxialCoordinates[] = $derived.by(() => {
         if (!this.canUseUpdatedLogistics || !this.myPlayer) return []
-        const playerId = this.myPlayer.id
-
-        return Object.values(this.gameState.board.hexes)
-            .filter((hex) => hex.piece?.playerId === playerId)
-            .filter((hex) => hex.piece?.type === PieceType.Fighter)
-            .map((hex) => hex.coords)
-            .filter(
-                (coords) => attackableTargets(this.gameState.board, coords, playerId).length > 0
-            )
+        return wakeableFighters(this.gameState.board, this.myPlayer.id)
     })
-
-    toggleUpdatedLogistics() {
-        this.choosingUpdatedLogistics = !this.choosingUpdatedLogistics
-    }
 
     async useUpdatedLogistics(coords: AxialCoordinates) {
         if (!this.canUseUpdatedLogistics) return
 
         const action = this.createPlayerAction(UseUpdatedLogistics, { coords })
-        this.choosingUpdatedLogistics = false
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -601,65 +644,35 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseTacticalFeint)
     )
 
-    choosingFeint: boolean = $state(false)
-    // The player's ship picked as the near end of the swap, if they have picked one yet.
-    feintFrom: AxialCoordinates | undefined = $state(undefined)
+    choosingFeint: boolean = $derived(this.activePower === Power.Feint)
 
-    // The player's ships that have an enemy beside them. A ship with no neighbour to trade with
-    // is left out rather than offered and then refused - the same reason a fighter with nothing
-    // in reach is left out of wakeableFighters.
     feintableShips: AxialCoordinates[] = $derived.by(() => {
         if (!this.canUseTacticalFeint || !this.myPlayer) return []
-        const playerId = this.myPlayer.id
-
-        return Object.values(this.gameState.board.hexes)
-            .filter((hex) => hex.piece?.playerId === playerId)
-            .map((hex) => hex.coords)
-            .filter((coords) => this.feintTargetsFrom(coords).length > 0)
+        return feintableShips(this.gameState.board, this.myPlayer.id)
     })
 
-    // The enemy ships one of the player's own could trade places with.
+    feintFrom: AxialCoordinates | undefined = $derived(
+        this.choosingFeint ? this.validOrigin(this.feintableShips) : undefined
+    )
+
     feintTargetsFrom(coords: AxialCoordinates): AxialCoordinates[] {
         const playerId = this.myPlayer?.id
         if (!playerId) return []
-
-        return neighborsOf(coords).filter((neighbor) => {
-            const piece = getHex(this.gameState.board, neighbor)?.piece
-            return piece !== undefined && piece.playerId !== playerId
-        })
+        return feintTargets(this.gameState.board, coords, playerId)
     }
 
-    // What the board should be offering right now: the near end until one is chosen, then the far
-    // end. Split this way so the highlights answer one question at a time.
     feintHexes: AxialCoordinates[] = $derived.by(() => {
         if (!this.choosingFeint) return []
         return this.feintFrom ? this.feintTargetsFrom(this.feintFrom) : this.feintableShips
     })
 
-    toggleFeint() {
-        this.choosingFeint = !this.choosingFeint
-        // Backing out drops the half-made swap: a remembered near end that survives a cancel is
-        // waiting to be paired with the next stray click.
-        if (!this.choosingFeint) this.feintFrom = undefined
-    }
-
     private async onFeintClick(coords: AxialCoordinates) {
-        // Clicking the chosen ship again puts it back down, so a misclick costs nothing.
-        if (this.feintFrom && sameHex(this.feintFrom, coords)) {
-            this.feintFrom = undefined
+        const from = this.feintFrom
+        if (from && this.feintTargetsFrom(from).some((target) => sameHex(target, coords))) {
+            await this.useTacticalFeint(from, coords)
             return
         }
-        if (this.feintFrom) {
-            if (this.feintTargetsFrom(this.feintFrom).some((target) => sameHex(target, coords))) {
-                await this.useTacticalFeint(this.feintFrom, coords)
-            }
-            return
-        }
-        // Picking a different one of your own ships instead simply moves the choice, rather than
-        // being read as a target and rejected.
-        if (this.feintableShips.some((ship) => sameHex(ship, coords))) {
-            this.feintFrom = coords
-        }
+        this.toggleOrigin(coords, this.feintableShips)
     }
 
     // Trade Route Wormhole: two clicks like the feint, and for the same reason - a journey has
@@ -668,8 +681,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseTradeRouteWormhole)
     )
 
-    choosingWormhole: boolean = $state(false)
-    wormholeFrom: AxialCoordinates | undefined = $state(undefined)
+    choosingWormhole: boolean = $derived(this.activePower === Power.Wormhole)
 
     // Both ends come straight from the engine's own helpers rather than being worked out again
     // here: which hexes are on a route is exactly the rule, and two answers to it would drift.
@@ -686,37 +698,22 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     // The near end until one is chosen, then the far end - so the highlights ask one question at
     // a time.
+    wormholeFrom: AxialCoordinates | undefined = $derived(
+        this.choosingWormhole ? this.validOrigin(this.travellableShips) : undefined
+    )
+
     wormholeHexes: AxialCoordinates[] = $derived.by(() => {
         if (!this.choosingWormhole) return []
         return this.wormholeFrom ? this.wormholeExits(this.wormholeFrom) : this.travellableShips
     })
 
-    toggleWormhole() {
-        this.choosingWormhole = !this.choosingWormhole
-        if (!this.choosingWormhole) this.wormholeFrom = undefined
-    }
-
     private async onWormholeClick(coords: AxialCoordinates) {
-        // Clicking the chosen ship again puts it back down, so a misclick costs nothing.
-        if (this.wormholeFrom && sameHex(this.wormholeFrom, coords)) {
-            this.wormholeFrom = undefined
+        const from = this.wormholeFrom
+        if (from && this.wormholeExits(from).some((exit) => sameHex(exit, coords))) {
+            await this.useTradeRouteWormhole(from, coords)
             return
         }
-        if (this.wormholeFrom) {
-            if (this.wormholeExits(this.wormholeFrom).some((exit) => sameHex(exit, coords))) {
-                await this.useTradeRouteWormhole(this.wormholeFrom, coords)
-                return
-            }
-            // Clicking a different traveller instead moves the choice, rather than being read as
-            // a destination and rejected.
-            if (this.travellableShips.some((ship) => sameHex(ship, coords))) {
-                this.wormholeFrom = coords
-            }
-            return
-        }
-        if (this.travellableShips.some((ship) => sameHex(ship, coords))) {
-            this.wormholeFrom = coords
-        }
+        this.toggleOrigin(coords, this.travellableShips)
     }
 
     // Immediate Download: two clicks again, but both ends are PLANETS rather than ships - the
@@ -726,8 +723,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseImmediateDownload)
     )
 
-    choosingDownload: boolean = $state(false)
-    downloadFrom: AxialCoordinates | undefined = $state(undefined)
+    choosingDownload: boolean = $derived(this.activePower === Power.Download)
 
     // Straight from the engine's helpers: which planets hold a Download of theirs, and what each
     // can see. Line of sight is the rule, and a second implementation of it in the UI would be a
@@ -745,42 +741,29 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return downloadTargetsFrom(this.gameState, playerId, anchor)
     }
 
+    downloadFrom: AxialCoordinates | undefined = $derived(
+        this.choosingDownload ? this.validOrigin(this.downloadAnchors) : undefined
+    )
+
     downloadHexes: AxialCoordinates[] = $derived.by(() => {
         if (!this.choosingDownload) return []
         return this.downloadFrom ? this.downloadTargets(this.downloadFrom) : this.downloadAnchors
     })
 
-    toggleDownload() {
-        this.choosingDownload = !this.choosingDownload
-        if (!this.choosingDownload) this.downloadFrom = undefined
-    }
-
     private async onDownloadClick(coords: AxialCoordinates) {
-        if (this.downloadFrom && sameHex(this.downloadFrom, coords)) {
-            this.downloadFrom = undefined
+        const from = this.downloadFrom
+        if (from && this.downloadTargets(from).some((target) => sameHex(target, coords))) {
+            await this.useImmediateDownload(from, coords)
             return
         }
-        if (this.downloadFrom) {
-            if (this.downloadTargets(this.downloadFrom).some((target) => sameHex(target, coords))) {
-                await this.useImmediateDownload(this.downloadFrom, coords)
-                return
-            }
-            if (this.downloadAnchors.some((anchor) => sameHex(anchor, coords))) {
-                this.downloadFrom = coords
-            }
-            return
-        }
-        if (this.downloadAnchors.some((anchor) => sameHex(anchor, coords))) {
-            this.downloadFrom = coords
-        }
+        this.toggleOrigin(coords, this.downloadAnchors)
     }
 
     async useImmediateDownload(from: AxialCoordinates, to: AxialCoordinates) {
         if (!this.canUseImmediateDownload) return
 
         const action = this.createPlayerAction(UseImmediateDownload, { from, to })
-        this.choosingDownload = false
-        this.downloadFrom = undefined
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -788,8 +771,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (!this.canUseTradeRouteWormhole) return
 
         const action = this.createPlayerAction(UseTradeRouteWormhole, { from, to })
-        this.choosingWormhole = false
-        this.wormholeFrom = undefined
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -797,8 +779,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (!this.canUseTacticalFeint) return
 
         const action = this.createPlayerAction(UseTacticalFeint, { from, to })
-        this.choosingFeint = false
-        this.feintFrom = undefined
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -839,7 +820,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 return 'Immediate Download — click a planet that one can see to take its technology.'
             }
             return this.downloadAnchors.length === 0
-                ? 'None of your Download planets can see a technology you could take - press Immediate Download again to back out.'
+                ? 'None of your Download planets can see a technology you could take.'
                 : 'Immediate Download — click the planet holding your Download.'
         }
         if (this.choosingWormhole) {
@@ -847,7 +828,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 return 'Trade Route Wormhole — click where it comes out. Click your own ship again to change it.'
             }
             return this.travellableShips.length === 0
-                ? 'None of your ships beside a planet has a route to travel - press Trade Route Wormhole again to back out.'
+                ? 'None of your ships beside a planet has a route to travel.'
                 : 'Trade Route Wormhole — click one of your highlighted ships to send it.'
         }
         if (this.choosingFeint) {
@@ -855,12 +836,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 return 'Tactical Feint — click the enemy ship to trade places with. Click your own ship again to change it.'
             }
             return this.feintableShips.length === 0
-                ? 'None of your ships has an enemy beside it - press Tactical Feint again to back out.'
+                ? 'None of your ships has an enemy beside it.'
                 : 'Tactical Feint — click one of your highlighted ships to swap it with a neighbour.'
         }
         if (this.choosingUpdatedLogistics) {
             return this.wakeableFighters.length === 0
-                ? 'None of your fighters has anything in reach - press Updated Logistics again to back out.'
+                ? 'None of your fighters has anything in reach.'
                 : 'Updated Logistics — click one of your highlighted fighters to attack with it.'
         }
         if (this.isPlacingTile) {
@@ -916,8 +897,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             ...(pieceId ? { pieceId } : {})
         })
 
-        this.chosenSpecialId = undefined
-        this.chosenHeldId = undefined
+        this.resetAction()
         await this.applyAction(action)
     }
 
@@ -939,12 +919,21 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // Picking up one of the ships in hand. The pinned ship after a laid tile cannot be swapped
-    // away from, so there is nothing to choose then.
+    // The ship owed after a laid tile cannot be swapped away from.
     chooseHeld(pieceId: string) {
-        if (this.pinnedHeldId) return
-        this.chosenSpecialId = undefined
-        this.chosenHeldId = this.chosenHeldId === pieceId ? undefined : pieceId
+        if (this.pinnedHeldId || !this.canChoose) return
+        this.select(
+            'piece',
+            this.chosenHeldId === pieceId ? undefined : { source: 'held', pieceId }
+        )
+    }
+
+    chooseSpecial(pieceId: string) {
+        if (!this.canChoose) return
+        this.select(
+            'piece',
+            this.chosenSpecialId === pieceId ? undefined : { source: 'special', pieceId }
+        )
     }
 
     // Whether this held ship has anywhere legal to go, so the panel can grey out one that is
@@ -977,15 +966,18 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    toggleRailgun() {
-        this.railgunArmed = !this.railgunArmed
+    choosePower(power: Power) {
+        if (!this.canChoose || !this.isPowerAvailable(power) || this.activePower === power) return
+        this.select('power', power)
+
+        const origins = this.originCandidates(power)
+        if (origins.length === 1) this.select('origin', origins[0], 'auto')
     }
 
     async attack(coords: AxialCoordinates) {
-        // Armed means "use it if it helps", not "use it regardless": firing on a target that dies
-        // to an ordinary shot spends nothing, so the flag is dropped rather than sent and refused.
+        // Armed means "use it if it helps": the engine refuses a Railgun that changes nothing.
         const useRailgun = this.railgunArmed && this.railgunWouldMatter(coords)
-        this.railgunArmed = false
+        this.resetAction()
         await this.applyAction(
             this.createPlayerAction(AttackPiece, {
                 type: ActionType.AttackPiece,
@@ -996,7 +988,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     async holdFire() {
-        this.railgunArmed = false
+        this.resetAction()
         await this.applyAction(
             this.createPlayerAction(AttackPiece, { type: ActionType.AttackPiece })
         )
@@ -1004,7 +996,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     // Holding position rather than stepping. Always allowed: a forced move could only hurt.
     async holdPosition() {
-        this.movingFrom = undefined
+        this.resetAction()
         await this.applyAction(this.createPlayerAction(MovePiece, { type: ActionType.MovePiece }))
     }
 
@@ -1012,7 +1004,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const from = this.movingFrom
         if (!from) return
 
-        this.movingFrom = undefined
+        this.resetAction()
         await this.applyAction(
             this.createPlayerAction(MovePiece, { type: ActionType.MovePiece, from, to })
         )
@@ -1020,8 +1012,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     async placeTile(coords: AxialCoordinates) {
         const rotation = this.tileRotation
-        this.tilePreviewOrigin = undefined
-        this.tileRotation = 0
+        this.resetAction()
         await this.applyAction(
             this.createPlayerAction(PlaceTile, {
                 type: ActionType.PlaceTile,
@@ -1031,64 +1022,57 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    async onBoardClick(coords: AxialCoordinates) {
+    // A touch has no hover to preview with, so on touch the first tap on a placement previews
+    // it and a second tap on the same hex commits.
+    async onTileOriginClick(origin: AxialCoordinates, touch = false) {
+        if (this.busy || !this.tileOrigins.some((candidate) => sameHex(candidate, origin))) return
+        if (touch && !this.isPreviewing(origin)) {
+            this.select('preview', origin)
+            return
+        }
+        await this.placeTile(origin)
+    }
+
+    async onBoardClick(coords: AxialCoordinates, touch = false) {
         if (this.busy) return
 
-        // Answered before anything else, for the same reason it takes over the highlights: while
-        // the player is picking a ship, a click means that and nothing else.
-        if (this.choosingFeint) {
-            await this.onFeintClick(coords)
-            return
-        }
-        if (this.choosingWormhole) {
-            await this.onWormholeClick(coords)
-            return
-        }
-        if (this.choosingDownload) {
-            await this.onDownloadClick(coords)
-            return
-        }
-        if (this.choosingUpdatedLogistics) {
-            if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {
-                await this.useUpdatedLogistics(coords)
-            }
-            return
-        }
-
-        if (this.spreading) {
-            // While a volley is being assembled a click adds or removes a target; the shot is
-            // only sent by the confirm button.
-            if (this.attackTargets.some((target) => sameHex(target, coords))) {
-                this.toggleSpreadTarget(coords)
-            }
-            return
+        // A chosen power owns the board until it is used or undone.
+        switch (this.activePower) {
+            case Power.Feint:
+                await this.onFeintClick(coords)
+                return
+            case Power.Wormhole:
+                await this.onWormholeClick(coords)
+                return
+            case Power.Download:
+                await this.onDownloadClick(coords)
+                return
+            case Power.Logistics:
+                if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {
+                    await this.useUpdatedLogistics(coords)
+                }
+                return
+            case Power.Spread:
+                if (this.attackTargets.some((target) => sameHex(target, coords))) {
+                    this.toggleSpreadTarget(coords)
+                }
+                return
         }
 
         if (this.isPlacingTile) {
-            if (this.tileOrigins.some((origin) => sameHex(origin, coords))) {
-                await this.placeTile(coords)
-            }
+            await this.onTileOriginClick(coords, touch)
             return
         }
 
         if (this.isMovingForTechnology) {
-            // Clicking the piece already picked up puts it back down, so a misclick isn't a
-            // committed move.
-            if (this.movingFrom && sameHex(this.movingFrom, coords)) {
-                this.movingFrom = undefined
-                return
-            }
-            if (this.movingFrom && this.movableHexes.some((hex) => sameHex(hex, coords))) {
+            const from = this.movingFrom
+            if (from && this.movableHexes.some((hex) => sameHex(hex, coords))) {
                 await this.movePiece(coords)
                 return
             }
-            if (
-                legalMovesFor(this.gameState.board, this.myPlayer?.id ?? '').some((move) =>
-                    sameHex(move.from, coords)
-                )
-            ) {
-                this.movingFrom = coords
-            }
+            const playerId = this.myPlayer?.id ?? ''
+            const origins = legalMovesFor(this.gameState.board, playerId).map((move) => move.from)
+            this.toggleOrigin(coords, origins)
             return
         }
 
@@ -1101,47 +1085,94 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return
         }
 
-        // A planet is never somewhere a ship can go, so a click on one that holds a technology
-        // is only ever a request to read it.
+        // A planet is never somewhere a ship can go, so a click on one is a request to read it.
         if (getHex(this.gameState.board, coords)?.technology) {
             this.togglePinnedPlanet(coords)
             return
         }
-        // isHighlighted rather than isOpenHex, so the restriction to a newly laid tile is
-        // honoured by the same list the board drew from.
         if (
             this.isPlacing &&
             isOpenHex(this.gameState.board, coords) &&
             this.isHighlighted(coords)
         ) {
+            if (touch && !this.isPreviewing(coords)) {
+                this.select('preview', coords)
+                return
+            }
             await this.place(coords)
         }
     }
 
     togglePinnedPlanet(coords: AxialCoordinates) {
-        this.pinnedPlanet =
-            this.pinnedPlanet && sameHex(this.pinnedPlanet, coords) ? undefined : coords
+        this.pinned = this.pinnedPlanet && sameHex(this.pinnedPlanet, coords) ? undefined : coords
     }
 
-    // Undo the last action of the player's own that nothing has been revealed since. The
-    // platform works out which action that is; a game only has to say which of its actions
-    // reveal something (see revealsInfo on ChoosePlanet and PlaceTile).
-    async undoLastAction() {
-        this.movingFrom = undefined
-        this.chosenSpecialId = undefined
-        this.chosenHeldId = undefined
-        this.tilePreviewOrigin = undefined
-        this.railgunArmed = false
-        await this.undo()
+    override beforeNewState(_transition: PresentedTransition) {
+        this.resetAction()
     }
 
-    toggleSpecial(pieceId: string) {
-        this.chosenSpecialId = this.chosenSpecialId === pieceId ? undefined : pieceId
+    override async undo() {
+        if (!this.canUndo || this.busy) return
+        await undoSelectionOrAction(this.stagedSelection, () => super.undo())
     }
-}
 
-export function describePiece(piece: Piece): string {
-    if (piece.hub) return 'Station Hub'
-    const name = piece.type === PieceType.Probe ? 'probe' : piece.type
-    return piece.level ? `level ${piece.level} ${name}` : name
+    resetAction() {
+        this.stagedSelection.clear()
+    }
+
+    private select<TStage extends keyof EarendelSelectionValues>(
+        stage: TStage,
+        value: EarendelSelectionValues[TStage] | undefined,
+        source: 'manual' | 'auto' = 'manual'
+    ) {
+        this.selection = setEarendelSelection(this.selection, stage, value, source)
+    }
+
+    private isPreviewing(coords: AxialCoordinates): boolean {
+        return this.previewHex !== undefined && sameHex(this.previewHex, coords)
+    }
+
+    private validOrigin(candidates: AxialCoordinates[]): AxialCoordinates | undefined {
+        const origin = this.originChoice
+        return origin && candidates.some((candidate) => sameHex(candidate, origin))
+            ? origin
+            : undefined
+    }
+
+    // Choosing the picked origin again puts it back down; choosing another moves the choice.
+    private toggleOrigin(coords: AxialCoordinates, candidates: AxialCoordinates[]) {
+        if (!candidates.some((candidate) => sameHex(candidate, coords))) return
+        const origin = this.originChoice
+        this.select('origin', origin && sameHex(origin, coords) ? undefined : coords)
+    }
+
+    private originCandidates(power: Power): AxialCoordinates[] {
+        switch (power) {
+            case Power.Feint:
+                return this.feintableShips
+            case Power.Wormhole:
+                return this.travellableShips
+            case Power.Download:
+                return this.downloadAnchors
+            default:
+                return []
+        }
+    }
+
+    private isPowerAvailable(power: Power): boolean {
+        switch (power) {
+            case Power.Feint:
+                return this.canUseTacticalFeint
+            case Power.Wormhole:
+                return this.canUseTradeRouteWormhole
+            case Power.Download:
+                return this.canUseImmediateDownload
+            case Power.Logistics:
+                return this.canUseUpdatedLogistics
+            case Power.Spread:
+                return this.canSpread
+            case Power.Railgun:
+                return this.canArmRailgun
+        }
+    }
 }

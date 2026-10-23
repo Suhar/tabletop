@@ -1,83 +1,59 @@
-# UI Interaction Visual Contract
+# Earendel UI interaction visual contract
 
-This file is required for every new game UI, even if the game does not yet have complex interaction visuals.
+## Visual intents
 
-Purpose:
-- separate visual intent from implementation details
-- keep layer responsibilities narrow
-- prevent one highlight/dimming change from breaking another interaction
+- **Ship placement.** While the acting player holds a ship, the hex under the pointer shows a ghost of the ship that would land (a station docked to the stations it would link to), but only on a hex that accepts it. A fighter ghost also draws dashed, still missile arcs to what it could attack from there; a probe ghost draws pulsing reach pointers to the planets it could survey. Legal hexes get only a faint outline, since the ghost already answers where. On touch the first tap on a legal hex stages that hex as the preview (ghost, arcs and pointers shown there) and a second tap on the same hex places; any other legal hex moves the preview.
+- **Choosing the ship.** With more than one ship in hand, a ship button in the action panel picks which one is placed; choosing it again puts it down. A special piece is chosen the same way and replaces the draw. A ship owed after a laid tile cannot be swapped.
+- **Tile laying.** Every legal origin for the tile at its current rotation shows a dashed outline of the four-hex footprint, its origin hex brighter. Hovering an origin (on touch, the first tap) fills the footprint with the tile's planet colour at its planet hex; clicking (on touch, the second tap) lays it. Rotate buttons turn the tile.
+- **Powers with two ends.** Tactical Feint, Trade Route Wormhole and Immediate Download are chosen from the action panel. The board then pulses only the near ends (own ships with an enemy beside them, own ships with a route, own Download planets that can see a technology), then, once one is chosen, only the far ends. The chosen near end gets a fill in the power's colour (violet, teal, emerald). Choosing the chosen end again puts it down; choosing another near end moves the choice. With a single near end it is chosen automatically.
+- **One-end powers.** Updated Logistics pulses the fighters that have something in reach; a click wakes one. Full Torpedo Spread lets the player toggle targets among the pending shot's targets, each picked one filled orange, and fires from the panel once two are picked. Arming the Railgun rings in red the targets it would change.
+- **Technology move.** While a technology move is owed the board pulses the movable pieces, then, once one is picked up (yellow fill), its destinations.
+- **Pending decisions.** Survey candidates get pulsing reach pointers from the probe; a pending shot flies looping missiles at each target.
+- **Board reading aids.** Hovering a hex holding a piece shows control dots from that piece's owner into every planet beside it that the owner controls. Hovering a planet shows dashed lines to every same-coloured planet, a spent pair dim and struck through, and the planet's technology in a popup. Clicking a planet pins the popup. On touch a tap on a hex the session does not act on inspects it the same way until the board changes.
+- **Turn header and action area.** The header reads Your turn, `[Player]'s turn`, History or End of game on the left, with the single Undo at its right end. In History View the action area shows the History Step that produced the displayed state instead of the prompt and controls.
 
-If this game has no interactive visual states yet, leave the sections below in place and note `Not yet applicable` where appropriate.
+## Coexistence and precedence
 
-## 1. Visual Intents
+- Precedence lives in `highlightedHexes`: a chosen power (Feint, then Wormhole, then Download, then Updated Logistics) wins over a tile to lay, which wins over the ship owed on a new tile, a technology move, survey candidates, attack targets and finally ordinary placement. Board clicks follow the same order in `onBoardClick`. Only one power can be chosen at a time; choosing another replaces it.
+- Choosing a ship to place drops a chosen power, because the ship stage comes first in the staged selection; choosing a power keeps the chosen ship.
+- Spread and Railgun exist only while a shot is pending, which excludes placement, tile laying and the other powers.
+- Hover wins over the touch preview for the placement ghost; the inspected hex never drives the ghost, only the reading aids.
+- During any state transition (`busy`) and in History View no staged choice applies, so only state-derived marks are drawn.
 
-List each interaction mode separately.
+## Shared visual state
 
-| Intent | Trigger | What should be emphasized | What should be dimmed | What must remain unaffected |
-| --- | --- | --- | --- | --- |
-| example_intent | example trigger | example emphasis | example dimming | example unaffected elements |
-| control_lines_on_hover | Hovering a hex that holds a piece | Control dots from that piece's owner into every planet beside the hovered piece, including the friendly pieces sharing those planets | Nothing; every other control line is hidden, not dimmed | Hourglass claim markers, placement previews, and the planet-pair lines from a hovered hex |
+All staged choices live in one staged selection (`model/stagedSelection.ts`, stage order piece, power, rotation, origin, targets, preview) on the shared helpers. Each is manual except an origin chosen automatically when a power has a single near end. Undo pops the highest manual stage; only when none is left does it undo the last action. There is no Back or cancel control.
 
-## 2. Visual Primitives
+| State                                                                | Meaning                                     | Producer                                        | Consumers                                                    | Lifetime                                                                         | Validity                                                                                  |
+| -------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `piece` (`chosenHeldId`, `chosenSpecialId`)                          | Ship or special piece to place              | Action panel ship buttons                       | Board ghost and previews, prompt, placement                  | Cleared by `resetAction()` before every published state, by a commit and by Undo | Ignored unless placing, the piece is still in hand, and (special) a special may be played |
+| `power` (`activePower`)                                              | Which power owns the board                  | Action panel power buttons                      | `highlightedHexes`, board clicks, panel button style, prompt | As above                                                                         | Ignored unless the power is currently available                                           |
+| `rotation` (`tileRotation`)                                          | How the tile in hand is turned              | Rotate buttons                                  | Tile ghosts, prompt, tile placement                          | As above                                                                         | 0 unless a tile is being laid                                                             |
+| `origin` (`feintFrom`, `wormholeFrom`, `downloadFrom`, `movingFrom`) | Chosen near end                             | Board click, or automatic for a single near end | Board fill, highlights, prompt                               | As above                                                                         | Ignored unless it is still among the current near ends of the active flow                 |
+| `targets` (`spreadTargets`)                                          | Spread volley being assembled               | Board clicks while spreading                    | Board fill, Fire button                                      | As above                                                                         | Filtered to the pending shot's current targets                                            |
+| `preview` (`previewHex`)                                             | Touch preview of a placement or tile origin | First tap                                       | Board ghost, tile footprint, second-tap commit               | As above                                                                         | Ignored while `busy` or in History View                                                   |
+| `pinnedPlanet`                                                       | Planet whose technology popup stays open    | Planet click                                    | Board popup                                                  | Kept until toggled; not a staged choice, so Undo leaves it                       | Ignored once the planet holds no technology                                               |
+| Board `hovered`, `inspected`                                         | Reading-aid focus                           | Pointer enter (mouse or pen), touch tap         | Board overlays only                                          | `inspected` resets whenever the visible state changes                            | Local to the board                                                                        |
 
-List the visual building blocks used by the UI.
+Lifetime and validity are separate: `beforeNewState` resets the whole selection for every transition kind, since a published state always changes what the choices mean, and the derived accessors above decide whether a value that still exists applies.
 
-- board spotlight mask
-- invalid-area dimming
-- area overlay fill
-- dual outline
-- piece emphasis
-- card exemption cutout
-- disabled/muted state
+## Render ownership
 
-For each primitive, document:
-- owner layer
-- allowed inputs
-- forbidden responsibilities
+- **Pieces.** Pieces render in one layer above every hex with no hit target, so the hex underneath takes clicks and a piece can slide across the board. Each piece element is keyed by piece and hex, so a moved piece mounts afresh at its destination on the state swap.
+- **Piece moves.** `PieceMoveAnimator` slides every piece that changes hexes (technology move, Wormhole, Tactical Feint and their undo) on `actionTimeline` (450ms with an action, 150ms without).
+- **Girders.** `TrussGrowthAnimator` fades girders the transition breaks and grows the ones it makes from the end that changed, drawing a transient station only for a station new to the board. With an action the growth runs on `finalTimeline`, after pieces finish moving (500ms); without one everything runs at once (150ms).
+- **Blasts and score floats.** `BlastAnimator` (actionTimeline, up to 780ms) and `ScoreFloatAnimator` (finalTimeline, 800ms) draw action-scoped transients only when an action is present: live play, other players' actions and full-action replay. Undo and state-only history show the result directly. Their transients clear in `afterAnimations`.
+- **Continuous cues** (claim hourglass, control dots, planet motion, pulses, missiles, reach pointers, beams, hub ring) are local CSS on state-derived marks and explain no transition.
 
-## 3. Layer Responsibilities
+## Verification scenarios
 
-| Layer | Owns | Allowed Inputs | Must Not Own |
-| --- | --- | --- | --- |
-| `ExampleLayer` | example responsibility | example inputs | example forbidden scope |
-
-## 4. Shared State Contracts
-
-For each shared visual state:
-- semantic meaning
-- producer
-- consumers
-- permitted uses
-- forbidden uses
-
-## 5. Forbidden Couplings
-
-- Do not reuse board spotlight state to drive piece emphasis.
-- Do not reuse piece emphasis state to drive board dimming.
-- Do not let one layer infer another layer's visual responsibilities.
-- Do not couple mask exemption and visible overlay styling unless explicitly intended.
-
-## 6. Interaction Matrix
-
-| Intent A | Intent B | Can coexist? | Winner / combination rule |
-| --- | --- | --- | --- |
-| example_a | example_b | yes/no | describe precedence |
-
-## 7. Regression Checklist
-
-- verify existing highlight interactions still work
-- verify existing dimming interactions still work
-- verify unaffected layers remain unaffected
-
-## 8. Change Rules
-
-When touching interactive visuals:
-1. identify the intent being changed
-2. identify the primitives involved
-3. verify whether shared state contracts are being widened
-4. update this document if a new interaction or coupling is introduced
-
-## 9. Status
-
-- Interactive visual system status: `Not yet applicable` / `Initial` / `Established`
-- Last updated for interaction change:
+| Scenario                                                                                     | Expected                                                                                                                             | How                                                                        |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Choose Tactical Feint with two candidate ships, pick one, press Undo twice, press Undo again | First Undo drops the near end, second drops the power, neither undoes an action; the third undoes the last action if one is undoable | Manual (harness); wrapper behaviour automated in `stagedSelection.spec.ts` |
+| Choose a power with a single candidate ship                                                  | Near end chosen automatically; one Undo drops the power                                                                              | Manual (harness); auto-skip automated                                      |
+| Perform a Tactical Feint that swaps two pieces                                               | Both pieces slide past each other, no duplicate station; on Undo they slide back within 150ms                                        | Manual (harness, DOM poll of transforms)                                   |
+| Place a station that links to a friendly station                                             | Girder grows from the new station after placement; points rise from the hex                                                          | Manual (harness)                                                           |
+| Attack a piece                                                                               | Blast plays over the still-drawn target, then it is removed or demoted                                                               | Manual (harness)                                                           |
+| Step back into History View after a placement                                                | Header reads History, action area describes that step, no Undo, no staged choice shown                                               | Manual (harness); step selection automated in `historyStep.spec.ts`        |
+| Touch: tap a legal hex, Undo, tap twice                                                      | First tap shows the ghost without placing; Undo removes it; two taps place                                                           | Manual (harness, touch emulation at 390px)                                 |
+| Hover a piece, then a planet                                                                 | Control dots for the piece's owner; pair lines and the technology popup for the planet                                               | Manual (harness)                                                           |

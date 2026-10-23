@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Player } from '@tabletop/common'
+    import { assertExists, type Player } from '@tabletop/common'
     import type { HydratedEarendelPlayerState, EarendelPlayerState } from '@tabletop/earendel'
     import PlayerState from '$lib/components/PlayerState.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -19,9 +19,11 @@
         const playersAndStatesById = new Map(
             playersAndStates.map((item) => [item.playerState.playerId, item])
         )
-        const turnOrderSorted = gameSession.gameState.turnManager.turnOrder.map(
-            (playerId) => playersAndStatesById.get(playerId)!
-        ) as PlayerAndState[]
+        const turnOrderSorted = gameSession.gameState.turnManager.turnOrder.map((playerId) => {
+            const entry = playersAndStatesById.get(playerId)
+            assertExists(entry, `No player state for ${playerId}`)
+            return entry
+        })
 
         // if not hotseat, rotate until user player is at top
         if (gameSession.myPlayer && !gameSession.primaryGame.hotseat) {
@@ -35,8 +37,10 @@
 
         return turnOrderSorted
     })
-    function getPlayerForState(playerState: EarendelPlayerState) {
-        return gameSession.game.players.find((player) => player.id === playerState.playerId)
+    function getPlayerForState(playerState: EarendelPlayerState): Player {
+        const player = gameSession.game.players.find((player) => player.id === playerState.playerId)
+        assertExists(player, `No player for state ${playerState.playerId}`)
+        return player
     }
 </script>
 

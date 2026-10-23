@@ -13,14 +13,18 @@
     import Starfield from '$lib/components/Starfield.svelte'
     import TechnologyPiles from '$lib/components/TechnologyPiles.svelte'
 
-    import type { EarendelGameSession } from '$lib/model/session.svelte'
+    import Header from '$lib/components/Header.svelte'
+    import HistoryDescription from '$lib/components/HistoryDescription.svelte'
+    import { assert } from '@tabletop/common'
+    import { EarendelGameSession } from '$lib/model/session.svelte'
     import type { HydratedEarendelGameState, EarendelGameState } from '@tabletop/earendel'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
 
     let {
         gameSession
     }: { gameSession: GameSession<EarendelGameState, HydratedEarendelGameState> } = $props()
-    setGameSession(gameSession as EarendelGameSession)
+    assert(gameSession instanceof EarendelGameSession, 'Earendel needs its own game session')
+    setGameSession(gameSession)
 
     // One sky per game, from the game's own seed, so it is the same for everyone at the table and
     // survives a reload - and so two games look like two different corners of space. Falls back
@@ -46,7 +50,7 @@
                     <PlayersPanel />
                 {/snippet}
                 {#snippet history()}
-                   <History />
+                    <History />
                 {/snippet}
             </DefaultSideContent>
             <TechnologyPiles />
@@ -54,12 +58,17 @@
         {#snippet gameContent()}
             <!--  Top part is not allowed to shrink -->
             <div class="shrink-0">
-                <InformationPanel />
+                <Header />
+                {#if gameSession.isViewingHistory}
+                    <HistoryDescription />
+                {:else}
+                    <InformationPanel />
+                {/if}
             </div>
             <!--  Bottom part fills the remaining space, but hides overflow to keep it's height fixed.
               This allows the wrapper to scale to its bounds regardless of its content size-->
             <div class="grow-0 overflow-hidden" style="flex:1;">
-                <ScalingWrapper justify="center" controls="bottom-left">
+                <ScalingWrapper justify="center" controls="bottom-left" expandable>
                     <Board />
                 </ScalingWrapper>
             </div>

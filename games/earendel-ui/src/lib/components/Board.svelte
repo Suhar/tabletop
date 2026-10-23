@@ -1,16 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import type { AxialCoordinates, GameAction } from '@tabletop/common'
+    import type { AxialCoordinates } from '@tabletop/common'
     import {
         HexKind,
         type Hex,
         PieceLevel,
         PieceType,
         PlanetColor,
-        type AttackPiece,
-        isAttackPiece,
-        isPlacePiece,
-        type PlacePiece,
+        hexKey,
         powerOf,
         sameHex,
         technologyAbility,
@@ -24,10 +21,12 @@
     import TrussGirder from './TrussGirder.svelte'
     import FighterShape from './FighterShape.svelte'
     import ProbeShape from './ProbeShape.svelte'
-    import {
-        animateTrussClip,
-        TrussGrowthAnimator
-    } from '$lib/animators/trussGrowthAnimator.svelte.js'
+    import { TrussGrowthAnimator } from '$lib/animators/trussGrowthAnimator.svelte.js'
+    import { animatePiece, PieceMoveAnimator } from '$lib/animators/pieceMoveAnimator.svelte.js'
+    import { ScoreFloatAnimator } from '$lib/animators/scoreFloatAnimator.svelte.js'
+    import { BlastAnimator } from '$lib/animators/blastAnimator.svelte.js'
+    import { registerElement } from '$lib/animators/elementRegistry.js'
+    import { stationTubeKey } from '$lib/utils/stationLinks.js'
 
     let gameSession = getGameSession()
 
@@ -106,6 +105,38 @@
     )
 
     let hovered: AxialCoordinates | undefined = $state(undefined)
+    let hoveredTileOrigin: AxialCoordinates | undefined = $state(undefined)
+
+    // Touch has no hover: a tap on a hex the session does not act on inspects it instead, until
+    // the board changes.
+    let inspected: AxialCoordinates | undefined = $derived.by(() => {
+        void gameSession.gameState
+        return undefined
+    })
+    let lastPointerType = 'mouse'
+
+    let placementFocus: AxialCoordinates | undefined = $derived(hovered ?? gameSession.previewHex)
+    let focused: AxialCoordinates | undefined = $derived(placementFocus ?? inspected)
+
+    let tilePreviewOrigin: AxialCoordinates | undefined = $derived(
+        hoveredTileOrigin ?? (gameSession.isPlacingTile ? gameSession.previewHex : undefined)
+    )
+
+    function onHexPointerEnter(event: PointerEvent, coords: AxialCoordinates) {
+        if (event.pointerType !== 'touch') hovered = coords
+    }
+
+    function onHexPointerLeave(event: PointerEvent) {
+        if (event.pointerType !== 'touch') hovered = undefined
+    }
+
+    async function onHexClick(coords: AxialCoordinates) {
+        const touch = lastPointerType === 'touch'
+        if (touch) {
+            inspected = inspected && sameHex(inspected, coords) ? undefined : coords
+        }
+        await gameSession.onBoardClick(coords, touch)
+    }
 
     // The ship about to be placed, previewed on the hex under the cursor rather than announced
     // by lighting up every hex it could go on. Thirty pulsing hexes told the player where they
@@ -121,26 +152,27 @@
     // Locked to the hovered hex, and only when that hex would actually accept the piece - a
     // ghost on an illegal hex would promise a placement the engine then refuses.
     let ghostEntry = $derived.by(() => {
-        if (!showGhost || !hovered || !gameSession.isHighlighted(hovered)) return undefined
-        return placed.find((entry) => sameHex(entry.hex.coords, hovered!))
+        const at = placementFocus
+        if (!showGhost || !at || !gameSession.isHighlighted(at)) return undefined
+        return placed.find((entry) => sameHex(entry.hex.coords, at))
     })
 
     // What the fighter being placed could attack if it landed on the hovered hex. Shown before
     // the placement so the shot can be aimed rather than discovered afterwards.
     let previewTargets: AxialCoordinates[] = $derived(
-        hovered ? gameSession.previewTargetsFor(hovered) : []
+        placementFocus ? gameSession.previewTargetsFor(placementFocus) : []
     )
 
     // The planets a probe could be sent to from the hovered hex. The fighter's equivalent is
     // previewTargets just above; between them they let a player see what a placement will DO
     // before committing, instead of finding out once it is too late to choose differently.
     let previewProbeDestinations: AxialCoordinates[] = $derived(
-        hovered ? gameSession.previewProbeDestinationsFor(hovered) : []
+        placementFocus ? gameSession.previewProbeDestinationsFor(placementFocus) : []
     )
 
     // Control lines appear only for the piece under the cursor and the friendly pieces holding
     // the same planets - drawn for the whole board at once, they made it unreadable.
-    let shownControlEdges = $derived(hovered ? gameSession.controlEdgesFor(hovered) : [])
+    let shownControlEdges = $derived(focused ? gameSession.controlEdgesFor(focused) : [])
 
     // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
     // so the wavelength stays constant however long or however angled the line is.
@@ -259,111 +291,23 @@
         return path.trim()
     }
 
-    // Points floating up from where they were earned. Each is removed when its animation has
-    // run, so the list only ever holds what is on screen.
-    type ScoreFloat = {
-        id: number
-        x: number
-        y: number
-        points: number
-        caption: string
-        color: string
-    }
-
-    let floats: ScoreFloat[] = $state([])
-    let nextFloatId = 0
-
-    const FLOAT_MS = 1700
-
-    function float(coords: AxialCoordinates, points: number, caption: string, playerId: string) {
-        const center = hexGeometry(coords).center
-        const id = nextFloatId++
-
-        floats.push({
-            id,
-            x: center.x,
-            // Stacked, so two sources scored by one placement don't land on top of each other.
-            y: center.y - floats.length * 30,
-            points,
-            caption,
-            color: gameSession.colors.getPlayerUiColor(playerId)
-        })
-
-        setTimeout(() => {
-            floats = floats.filter((entry) => entry.id !== id)
-        }, FLOAT_MS)
-    }
-
-    // A shot landing. Destroyed and damaged look different on purpose: the same action does
-    // both, and the board is where the difference should be legible.
-    type Blast = { id: number; x: number; y: number; destroyed: boolean }
-
-    let blasts: Blast[] = $state([])
-    let nextBlastId = 0
-
-    const BLAST_MS = 900
-
-    function blast(coords: AxialCoordinates, destroyed: boolean) {
-        const center = hexGeometry(coords).center
-        const id = nextBlastId++
-
-        blasts.push({ id, x: center.x, y: center.y, destroyed })
-        setTimeout(() => {
-            blasts = blasts.filter((entry) => entry.id !== id)
-        }, BLAST_MS)
-    }
-
-    function showAttack(action: GameAction) {
-        if (!isAttackPiece(action)) return
-
-        const shot = action as AttackPiece
-        // Nothing to show for a shot that was passed up.
-        if (!shot.coords || shot.metadata?.declined) return
-
-        blast(shot.coords, !shot.metadata?.damaged)
-    }
-
-    // Scoring is reported per source rather than as one total: a placement can be paid for its
-    // station complex AND for a chain, and rolling those into a single number is exactly what
-    // makes the jump hard to account for.
-    function showScoring(action?: GameAction) {
-        if (!action || !isPlacePiece(action)) return
-
-        const placed = action as PlacePiece
-        const playerId = placed.playerId
-
-        if (placed.metadata?.stationGroupPoints) {
-            float(placed.coords, placed.metadata.stationGroupPoints, 'complex', playerId)
-        }
-        for (const chain of placed.metadata?.chains ?? []) {
-            float(placed.coords, chain.points, 'chain', playerId)
-        }
-    }
-
-    // New girders grow out of the station that made them. See TrussGrowthAnimator.
     const trussGrowth = new TrussGrowthAnimator()
+    const pieceMoves = new PieceMoveAnimator()
+    const scoreFloats = new ScoreFloatAnimator()
+    const blasts = new BlastAnimator()
 
     onMount(() => {
-        const growTrusses = trussGrowth.onGameStateChange.bind(trussGrowth)
-        gameSession.addGameStateChangeListener(growTrusses)
-        return () => gameSession.removeGameStateChangeListener(growTrusses)
-    })
-
-    onMount(() => {
-        const listener = async ({ action }: { action?: GameAction }) => {
-            // Not while scrubbing history: all of this happened long ago.
-            if (!action || gameSession.isViewingHistory) return
-            showScoring(action)
-            showAttack(action)
+        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats]
+        const listeners = animators.map((animator) => animator.onGameStateChange.bind(animator))
+        for (const listener of listeners) gameSession.addGameStateChangeListener(listener)
+        return () => {
+            for (const listener of listeners) gameSession.removeGameStateChangeListener(listener)
         }
-
-        gameSession.addGameStateChangeListener(listener)
-        return () => gameSession.removeGameStateChangeListener(listener)
     })
 
     // Which planet's technology to show: the pinned one, else whatever is under the cursor.
     let shownTechnology = $derived.by(() => {
-        const coords = gameSession.pinnedPlanet ?? hovered
+        const coords = gameSession.pinnedPlanet ?? focused
         if (!coords) return undefined
 
         const entry = placed.find((candidate) => sameHex(candidate.hex.coords, coords))
@@ -507,10 +451,11 @@
         <g
             role="button"
             tabindex="-1"
-            onclick={() => gameSession.onBoardClick(hex.coords)}
+            onpointerdown={(event) => (lastPointerType = event.pointerType)}
+            onclick={() => onHexClick(hex.coords)}
             onkeydown={(event) => event.key === 'Enter' && gameSession.onBoardClick(hex.coords)}
-            onmouseenter={() => (hovered = hex.coords)}
-            onmouseleave={() => (hovered = undefined)}
+            onpointerenter={(event) => onHexPointerEnter(event, hex.coords)}
+            onpointerleave={onHexPointerLeave}
             class={highlighted ? 'cursor-pointer' : ''}
         >
             <!-- A planet's hex is tinted in its own colour. Raised from 0.28 to 0.42: the tint
@@ -736,26 +681,6 @@
                         ?
                     </text>
                 {/if}
-            {:else if hex.piece}
-                {@const color = gameSession.colors.getPlayerUiColor(hex.piece.playerId)}
-                {#if hex.piece.type === PieceType.Probe}
-                    <!-- A probe without a level of its own reveals at the weaker level, as the
-                         engine reads it. -->
-                    <ProbeShape
-                        center={entry.center}
-                        {color}
-                        level={hex.piece.level ?? PieceLevel.Two}
-                    />
-                {:else if hex.piece.type === PieceType.Station}
-                    <StationShape
-                        center={entry.center}
-                        {color}
-                        hub={hex.piece.hub}
-                        linkedAngles={linkedAngles(hex.coords, hex.piece.playerId)}
-                    />
-                {:else}
-                    <FighterShape center={entry.center} {color} level={powerOf(hex.piece)} />
-                {/if}
             {/if}
 
             <!-- The red outline that used to ring a piece in range of the fighter you are
@@ -886,6 +811,42 @@
         </g>
     {/each}
 
+    <!-- Pieces sit above every hex so one can slide across the board (see PieceMoveAnimator).
+         Keyed by piece and hex: a moved piece mounts afresh at its new hex on the state swap. -->
+    {#each placed as entry (entry.hex.coords.q + ',' + entry.hex.coords.r)}
+        {@const piece = entry.hex.piece}
+        {#if piece}
+            {#key piece.id + '@' + hexKey(entry.hex.coords)}
+                {@const color = gameSession.colors.getPlayerUiColor(piece.playerId)}
+                <g
+                    use:animatePiece={{
+                        animator: pieceMoves,
+                        pieceId: piece.id,
+                        coords: entry.hex.coords
+                    }}
+                    pointer-events="none"
+                >
+                    {#if piece.type === PieceType.Probe}
+                        <ProbeShape
+                            center={entry.center}
+                            {color}
+                            level={piece.level ?? PieceLevel.Two}
+                        />
+                    {:else if piece.type === PieceType.Station}
+                        <StationShape
+                            center={entry.center}
+                            {color}
+                            hub={piece.hub}
+                            linkedAngles={linkedAngles(entry.hex.coords, piece.playerId)}
+                        />
+                    {:else}
+                        <FighterShape center={entry.center} {color} level={powerOf(piece)} />
+                    {/if}
+                </g>
+            {/key}
+        {/if}
+    {/each}
+
     <!-- The ship about to land, shown on the hex under the cursor. Drawn after every hex so it
          is never painted over by a neighbour, and pointer-events: none so it can't eat the click
          it is inviting. -->
@@ -921,15 +882,22 @@
          whole four-hex footprint, so it is clear what is about to land and where. -->
     {#each ghosts as ghost (ghost.origin.q + ',' + ghost.origin.r)}
         {@const previewing =
-            gameSession.tilePreviewOrigin && sameHex(gameSession.tilePreviewOrigin, ghost.origin)}
+            tilePreviewOrigin && sameHex(tilePreviewOrigin, ghost.origin)}
         <g
             role="button"
             tabindex="-1"
             class="cursor-pointer"
-            onclick={() => gameSession.placeTile(ghost.origin)}
-            onkeydown={(event) => event.key === 'Enter' && gameSession.placeTile(ghost.origin)}
-            onmouseenter={() => (gameSession.tilePreviewOrigin = ghost.origin)}
-            onmouseleave={() => (gameSession.tilePreviewOrigin = undefined)}
+            onpointerdown={(event) => (lastPointerType = event.pointerType)}
+            onclick={() =>
+                gameSession.onTileOriginClick(ghost.origin, lastPointerType === 'touch')}
+            onkeydown={(event) =>
+                event.key === 'Enter' && gameSession.onTileOriginClick(ghost.origin)}
+            onpointerenter={(event) => {
+                if (event.pointerType !== 'touch') hoveredTileOrigin = ghost.origin
+            }}
+            onpointerleave={(event) => {
+                if (event.pointerType !== 'touch') hoveredTileOrigin = undefined
+            }}
         >
             {#each ghost.hexes as hex, index (hex.coords.q + ',' + hex.coords.r)}
                 {@const isPlanet = index === gameSession.pendingTile?.planetOffset}
@@ -1039,7 +1007,7 @@
          placed rather than an intention. -->
     {#if ghostEntry}
         {#each previewTargets as target, index (target.q + ',' + target.r)}
-            {@const path = attackArc(hovered!, target)}
+            {@const path = attackArc(ghostEntry.hex.coords, target)}
             <!-- Up from 0.42/3 to 0.53/3.75, a quarter stronger in both weight and opacity:
                  with the target ring gone this is the only sign that a shot is on offer, so it
                  has to carry on its own. Still dashed and still held rather than flying, so it
@@ -1057,7 +1025,7 @@
         {/each}
 
         {#each previewProbeDestinations as target, index (target.q + ',' + target.r)}
-            {@const pointer = reachPointer(hovered!, target)}
+            {@const pointer = reachPointer(ghostEntry.hex.coords, target)}
             <polygon
                 points={pointer.points}
                 fill="#e8f0ff"
@@ -1117,66 +1085,61 @@
         </g>
     {/each}
 
-    <!-- A shot landing. Everything is drawn centred on the origin and moved into place by the
-         group's transform, so a CSS scale expands about the blast rather than about the board's
-         top-left corner. -->
-    {#each blasts as entry (entry.id)}
-        <g transform="translate({entry.x} {entry.y})" pointer-events="none">
-            <circle
-                r="16"
-                fill={entry.destroyed ? '#ffd166' : '#ffe9a8'}
-                class={entry.destroyed ? 'blast-flash' : 'blast-flash blast-small'}
-            />
-            <circle
-                r="24"
-                fill="none"
-                stroke="#ff2f2f"
-                stroke-width="5"
-                class={entry.destroyed ? 'blast-ring' : 'blast-ring blast-small'}
-            />
-            {#if entry.destroyed}
-                <!-- Sparks only for a kill: a fighter that merely lost a level is still there. -->
-                <g class="blast-sparks">
-                    {#each [0, 45, 90, 135, 180, 225, 270, 315] as angle (angle)}
-                        <line
-                            x1="14"
-                            y1="0"
-                            x2="30"
-                            y2="0"
-                            stroke="#ffd166"
-                            stroke-width="4"
-                            stroke-linecap="round"
-                            transform="rotate({angle})"
-                        />
-                    {/each}
-                </g>
-            {/if}
+    <!-- A shot landing, drawn about the origin so BlastAnimator scales each part about the blast. -->
+    {#each blasts.blasts as entry (entry.key)}
+        <g transform="translate({entry.at.x} {entry.at.y})" pointer-events="none">
+            <g use:registerElement={{ registry: blasts.elements, key: entry.key }}>
+                <circle
+                    data-blast="flash"
+                    r="16"
+                    fill={entry.destroyed ? '#ffd166' : '#ffe9a8'}
+                    opacity="0"
+                />
+                <circle
+                    data-blast="ring"
+                    r="24"
+                    fill="none"
+                    stroke="#ff2f2f"
+                    stroke-width="5"
+                    opacity="0"
+                />
+                {#if entry.destroyed}
+                    <g data-blast="sparks" opacity="0">
+                        {#each [0, 45, 90, 135, 180, 225, 270, 315] as angle (angle)}
+                            <line
+                                x1="14"
+                                y1="0"
+                                x2="30"
+                                y2="0"
+                                stroke="#ffd166"
+                                stroke-width="4"
+                                stroke-linecap="round"
+                                transform="rotate({angle})"
+                            />
+                        {/each}
+                    </g>
+                {/if}
+            </g>
         </g>
     {/each}
 
-    <!-- Points drifting up from where they were earned. -->
-    {#each floats as entry (entry.id)}
-        <g class="score-float" pointer-events="none">
-            <text
-                x={entry.x}
-                y={entry.y}
-                text-anchor="middle"
-                class="text-[34px] font-bold"
-                fill={entry.color}
-                stroke="#0a0f1c"
-                stroke-width="6"
-                paint-order="stroke"
-            >
-                +{entry.points}
-            </text>
-            <text
-                x={entry.x}
-                y={entry.y + 20}
-                text-anchor="middle"
-                class="text-[15px] font-semibold fill-white/80"
-            >
-                {entry.caption}
-            </text>
+    {#each scoreFloats.floats as entry (entry.key)}
+        <g transform="translate({entry.at.x} {entry.at.y})" pointer-events="none">
+            <g use:registerElement={{ registry: scoreFloats.elements, key: entry.key }} opacity="0">
+                <text
+                    text-anchor="middle"
+                    class="text-[34px] font-bold"
+                    fill={gameSession.colors.getPlayerUiColor(entry.playerId)}
+                    stroke="#0a0f1c"
+                    stroke-width="6"
+                    paint-order="stroke"
+                >
+                    +{entry.points}
+                </text>
+                <text y="20" text-anchor="middle" class="text-[15px] font-semibold fill-white/80">
+                    {entry.caption}
+                </text>
+            </g>
         </g>
     {/each}
 
@@ -1189,12 +1152,13 @@
          shows a connection any more. Nothing displayed it at all before, which left players
          remembering it, and getting it wrong costs a lot when the payout is superlinear.
          On hover rather than always, because a colour with four planets has six pairs. -->
-    {#if hovered}
-        {@const hoveredColor = placed.find((entry) => sameHex(entry.hex.coords, hovered!))?.hex
+    {#if focused}
+        {@const focusedHex = focused}
+        {@const focusedColor = placed.find((entry) => sameHex(entry.hex.coords, focusedHex))?.hex
             .color}
-        {@const pairColor = hoveredColor ? PLANET_FILL[hoveredColor] : '#dce6ff'}
-        {#each gameSession.planetPairsFrom(hovered) as pair, index (index)}
-            {@const from = hexGeometry(hovered).center}
+        {@const pairColor = focusedColor ? PLANET_FILL[focusedColor] : '#dce6ff'}
+        {#each gameSession.planetPairsFrom(focusedHex) as pair, index (index)}
+            {@const from = hexGeometry(focusedHex).center}
             {@const to = hexGeometry(pair.to).center}
             {@const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }}
             <g pointer-events="none">
@@ -1233,7 +1197,7 @@
          drawn on it.
          Drawn here rather than with each station because a girder crosses into the neighbouring
          hex, whose own fill would otherwise paint over half of it. -->
-    {#each gameSession.stationTubes as tube, index (tube.playerId + index)}
+    {#each gameSession.stationTubes as tube (stationTubeKey(tube))}
         {@const color = gameSession.colors.getPlayerUiColor(tube.playerId)}
         {@const ends = trussEnds(
             hexGeometry(tube.from).center,
@@ -1241,7 +1205,9 @@
             tube.fromHub,
             tube.toHub
         )}
-        <TrussGirder start={ends.start} end={ends.end} {color} />
+        <g use:registerElement={{ registry: trussGrowth.girders, key: stationTubeKey(tube) }}>
+            <TrussGirder start={ends.start} end={ends.end} {color} />
+        </g>
     {/each}
 
     <!-- Girders being made by the action now animating, with the stations that made them: the
@@ -1259,7 +1225,7 @@
         {@const color = gameSession.colors.getPlayerUiColor(truss.playerId)}
         <clipPath id="truss-grow-{truss.key}">
             <rect
-                use:animateTrussClip={{ animator: trussGrowth, key: truss.key }}
+                use:registerElement={{ registry: trussGrowth.clips, key: truss.key }}
                 x="0"
                 y="-8"
                 width="0"
@@ -1444,27 +1410,6 @@
         animation: flow 1.6s linear infinite;
     }
 
-    @keyframes rise {
-        0% {
-            transform: translateY(0);
-            opacity: 0;
-        }
-        15% {
-            opacity: 1;
-        }
-        70% {
-            opacity: 1;
-        }
-        100% {
-            transform: translateY(-70px);
-            opacity: 0;
-        }
-    }
-
-    .score-float {
-        animation: rise 1.7s ease-out forwards;
-    }
-
     /* The trail is drawn as the missile flies, then both clear and it fires again. */
     @keyframes fly-trail {
         0% {
@@ -1507,61 +1452,6 @@
 
     .missile {
         animation: fly-missile 1.6s linear infinite;
-    }
-
-    /* One multiplier drives how big a blast gets, so the two sizes share the keyframes rather
-       than relying on a static scale composing with an animated transform. */
-    @keyframes flash {
-        0% {
-            transform: scale(calc(0.3 * var(--boom)));
-            opacity: 1;
-        }
-        100% {
-            transform: scale(calc(1.7 * var(--boom)));
-            opacity: 0;
-        }
-    }
-
-    @keyframes shock {
-        0% {
-            transform: scale(calc(0.25 * var(--boom)));
-            opacity: 0.95;
-        }
-        100% {
-            transform: scale(calc(2.3 * var(--boom)));
-            opacity: 0;
-        }
-    }
-
-    @keyframes sparks {
-        0% {
-            transform: scale(0.4);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(1.9);
-            opacity: 0;
-        }
-    }
-
-    .blast-flash {
-        --boom: 1;
-        animation: flash 380ms ease-out forwards;
-    }
-
-    .blast-ring {
-        --boom: 1;
-        animation: shock 780ms ease-out forwards;
-    }
-
-    .blast-sparks {
-        animation: sparks 620ms ease-out forwards;
-    }
-
-    /* A fighter knocked down a level gets a smaller, shorter blast than one destroyed. */
-    .blast-small {
-        --boom: 0.55;
-        animation-duration: 320ms;
     }
 
     /* Nudged along its own direction, so the movement itself says which way it points. */

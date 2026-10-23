@@ -12,7 +12,7 @@
     let gameSession = getGameSession()
     let { player, playerState }: { player: Player; playerState: EarendelPlayerState } = $props()
 
-    let isTurn = $derived(gameSession.game.state?.activePlayerIds.includes(player.id))
+    let isTurn = $derived(gameSession.gameState.activePlayerIds.includes(player.id))
     let bgColor = $derived(gameSession.colors.getPlayerBgColor(player.id))
 
     // Planets pay only at the end, so a running total alone would hide half of what a player
@@ -60,7 +60,7 @@
         <div class="flex justify-center gap-3 text-sm">
             <span title="Points banked so far">{playerState.score} pts</span>
             <span title="Points from planets if the game ended now">+{planetPoints} held</span>
-            <span title="Pieces left in the bag">{playerState.bag.length} in bag</span>
+            <span title="Pieces left in the bag">{playerState.bag.remaining} in bag</span>
         </div>
 
         {#if heldTechnologyNames.length > 0}

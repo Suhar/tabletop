@@ -6,7 +6,8 @@
         technologyName
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { describePiece } from '$lib/model/session.svelte.js'
+    import { describePiece } from '$lib/utils/describe.js'
+    import { Power } from '$lib/model/stagedSelection.js'
 
     let gameSession = getGameSession()
 
@@ -33,19 +34,7 @@
 </script>
 
 <div class="flex flex-col items-center gap-2 py-2 text-white">
-    <div class="flex items-center gap-3">
-        <div class="text-center text-sm sm:text-base min-h-[1.5rem]">{gameSession.prompt}</div>
-        {#if gameSession.undoableAction}
-            <!-- Only shown when there is something to take back. The platform decides that:
-                 undo cannot reach past an action that revealed anything. -->
-            <button
-                class="rounded-md px-3 py-1 text-xs font-semibold uppercase bg-transparent border-2 border-white/70 hover:bg-white/15"
-                onclick={() => gameSession.undoLastAction()}
-            >
-                Undo
-            </button>
-        {/if}
-    </div>
+    <div class="text-center text-sm sm:text-base min-h-[1.5rem]">{gameSession.prompt}</div>
 
     <!-- Two ways to spend a turn, and they are exclusive: place one of the ships drawn, or play a
          special piece instead. Side by side in one row they read as six interchangeable options,
@@ -110,7 +99,7 @@
                         ? gameSession.colors.getPlayerBorderContrastColor(special.playerId)
                         : 'border-transparent opacity-90'}"
                     style="background-color: {gameSession.colors.getPlayerUiColor(special.playerId)}"
-                    onclick={() => gameSession.toggleSpecial(special.id)}
+                    onclick={() => gameSession.chooseSpecial(special.id)}
                 >
                     <span class="flex items-center gap-2">
                         <span class="text-xl leading-none">{glyph(special)}</span>
@@ -239,13 +228,13 @@
 
     <!-- Updated Logistics wakes a fighter that has already landed. Pressing this asks which
          one; the board then highlights the fighters that actually have something in reach, and a
-         click sends it. Pressing again backs out, since nothing has been committed yet. -->
+         click sends it. -->
     {#if gameSession.canUseUpdatedLogistics}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingUpdatedLogistics
                 ? 'bg-sky-400/30 border-sky-300'
                 : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-            onclick={() => gameSession.toggleUpdatedLogistics()}
+            onclick={() => gameSession.choosePower(Power.Logistics)}
         >
             {gameSession.choosingUpdatedLogistics
                 ? 'Choose a fighter to attack with'
@@ -261,7 +250,7 @@
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingFeint
                 ? 'bg-violet-400/30 border-violet-300'
                 : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-            onclick={() => gameSession.toggleFeint()}
+            onclick={() => gameSession.choosePower(Power.Feint)}
         >
             {#if !gameSession.choosingFeint}
                 Tactical Feint
@@ -281,7 +270,7 @@
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingDownload
                 ? 'bg-emerald-400/30 border-emerald-300'
                 : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-            onclick={() => gameSession.toggleDownload()}
+            onclick={() => gameSession.choosePower(Power.Download)}
         >
             {#if !gameSession.choosingDownload}
                 Immediate Download
@@ -300,7 +289,7 @@
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingWormhole
                 ? 'bg-teal-400/30 border-teal-300'
                 : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-            onclick={() => gameSession.toggleWormhole()}
+            onclick={() => gameSession.choosePower(Power.Wormhole)}
         >
             {#if !gameSession.choosingWormhole}
                 Trade Route Wormhole
@@ -321,9 +310,9 @@
                 class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.spreading
                     ? 'bg-orange-400/30 border-orange-300'
                     : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-                onclick={() => gameSession.toggleSpreading()}
+                onclick={() => gameSession.choosePower(Power.Spread)}
             >
-                {gameSession.spreading ? 'Cancel spread' : 'Full Torpedo Spread'}
+                Full Torpedo Spread
             </button>
 
             {#if gameSession.spreading}
@@ -345,7 +334,7 @@
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.railgunArmed
                 ? 'bg-red-400/30 border-red-300'
                 : 'bg-white/15 hover:bg-white/25 border-white/70'}"
-            onclick={() => gameSession.toggleRailgun()}
+            onclick={() => gameSession.choosePower(Power.Railgun)}
         >
             {gameSession.railgunArmed ? 'Railgun armed' : 'Arm Railgun'}
         </button>

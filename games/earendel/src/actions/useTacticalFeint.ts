@@ -3,11 +3,12 @@ import { Compile } from 'typebox/compile'
 import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, hexKey, neighborsOf, sameHex } from '../model/board.js'
+import { getHex, hexKey, sameHex } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveArrival } from '../util/arrival.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
+import { feintTargets } from '../util/legality.js'
 import { ScoredChain } from '../model/chains.js'
 
 export type UseTacticalFeintMetadata = Type.Static<typeof UseTacticalFeintMetadata>
@@ -88,7 +89,11 @@ export class HydratedUseTacticalFeint
         // Resolved after the swap, so the arriving ship is read off the board where it now
         // stands - and so chains and station groups are measured on the board the swap made,
         // including the hole the ship left behind it.
-        const { stationPoints, chains, probeDestinations } = resolveArrival(state, this.playerId, this.to)
+        const { stationPoints, chains, probeDestinations } = resolveArrival(
+            state,
+            this.playerId,
+            this.to
+        )
 
         this.metadata = {
             movedType: mine.type,
@@ -125,7 +130,11 @@ export class HydratedUseTacticalFeint
         if (!theirs) return 'There is no ship to trade places with.'
         if (theirs.playerId === this.playerId) return 'A feint trades places with an enemy ship.'
 
-        if (!neighborsOf(this.from).some((neighbor) => sameHex(neighbor, this.to))) {
+        if (
+            !feintTargets(state.board, this.from, this.playerId).some((target) =>
+                sameHex(target, this.to)
+            )
+        ) {
             return 'A feint only reaches a ship right beside your own.'
         }
 

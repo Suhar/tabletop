@@ -8,6 +8,7 @@ import { PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { attackableTargets } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
+import { canWakeFighter } from '../util/legality.js'
 
 export type UseUpdatedLogisticsMetadata = Type.Static<typeof UseUpdatedLogisticsMetadata>
 export const UseUpdatedLogisticsMetadata = Type.Object({
@@ -95,7 +96,7 @@ export class HydratedUseUpdatedLogistics
 
         // Refused rather than wasted: waking a fighter with nothing in reach would spend three
         // turns of the power for a shot that cannot be taken.
-        if (attackableTargets(state.board, this.coords, this.playerId).length === 0) {
+        if (!canWakeFighter(state.board, this.coords, this.playerId)) {
             return 'That fighter has nothing it could hit.'
         }
 

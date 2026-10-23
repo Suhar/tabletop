@@ -2,6 +2,7 @@ import type { AnimationContext } from '@tabletop/frontend-components'
 import type { AxialCoordinates, GameAction, Point } from '@tabletop/common'
 import { getHex, hexKey, type HydratedEarendelGameState } from '@tabletop/earendel'
 import { tick } from 'svelte'
+import { ElementRegistry } from './elementRegistry.js'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
 import { trussEnds } from '$lib/utils/stationGeometry.js'
 import {
@@ -21,9 +22,9 @@ export type GrowingTruss = {
     degrees: number
 }
 
-// A station that has arrived but is not on the visible board yet: the board still shows the
-// state before the action until the animations finish, so the girders would otherwise grow out of
-// an empty hex.
+// A station new to the board: the visible board still shows the state before the action until
+// the animations finish, so the girders would otherwise grow out of an empty hex. A station that
+// moved is not one of these; PieceMoveAnimator slides its own element to the new hex.
 export type ArrivingStation = {
     coords: AxialCoordinates
     playerId: string
@@ -31,32 +32,18 @@ export type ArrivingStation = {
     linked: AxialCoordinates[]
 }
 
-// Seconds. A live action (or a replay of one) is worth watching; undo and history scrubbing only
-// need the change to be followable.
 const GROW_DURATION = 0.5
-const FALLBACK_GROW_DURATION = 0.15
+const FALLBACK_DURATION = 0.15
 
-// Grows the girders between linked stations when a link is made. Keyed on the state rather than
-// on an action type: placing a station, a Wormhole jump, a Tactical Feint, and undoing a station's
-// destruction all make links, and they are all the same change here - a girder in the new state
-// that the old one did not have.
-//
-// Pattern B (new item): the new station and its girders are drawn transiently while the board
-// still shows the old state, each girder revealed from its new station outward by a clip that
-// widens along it, and the transients are cleared just as the real state takes over.
+// Grows the girders a transition makes and fades the ones it breaks. With an action the girders
+// grow on finalTimeline, after any piece has finished moving into place; without one, everything
+// runs at once within the fallback budget.
 export class TrussGrowthAnimator {
     growing: GrowingTruss[] = $state([])
     arriving: ArrivingStation[] = $state([])
 
-    private clips = new Map<string, SVGRectElement>()
-
-    setClip(key: string, element?: SVGRectElement) {
-        if (element) {
-            this.clips.set(key, element)
-        } else {
-            this.clips.delete(key)
-        }
-    }
+    readonly clips = new ElementRegistry<SVGRectElement>()
+    readonly girders = new ElementRegistry<SVGGElement>()
 
     async onGameStateChange({
         to,
@@ -71,22 +58,35 @@ export class TrussGrowthAnimator {
     }): Promise<void> {
         if (!from) return
 
+        const duration = action ? GROW_DURATION : FALLBACK_DURATION
+        const after = new Set(stationTubesOf(to.board).map(stationTubeKey))
+        for (const tube of stationTubesOf(from.board)) {
+            const key = stationTubeKey(tube)
+            const girder = this.girders.get(key)
+            if (after.has(key) || !girder) continue
+            animationContext.actionTimeline.to(
+                girder,
+                { opacity: 0, duration: FALLBACK_DURATION },
+                0
+            )
+        }
+
         const before = new Set(stationTubesOf(from.board).map(stationTubeKey))
         const made = stationTubesOf(to.board).filter((tube) => !before.has(stationTubeKey(tube)))
         if (made.length === 0) return
 
-        // A station has arrived at a hex if a different piece - or none - stood there before.
-        const arrived = (coords: AxialCoordinates) =>
+        const piecesBefore = new Set(
+            Object.values(from.board.hexes).flatMap((hex) => (hex.piece ? [hex.piece.id] : []))
+        )
+        const changed = (coords: AxialCoordinates) =>
             getHex(from.board, coords)?.piece?.id !== getHex(to.board, coords)?.piece?.id
 
         const arrivals = new Map<number, ArrivingStation>()
         const growing = made.map((tube) => {
-            // Grow from the end that arrived, toward the one already standing.
-            const oriented = arrived(tube.to) && !arrived(tube.from) ? reversed(tube) : tube
+            const oriented = changed(tube.to) && !changed(tube.from) ? reversed(tube) : tube
             for (const coords of [oriented.from, oriented.to]) {
-                if (!arrived(coords) || arrivals.has(hexKey(coords))) continue
                 const piece = getHex(to.board, coords)?.piece
-                if (!piece) continue
+                if (!piece || piecesBefore.has(piece.id) || arrivals.has(hexKey(coords))) continue
                 arrivals.set(hexKey(coords), {
                     coords,
                     playerId: piece.playerId,
@@ -103,11 +103,11 @@ export class TrussGrowthAnimator {
         // The transient girders have to be mounted before their clips can be tweened.
         await tick()
 
-        const duration = action ? GROW_DURATION : FALLBACK_GROW_DURATION
+        const timeline = action ? animationContext.finalTimeline : animationContext.actionTimeline
         for (const truss of growing) {
             const clip = this.clips.get(truss.key)
             if (!clip) continue
-            animationContext.actionTimeline.fromTo(
+            timeline.fromTo(
                 clip,
                 { attr: { width: 0 } },
                 { attr: { width: truss.length }, duration, ease: 'power2.out' },
@@ -115,8 +115,6 @@ export class TrussGrowthAnimator {
             )
         }
 
-        // Runs in the same synchronous step as the state swap, so the real girders replace these
-        // without a frame of neither.
         animationContext.afterAnimations(() => {
             this.growing = []
             this.arriving = []
@@ -143,25 +141,5 @@ function growingTruss(tube: StationTube): GrowingTruss {
         end,
         length: Math.hypot(end.x - start.x, end.y - start.y),
         degrees: (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI
-    }
-}
-
-export function animateTrussClip(
-    node: SVGRectElement,
-    params: { animator: TrussGrowthAnimator; key: string }
-) {
-    let current = params
-    current.animator.setClip(current.key, node)
-
-    return {
-        update(next: { animator: TrussGrowthAnimator; key: string }) {
-            if (next.key === current.key) return
-            current.animator.setClip(current.key, undefined)
-            current = next
-            current.animator.setClip(current.key, node)
-        },
-        destroy() {
-            current.animator.setClip(current.key, undefined)
-        }
     }
 }
