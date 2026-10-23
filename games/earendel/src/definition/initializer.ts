@@ -106,8 +106,7 @@ export class EarendelGameInitializer
     }
 }
 
-// The full deck unless the config names a single technology to fill it with, which is a
-// testing aid rather than a variant (see config.ts).
+// The full deck unless the config names a single technology to fill it with (see config.ts).
 function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
     const choice = config.technologyDeck ?? FULL_DECK
 

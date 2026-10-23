@@ -8,10 +8,8 @@ import {
 } from '@tabletop/common'
 import { TechnologyEffectKind } from '../model/technology.js'
 
-// A testing aid, not a game rule. Picking a single technology fills the whole deck with it,
-// so a new effect can be exercised without waiting for the shuffle to offer it. Every planet
-// then houses the same technology, which is nobody's idea of a game - but it is the fastest
-// way to see a new effect from every angle.
+// Picking a single technology fills the whole deck with it, one card per planet colour, so that
+// technology comes up on every exploration (see "Game options" in rules.md).
 export const FULL_DECK = 'all'
 
 // How a turn is shaped. DraftThree is the default: it gives the player a real decision before
@@ -41,7 +39,7 @@ const technologyDeckOption: ListConfigOption = {
     type: ConfigOptionType.List,
     name: 'Technology deck',
     description:
-        'Testing aid: fill the deck with a single technology so its effect comes up every time. Use the full deck for a real game.',
+        'Use the full deck, or fill it with a single technology so that technology comes up on every exploration.',
     default: FULL_DECK,
     alwaysShow: true,
     options: [

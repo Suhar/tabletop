@@ -12,21 +12,21 @@ settling it first.
 ## Components
 
 **Tiles** — four hexes in a diamond (an axial rhombus). Each tile has one planet hex and
-three hexes of open space; *which* hex is the planet varies from tile to tile.
+three hexes of open space; _which_ hex is the planet varies from tile to tile.
 
 **Planets** — every planet hex has one of **five colors**. A planet is either unexplored or
 explored; once explored, the technology it holds never changes.
 
 **Pieces (ships)** — each occupies a single hex of open space. Ships are never placed on
-planets. Each contributes *power* toward controlling adjacent planets:
+planets. Each contributes _power_ toward controlling adjacent planets:
 
-| Piece | Power | Notes |
-| --- | --- | --- |
-| Probe | 1 | An explorer. Its **level** (2 or 3) is how many technology cards it reveals, and its weight in probe influence. |
-| Station | 1 | |
-| Fighter (level 1) | 1 | Only reached by damage. Destroys an enemy probe on arrival. |
-| Fighter (level 2) | 2 | Destroys an enemy probe; damages a level 1 fighter to destruction. |
-| Fighter (level 3) | 3 | Destroys an enemy probe; damages a level 2 fighter, or finishes a level 1. |
+| Piece             | Power | Notes                                                                                                           |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------- |
+| Probe             | 1     | An explorer. Its **level** (2 or 3) is how many technology cards it reveals, and its weight in probe influence. |
+| Station           | 1     |                                                                                                                 |
+| Fighter (level 1) | 1     | Only reached by damage. Destroys an enemy probe on arrival.                                                     |
+| Fighter (level 2) | 2     | Destroys an enemy probe; damages a level 1 fighter to destruction.                                              |
+| Fighter (level 3) | 3     | Destroys an enemy probe; damages a level 2 fighter, or finishes a level 1.                                      |
 
 Probes and fighters come in two **levels**, 2 and 3, visually distinct and known to the
 player the moment the piece is drawn. The number means something different for each: a
@@ -45,13 +45,13 @@ associated with **one, two, or three planet colors**; it can only be housed on a
 color it lists.
 
 Every technology is either **standard** or **elevated**. An elevated technology can't be
-passed over: see *Exploration* below.
+passed over: see _Exploration_ below.
 
 **Special pieces** — kept face-up in front of their owner, and playable instead of drawing
-from the bag. They come *from technologies*: a technology may grant one or more special
+from the bag. They come _from technologies_: a technology may grant one or more special
 pieces, or instead a power. Technology is the reward; a special piece is one form it takes.
 
-The first is the **Station Hub**, from *Station Upgrade*. It is a **station in every respect** —
+The first is the **Station Hub**, from _Station Upgrade_. It is a **station in every respect** —
 power 1, immune to fighters, links complexes by touch and by sight line, projects a blockade —
 with one addition: it **doubles the score of its complex**, when placed and every time that
 complex is scored afterwards.
@@ -60,12 +60,14 @@ complex is scored afterwards.
 
 ## Setup
 
-The board starts as **7 tiles per player**, arranged so the map is compact at every player
+The board starts as **3 tiles per player**, arranged so the map is compact at every player
 count. Each player's bag is shuffled. Scores start at 0.
 
-> **Currently set to 3 tiles per player for testing.** Deliberately too small, so games reach
-> any given rule quickly. The playtest number is 7, kept in the code as
-> `PLAYTEST_TILES_PER_PLAYER` and used by the sizing assertions so the real target isn't lost.
+At this size the board is small for the bags: 9 open hexes per player against 22 pieces. Games
+are short, and usually end when a player cannot place the piece they drew (see _End of the
+game_) rather than when a bag empties — every one of 32 simulated games ended that way. A board
+of 7 tiles per player is where games end on an empty bag instead; the sizing notes below were
+measured there.
 
 **OPEN:** how planet colors are distributed across the starting tiles.
 
@@ -84,9 +86,7 @@ end on an empty bag, with every player placing at least 21 of their 22 pieces. E
 board further only lowers the share of planets explored, since the probes per player stay
 fixed.
 
-**PROVISIONAL: 7 tiles per player, 1 planet per tile.** Now that board growth exists, the
-opening map could start smaller and let growth make up the difference — worth re-running the
-sweep to find out how much smaller.
+One planet per tile is settled by the sizing above.
 
 ---
 
@@ -159,7 +159,7 @@ Exploring reveals the chosen planet's nature:
 
 **Elevated technologies override the choice.** If any matching card is elevated, the planet
 must take an elevated one: the standard matches are out of reach, however attractive. Reveal
-two or more elevated cards and the choice is between *those*. Reveal none and every match is
+two or more elevated cards and the choice is between _those_. Reveal none and every match is
 on the table as normal.
 
 So an elevated card is both a stronger prize and a loss of control — the more of them in the
@@ -172,7 +172,7 @@ A technology may be **immediate**: its effect happens the moment the player choo
 planet they have just explored, inside that same turn. The turn does not end until it is
 resolved.
 
-The first one is **Tactical Shift**: *move any friendly piece into any adjacent empty space.*
+The first one is **Tactical Shift**: _move any friendly piece into any adjacent empty space._
 
 - The piece must be the player's **own**, and the destination adjacent, open space, and empty.
 - **A step is not a placement.** Nothing that a placement triggers happens: no chain scores,
@@ -185,11 +185,11 @@ The first one is **Tactical Shift**: *move any friendly piece into any adjacent 
   breaking your own blockade, or stepping off a planet you hold — so compelling it would turn a
   reward into a penalty. If no friendly piece can step anywhere, it simply fizzles.
 
-The second is **Beyond the Frontier**: *draw a tile from the supply and lay it, then draw a
-ship and place it on that tile.*
+The second is **Beyond the Frontier**: _draw a tile from the supply and lay it, then draw a
+ship and place it on that tile._
 
 - The tile must be laid so that **at least two of its own hexes border hexes already on the
-  board**. Two of them may border the *same* hex — the rule is about the tile's contact, not
+  board**. Two of them may border the _same_ hex — the rule is about the tile's contact, not
   the board's. This is what stops the map growing a thin tail.
 - The ship that follows is a **real placement**, unlike the move above: it explores, it
   shoots, it scores its station group, all as normal. It just has to land on the tile that
@@ -217,8 +217,8 @@ different planets. Like every technology, it is gained by the explorer and by an
 holds the planet outright from one turn to the next — so the same card can hand a charge to
 several players over a game.
 
-The first is **Logistics Upgrade**: *once, on a later turn, place the ship you would otherwise
-discard.*
+The first is **Logistics Upgrade**: _once, on a later turn, place the ship you would otherwise
+discard._
 
 Spent at the opening of a drafted turn, in place of the discard, so that turn places all
 **three** drawn ships instead of two. It needs no other rule: a turn runs until its hand is
@@ -226,8 +226,8 @@ empty.
 
 Note it does nothing in the simpler one-draw turn style, where there is no discard to save.
 
-**Immediate Download**: *once: gain the technology of any explored planet with a clear line of
-sight to this one. It is available at once.*
+**Immediate Download**: _once: gain the technology of any explored planet with a clear line of
+sight to this one. It is available at once._
 
 What this really buys is **time**. Every other route to a technology runs through the claim rule:
 take a planet outright, then hold it until your next turn begins — a full round in which anyone can
@@ -235,7 +235,7 @@ break the hold. A Download skips all of it. The planet it reads from may be an o
 their space, with a claim of their own ripening on it; **sight is the only requirement, and sight
 does not care who owns what.**
 
-It does not take the technology *away*. A technology gained is a record, not a token: the card stays
+It does not take the technology _away_. A technology gained is a record, not a token: the card stays
 on its planet and its owner keeps it. Two players holding the same technology was already possible —
 a planet that changes hands after its claim has ripened does exactly that — so this needs no new
 rule to make sense of.
@@ -248,7 +248,7 @@ It is spent **from the planet holding it**, and that planet is where the line of
 A player holding two Downloads on two planets has two different views of the board, and spends each
 from its own.
 
-OPEN: a Download can be read from a planet whose technology is *another* Download. Nothing stops
+OPEN: a Download can be read from a planet whose technology is _another_ Download. Nothing stops
 that today, and chaining sight across the board may be stronger than it looks.
 
 ### Granted pieces
@@ -257,7 +257,7 @@ A technology may hand over a **piece** the moment it is gained, rather than an e
 or a power to spend. There is nothing to decide: the reward is the piece, and what it does is the
 piece's business.
 
-**Station Upgrade** grants a **Station Hub** (see *Components*). Like every technology it is
+**Station Upgrade** grants a **Station Hub** (see _Components_). Like every technology it is
 claimed by holding the planet outright from one turn to the next, so one card can hand a hub to
 several players over a game — each getting their own.
 
@@ -278,10 +278,10 @@ the power, not to the card.
 
 **Every cooldown is 3 turns.** One figure for all of them, so a player never has to remember
 which of their powers is on which clock. A power that genuinely wants a different rhythm should
-have a different *timing* rather than its own number.
+have a different _timing_ rather than its own number.
 
-The first is **Railgun**: *a fighter's attack destroys its target outright,
-whatever its health.*
+The first is **Railgun**: _a fighter's attack destroys its target outright,
+whatever its health._
 
 Armed before a shot, it turns what would have been damage into a kill. Used on a turn, it is
 unavailable on the owner's next two turns and ready again on the third.
@@ -290,7 +290,7 @@ unavailable on the owner's next two turns and ready again on the third.
   power to touch anything, so an equal or bigger fighter remains out of reach.
 - It cannot be spent on a shot that would destroy the target anyway — that would start the timer
   for nothing, so the game refuses rather than letting it be wasted. Arming it therefore means
-  *use it if it helps*: fire on a probe with the Railgun armed and the probe simply dies to the
+  _use it if it helps_: fire on a probe with the Railgun armed and the probe simply dies to the
   ordinary shot, timer untouched.
 
 **ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
@@ -336,23 +336,23 @@ A planet's technology pays each player **once and once only**: a player who alre
 never offered it again.
 
 **A technology that acts at once acts when it is gained**, at the very top of the claiming
-player's turn — *before* the draft discard as well as before the placement. A tile, a Station Hub
+player's turn — _before_ the draft discard as well as before the placement. A tile, a Station Hub
 or a free move all change what the hand is worth, and being asked to throw a ship away before
 seeing what the turn has brought is choosing blind. A turn that claims two such technologies
 carries both out, in turn, before anything else happens.
 
-**Exploring pays no points, deliberately.** Its rewards are that the explorer *decides* what
+**Exploring pays no points, deliberately.** Its rewards are that the explorer _decides_ what
 the planet will hold — picking a technology that suits their position, from cards nobody
 else has seen — and gets the first claim on it.
 
 **OPEN:** whether a technology may carry an extra reward for the explorer specifically — for
 example granting the explorer two copies of a special piece where a later controller gets
-one. This is a reason for a probe's *level* to matter beyond the size of the reveal: a level
+one. This is a reason for a probe's _level_ to matter beyond the size of the reveal: a level
 3 probe sees more cards, so it is likelier to find a technology worth exploring for.
 
 Both survey decisions — whether and which planet to survey, then which card — belong to the
 placing player and happen inside their own turn. The first is always asked, since not surveying
-is always an answer. The second is never *presented* when it has only one answer: a reveal that
+is always an answer. The second is never _presented_ when it has only one answer: a reveal that
 turns up one matching card (or none) houses it without asking, and an explored planet offers
 only the technology it holds.
 
@@ -361,7 +361,7 @@ Other piece types resolve their own effects on placement; only probes explore.
 ### Fighters destroy
 
 A fighter arrives shooting. On being placed, it **may fire on one adjacent piece of its own
-power or below**. A level 2 fighter can wear down another level 2; only a fighter *above* it is
+power or below**. A level 2 fighter can wear down another level 2; only a fighter _above_ it is
 out of reach.
 
 Equal fighters used to be safe from each other, which made a level 3 the only piece on the board
@@ -370,7 +370,7 @@ worth having and left two level 2s staring at each other indefinitely.
 What the shot does depends on the target:
 
 - An enemy **fighter** takes **1 damage**, losing a level. At **level 1** it is destroyed by the
-  next hit instead. Since a fighter's level *is* its power, a damaged fighter is a weaker claim
+  next hit instead. Since a fighter's level _is_ its power, a damaged fighter is a weaker claim
   on the planets around it as well as being easier to finish — and a level 1 fighter holds a
   planet no harder than a station.
 - Anything else in reach is **destroyed** outright.
@@ -440,18 +440,18 @@ the planet, and it is gone — a controller who is no longer among the strongest
 but a former one. A planet nobody has ever controlled, tied from the start, is controlled by
 nobody.
 
-This is why control is *recorded* rather than worked out from the board: the answer depends on who
+This is why control is _recorded_ rather than worked out from the board: the answer depends on who
 held it before.
 
 Ties are treated differently depending on what is at stake:
 
-| At stake | A tie |
-| --- | --- |
-| End-game points for the planet | **Pays every tied player in full** |
-| The planet's technology | **Pays nobody** — it takes strictly more power than anyone else |
+| At stake                       | A tie                                                           |
+| ------------------------------ | --------------------------------------------------------------- |
+| End-game points for the planet | **Pays every tied player in full**                              |
+| The planet's technology        | **Pays nobody** — it takes strictly more power than anyone else |
 
 So sharing a planet's points is fine; sharing what it holds is not. One consequence worth
-knowing: deliberately *tying* a planet freezes its technology out of everyone's reach, since
+knowing: deliberately _tying_ a planet freezes its technology out of everyone's reach, since
 no one is then holding it outright.
 
 Scores are **public** and are a **running total that never decreases**: points scored for
@@ -460,21 +460,21 @@ control during the game are kept even if control is later lost.
 ### Chains
 
 If a placement creates an unbroken chain of that player's own ships joining **two planets of
-the same color**, the player scores **T(n)**, where *n* is the number of ships in the chain
+the same color**, the player scores **T(n)**, where _n_ is the number of ships in the chain
 (planets aren't counted) and T(n) is the *n*th triangular number: 1, 3, 6, 10, 15, …
 
 A chain is a run of ships on adjacent hexes; the first touches one planet, the last touches
 the other. Ship type is irrelevant — a probe links a chain as well as a fighter does. Only
-the player's *own* ships link, and since no ship can stand on a planet, a planet is a wall a
+the player's _own_ ships link, and since no ship can stand on a planet, a planet is a wall a
 chain must go around.
 
-Because T grows faster than *n*, joining two **distant** planets of a color is worth far more
+Because T grows faster than _n_, joining two **distant** planets of a color is worth far more
 than joining two that nearly touch — and costs the ships and turns to match, which is also
 the game's clock.
 
 **ASSUMED** (settle before playtesting):
 
-- *n* is the length of the **shortest** run through the player's ships. Once ships bunch up
+- _n_ is the length of the **shortest** run through the player's ships. Once ships bunch up
   there are many routes; the shortest is the one that is well defined, and it's the only
   measure that doesn't pay a player for wandering.
 - A **pair of planets pays once, ever, to whoever joins it first** — it is then spent for
@@ -493,22 +493,22 @@ Placing a **station** scores **1 for itself and 1 for every other friendly stati
 contiguous group with it**.
 
 Two stations are in the same **complex** if they **touch**, or if there is a **clear line**
-between them — the same wavy line that closes that space to enemy probes (see *Station
-blockades*). Links are **transitive**: a complex can run board-wide through a chain of
+between them — the same wavy line that closes that space to enemy probes (see _Station
+blockades_). Links are **transitive**: a complex can run board-wide through a chain of
 adjacency and sight lines, and a single station bridging two clusters welds them into one.
 
 So a player with three touching stations who lays a fourth across a gap, with a clear line to
 the run, scores **4**.
 
 Stations link to **stations only**. A probe or fighter standing between two of them — yours or
-anyone else's — breaks *both* kinds of link at once: adjacency by definition, and the line by
+anyone else's — breaks _both_ kinds of link at once: adjacency by definition, and the line by
 standing in it. So one piece dropped into a gap can split a complex in two, which is the
 counter-play, given that stations cannot be destroyed. A planet breaks a line too, since it
 cannot be seen past.
 
 Because it pays on every placement, a complex built up one station at a time pays 1, 2, 3, …
 — the same triangular total a chain pays, but earned incrementally and with no need for
-planets to line up. Placing stations apart and joining them later pays *less* than building
+planets to line up. Placing stations apart and joining them later pays _less_ than building
 compactly from the start (1+1+3 = 5 against 1+2+3 = 6), which is the decision the rule
 creates. All six stations in one complex is 21 points, the practical ceiling — and sight lines
 make reaching that far easier than adjacency alone would.
@@ -517,7 +517,7 @@ This gives each piece type a job: probes explore, fighters destroy, stations sco
 
 **A station can be paid twice for one placement.** Station complexes and chains are separate
 rules, and a station is a ship like any other where chains are concerned - so a station that
-joins a complex *and* completes a run between two planets of one colour collects under both. A
+joins a complex _and_ completes a run between two planets of one colour collects under both. A
 third station joining a pair, on a hex that also bridges two same-coloured planets, is 3 for
 the complex plus 3 for the chain.
 
@@ -527,7 +527,7 @@ the game to ask players to look for. The surprise jump is a real cost, which the
 over the board is there to explain (see the UI's per-action popups) - the points arrive
 labelled, not silently.
 
-**Updated Logistics**: *a fighter already on the board may attack one of its neighbours.*
+**Updated Logistics**: _a fighter already on the board may attack one of its neighbours._
 
 This is the only way a fighter fires twice. Shooting is otherwise something that happens on
 arrival and never again, so a landed fighter threatens its neighbours only in the sense that
@@ -537,7 +537,7 @@ The shot is an ordinary one in every other respect: the escort rule applies, a R
 spent on it, and it may be declined. It is refused outright on a fighter with nothing in reach,
 rather than spending three turns of the power on a shot that cannot be taken.
 
-**Full Torpedo Spread**: *when a fighter attacks, it may hit any or all of its neighbours.*
+**Full Torpedo Spread**: _when a fighter attacks, it may hit any or all of its neighbours._
 
 **Any**, not merely all. Sparing a neighbour is a real decision: clearing a piece can hand a
 planet to a third party, or open a blockade of your own, so a player choosing two of three
@@ -551,8 +551,8 @@ spread is only that it happens more than once, from one attack, for one cooldown
 The hits land **in the order chosen**, and that can matter: if one target was escorting another,
 shooting the guard first opens up its neighbour. The volley is not simultaneous.
 
-**Tactical Feint**: *swap one of your ships with an adjacent enemy ship. Your ship counts as newly
-placed.*
+**Tactical Feint**: _swap one of your ships with an adjacent enemy ship. Your ship counts as newly
+placed._
 
 The swap is the small half. "Newly placed" is the large one: the ship arrives as though it had
 just been played out of hand, which means **everything** an arrival sets off. A station scores its
@@ -567,10 +567,10 @@ hand another player a free arrival.
 
 Two consequences worth stating, because both are deliberate:
 
-- **A feint reaches an escorted ship.** The escort rule protects against *attacks*, and a swap is
+- **A feint reaches an escorted ship.** The escort rule protects against _attacks_, and a swap is
   not an attack. So this is the answer to a cluster that cannot be shot into — and note that
   displacing the escorting fighter can open its neighbours up to the shot that follows.
-- **A feint ignores a station blockade.** A hex closed to your probes is closed to *placing* one
+- **A feint ignores a station blockade.** A hex closed to your probes is closed to _placing_ one
   there; a swap is not a placement, and every swap target hex is occupied anyway, so the blockade
   check never had a hex to apply to. Worth revisiting if blockades turn out to matter more than
   this does.
@@ -583,8 +583,8 @@ its complex pays again, every three turns. That follows from "newly placed" and 
 combination the card is for, but it is points for no new position and it should be watched at the
 table.
 
-**Trade Route Wormhole**: *move one of your ships from beside a planet to beside a different
-planet of the same colour. Your ship counts as newly placed.*
+**Trade Route Wormhole**: _move one of your ships from beside a planet to beside a different
+planet of the same colour. Your ship counts as newly placed._
 
 The **colour is the route**. Two planets of one colour are the two ends of a wormhole, and a ship
 standing beside one can be standing beside the other — however far apart they are, and with no
@@ -593,18 +593,18 @@ though newly played, so a station pays for the complex it joins, a chain the arr
 pays, a fighter fires, a probe explores, and control is recomputed.
 
 **The pair of planets is not part of the move.** A ship beside two planets has two colours to
-travel on, and a destination is legal if *any* planet it touches pairs with *any* planet the ship
+travel on, and a destination is legal if _any_ planet it touches pairs with _any_ planet the ship
 is leaving. So a player picks a hex, not a route, and nothing has to be said about which planet
-they had in mind. A different hex beside the *same* planet is not a destination — the planet has
+they had in mind. A different hex beside the _same_ planet is not a destination — the planet has
 to be a different one, or the trade route goes nowhere.
 
 **A blockade still holds against it**, unlike a feint. The difference is not special pleading: a
-wormhole lands on an *empty* hex, so "as if newly placed" has a placement rule to answer to, and
+wormhole lands on an _empty_ hex, so "as if newly placed" has a placement rule to answer to, and
 two enemy stations watching that corridor shut a probe out of it exactly as they would if the
 probe were being played from hand. A feint's destination is occupied by definition, so the
 blockade check never had an empty hex to apply to.
 
-Note what this does to chains: the ship *leaves* a hex, and a chain it was standing in is broken
+Note what this does to chains: the ship _leaves_ a hex, and a chain it was standing in is broken
 by its departure. Since a spent pair stays spent, a player can dismantle their own scored chain
 freely — but the ship arriving may complete a **new** pair at the far end, which is the trade the
 card is really offering.
@@ -629,7 +629,7 @@ reach for first and it looks like an exception — it isn't. Nothing in between 
 between, and zero hexes is the easiest way to have nothing in between.
 
 The one rule that reads this differently is the **station blockade** below, and deliberately: two
-*touching* stations close nothing, because a blockade is about shutting a corridor and there is no
+_touching_ stations close nothing, because a blockade is about shutting a corridor and there is no
 corridor to shut. That is a rule about the space between, not about sight.
 
 ### Station blockades
@@ -647,8 +647,8 @@ So a station pair is a fence that costs nothing to maintain and can only be brok
 committing a real piece to the gap. Since probes are the only way to explore, a well-placed
 pair can shut opponents out of the planets beyond it.
 
-The same line also joins the two stations into one **complex** for scoring — see *Station
-groups* above. A wavy line therefore does two jobs at once, which is why breaking one is worth
+The same line also joins the two stations into one **complex** for scoring — see _Station
+groups_ above. A wavy line therefore does two jobs at once, which is why breaking one is worth
 a piece to an opponent.
 
 **OPEN:** which other acts score during play, and how much. Taking control of a planet from
@@ -667,7 +667,7 @@ anyone banking anything, so it's the board's final shape that counts.
 **OPEN:** whether each technology carries its own end-game point value, so that choosing
 which technology to house on a planet is also a scoring decision. Note that the player who
 explores a planet often isn't the player who ends up controlling it — probes have no power —
-so a technology's value would be points offered to *whoever holds the planet at the end*,
+so a technology's value would be points offered to _whoever holds the planet at the end_,
 which makes housing a low-value technology on a planet you don't expect to hold a deliberate
 denial play.
 
@@ -678,7 +678,7 @@ denial play.
 Certain actions let a player add a tile to the board. A new tile must be placed so that **at
 least two of its hexes touch existing hexes**.
 
-Board growth is a **technology effect** — see *Immediate effects* above. Tiles come from a
+Board growth is a **technology effect** — see _Immediate effects_ above. Tiles come from a
 supply held back at setup, and the technology that draws one also places a ship on it.
 
 ---
@@ -693,10 +693,11 @@ no special piece they could place instead. A full board is one way that happens;
 drawn while every open hex is closed by enemy station blockades is another.
 
 This can only be judged after the draw, since a hex shut to a probe is wide open to the
-fighter behind it in the same bag. It is a real ending rather than a safety valve, but a rare
-one: roughly one simulated game in thirty ends this way, and if it becomes common the board
-has grown too small for the bags. Players later in the turn order simply
-don't get another turn.
+fighter behind it in the same bag. At 3 tiles per player it is the usual ending. Players later
+in the turn order simply don't get another turn.
+
+A tie for the highest score is a **shared win**, just as tied control of a planet pays every
+tied player in full.
 
 Everyone starts with the same 18 pieces, so the player who empties their bag first is the
 one who has spent the fewest turns on special pieces, not the one who was luckiest with the
@@ -709,13 +710,11 @@ instead of it.
 
 ---
 
-## Testing aids
+## Game options
 
-Not rules. The **Technology deck** setup option can fill the deck with a single technology,
-one card in every planet colour, so a newly added effect comes up on every exploration
-instead of waiting on the shuffle. Every planet then houses the same technology, which is no
-kind of game — it is just the fastest way to see a new effect from every angle. Use the full
-deck for anything resembling a real playtest.
+**Technology deck.** The full deck is the normal game. Alternatively the deck can be filled
+with a single technology, one card in every planet colour, so that technology comes up on
+every exploration and every planet houses it — a way to see one effect from every angle.
 
 ---
 
@@ -731,11 +730,11 @@ Two actions reveal, and undo cannot reach back past either:
   player who could look and then place elsewhere would be reading the deck.
 - **Laying a tile**, which draws a ship from the bag to go on it.
 
-Each of those claims a reveal only when something *actually* became public. If the technology
+Each of those claims a reveal only when something _actually_ became public. If the technology
 deck and its discard are both spent, an exploration turns nothing over — so there is no
 knowledge to protect, and the placement that triggered it can still be taken back.
 
 Everything else is undoable: a placement that revealed nothing, a shot, a technology's move.
 Note that undo restores the bag order and the random seed exactly, so taking back a turn and
 replaying it identically produces the same draw — the point of the restriction is the
-*knowledge* gained, not a chance to re-roll.
+_knowledge_ gained, not a chance to re-roll.

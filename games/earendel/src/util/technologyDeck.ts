@@ -107,7 +107,7 @@ type UndealtEffect = Exclude<TechnologyEffectKind, (typeof PLACEHOLDER_EFFECTS)[
 // Fails to compile, naming the missing effect, when one is left out of PLACEHOLDER_EFFECTS.
 const _EVERY_EFFECT_IS_DEALT: [UndealtEffect] extends [never] ? true : UndealtEffect = true
 // A deck of nothing but the named effect, one card per planet colour so that whatever a probe
-// reaches, the effect comes up. A testing aid - see the technologyDeck config option.
+// reaches, the effect comes up. See the technologyDeck config option.
 export function buildFocusedTechnologyDeck(
     prng: Prng,
     kind: TechnologyEffectKind,

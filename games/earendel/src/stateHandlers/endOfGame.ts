@@ -43,8 +43,8 @@ export class EndOfGameStateHandler implements MachineStateHandler<
             .filter((player) => player.score === highScore)
             .map((player) => player.playerId)
 
-        // OPEN: ties are unbroken for now, matching the rule that tied planet control pays
-        // everyone in full. A tiebreaker may still be wanted for the game as a whole.
+        // A tie for the highest score is a shared win, as tied planet control pays everyone in
+        // full.
         gameState.result = winningIds.length > 1 ? GameResult.Draw : GameResult.Win
         gameState.winningPlayerIds = winningIds
         gameState.activePlayerIds = []
