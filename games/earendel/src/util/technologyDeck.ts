@@ -68,19 +68,10 @@ export function revealForExploration(
 // will replace this wholesale - what matters for now is that colour coverage is even, so the
 // reveal rule can be exercised honestly. Deterministic given a seed, like everything in setup.
 //
-// PROVISIONAL: one card in three is elevated - IF any are dealt at all, which they currently
-// are not. The real proportion belongs with the real technologies, since it depends on how much
-// stronger an elevated one is.
-//
-// No elevated technology has been designed yet: every technology that exists is standard. So the
-// placeholder deck must not mint them, and DEAL_ELEVATED is off. It matters far more than it
-// looks. An elevated card REMOVES the explorer's choice (see choosableFrom - elevated candidates
-// crowd out standard ones, and a lone candidate is taken automatically), so dealing one card in
-// three elevated was silently deciding about four explorations in nine on the player's behalf,
-// in the name of a rule whose content hasn't been written. Exploring is meant to be a decision;
-// that turned it into a lottery.
-//
-// Turn this on when there are real elevated technologies to deal.
+// No elevated technology has been designed yet, so none is dealt: an elevated card removes the
+// explorer's choice (see choosableFrom), and dealing them before they mean anything would decide
+// explorations on the player's behalf. Turn DEAL_ELEVATED on, and settle the share, when the
+// first real elevated technology exists.
 export const ELEVATED_SHARE = 3
 export const DEAL_ELEVATED = false
 
@@ -153,9 +144,7 @@ export function buildTechnologyDeck(prng: Prng): TechnologyCard[] {
             DEAL_ELEVATED && index % ELEVATED_SHARE === 0
                 ? TechnologyTier.Elevated
                 : TechnologyTier.Standard,
-        // PROVISIONAL: the effects that exist are dealt alternately across the whole deck so
-        // both get exercised in play, and so an elevated card isn't strictly worse than a
-        // standard one for having no effect. Real technologies replace this wholesale.
+        // The effects that exist are dealt round-robin across the deck.
         effect: { kind: PLACEHOLDER_EFFECTS[index % PLACEHOLDER_EFFECTS.length] }
     }))
 

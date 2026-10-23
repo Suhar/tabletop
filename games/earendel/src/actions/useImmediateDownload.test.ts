@@ -198,6 +198,13 @@ describe('Immediate Download', () => {
         expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
     })
 
+    it('refuses a planet holding another Download, so sight cannot chain', () => {
+        const { game, mover } = scenario(TechnologyEffectKind.ImmediateDownload)
+
+        expect(downloadTargetsFrom(game.hydrated, mover, at(2, 0))).toEqual([])
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
+    })
+
     it('must be spent from a planet actually holding the player’s Download', () => {
         const { game, mover } = scenario()
         // The far planet is in sight and holds a technology, but it isn't the anchor.

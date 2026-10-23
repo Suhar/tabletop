@@ -1,13 +1,19 @@
 import { type AxialCoordinates, Prng, shuffle } from '@tabletop/common'
-import { type EarendelBoard, getHex, HexKind, hexKey, neighborsOf, PLANET_COLORS } from '../model/board.js'
+import {
+    type EarendelBoard,
+    getHex,
+    HexKind,
+    hexKey,
+    neighborsOf,
+    PLANET_COLORS
+} from '../model/board.js'
 import type { Tile } from '../model/tile.js'
 import { TILE_HEX_OFFSETS } from './boardSetup.js'
 
 // Tiles held back from the starting map, to be laid during play by the technology that grows
 // the board.
 //
-// PROVISIONAL: two per player. Enough that growth is a real option without the board being
-// able to double. The right number depends on how common the technology turns out to be.
+// Two per player: enough that growth is a real option without the board being able to double.
 export const SPARE_TILES_PER_PLAYER = 2
 
 export function buildTileSupply(playerCount: number, prng: Prng): Tile[] {

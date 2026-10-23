@@ -1,11 +1,11 @@
-# Earendel — rules in progress
+# Earendel — rules
 
 A turn-based game of space exploration for 2–5 players. This document is the design source
 of truth: it describes the game as intended, not as implemented. Where the code lags behind
 or ahead, this file wins and the code is wrong.
 
-Sections marked **OPEN** are undecided. Nothing should be built on an OPEN item without
-settling it first.
+Every rule here is settled. A question that comes up in play is added as **OPEN** and decided
+before anything is built on it.
 
 ---
 
@@ -69,7 +69,8 @@ game_) rather than when a bag empties — every one of 32 simulated games ended 
 of 7 tiles per player is where games end on an empty bag instead; the sizing notes below were
 measured there.
 
-**OPEN:** how planet colors are distributed across the starting tiles.
+Each planet's colour is chosen at random, independently, so a board can hold several planets of
+one colour and none of another.
 
 **Sizing, settled by simulation rather than by feel.** The open space on the board has to be
 matched against the size of the bags, or the game cannot reach its own ending. Two tiles per
@@ -207,7 +208,8 @@ rhombus, so it covers the same four hexes every half turn — but the planet swa
 turning is worth doing even when the outline doesn't move. Rotation also reaches placements a
 fixed orientation cannot.
 
-**OPEN:** how large the tile supply should be — provisionally two tiles per player.
+The tile supply holds **two tiles per player**, each with a random planet position and colour.
+It is **face-down**: nobody sees a tile until it is drawn.
 
 ### Stored effects
 
@@ -248,8 +250,8 @@ It is spent **from the planet holding it**, and that planet is where the line of
 A player holding two Downloads on two planets has two different views of the board, and spends each
 from its own.
 
-OPEN: a Download can be read from a planet whose technology is _another_ Download. Nothing stops
-that today, and chaining sight across the board may be stronger than it looks.
+A Download **cannot** take a technology that is itself an Immediate Download, so sight cannot be
+chained across the board.
 
 ### Granted pieces
 
@@ -293,14 +295,12 @@ unavailable on the owner's next two turns and ready again on the third.
   _use it if it helps_: fire on a probe with the Railgun armed and the probe simply dies to the
   ordinary shot, timer untouched.
 
-**ASSUMED:** that a step triggers nothing. A move that explored, or scored a chain, would be a
-far stronger effect; this is the conservative reading.
+A step triggers nothing. A move that explored, or scored a chain, would be a far stronger
+effect.
 
-**OPEN:** what proportion of the deck is elevated. Provisionally one card in three, which is
-not currently dealt at all: **no elevated technology has been designed yet**, so the placeholder
-deck marks every card standard. That is deliberate rather than an oversight — an elevated card
-removes the explorer's choice, so minting them before they mean anything took the decision away
-about four explorations in nine for no gain.
+**No elevated technology has been designed yet**, so every card in the deck is standard. An
+elevated card removes the explorer's choice, so none is dealt until one means something. The
+proportion of the deck that is elevated is decided when the first one is designed.
 
 If the deck runs out mid-reveal, the discard pile is shuffled to form a new deck. If even
 that cannot produce enough matching cards, the planet is explored with **fewer** candidates
@@ -345,10 +345,7 @@ carries both out, in turn, before anything else happens.
 the planet will hold — picking a technology that suits their position, from cards nobody
 else has seen — and gets the first claim on it.
 
-**OPEN:** whether a technology may carry an extra reward for the explorer specifically — for
-example granting the explorer two copies of a special piece where a later controller gets
-one. This is a reason for a probe's _level_ to matter beyond the size of the reveal: a level
-3 probe sees more cards, so it is likelier to find a technology worth exploring for.
+The explorer gets **nothing extra** beyond choosing the technology and the first claim on it.
 
 Both survey decisions — whether and which planet to survey, then which card — belong to the
 placing player and happen inside their own turn. The first is always asked, since not surveying
@@ -472,7 +469,7 @@ Because T grows faster than _n_, joining two **distant** planets of a color is w
 than joining two that nearly touch — and costs the ships and turns to match, which is also
 the game's clock.
 
-**ASSUMED** (settle before playtesting):
+Three further rules:
 
 - _n_ is the length of the **shortest** run through the player's ships. Once ships bunch up
   there are many routes; the shortest is the one that is well defined, and it's the only
@@ -578,10 +575,9 @@ Two consequences worth stating, because both are deliberate:
 It is refused when a shot or an exploration of the player's own is already waiting: there is one
 slot for each, and the feint's own arrival needs it.
 
-OPEN: a station can be **rescored by shuffling**. Swap a station one hex sideways into an enemy and
-its complex pays again, every three turns. That follows from "newly placed" and may be exactly the
-combination the card is for, but it is points for no new position and it should be watched at the
-table.
+A station **can be rescored by shuffling**: swap it one hex sideways into an enemy and its complex
+pays again, every three turns. That follows from "newly placed", and makes Tactical Feint a
+scoring card as well as a disruptive one.
 
 **Trade Route Wormhole**: _move one of your ships from beside a planet to beside a different
 planet of the same colour. Your ship counts as newly placed._
@@ -651,8 +647,8 @@ The same line also joins the two stations into one **complex** for scoring — s
 groups_ above. A wavy line therefore does two jobs at once, which is why breaking one is worth
 a piece to an opponent.
 
-**OPEN:** which other acts score during play, and how much. Taking control of a planet from
-another player is a candidate.
+Nothing else scores during play. Taking control of a planet from another player scores nothing
+at the time; planets pay at the end.
 
 ### At the end of the game
 
@@ -662,14 +658,9 @@ full, so one planet can pay two players a point each.
 This is the only scoring that waits until the end: control can change hands all game without
 anyone banking anything, so it's the board's final shape that counts.
 
-**OPEN:** whether an explored planet should be worth more than an unexplored one.
+An explored planet is worth the same as an unexplored one.
 
-**OPEN:** whether each technology carries its own end-game point value, so that choosing
-which technology to house on a planet is also a scoring decision. Note that the player who
-explores a planet often isn't the player who ends up controlling it — probes have no power —
-so a technology's value would be points offered to _whoever holds the planet at the end_,
-which makes housing a low-value technology on a planet you don't expect to hold a deliberate
-denial play.
+Technologies carry no end-game point value.
 
 ---
 
@@ -706,7 +697,8 @@ order: a draw that goes back in the bag doesn't advance that player's clock.
 An exploration owed by the final placement is still resolved — the game ends after it, not
 instead of it.
 
-**OPEN:** final scoring beyond planet control.
+Final scores are the points scored during play plus planet control at the end; there is no
+other final scoring.
 
 ---
 

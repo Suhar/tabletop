@@ -12,8 +12,7 @@ export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
     { q: 1, r: 1 }
 ]
 
-// One planet per tile, three hexes of open space. PROVISIONAL, chosen by simulation rather
-// than by feel: two planets per tile left so little room that no game could reach its own
+// One planet per tile, three hexes of open space, chosen by simulation rather than by feel: two planets per tile left so little room that no game could reach its own
 // ending, and dropping to one is what makes the open space add up (see rules.md).
 export const PLANETS_PER_TILE = 1
 

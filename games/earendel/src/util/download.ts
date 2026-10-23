@@ -31,7 +31,8 @@ export function downloadAnchorsFor(
 }
 
 // The planets a Download sitting on this one could take a technology from: in clear line of
-// sight, explored, holding a technology, and holding one this player doesn't already have.
+// sight, explored, holding a technology this player doesn't already have, and not holding
+// another Download - which would let sight chain across the board.
 //
 // Explored is not a separate rule so much as a consequence - an unexplored planet holds no
 // technology yet - but it is checked by name because the wording says "explored planet", and a
@@ -47,6 +48,7 @@ export function downloadTargetsFrom(
         const hex = getHex(state.board, coords)
         if (hex?.kind !== HexKind.Planet) return false
         if (!hex.explored || !hex.technology) return false
+        if (hex.technology.effect?.kind === TechnologyEffectKind.ImmediateDownload) return false
         // Already theirs: there is nothing to download, and spending a one-shot power on it
         // would be a trap rather than a choice.
         return !held.has(hex.technology.id)
