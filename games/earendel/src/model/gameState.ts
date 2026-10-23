@@ -24,62 +24,26 @@ export const EarendelGameState = Type.Evaluate(
     Type.Intersect([
         Type.Omit(GameState, ['players', 'machineState']),
         Type.Object({
-            players: Type.Array(EarendelPlayerState), // Redefine with the specific player state type
-            machineState: Type.Enum(MachineState), // Redefine with the specific machine states
+            players: Type.Array(EarendelPlayerState),
+            machineState: Type.Enum(MachineState),
             board: EarendelBoard,
-            // The shared technology deck, in draw order, and its discard. The deck's order is
-            // hidden information - it is what exploring reveals - so anything exposing state to
-            // a player must keep it that way (and EarendelGameExploration reshuffles it). The
-            // discard is face-up.
             technologyDeck: DrawBag(TechnologyCard),
             technologyDiscard: Type.Array(TechnologyCard),
-            // Set while a probe placement is waiting on its player: which planet to explore
-            // (when it reached more than one), and then which revealed technology to keep.
-            // Cleared once the exploration resolves. Its presence is what holds the turn open.
             pendingExploration: Type.Optional(PendingExploration),
-            // The ships drawn for the current turn and not yet placed. Drawn before any hex
-            // is chosen, because knowing what you have is what makes the placement a
-            // decision. Public: the platform sends state to every client whole, so there is
-            // nowhere to hide it.
-            //
-            // One piece in the simple turn style, two after a draft, and briefly three while
-            // the player decides which to throw away. The turn ends when it empties, which is
-            // what lets both styles share one path.
             heldPieces: Type.Array(Piece),
-            // Tiles held back from the starting map, drawn by the technology that grows the
-            // board.
             tileSupply: DrawBag(Tile),
-            // A tile drawn and waiting to be laid.
             pendingTile: Type.Optional(Type.Object({ playerId: Type.String(), tile: Tile })),
-            // Set between laying a tile and placing the ship that follows it: that ship, and
-            // only that ship, must land on this tile. The piece is named as well as the tile
-            // because a drafted turn may still be holding a piece of its own.
             bonusPlacementTileId: Type.Optional(Type.String()),
             bonusPlacementPieceId: Type.Optional(Type.String()),
-            // Set while an immediate technology effect is owed to the player who claimed it.
             pendingTechnology: Type.Optional(PendingTechnology),
-            // Immediate effects still owed after the one being resolved. A turn can claim
-            // several technologies at once - two planets held to term on the same turn - and
-            // each one that acts at once has to be carried out before the turn proceeds. The
-            // one in hand lives in pendingTechnology/pendingTile as it always has; this is the
-            // rest of the line behind it, drained one at a time.
             queuedTechnologyEffects: Type.Array(PendingTechnology),
-            // Whether this turn still owes its draft discard. The count in hand can't answer
-            // that on its own: a turn that lays a tile draws an extra ship for it, so "more than
-            // one held" stops meaning "hasn't discarded yet" the moment a technology intervenes.
+            // Stored, not derived: a laid tile draws an extra ship, so the hand size cannot say.
             draftPending: Type.Optional(Type.Boolean()),
-            // Who controls each planet, by hex key. Recorded rather than derived because control
-            // is STICKY: a tie leaves the incumbent in place, so the answer depends on who held it
-            // before and cannot be read off the board alone (see util/control.ts).
+            // Stored, not derived: control is sticky, so it depends on who held it before (rules.md,
+            // Control and scoring).
             planetControllers: Type.Record(Type.String(), Type.String()),
-            // Set while a newly placed fighter's owner decides whether to fire. Like
-            // pendingExploration, its presence is what holds the turn open.
             pendingAttack: Type.Optional(PendingAttack),
-            // Pairs of planets already joined by a chain (see planetPairKey). A pair pays
-            // out once and is then spent for everyone, so the record is global rather than
-            // per player - joining a colour first is the whole race.
             scoredPlanetPairs: Type.Array(Type.String()),
-            // Technologies staked out by probes, each waiting on its player's next turn.
             probeClaims: Type.Array(ProbeClaim)
         })
     ])
@@ -87,8 +51,7 @@ export const EarendelGameState = Type.Evaluate(
 
 export const EarendelGameStateValidator = Compile(EarendelGameState)
 
-// What a player or spectator receives: the hidden piles' items emptied and the protected random
-// state neutralised. Hydration accepts this as well as the complete canonical state.
+// Hidden piles emptied and protected random state neutralised; hydration accepts this too.
 export const EarendelProjectedState = Visibility.createProjectionSchema(EarendelGameState)
 export type EarendelProjectedState = Type.Static<typeof EarendelProjectedState>
 export const EarendelProjectedStateValidator = Compile(EarendelProjectedState)
@@ -97,7 +60,6 @@ export class HydratedEarendelGameState
     extends HydratableGameState<typeof EarendelProjectedState, HydratedEarendelPlayerState>
     implements EarendelProjectedState
 {
-    // Declare properties to satisfy the interface, they will be populated by the base class
     declare id: string
     declare gameId: string
     declare prng: PrngState

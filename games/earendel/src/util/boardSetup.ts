@@ -1,10 +1,6 @@
 import { type AxialCoordinates, Prng, shuffle } from '@tabletop/common'
 import { EarendelBoard, HexKind, hexKey, PLANET_COLORS } from '../model/board.js'
 
-// A tile is four hexes in a diamond: an axial rhombus, (0,0) (1,0) (0,1) (1,1) relative to
-// its origin. Two of the four are planets and two are open space, but WHICH two varies from
-// tile to tile - that variety is the whole reason the board is interesting, so the layout is
-// drawn at random per tile rather than fixed.
 export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
     { q: 0, r: 0 },
     { q: 1, r: 0 },
@@ -12,45 +8,28 @@ export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
     { q: 1, r: 1 }
 ]
 
-// One planet per tile, three hexes of open space, chosen by simulation rather than by feel: two planets per tile left so little room that no game could reach its own
-// ending, and dropping to one is what makes the open space add up (see rules.md).
+// One planet per tile, settled by simulation (rules.md, Setup).
 export const PLANETS_PER_TILE = 1
 
-// Three tiles per player: 9 open hexes each against a bag of 22, so games are short and usually
-// end when the board fills rather than when a bag empties (see rules.md). Seven is the size at
-// which simulated games end on an empty bag instead; the sizing assertions in
-// simulation.test.ts are written against it.
 export const TILES_PER_PLAYER = 3
 
-// The board size at which simulated games end on an empty bag, which the sizing assertions
-// measure against.
 export const PLAYTEST_TILES_PER_PLAYER = 7
 
-// Both numbers are being tuned, so they can be overridden without editing the constants -
-// see simulate.ts, which sweeps them.
 export type BoardSetupOptions = {
     tilesPerPlayer?: number
     planetsPerTile?: number
 }
 
-// Where the starting tiles go.
-//
-// Tiles are laid on a grid whose two steps are axis-aligned on screen: in axial terms (2,-1)
-// is exactly horizontal and (0,2) exactly vertical, so columns and rows line up rather than
-// shearing away as a naive (2,0) step would. Those two steps generate a lattice of index four,
-// which is exactly the size of a tile, so the rhombi tile the plane with no gaps or overlaps.
+// (2,-1) and (0,2) are axis-aligned on screen and span an index-4 lattice, so the four-hex tiles
+// cover the plane with no gaps or overlaps.
 const COLUMN_STEP: AxialCoordinates = { q: 2, r: -1 }
 const ROW_STEP: AxialCoordinates = { q: 0, r: 2 }
 
-// How far a column and a row carry on screen, in the units the hexes are drawn in. A tile
-// cell is taller than it is wide, which is why a square grid of them would come out portrait.
 const COLUMN_WIDTH = 150
 const ROW_HEIGHT = 174
 
-// Wider than tall, to sit in an app window rather than fighting it.
 const TARGET_ASPECT = 1.6
 
-// The column count whose grid comes out closest to TARGET_ASPECT.
 function bestColumnCount(tileCount: number): number {
     let best = 1
     let bestError = Infinity
@@ -81,7 +60,6 @@ export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
     })
 }
 
-// The board every game starts from: TILES_PER_PLAYER per player, each with its own layout.
 export function buildStartingBoard(
     playerCount: number,
     prng: Prng,
@@ -102,9 +80,6 @@ export function buildStartingBoard(
                 coords,
                 tileId,
                 kind,
-                // Placeholder distribution: each planet's colour drawn independently. How
-                // colours should actually be spread across the opening map is still open -
-                // an even spread and a clumpy one play very differently.
                 ...(kind === HexKind.Planet
                     ? { color: PLANET_COLORS[Math.floor(prng.random() * PLANET_COLORS.length)] }
                     : {})

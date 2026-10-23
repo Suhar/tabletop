@@ -25,7 +25,6 @@
             return entry
         })
 
-        // if not hotseat, rotate until user player is at top
         if (gameSession.myPlayer && !gameSession.primaryGame.hotseat) {
             const myPlayerId = gameSession.myPlayer.id
             if (myPlayerId) {

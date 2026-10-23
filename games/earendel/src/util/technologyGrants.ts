@@ -13,14 +13,6 @@ import { probeLeaderOf } from './probes.js'
 import { drawFrom } from './drawBags.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
-// Settles this player's probe claims at the start of their turn: every claim whose planet their
-// probes still lead on - strictly the most probe influence - becomes theirs, and every other claim
-// lapses. Either way the claims are spent, since each was only ever good for this one turn.
-//
-// This is the whole of how a technology changes hands. Holding a planet with stations and fighters
-// scores it but does not win what it holds; surveying it with probes and keeping the lead for a
-// round does. A rival who outweighs your probes in between doesn't take the technology - they only
-// stop you getting it, unless they survey the planet and stake a claim of their own.
 export function probeTechnologiesFor(
     state: HydratedEarendelGameState,
     playerId: string
@@ -45,9 +37,6 @@ export function probeTechnologiesFor(
     return { gained, lapsed }
 }
 
-// Hands one technology to one player: the id for the ledger, and anything the card stores for
-// them to spend later. The single place a technology changes hands, so the explorer and a
-// later conqueror cannot drift apart.
 export function grantTechnology(
     state: HydratedEarendelGameState,
     playerId: string,
@@ -71,8 +60,6 @@ export function grantTechnology(
     }
 }
 
-// The piece a granting technology hands over. Named from the card as well as the player, so the
-// same planet cannot hand the same player two of them.
 function grantedPiece(
     kind: TechnologyEffectKind,
     playerId: string,
@@ -89,12 +76,6 @@ function grantedPiece(
     return undefined
 }
 
-// Settles this player's probe claims, hands over every technology they kept, and lines up any
-// that act at once. Called at the top of a turn, which is the only moment a technology ever
-// changes hands.
-//
-// Returns the cards gained and lapsed so the action that triggered it can report them: nobody was
-// looking at the board when either was decided - each is the outcome of a round of other turns.
 export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
@@ -107,14 +88,11 @@ export function claimProbeTechnologies(
     for (const card of gained) {
         grantTechnology(state, playerId, card)
 
-        // GrowBoard is handled apart from the others because it needs a tile drawn for it, and
-        // the supply can be empty - in which case the technology simply comes to nothing.
         if (hasImmediateEffect(card)) {
             effects.push({ playerId, technologyId: card.id, kind: card.effect!.kind })
         }
     }
 
-    // The first effect goes into the slot the resolving states already watch; the rest wait.
     const [first, ...rest] = effects
     state.queuedTechnologyEffects = rest
     if (first) activateTechnologyEffect(state, first)
@@ -122,8 +100,6 @@ export function claimProbeTechnologies(
     return { gained, lapsed }
 }
 
-// Puts one owed effect into the slot its resolving state watches. GrowBoard wants a tile in
-// hand; everything else waits on pendingTechnology.
 export function activateTechnologyEffect(
     state: HydratedEarendelGameState,
     effect: PendingTechnology
@@ -136,8 +112,6 @@ export function activateTechnologyEffect(
     state.pendingTechnology = effect
 }
 
-// Pulls the next owed effect into play, if any. Returns whether one was activated, so the
-// caller can decide between carrying on with the turn and resolving another effect.
 export function activateNextTechnologyEffect(state: HydratedEarendelGameState): boolean {
     const [next, ...rest] = state.queuedTechnologyEffects
     if (!next) return false
@@ -145,8 +119,6 @@ export function activateNextTechnologyEffect(state: HydratedEarendelGameState): 
     state.queuedTechnologyEffects = rest
     activateTechnologyEffect(state, next)
 
-    // An empty tile supply leaves GrowBoard with nothing to do, so it isn't really pending -
-    // skip straight past it rather than stalling the turn on an effect that cannot happen.
     if (!state.pendingTile && !state.pendingTechnology) {
         return activateNextTechnologyEffect(state)
     }

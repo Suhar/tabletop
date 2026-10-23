@@ -11,29 +11,12 @@ export const EarendelPlayerState = Type.Evaluate(
     Type.Intersect([
         PlayerState,
         Type.Object({
-            // The player's own bag of ships, shuffled at setup and drawn from the front. Its
-            // contents are hidden from everyone, including its owner; only `remaining` is public.
             bag: DrawBag(Piece),
-            // Rewards from exploring planets, kept face-up in front of the player. A turn
-            // may spend one of these INSTEAD of drawing from the bag.
             specialPieces: Type.Array(Piece),
-            // Technologies this player has gained, by card id. Gained by exploring the
-            // planet, or by coming into control of it later - and never lost afterwards,
-            // even when the planet is. Ids are unique across the deck, so a card id names
-            // the planet it came from.
             technologies: Type.Array(Type.String()),
-            // Effects gained from technologies that are spent later rather than at once, each
-            // usable a single time. A player can hold several, including two of the same kind
-            // from two different planets.
             storedEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
-            // Repeatable powers this player holds, each usable again and again but only so
-            // often. Deduplicated: a second copy of the same card adds nothing.
             cooldownEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
-            // For each of those, the player's own turn count when it was last used. Absent means
-            // never used, so ready.
             cooldowns: Type.Record(Type.String(), Type.Number()),
-            // A running total that only ever goes up: control scored during the game is kept
-            // even if the planet is later lost.
             score: Type.Number()
         })
     ])
@@ -55,8 +38,6 @@ export class HydratedEarendelPlayerState
     declare cooldowns: Record<string, number>
     declare score: number
 
-    // The game ends the moment any player's bag runs out (see EndOfGame), so this is the
-    // clock everything else is measured against.
     get bagIsEmpty(): boolean {
         return this.bag.remaining === 0
     }

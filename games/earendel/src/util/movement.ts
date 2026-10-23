@@ -5,14 +5,7 @@ import { probeBlockedBy } from './lineOfSight.js'
 
 export type Move = { from: AxialCoordinates; to: AxialCoordinates }
 
-// Where the piece standing here could step: an adjacent hex of open space with nothing on it.
-//
-// A probe is still shut out of an enemy station blockade. That rule closes the space itself
-// rather than the act of placing, so slipping in sideways is no different from landing there.
-export function destinationsFrom(
-    board: EarendelBoard,
-    from: AxialCoordinates
-): AxialCoordinates[] {
+export function destinationsFrom(board: EarendelBoard, from: AxialCoordinates): AxialCoordinates[] {
     const piece = getHex(board, from)?.piece
     if (!piece) return []
 
@@ -24,7 +17,6 @@ export function destinationsFrom(
     })
 }
 
-// Every move this player could make with one of their own pieces.
 export function legalMovesFor(board: EarendelBoard, playerId: string): Move[] {
     return Object.values(board.hexes)
         .filter((hex) => hex.piece?.playerId === playerId)

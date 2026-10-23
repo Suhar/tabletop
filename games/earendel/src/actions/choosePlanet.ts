@@ -10,17 +10,9 @@ import { revealForExploration } from '../util/technologyDeck.js'
 
 export type ChoosePlanetMetadata = Type.Static<typeof ChoosePlanetMetadata>
 export const ChoosePlanetMetadata = Type.Object({
-    // Every card turned over on the way, in order - watching the flips is half the point of
-    // exploring, so history keeps them, not just the ones that matched.
     flipped: Type.Optional(Type.Array(TechnologyCard)),
-    // The cards the player may actually take. Fewer than the probe's level when the deck and
-    // discard couldn't produce enough matches - or when an elevated card turned up, which
-    // puts the standard matches out of reach.
     candidates: Type.Optional(Type.Array(TechnologyCard)),
-    // The planet had already been explored, so nothing was turned over: the technology staked
-    // out is the one it already holds.
     alreadyExplored: Type.Optional(Type.Boolean()),
-    // The player chose not to survey any planet.
     declined: Type.Optional(Type.Boolean())
 })
 
@@ -31,12 +23,8 @@ export const ChoosePlanet = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.ChoosePlanet),
             playerId: Type.String(),
-            // Set when the flip actually turned something over, which is what undo must not
-            // reach back past: a player who could look and then choose differently would be
-            // reading the deck. When both piles are spent nothing becomes public, so there is
-            // nothing to protect and the placement stays takeable back.
+            // Undo must not reach back past a flip that turned cards face up.
             revealsInfo: Type.Optional(Type.Boolean()),
-            // Absent means surveying nothing - it is always optional.
             coords: Type.Optional(AxialCoordinates),
             metadata: Type.Optional(ChoosePlanetMetadata)
         })
@@ -49,15 +37,6 @@ export function isChoosePlanet(action?: GameAction): action is ChoosePlanet {
     return action?.type === ActionType.ChoosePlanet
 }
 
-// Settles whether a just-placed probe surveys a planet beside it, and which. It may only survey a
-// planet where its player has strictly the most probe influence (see probeDestinations). The
-// probe stays where it is either way; its level sets how many cards the reveal looks for.
-// Deciding the planet is also what makes the reveal possible - the planet's colour is what the
-// flip is looking for - so the cards come off the deck here, and choosing among them is the next
-// action, which also stakes the player's claim on the technology.
-//
-// Surveying a planet that is already explored turns nothing over: the one technology on offer is
-// the one the planet already holds.
 export class HydratedChoosePlanet
     extends HydratableAction<typeof ChoosePlanet>
     implements ChoosePlanet
@@ -79,7 +58,6 @@ export class HydratedChoosePlanet
         }
 
         const pending = state.pendingExploration!
-        // Only a real flip reveals anything; set below when one happens.
         this.revealsInfo = false
 
         if (!this.coords) {
@@ -111,9 +89,6 @@ export class HydratedChoosePlanet
         state.technologyDeck = piles.deck
         state.technologyDiscard = piles.discard
 
-        // Narrowed here rather than at the moment of choosing, so that everything downstream
-        // - validation, and the auto-resolve when only one card is takeable - sees the same
-        // set the player does. `revealed` still holds every flip, so nothing is lost.
         const choosable = choosableFrom(result.candidates)
 
         pending.revealed = result.flipped

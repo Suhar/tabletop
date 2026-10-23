@@ -10,12 +10,6 @@ import { endPlacement } from '../util/turn.js'
 
 type AttackingAction = HydratedAttackPiece | HydratedAttackSpread
 
-// Still the placing player's turn: their fighter landed next to something it could destroy.
-//
-// Unlike the exploration choices, this one is never taken on the player's behalf even when
-// there is a single target - firing is optional, so one target is still a real decision.
-//
-// Transitions: Attacking(AttackPiece) -> PlacingPiece | EndOfGame
 export class AttackingStateHandler implements MachineStateHandler<
     AttackingAction,
     HydratedEarendelGameState
@@ -50,7 +44,6 @@ export class AttackingStateHandler implements MachineStateHandler<
         switch (true) {
             case isAttackPiece(action):
             case isAttackSpread(action): {
-                // Both end the shot, so both hand the turn back the same way.
                 return endPlacement(context.gameState, context, action)
             }
             default: {
@@ -68,9 +61,6 @@ export class AttackingStateHandler implements MachineStateHandler<
         if (!pending || pending.playerId !== playerId) return false
 
         if (actionType === ActionType.AttackSpread) {
-            // Only worth offering with something to spread ACROSS: on a single target it is an
-            // ordinary shot, and spending three turns of a power on that is a trap rather than a
-            // choice.
             return (
                 pending.targets.length > 1 &&
                 canUseCooldownEffect(

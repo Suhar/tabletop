@@ -8,13 +8,9 @@ import {
 } from '@tabletop/common'
 import { TechnologyEffectKind } from '../model/technology.js'
 
-// Picking a single technology fills the whole deck with it, one card per planet colour, so that
-// technology comes up on every exploration (see "Game options" in rules.md).
+// A single technology fills the deck with it (rules.md, Game options).
 export const FULL_DECK = 'all'
 
-// How a turn is shaped. DraftThree is the default: it gives the player a real decision before
-// any hex is chosen - which of three to throw away - and two placements that can build on each
-// other, at the cost of burning a third of the bag unplaced.
 export enum TurnStyle {
     DraftThree = 'draftThree',
     SinglePiece = 'singlePiece'
@@ -65,8 +61,6 @@ export const EarendelGameConfig = Type.Object({
 
 const EarendelGameConfigValidator = Compile(EarendelGameConfig)
 
-// The game's configuration read as Earendel's. Every field is optional, so an absent
-// configuration reads as the defaults.
 export function earendelConfig(config: unknown): EarendelGameConfig {
     const value = config ?? {}
     assert(EarendelGameConfigValidator.Check(value), 'Invalid Earendel configuration')
@@ -75,7 +69,6 @@ export function earendelConfig(config: unknown): EarendelGameConfig {
 
 export const EarendelGameConfigOptions: GameConfigOptions = [turnStyleOption, technologyDeckOption]
 
-// How many pieces a turn draws, and how many of those are thrown away.
 export const DRAFT_SIZE = 3
 export const DRAFT_DISCARDS = 1
 

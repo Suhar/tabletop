@@ -9,21 +9,10 @@ import { probeDestinations } from './exploration.js'
 import { stationGroupPoints } from './stations.js'
 import type { CompletedChain } from './chains.js'
 
-// Everything a ship arriving on a hex sets off, in one place.
-//
-// This was the back half of PlacePiece, and it stayed there while a placement was the only way
-// a ship could arrive. Tactical Feint breaks that: it swaps a ship into an enemy's hex and then,
-// by its own wording, treats it as if it had just been placed - which means all of this, not some
-// of it. Two implementations of "just placed" would drift apart, and the one that drifted would
-// be the rarely-taken path.
-//
-// The ship must already be ON the board at coords when this is called: what it does depends on
-// its type and level, and reading those off the board rather than taking them as arguments means
-// a caller cannot describe the arriving ship differently from the one that actually arrived.
+// The ship must already stand at coords: it is read off the board, not passed in.
 export type Arrival = {
     stationPoints: number
-    // Carries pairKey, which the caller strips before recording in metadata - history shows the
-    // chain, the key is bookkeeping.
+    // Carries pairKey, which the caller strips before recording in metadata.
     chains: CompletedChain[]
     probeDestinations: AxialCoordinates[]
 }
@@ -39,53 +28,31 @@ export function resolveArrival(
         throw Error('resolveArrival called for a hex with no ship on it')
     }
 
-    // A station pays for the company it keeps: one for itself, one for each station already in
-    // the group it joins. Scored on every arrival, so a cluster built up one station at a time
-    // pays 1, 2, 3, ...
     const stationPoints =
-        piece.type === PieceType.Station
-            ? stationGroupPoints(state.board, playerId, coords)
-            : 0
+        piece.type === PieceType.Station ? stationGroupPoints(state.board, playerId, coords) : 0
     playerState.score += stationPoints
 
-    // Joining two planets of one colour pays T(n) on the n ships between them. Scored here, on
-    // the arrival that completes it, and never again for that pair.
     const chains = chainsCompletedBy(state.board, playerId, coords, state.scoredPlanetPairs)
     for (const chain of chains) {
         playerState.score += chain.points
         state.scoredPlanetPairs.push(chain.pairKey)
     }
 
-    // Taking hold of a planet never hands its technology over: technologies are won only by
-    // surveying with probes and keeping the probe lead for a round (see claimProbeTechnologies).
-    // An arrival can still break someone else's lead, which is how a pending claim is stopped.
-
-    // A fighter arrives shooting: it may destroy one adjacent piece weaker than itself.
-    // Optional, and the target is the player's choice, so it parks a decision rather than
-    // resolving here.
     const targets = attackableTargets(state.board, coords, playerId)
     if (targets.length > 0) {
         state.pendingAttack = { playerId, fighterCoords: coords, targets }
     }
 
-    // A probe landing beside planets it leads doesn't resolve anything here: whether it surveys
-    // one, and which, is the player's choice, and exploring consumes the technology deck. Both belong
-    // in their own actions so each is separately undoable and the deck is only touched once the
-    // target is settled.
     const destinations = probeDestinations(state, coords, piece)
     if (destinations.length > 0) {
         state.pendingExploration = {
             playerId,
             probeCoords: coords,
-            // A probe won from a technology may not carry a level of its own; the weaker level
-            // is the safe reading.
             probeLevel: piece.level ?? PieceLevel.Two,
             candidatePlanets: destinations
         }
     }
 
-    // Control is recomputed once the board is settled: a tie now leaves whoever held the planet
-    // holding it, so this cannot be read off the board later.
     refreshPlanetControl(state)
 
     return { stationPoints, chains, probeDestinations: destinations }

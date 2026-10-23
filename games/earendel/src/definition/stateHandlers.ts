@@ -11,7 +11,6 @@ import { StartOfTurnStateHandler } from '../stateHandlers/startOfTurn.js'
 import { PlacingBonusPieceStateHandler } from '../stateHandlers/placingBonusPiece.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
 
-// The mapping of machine states to their handlers, used by the game engine
 export const EarendelStateHandlers: Record<
     MachineState,
     MachineStateHandler<HydratedAction, HydratedEarendelGameState>

@@ -2,7 +2,6 @@
     import type { Point } from '@tabletop/common'
     import { trussPaths } from '$lib/utils/stationGeometry.js'
 
-    // The girder joining two linked stations: two rails, laced between them.
     let { start, end, color }: { start: Point; end: Point; color: string } = $props()
 
     let paths = $derived(trussPaths(start, end))

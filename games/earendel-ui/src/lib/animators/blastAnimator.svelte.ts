@@ -8,9 +8,6 @@ import { ElementRegistry } from './elementRegistry.js'
 
 export type Blast = { key: string; at: Point; destroyed: boolean }
 
-// Pattern B: a shot landing, larger with sparks for a kill than for a fighter knocked down a
-// level. Played on actionTimeline while the target is still drawn from the state before the shot,
-// so the swap that removes or demotes it lands after the blast. Only with an action.
 export class BlastAnimator {
     blasts: Blast[] = $state([])
     readonly elements = new ElementRegistry<SVGGElement>()

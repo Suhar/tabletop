@@ -9,9 +9,6 @@ export const FALLBACK_MOVE_DURATION = 0.15
 
 type RenderedPiece = { node: SVGGElement; coords: AxialCoordinates }
 
-// Pattern A: a piece that changes hexes (a technology move, Wormhole, Tactical Feint, or the undo
-// of one) slides its rendered element to the new hex before the state swap. The board keys each
-// piece element by piece and hex, so the swap mounts a fresh element at the destination.
 export class PieceMoveAnimator {
     private pieces = new Map<string, RenderedPiece>()
 

@@ -1,9 +1,7 @@
 import { Color } from '@tabletop/common'
 import { DefaultColorizer } from '@tabletop/frontend-components'
 
-// The warm half of Earendel's palette (see EarendelColors): every player colour is warm or white,
-// leaving the cool colours to the planets. Class names are spelled out in full rather than built
-// from the hex values, because Tailwind only generates classes it finds written in the source.
+// Class names are spelled out because Tailwind only generates classes written in the source.
 export class EarendelGameColorizer extends DefaultColorizer {
     override getUiColor(color?: string): string {
         switch (color) {
@@ -56,8 +54,6 @@ export class EarendelGameColorizer extends DefaultColorizer {
         }
     }
 
-    // As a player colour, text is drawn in the colour itself. Otherwise it is text set ON that
-    // colour, and only red is dark enough to carry white; the rest of the warm colours are light.
     override getTextColor(color?: Color, asPlayerColor: boolean = false): string {
         if (!asPlayerColor) return color === Color.Red ? 'text-white' : 'text-black'
         switch (color) {

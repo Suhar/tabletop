@@ -11,21 +11,14 @@ import {
 import type { ScoredChain } from '../model/chains.js'
 import { connectedGroup } from './groups.js'
 
-// T(n) = 1 + 2 + ... + n. Chains pay superlinearly, so joining two DISTANT planets of a
-// colour is worth far more than joining two that nearly touch - and costs the ships and the
-// turns to match, which is also the game's clock.
 export function triangular(n: number): number {
     return (n * (n + 1)) / 2
 }
 
-// A pair of planets, named in a way that doesn't depend on which was reached first, so a pair
-// already scored can be recognised however it is approached.
 export function planetPairKey(a: AxialCoordinates, b: AxialCoordinates): string {
     return [hexKey(a), hexKey(b)].sort((left, right) => left - right).join(':')
 }
 
-// Every hex holding one of this player's ships that is reachable from `start` through their
-// own ships, of any type - unlike a station group, a chain is happy to run through a probe.
 function componentContaining(
     board: EarendelBoard,
     playerId: string,
@@ -57,9 +50,6 @@ function planetsTouching(
     return byColor
 }
 
-// How many ships stand between the two planets, by the shortest run through this component.
-// Several routes may exist once a player's ships bunch up; the shortest is the one that is
-// well-defined and cheap to find, and it's the only measure that doesn't reward wandering.
 function chainLength(
     component: AxialCoordinates[],
     from: AxialCoordinates,
@@ -72,7 +62,6 @@ function chainLength(
     const distances = new Map<number, number>()
     const queue: AxialCoordinates[] = []
 
-    // Every ship touching the first planet is one link in, so they all start at 1.
     for (const coords of component) {
         if (touches(coords, from)) {
             distances.set(hexKey(coords), 1)
@@ -98,12 +87,6 @@ function chainLength(
 
 export type CompletedChain = ScoredChain & { pairKey: string }
 
-// The chains a placement just completed. A placement scores when the ships it belongs to now
-// join two planets of the same colour that weren't joined before - `alreadyScored` is what
-// "before" means, since a pair pays out once and then is spent.
-//
-// One placement can complete several pairs at once (three planets of a colour joined at once
-// is three pairs), and each is measured and paid separately.
 export function chainsCompletedBy(
     board: EarendelBoard,
     playerId: string,

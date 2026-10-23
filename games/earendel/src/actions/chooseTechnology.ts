@@ -9,10 +9,7 @@ import { isElevated, matchesColor, TechnologyCard } from '../model/technology.js
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
     technologyId: Type.Optional(Type.String()),
-    // The card itself, so history can name it without looking at the board.
     technology: Type.Optional(TechnologyCard),
-    // True when the deck couldn't offer anything: the planet is explored and simply holds no
-    // technology. Rare by design, but the game continues rather than stalling.
     noTechnologyAvailable: Type.Optional(Type.Boolean())
 })
 
@@ -23,7 +20,6 @@ export const ChooseTechnology = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.ChooseTechnology),
             playerId: Type.String(),
-            // Absent only when there was nothing to choose between.
             technologyId: Type.Optional(Type.String()),
             metadata: Type.Optional(ChooseTechnologyMetadata)
         })
@@ -36,8 +32,6 @@ export function isChooseTechnology(action?: GameAction): action is ChooseTechnol
     return action?.type === ActionType.ChooseTechnology
 }
 
-// Houses one of the revealed technologies on the planet just surveyed, discards the rest, and
-// stakes the surveying player's claim on it. The planet keeps the technology permanently.
 export class HydratedChooseTechnology
     extends HydratableAction<typeof ChooseTechnology>
     implements ChooseTechnology
@@ -64,11 +58,6 @@ export class HydratedChooseTechnology
         if (chosen) {
             state.board.hexes[hexKey(pending.exploringPlanet!)].technology = chosen
 
-            // Surveying stakes a claim rather than handing the technology over. The player gains
-            // it at the start of their next turn if their probes still lead on the planet (see
-            // claimProbeTechnologies), which gives everyone else a round to outweigh them.
-            // Nothing is set up here for an immediate effect either: those fire when the
-            // technology is actually gained, not when it is chosen.
             state.probeClaims.push({
                 playerId: this.playerId,
                 coords: pending.exploringPlanet!,
@@ -76,8 +65,6 @@ export class HydratedChooseTechnology
             })
         }
 
-        // Everything turned over goes to the discard except the one card the planet keeps -
-        // including the matching cards that weren't chosen.
         state.technologyDiscard.push(...revealed.filter((card) => card.id !== chosen?.id))
 
         state.pendingExploration = undefined
@@ -99,15 +86,12 @@ export class HydratedChooseTechnology
 
         const candidates = pending.candidates ?? []
         if (candidates.length === 0) {
-            // Nothing was revealed - the only legal move is to take nothing.
             return this.technologyId ? 'There was no technology to choose.' : undefined
         }
 
         if (!this.technologyId) return 'No technology was chosen.'
 
         if (!candidates.some((card) => card.id === this.technologyId)) {
-            // A card can be the right colour and still be out of reach, when an elevated
-            // technology turned up alongside it. Worth saying which of the two it is.
             const color = getHex(state.board, pending.exploringPlanet)?.color
             const wanted = (pending.revealed ?? []).find((card) => card.id === this.technologyId)
 

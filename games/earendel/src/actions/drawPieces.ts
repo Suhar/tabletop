@@ -13,12 +13,7 @@ import { earendelConfig } from '../definition/config.js'
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
     drawn: Type.Optional(Type.Array(Piece)),
-    // Technologies that became this player's as the turn opened, because their probes still led
-    // on the planets they surveyed last turn. Reported so history and the board can announce them:
-    // unlike a placement's rewards, nobody was watching the moment these were earned.
     technologiesClaimed: Type.Optional(Type.Array(TechnologyCard)),
-    // Claims that lapsed as the turn opened, because another player's probes drew level or
-    // overtook theirs in between.
     technologiesLapsed: Type.Optional(Type.Array(TechnologyCard))
 })
 
@@ -29,11 +24,7 @@ export const DrawPieces = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.DrawPieces),
             playerId: Type.String(),
-            // Turning ships face up is the moment hidden information becomes public, so undo
-            // cannot reach back past it. That is what gives the previous player a window to
-            // take their turn back: it closes when the next player draws, and not before.
-            //
-            // Set from what was actually drawn - an empty bag reveals nothing.
+            // Drawn ships become public, so undo cannot reach back past the draw.
             revealsInfo: Type.Optional(Type.Boolean()),
             metadata: Type.Optional(DrawPiecesMetadata)
         })
@@ -46,9 +37,6 @@ export function isDrawPieces(action?: GameAction): action is DrawPieces {
     return action?.type === ActionType.DrawPieces
 }
 
-// Opens a turn by drawing the turn's ships. A deliberate action rather than something that
-// happens on its own, so that nothing is revealed until the player whose turn it is asks for
-// it - and so the player before them still has time to change their mind.
 export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> implements DrawPieces {
     declare type: ActionType.DrawPieces
     declare playerId: string
@@ -65,16 +53,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             throw Error(`Invalid DrawPieces action: ${invalidReason}`)
         }
 
-        // Claimed BEFORE the ships are drawn, because this is the start-of-turn reckoning: every
-        // planet this player surveyed last turn, and still leads with probes, pays out now. It
-        // happens here rather than in StartOfTurnStateHandler.enter for two reasons - enter()
-        // cannot change the machine state, and an immediate effect has to be able to send the
-        // turn somewhere - and it costs nothing in fidelity, since between a turn beginning
-        // and its owner drawing, nobody else can act.
-        // Control is brought up to date here too. Every action that changes the board refreshes
-        // it already, so it is normally a no-op - but it also catches a planet that has never had
-        // a controller recorded. Claims no longer read control; probe influence is read fresh
-        // off the board.
+        // Claimed here rather than in StartOfTurnStateHandler.enter: enter() cannot change the
+        // machine state, and an immediate effect may have to redirect the turn.
         refreshPlanetControl(state)
 
         const { gained: technologiesClaimed, lapsed: technologiesLapsed } = claimProbeTechnologies(
@@ -92,12 +72,9 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             state.heldPieces.push(piece)
         }
 
-        // More than one ship means a discard is owed. Recorded now, because the technologies
-        // claimed above may send the turn through a tile or a move first, and what is in hand by
-        // the time it comes back no longer says whether the draft has happened.
+        // Recorded now: claimed technologies may detour the turn before the discard.
         state.draftPending = state.heldPieces.length > 1
 
-        // Drawing ships turns them face-up, and so does a claimed Beyond the Frontier's tile.
         this.revealsInfo = state.heldPieces.length > 0 || state.pendingTile !== undefined
         this.metadata = {
             drawn: [...state.heldPieces],

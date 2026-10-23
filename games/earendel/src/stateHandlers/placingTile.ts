@@ -8,9 +8,6 @@ import { afterTechnologyEffect } from '../util/turn.js'
 
 type PlacingTileAction = HydratedPlaceTile
 
-// Still the exploring player's turn: a technology has handed them a tile to lay.
-//
-// Transitions: PlacingTile(PlaceTile) -> PlacingBonusPiece | PlacingPiece | EndOfGame
 export class PlacingTileStateHandler implements MachineStateHandler<
     PlacingTileAction,
     HydratedEarendelGameState
@@ -39,7 +36,6 @@ export class PlacingTileStateHandler implements MachineStateHandler<
 
         gameState.activePlayerIds = [pending.playerId]
 
-        // Nowhere to lay it - the technology comes to nothing rather than wedging the turn.
         if (legalTilePlacements(gameState.board).length === 0) {
             context.addSystemAction(PlaceTile, { playerId: pending.playerId })
         }
@@ -53,7 +49,6 @@ export class PlacingTileStateHandler implements MachineStateHandler<
 
         switch (true) {
             case isPlaceTile(action): {
-                // A tile actually laid owes a ship; one that couldn't be laid owes nothing.
                 if (gameState.bonusPlacementTileId) {
                     return MachineState.PlacingBonusPiece
                 }

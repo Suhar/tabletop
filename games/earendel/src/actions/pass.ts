@@ -11,11 +11,11 @@ export const PassMetadata = Type.Object({})
 export type Pass = Type.Static<typeof Pass>
 export const Pass = Type.Evaluate(
     Type.Intersect([
-        Type.Omit(GameAction, ['playerId']), // Omit playerId to redefine it
+        Type.Omit(GameAction, ['playerId']),
         Type.Object({
-            type: Type.Literal(ActionType.Pass), // This action is always this type
-            playerId: Type.String(), // Required now
-            metadata: Type.Optional(PassMetadata) // Always optional, because it is an output
+            type: Type.Literal(ActionType.Pass),
+            playerId: Type.String(),
+            metadata: Type.Optional(PassMetadata)
         })
     ])
 )
@@ -40,9 +40,6 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
             throw Error('Invalid Pass action')
         }
 
-        // A turn that places nothing must still put its hand back, or the pieces simply
-        // vanish - and the bag is the game's clock, so pieces quietly leaving it would
-        // shorten the game for reasons no one could see.
         if (state.heldPieces.length > 0) {
             const playerState = state.getPlayerState(this.playerId)
             returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)

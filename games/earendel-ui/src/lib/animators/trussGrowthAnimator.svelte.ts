@@ -12,7 +12,6 @@ import {
     type StationTube
 } from '$lib/utils/stationLinks.js'
 
-// A girder growing out of a station that has just arrived, toward the station it links to.
 export type GrowingTruss = {
     key: string
     playerId: string
@@ -22,9 +21,6 @@ export type GrowingTruss = {
     degrees: number
 }
 
-// A station new to the board: the visible board still shows the state before the action until
-// the animations finish, so the girders would otherwise grow out of an empty hex. A station that
-// moved is not one of these; PieceMoveAnimator slides its own element to the new hex.
 export type ArrivingStation = {
     coords: AxialCoordinates
     playerId: string
@@ -35,9 +31,6 @@ export type ArrivingStation = {
 const GROW_DURATION = 0.5
 const FALLBACK_DURATION = 0.15
 
-// Grows the girders a transition makes and fades the ones it breaks. With an action the girders
-// grow on finalTimeline, after any piece has finished moving into place; without one, everything
-// runs at once within the fallback budget.
 export class TrussGrowthAnimator {
     growing: GrowingTruss[] = $state([])
     arriving: ArrivingStation[] = $state([])

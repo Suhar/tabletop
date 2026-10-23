@@ -7,8 +7,6 @@ import {
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { planetPointsByPlayer } from '../util/scoring.js'
 
-// Terminal state. The game ends the instant a player empties their bag - mid-round, with no
-// final go-around - so this is reached straight from a turn ending.
 export class EndOfGameStateHandler implements MachineStateHandler<
     HydratedAction,
     HydratedEarendelGameState
@@ -30,9 +28,6 @@ export class EndOfGameStateHandler implements MachineStateHandler<
     enter(context: MachineContext<HydratedEarendelGameState>): void {
         const gameState = context.gameState
 
-        // Planets pay out only now, and only here: control can change hands all game without
-        // anyone banking anything, so the board's final shape is what counts. Everything
-        // else a player scored was banked when it happened and never came back off.
         const planetPoints = planetPointsByPlayer(gameState.board)
         for (const [playerId, points] of Object.entries(planetPoints)) {
             gameState.getPlayerState(playerId).score += points
@@ -43,8 +38,6 @@ export class EndOfGameStateHandler implements MachineStateHandler<
             .filter((player) => player.score === highScore)
             .map((player) => player.playerId)
 
-        // A tie for the highest score is a shared win, as tied planet control pays everyone in
-        // full.
         gameState.result = winningIds.length > 1 ? GameResult.Draw : GameResult.Win
         gameState.winningPlayerIds = winningIds
         gameState.activePlayerIds = []

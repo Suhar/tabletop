@@ -8,7 +8,6 @@ import { Piece } from '../model/pieces.js'
 export type DiscardPieceMetadata = Type.Static<typeof DiscardPieceMetadata>
 export const DiscardPieceMetadata = Type.Object({
     discarded: Type.Optional(Piece),
-    // The draft came up short - fewer than three left in the bag - so nothing was thrown away.
     nothingToDiscard: Type.Optional(Type.Boolean())
 })
 
@@ -19,7 +18,6 @@ export const DiscardPiece = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.DiscardPiece),
             playerId: Type.String(),
-            // Which of the drawn ships to throw away. Absent only when there was no choice.
             pieceId: Type.Optional(Type.String()),
             metadata: Type.Optional(DiscardPieceMetadata)
         })
@@ -32,9 +30,6 @@ export function isDiscardPiece(action?: GameAction): action is DiscardPiece {
     return action?.type === ActionType.DiscardPiece
 }
 
-// Throws one of the drafted ships out of the game. Not back to the bag: the cost of seeing
-// three and choosing is that one of them never gets played, which is also what makes a drafted
-// turn burn the bag half again as fast.
 export class HydratedDiscardPiece
     extends HydratableAction<typeof DiscardPiece>
     implements DiscardPiece
@@ -73,7 +68,6 @@ export class HydratedDiscardPiece
     invalidDiscardPieceReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        // Nothing to throw away when the draft came up short; the turn just plays what it has.
         if (state.heldPieces.length <= 1) {
             return this.pieceId ? 'There is nothing to discard.' : undefined
         }

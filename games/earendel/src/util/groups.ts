@@ -1,11 +1,6 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, type Hex, hexKey, neighborsOf } from '../model/board.js'
 
-// Every hex reachable from `start` through hexes the predicate accepts, including `start`
-// itself. Empty when `start` isn't accepted.
-//
-// Planets are never occupied, so anything built on pieces treats a planet as a wall: a group
-// goes around one, never through it.
 export function connectedGroup(
     board: EarendelBoard,
     start: AxialCoordinates,

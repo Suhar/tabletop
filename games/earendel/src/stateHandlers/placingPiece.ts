@@ -30,11 +30,6 @@ type PlacingPieceAction =
     | HydratedUseTradeRouteWormhole
     | HydratedUseImmediateDownload
 
-// A whole turn is one placement. This state is where every turn begins and, unless the
-// placement was a probe that found something, where it ends.
-//
-// Transitions: PlacingPiece(PlacePiece) -> Exploring | PlacingPiece | EndOfGame
-//              PlacingPiece(Pass)       -> PlacingPiece | EndOfGame
 export class PlacingPieceStateHandler implements MachineStateHandler<
     PlacingPieceAction,
     HydratedEarendelGameState
@@ -62,8 +57,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
     }
 
     enter(context: MachineContext<HydratedEarendelGameState>) {
-        // Always mid-turn by the time this runs: the turn was handed on by StartOfTurn and the
-        // hand drawn there, so this only has to keep the right player active.
         const gameState = context.gameState
         const current = gameState.turnManager.currentTurn()
         if (current) gameState.activePlayerIds = [current.playerId]
@@ -71,13 +64,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
         this.endGameIfStuck(context, gameState.activePlayerIds[0])
     }
 
-    // A player who cannot legally place anything they hold, and has no special piece they could
-    // place instead, ends the game. This can only be judged once there is a hand: a hex closed
-    // to a probe is wide open to a fighter, so the answer depends on what came out of the bag.
-    //
-    // Checked on a continuing turn too, not just at the start of one - a drafted turn can place
-    // its first ship into the last hex its second ship could have used. The Pass is a system
-    // action so the ending is recorded rather than silently arrived at.
     private endGameIfStuck(
         context: MachineContext<HydratedEarendelGameState>,
         playerId: string | undefined
@@ -105,26 +91,15 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
 
         switch (true) {
             case isUseUpdatedLogistics(action): {
-                // The woken fighter's shot is the ordinary one, so hand straight over to the
-                // state that resolves shots. It comes back here afterwards, with the ship in
-                // hand still to place.
                 return MachineState.Attacking
             }
             case isUseImmediateDownload(action): {
-                // A downloaded Immediate effect was activated by the action itself, so it is
-                // already sitting in the slot its resolving state watches. Everything else the
-                // download can hand over - a cooldown power, a granted piece, another stored
-                // effect - needs no state of its own, and the turn simply carries on.
                 const owed = pendingTechnologyEffectState(gameState)
                 if (owed) return owed
                 return endPlacement(gameState, context, action)
             }
             case isUseTradeRouteWormhole(action):
             case isUseTacticalFeint(action): {
-                // Both powers move a ship that arrives AS IF NEWLY PLACED, so either can owe the
-                // decisions a placement owes - a probe's exploration, a fighter's shot. And
-                // either way the turn comes back here afterwards: these cost a power, not the
-                // placement the turn already owed.
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
                 }
@@ -134,9 +109,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 return endPlacement(gameState, context, action)
             }
             case isPlacePiece(action): {
-                // A placement that owes the player a decision holds the turn open. A piece
-                // is one type or the other, so these are never both pending: probes explore,
-                // fighters shoot.
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
                 }
@@ -146,8 +118,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 return endPlacement(gameState, context, action)
             }
             case isPass(action): {
-                // Only ever reached when the player had nothing they could legally place,
-                // which is itself the end of the game.
                 return MachineState.EndOfGame
             }
             default: {
@@ -165,8 +135,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
         const playerState = gameState.findPlayerState(playerId)
         if (!playerState) return false
 
-        // Asked of the pieces actually in hand, not of the board alone: a station blockade
-        // can shut every open hex to a probe while leaving them all open to a fighter.
         const canPlace = hasAnyPlacement(
             gameState.board,
             playerId,
@@ -179,9 +147,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 return canPlace
             }
             case ActionType.UseImmediateDownload: {
-                // A stored one-shot rather than a cooldown, so the test is simply whether they
-                // still hold it. Which planet it reads from, and whether anything is in sight, is
-                // the action's own business.
                 return (
                     gameState.pendingAttack === undefined &&
                     gameState.pendingExploration === undefined &&
@@ -191,8 +156,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 )
             }
             case ActionType.UseTradeRouteWormhole: {
-                // Same shape as the feint: a power spent on ships already standing on the board,
-                // offered alongside the placement the turn owes rather than instead of it.
                 return (
                     gameState.pendingAttack === undefined &&
                     gameState.pendingExploration === undefined &&
@@ -204,10 +167,6 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 )
             }
             case ActionType.UseTacticalFeint: {
-                // Like Updated Logistics, offered alongside the placement rather than instead of
-                // it: the swap concerns ships already standing on the board and has nothing to do
-                // with the one in hand. Which pair of ships can actually trade places is the
-                // action's own business.
                 return (
                     gameState.pendingAttack === undefined &&
                     gameState.pendingExploration === undefined &&
@@ -215,19 +174,12 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 )
             }
             case ActionType.UseUpdatedLogistics: {
-                // Offered alongside the placement rather than instead of it: the power wakes a
-                // fighter that is already standing somewhere, which has nothing to do with the
-                // ship in hand. Whether any particular fighter can actually fire is the action's
-                // own business - this only says the power is available to spend.
                 return (
                     gameState.pendingAttack === undefined &&
                     canUseCooldownEffect(gameState, playerId, TechnologyEffectKind.UpdatedLogistics)
                 )
             }
             case ActionType.Pass: {
-                // Only ever a safety valve: a player with something they can place must
-                // place it. This covers a full board, and the subtler case of drawing a probe
-                // when every open hex is closed to probes - the draw goes back in the bag.
                 return !canPlace
             }
         }

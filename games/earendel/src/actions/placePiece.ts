@@ -10,14 +10,7 @@ import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 import { returnTo } from '../util/drawBags.js'
 
-// Where the ship being placed comes from. Named pieceSource rather than source because
-// GameAction already has a `source` (User vs System) and shadowing it silently breaks the
-// action's own contract.
-//
-// Bag means the piece drawn at the start of this turn, already face up. A player who doesn't
-// like what they drew may instead spend one of the special pieces in front of them, in which
-// case the drawn piece goes back into the bag - so the source has to be part of the action
-// rather than inferred.
+// Not `source`: GameAction already has a `source` (User vs System).
 export enum PieceSource {
     Bag = 'bag',
     Special = 'special'
@@ -25,23 +18,10 @@ export enum PieceSource {
 
 export type PlacePieceMetadata = Type.Static<typeof PlacePieceMetadata>
 export const PlacePieceMetadata = Type.Object({
-    // Which ship was placed - for a bag turn the player didn't choose it, so history has to
-    // say what they got.
     pieceType: Type.Optional(Type.Enum(PieceType)),
-    // The drawn ship put back because a special piece was played instead.
     returnedToBag: Type.Optional(Piece),
-    // Chains this placement completed, if any: two planets of one colour newly joined by an
-    // unbroken run of the player's ships. Recorded because the points are scored here and
-    // history has to be able to say why the score moved.
     chains: Type.Optional(Type.Array(ScoredChain)),
-    // What a station paid: one for itself and one for every station already in the group it
-    // joined. Absent for anything that isn't a station.
     stationGroupPoints: Type.Optional(Type.Number()),
-    // Technologies gained by taking outright hold of an explored planet. Kept for good -
-    // the planet can be taken away afterwards, the technology can't.
-    // Planets this probe could be sent to from where it landed. The player may send it to one
-    // of them or keep it on the board. Absent when the placement reached no planet, or wasn't
-    // a probe at all.
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
@@ -54,9 +34,6 @@ export const PlacePiece = Type.Evaluate(
             playerId: Type.String(),
             coords: AxialCoordinates,
             pieceSource: Type.Enum(PieceSource),
-            // Which ship: one of the pieces in hand, or - when the source is Special - which
-            // face-up piece is being spent. Optional only because a hand of one has nothing
-            // to express.
             pieceId: Type.Optional(Type.String()),
             metadata: Type.Optional(PlacePieceMetadata)
         })
@@ -69,9 +46,6 @@ export function isPlacePiece(action?: GameAction): action is PlacePiece {
     return action?.type === ActionType.PlacePiece
 }
 
-// The ordinary turn: take a ship - drawn blind from your own bag, or spent from the special
-// pieces in front of you - and put it on an open hex. A probe placed beside an unexplored
-// planet explores it, without that being a separate decision.
 export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> implements PlacePiece {
     declare type: ActionType.PlacePiece
     declare playerId: string
@@ -92,8 +66,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         const playerState = state.getPlayerState(this.playerId)
 
-        // The ship was drawn when the turn opened, so the player chose this hex already
-        // knowing what they had. Spending a special instead sends the drawn ship back.
         let piece: Piece
         let returnedToBag: Piece | undefined
 
@@ -106,10 +78,8 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
                 1
             )[0]
 
-            // The hand goes back in the bag, since a special piece is played instead of it.
             returnedToBag = state.heldPieces[0]
             if (state.heldPieces.length > 0) {
-                // Reshuffled, so putting one back tells the player nothing about what is next.
                 returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
                 state.heldPieces = []
             }
@@ -117,9 +87,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
-        // Everything the arrival sets off - station points, chains, a fighter's shot, a probe's
-        // exploration, control - lives in resolveArrival, because Tactical Feint has to be able
-        // to do all of it to a ship it swapped into place rather than played from hand.
         const { stationPoints, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
@@ -141,16 +108,11 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         return this.invalidPlacePieceReason(state) === undefined
     }
 
-    // Same checks as isValidPlacePiece, but reports WHY - the client shows this instead of a
-    // generic rejection (see the legality wrappers pattern).
     invalidPlacePieceReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) {
             return "It isn't your turn."
         }
 
-        // Any open hex, anywhere. Deliberately no adjacency or connection requirement - the
-        // whole board is in play every turn - so this being the only spatial check is the
-        // rule, not an unfinished one.
         if (!isOpenHex(state.board, this.coords)) {
             return 'A ship can only go on an empty hex of open space - not on a planet, and not on an occupied hex.'
         }
@@ -159,8 +121,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         let piece: Piece | undefined
 
         if (this.pieceSource === PieceSource.Bag) {
-            // The draw happens when the turn opens, so there is always something in hand by
-            // the time a placement arrives - unless the turn has gone wrong elsewhere.
             if (state.heldPieces.length === 0) return 'Nothing has been drawn to place.'
             if (!this.pieceId && state.heldPieces.length > 1) {
                 return 'Choose which of your ships to place.'
@@ -175,8 +135,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             if (!piece) return "That special piece isn't in front of you."
         }
 
-        // The ship that follows a laid tile has to land on that tile - it is part of the
-        // technology's effect, not a free placement anywhere.
         if (state.bonusPlacementTileId) {
             const hex = getHex(state.board, this.coords)
             if (hex?.tileId !== state.bonusPlacementTileId) {
@@ -190,10 +148,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             }
         }
 
-        // Two of a player's stations with clear space between them close that space to
-        // everyone else's probes. Only probes - anything else may be placed there, and doing
-        // so breaks the line. This check is possible at all because the draw now happens
-        // before the hex is chosen, so the engine knows what is being placed.
         if (
             piece.type === PieceType.Probe &&
             probeBlockedBy(state.board, this.coords, this.playerId)
@@ -205,8 +159,6 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
     }
 }
 
-// Which held ship a placement refers to. A hand of one needs no id; a drafted hand does, and
-// validation has already insisted on it by the time this runs.
 function heldIndex(state: HydratedEarendelGameState, pieceId?: string): number {
     if (!pieceId) return 0
     return state.heldPieces.findIndex((piece) => piece.id === pieceId)

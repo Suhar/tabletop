@@ -13,12 +13,8 @@ import { ScoredChain } from '../model/chains.js'
 
 export type UseTacticalFeintMetadata = Type.Static<typeof UseTacticalFeintMetadata>
 export const UseTacticalFeintMetadata = Type.Object({
-    // Which ships changed places. History has to name both: "swapped" says nothing about who
-    // lost their position, and that is usually the point of the move.
     movedType: Type.Optional(Type.Enum(PieceType)),
     displacedType: Type.Optional(Type.Enum(PieceType)),
-    // The same arrival bookkeeping a placement records, because the swapped ship arrives as if
-    // placed and can therefore score on landing.
     stationGroupPoints: Type.Optional(Type.Number()),
     chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
@@ -31,7 +27,6 @@ export const UseTacticalFeint = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.UseTacticalFeint),
             playerId: Type.String(),
-            // The player's own ship, and the adjacent enemy ship it trades places with.
             from: AxialCoordinates,
             to: AxialCoordinates,
             metadata: Type.Optional(UseTacticalFeintMetadata)
@@ -45,17 +40,6 @@ export function isUseTacticalFeint(action?: GameAction): action is UseTacticalFe
     return action?.type === ActionType.UseTacticalFeint
 }
 
-// Trade places with an adjacent enemy ship, and land as though the ship had just been played.
-//
-// The swap is the cheap half. The expensive half is "as if newly placed", which means the full
-// arrival - station points, chains, a fighter's shot, a probe's exploration, control - and that is
-// why this action delegates to resolveArrival rather than doing anything of its own. A ship that
-// has been sitting on the board for six turns suddenly counts as fresh, and everything a fresh
-// ship triggers, it triggers.
-//
-// Only the player's own ship arrives. The displaced enemy ship is moved, not placed: it lands on
-// the vacated hex and sets nothing off, however inviting the hex it lands on might have been. One
-// player's power should not hand the other player a free arrival.
 export class HydratedUseTacticalFeint
     extends HydratableAction<typeof UseTacticalFeint>
     implements UseTacticalFeint
@@ -86,9 +70,6 @@ export class HydratedUseTacticalFeint
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TacticalFeint)
 
-        // Resolved after the swap, so the arriving ship is read off the board where it now
-        // stands - and so chains and station groups are measured on the board the swap made,
-        // including the hole the ship left behind it.
         const { stationPoints, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
@@ -113,8 +94,6 @@ export class HydratedUseTacticalFeint
     invalidUseTacticalFeintReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        // The arrival can raise a shot or an exploration of its own, and there is only one slot
-        // for each: a feint on top of a decision already waiting would overwrite it.
         if (state.pendingAttack) return 'A shot of yours is already waiting.'
         if (state.pendingExploration) return 'A planet of yours is still waiting to be explored.'
 

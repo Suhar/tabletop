@@ -20,19 +20,12 @@ import { MachineState } from '../definition/states.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { bagOf, drawFrom } from './drawBags.js'
 
-// A game driven through the real engine rather than by calling apply() directly. Anything
-// about the turn spine - who is active, when a turn ends, which system actions fire - is only
-// honestly testable this way, since the engine, not the action, is what decides it.
 export class TestGame {
     readonly engine = new GameEngine<EarendelGameState, HydratedEarendelGameState>(EarendelRuntime)
     readonly game: Game
     state: EarendelGameState
     readonly processed: GameAction[] = []
 
-    // Defaults to the simple one-draw turn, so a test about chains or blockades exercises one
-    // mechanic rather than two. Tests about the drafted turn ask for it explicitly, and the
-    // simulation runs the real default. `start` passes tournament seating and a master seed
-    // straight through to the engine.
     constructor(
         playerCount = 2,
         seed = 1,
@@ -67,12 +60,6 @@ export class TestGame {
         this.state = initialState
     }
 
-    // Replaces every player's bag with a known stack, and leaves a hand drawn from it - which
-    // is what a test wants to start from.
-    //
-    // Drawn through the engine when the turn hasn't opened yet, so the state machine ends up
-    // where a real game would. Called mid-turn, it refills the hand directly instead: the draw
-    // action would rightly refuse a second one.
     stackBags(bag: (playerId: string) => Piece[]) {
         for (const player of this.state.players) {
             player.bag = bagOf(bag(player.playerId))
@@ -102,12 +89,6 @@ export class TestGame {
         return this.state.activePlayerIds[0]
     }
 
-    // Submits an action the way the server does, and keeps every action the engine produced -
-    // system actions included, which is where auto-resolved choices show up.
-    //
-    // Opens the turn first if it hasn't been: a real player clicks Draw, but a test about
-    // chains or blockades shouldn't have to say so before every placement. Tests that care
-    // about the draw itself assert on `processed`, which records it.
     run<T extends Type.TSchema>(
         schema: T,
         data: Partial<Type.Static<T>> & { type: string; playerId?: string }

@@ -8,12 +8,6 @@ import { afterTechnologyEffect } from '../util/turn.js'
 
 type ResolvingTechnologyAction = HydratedMovePiece
 
-// A technology that acts the moment it is CLAIMED, waiting on the player who claimed it. That
-// is now the top of their turn rather than the exploration that housed the card: exploring
-// decides what a planet holds, holding it until your next turn is what wins it.
-//
-// Transitions: ResolvingTechnology(MovePiece) -> PlacingTile | ResolvingTechnology
-//               | PlacingPiece | EndOfGame
 export class ResolvingTechnologyStateHandler implements MachineStateHandler<
     ResolvingTechnologyAction,
     HydratedEarendelGameState
@@ -42,8 +36,6 @@ export class ResolvingTechnologyStateHandler implements MachineStateHandler<
 
         gameState.activePlayerIds = [pending.playerId]
 
-        // A technology whose effect cannot be carried out fizzles rather than wedging the
-        // turn. Taken as a system action so history records that it came to nothing.
         if (legalMovesFor(gameState.board, pending.playerId).length === 0) {
             context.addSystemAction(MovePiece, { playerId: pending.playerId })
         }
@@ -55,8 +47,6 @@ export class ResolvingTechnologyStateHandler implements MachineStateHandler<
     ): MachineState {
         switch (true) {
             case isMovePiece(action): {
-                // A turn can claim more than one technology at once, so this hands on to the
-                // next owed effect before letting the placement resume.
                 return afterTechnologyEffect(action, context.gameState, context)
             }
             default: {

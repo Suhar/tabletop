@@ -21,8 +21,6 @@ export type Shot = { coords: AxialCoordinates; destroyed: boolean }
 
 export type PieceMove = { pieceId: string; from: AxialCoordinates; to: AxialCoordinates }
 
-// A placement can be paid for its station complex and for each chain at once; each source is
-// shown on its own so the jump in score can be accounted for.
 export function scoreSourcesOf(action: GameAction): ScoreSource[] {
     const arrival = arrivalOf(action)
     if (!arrival) return []

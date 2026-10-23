@@ -1,6 +1,4 @@
-// Its own module so that both board.ts and technology.ts can depend on it without depending
-// on each other: a hex holds a technology card, and a card lists planet colours, so anything
-// shared by the two has to sit below them both.
+// Its own module so board.ts and technology.ts can share it without depending on each other.
 export enum PlanetColor {
     Periwinkle = 'periwinkle',
     Aqua = 'aqua',

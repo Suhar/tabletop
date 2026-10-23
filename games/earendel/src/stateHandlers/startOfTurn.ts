@@ -7,14 +7,6 @@ import { afterDraw } from '../util/turn.js'
 
 type StartOfTurnAction = HydratedDrawPieces
 
-// Where every turn begins, in either turn style: the turn is handed on, and then it waits.
-//
-// Nothing is drawn until the player asks for it. That is the whole point of the state - the
-// draw is what makes hidden information public, and until it happens the player before them
-// can still take their own turn back.
-//
-// Transitions: StartOfTurn(DrawPieces) -> PlacingTile | ResolvingTechnology | DraftingPieces
-//               | PlacingPiece | EndOfGame
 export class StartOfTurnStateHandler implements MachineStateHandler<
     StartOfTurnAction,
     HydratedEarendelGameState
@@ -50,8 +42,6 @@ export class StartOfTurnStateHandler implements MachineStateHandler<
     ): MachineState {
         switch (true) {
             case isDrawPieces(action): {
-                // Technologies claimed by this draw act before anything else - see afterDraw,
-                // which also knows whether a discard is still owed behind them.
                 return afterDraw(context.gameState, context, action)
             }
             default: {

@@ -77,9 +77,6 @@ export function describeAction(action: GameAction): string {
         const count = drew.metadata?.drawn?.length ?? 0
         const drawn = `drew ${count} ${count === 1 ? 'ship' : 'ships'}`
 
-        // A claim settled as the turn opened is the more interesting half of this action, and
-        // nobody was watching the board when it was decided - it is the outcome of a planet
-        // surveyed and defended through everyone else's turns, so it gets said out loud.
         const claimed = drew.metadata?.technologiesClaimed ?? []
         const lapsed = drew.metadata?.technologiesLapsed ?? []
         const parts = [drawn]
@@ -94,8 +91,6 @@ export function describeAction(action: GameAction): string {
         const name = read.metadata?.technology
             ? technologyName(read.metadata.technology)
             : 'a technology'
-        // Worth saying it went off at once: a downloaded Immediate effect is resolved in the
-        // same breath, so the next entry in the log is its consequence.
         return read.metadata?.resolvedAtOnce
             ? `downloaded ${name} and used it on the spot`
             : `downloaded ${name} from a planet in sight`
@@ -122,8 +117,6 @@ export function describeAction(action: GameAction): string {
         const mine = feint.metadata?.movedType ?? 'ship'
         const theirs = feint.metadata?.displacedType ?? 'ship'
         const parts: string[] = [`feinted, swapping their ${mine} with a ${theirs}`]
-        // The swap's own consequences, said out loud for the same reason a placement's are:
-        // the score moved and history has to be able to say why.
         if (feint.metadata?.stationGroupPoints) {
             parts.push(`for ${feint.metadata.stationGroupPoints}`)
         }

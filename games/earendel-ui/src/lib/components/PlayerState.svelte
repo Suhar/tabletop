@@ -15,23 +15,12 @@
     let isTurn = $derived(gameSession.gameState.activePlayerIds.includes(player.id))
     let bgColor = $derived(gameSession.colors.getPlayerBgColor(player.id))
 
-    // Planets pay only at the end, so a running total alone would hide half of what a player
-    // has going. This shows what the board owes them if it stopped right now.
     let planetPoints = $derived(
         planetPointsByPlayer(gameSession.gameState.board)[playerState.playerId] ?? 0
     )
 
-    // Every technology a player holds is housed on some planet, so the board can name what the
-    // player's own ledger only records by id. Counted, since two planets can hold the same
-    // technology name.
     let heldTechnologyNames = $derived.by(() => {
         const held = new Set(playerState.technologies)
-        // Repeatable powers are left out here because the line below says strictly more about
-        // them - their name AND their timer. Listing them in both places put "Railgun" on one
-        // line and "Railgun ⏳2" on the next, which reads as two different things.
-        //
-        // Their count goes with them, and loses nothing: a second copy of a cooldown power adds
-        // nothing to its owner, which is why grantTechnology refuses to record one.
         const repeatable = new Set(
             playerState.cooldownEffects.map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
         )
@@ -77,10 +66,6 @@
             </div>
         {/if}
 
-        <!-- Repeatable powers and their timers. The number was a bare "(2)" in the same weight
-             as the name, which is easy to read as punctuation and easier still to miss; an
-             hourglass says "a timer is running here" the same way the one on a planet does, and
-             a ready power is worth calling out in full rather than with a tick. -->
         {#if playerState.cooldownEffects.length > 0}
             <div class="text-xs flex flex-wrap justify-center gap-x-2">
                 {#each playerState.cooldownEffects as kind (kind)}

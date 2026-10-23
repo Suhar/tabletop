@@ -1,10 +1,6 @@
 import { type RandomFunction, shuffle } from '@tabletop/common'
 
-// Earendel's hidden piles - each player's bag, the technology deck and the tile supply - are
-// stored as the platform's DrawBag: the items are protected, so no client sees what is in them or
-// in what order, and `remaining` is the public count that rules and the UI read instead.
-//
-// Drawn from the front, in the order the items are held.
+// Hidden piles are platform DrawBags: items are protected and `remaining` is the public count.
 export type Bag<T> = { items: T[]; remaining: number }
 
 export function bagOf<T>(items: T[]): Bag<T> {

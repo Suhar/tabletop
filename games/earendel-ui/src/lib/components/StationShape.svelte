@@ -2,14 +2,6 @@
     import type { Point } from '@tabletop/common'
     import { stationCoreRadius } from '$lib/utils/stationGeometry.js'
 
-    // A station drawn as a truss node: an octagonal core with a short docking stub on every side
-    // that faces a neighbour it is NOT linked to. The linked sides are left bare, because the
-    // truss girder drawn between two linked stations (see trussPaths) plugs in there -
-    // so a complex reads as one built structure, and a lone station looks unfinished, which is
-    // what it is.
-    //
-    // A Station Hub is the same node, larger, carrying a slowly turning ring of six habitat pods.
-    // The pods matter: a bare ring would read as the probe's open circle.
     let {
         center,
         color,
@@ -40,7 +32,6 @@
         }))
     )
 
-    // Rotated a half step so the octagon sits with a flat side up, like the hexes around it.
     function octagon(radius: number): string {
         return Array.from({ length: 8 }, (_unused, i) => {
             const angle = Math.PI / 8 + (Math.PI / 4) * i
@@ -48,7 +39,6 @@
         }).join(' ')
     }
 
-    // Set between the neighbour directions, so at rest no pod sits on a girder.
     const POD_ANGLES = Array.from({ length: 6 }, (_unused, i) => (Math.PI / 3) * i)
 </script>
 
@@ -95,8 +85,7 @@
 {/if}
 
 <style>
-    /* The `animation` shorthand, not the longhand: Svelte rewrites scoped keyframe names only in
-       the shorthand (see the note in Board.svelte). */
+    /* Use the `animation` shorthand: Svelte rewrites scoped @keyframes names only there. */
     .hub-ring {
         transform-box: fill-box;
         transform-origin: center;

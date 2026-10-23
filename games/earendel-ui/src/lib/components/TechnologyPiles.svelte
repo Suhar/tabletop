@@ -3,16 +3,10 @@
 
     const gameSession = getGameSession()
 
-    // Hover opens the spent-technology list; a click pins it open, so it can be read without
-    // holding the cursor still on it.
     let hovered = $state(false)
     let pinned = $state(false)
 </script>
 
-<!-- Lives in the side column, under the players and history, rather than in the bar above the
-     board. It is reference material - how much deck is left, and what has already gone - and the
-     bar above the board is where the game asks the player for things. Reference belongs where it
-     can be consulted, not where it competes with a prompt. -->
 {#if gameSession.discardedTechnologyCount > 0 || gameSession.technologyDeckCount > 0}
     <div
         class="relative px-2 pb-2 text-xs text-white"

@@ -13,9 +13,7 @@ import { ScoredChain } from '../model/chains.js'
 
 export type UseTradeRouteWormholeMetadata = Type.Static<typeof UseTradeRouteWormholeMetadata>
 export const UseTradeRouteWormholeMetadata = Type.Object({
-    // Which ship travelled, for history - the hexes alone say nothing a reader would recognise.
     pieceType: Type.Optional(Type.Enum(PieceType)),
-    // The same arrival bookkeeping a placement records, because the ship arrives as if placed.
     stationGroupPoints: Type.Optional(Type.Number()),
     chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
@@ -28,7 +26,6 @@ export const UseTradeRouteWormhole = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.UseTradeRouteWormhole),
             playerId: Type.String(),
-            // The ship being sent, and the empty hex it arrives on.
             from: AxialCoordinates,
             to: AxialCoordinates,
             metadata: Type.Optional(UseTradeRouteWormholeMetadata)
@@ -42,17 +39,6 @@ export function isUseTradeRouteWormhole(action?: GameAction): action is UseTrade
     return action?.type === ActionType.UseTradeRouteWormhole
 }
 
-// Sends a ship from beside one planet to beside a different planet of the same colour, where it
-// counts as newly placed.
-//
-// The colour is the route: two planets of one colour are the two ends of a wormhole, and anything
-// standing beside one can be at the other. Which pair of planets justified the hop is not part of
-// the action - a ship beside two planets has two colours to travel on, so the player picks a
-// destination hex and the engine checks that some pair exists. See wormholeDestinations.
-//
-// "Newly placed" is the same promise Tactical Feint makes, and it is kept by the same code:
-// resolveArrival. So a station arriving pays for its new complex, a chain the hop completes pays,
-// a fighter fires, a probe explores, and control is recomputed.
 export class HydratedUseTradeRouteWormhole
     extends HydratableAction<typeof UseTradeRouteWormhole>
     implements UseTradeRouteWormhole
@@ -81,9 +67,11 @@ export class HydratedUseTradeRouteWormhole
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TradeRouteWormhole)
 
-        // After the hop, so the board the arrival is measured against is the one the hop made -
-        // including the gap the ship left behind, which can break a chain it was part of.
-        const { stationPoints, chains, probeDestinations } = resolveArrival(state, this.playerId, this.to)
+        const { stationPoints, chains, probeDestinations } = resolveArrival(
+            state,
+            this.playerId,
+            this.to
+        )
 
         this.metadata = {
             pieceType: piece.type,
@@ -102,8 +90,6 @@ export class HydratedUseTradeRouteWormhole
     invalidUseTradeRouteWormholeReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        // The arrival can raise a shot or an exploration of its own, and there is one slot for
-        // each: travelling on top of a decision already waiting would overwrite it.
         if (state.pendingAttack) return 'A shot of yours is already waiting.'
         if (state.pendingExploration) return 'A planet of yours is still waiting to be explored.'
 
@@ -119,9 +105,6 @@ export class HydratedUseTradeRouteWormhole
             return 'Only a ship standing beside a planet can travel.'
         }
 
-        // The one check, rather than a series: the destination list already knows that the hex is
-        // empty, that it touches a different planet of a colour this ship can travel on, and that
-        // a station blockade doesn't shut a probe out of it.
         const destinations = wormholeDestinations(state.board, this.from, this.playerId)
         if (destinations.length === 0) {
             return 'That ship has nowhere to travel to.'

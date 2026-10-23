@@ -139,7 +139,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             : undefined
     })
 
-    // The piece picked up to move while resolving a technology.
     movingFrom: AxialCoordinates | undefined = $derived.by(() => {
         const origin = this.originChoice
         const playerId = this.myPlayer?.id
@@ -160,7 +159,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     heldPieces: Piece[] = $derived(this.gameState.heldPieces)
 
-    // The ship a click on the board would place: the one picked up, or the only one held.
     drawnPiece: Piece | undefined = $derived.by(() => {
         const held = this.gameState.heldPieces
         if (held.length === 0) return undefined
@@ -168,26 +166,21 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return held.find((piece) => piece.id === this.chosenHeldId)
     })
 
-    // Set while this player owes a discard, at the opening of a drafted turn.
     isDiscarding: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.DiscardPiece)
     )
 
-    // Set while this player's turn is open but nothing has been drawn. Nothing is revealed
-    // until they ask, which is what leaves the player before them time to undo.
+    // An explicit draw reveals nothing until asked, leaving the previous player time to undo.
     canDraw: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.DrawPieces)
     )
 
-    // How many ships this turn will draw, so the button can say so.
     drawCount: number = $derived.by(() => {
         const playerId = this.myPlayer?.id
         if (!playerId) return 0
         return drawCountForPlayer(this.gameState, playerId, this.primaryGame.config)
     })
 
-    // Armed for the next shot. Held here rather than in game state because until the target is
-    // clicked it is only an intention.
     railgunArmed: boolean = $derived(this.activePower === Power.Railgun)
 
     canArmRailgun: boolean = $derived.by(() => {
@@ -196,9 +189,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.Railgun)
     })
 
-    // The targets a Railgun would actually change: the ones a plain shot would only wear down.
-    // Anything else in reach dies to an ordinary shot, so spending a three-turn power on it buys
-    // nothing - and the engine refuses it rather than letting it be wasted.
     railgunTargets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingAttack
         if (!pending || this.attackTargets.length === 0) return []
@@ -216,14 +206,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.railgunTargets.some((target) => sameHex(target, coords))
     }
 
-    // Turns of this player's own that a power still has to sit out, for the panel.
     railgunTurnsLeft: number = $derived.by(() => {
         const playerId = this.myPlayer?.id
         if (!playerId) return 0
         return turnsUntilReady(this.gameState, playerId, TechnologyEffectKind.Railgun)
     })
 
-    // Whether a Logistics Upgrade could be spent right now, in place of discarding.
     canUseLogisticsUpgrade: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseLogisticsUpgrade)
     )
@@ -232,15 +220,10 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return (this.myPlayerState?.storedEffects ?? []).filter((stored) => stored === kind).length
     }
 
-    // While a laid tile owes a ship, only that ship may be placed - so the rest of the hand is
-    // not selectable.
     private get pinnedHeldId(): string | undefined {
         return this.gameState.bonusPlacementPieceId
     }
 
-    // The piece that would land if the player clicked a hex right now.
-    // The ship owed after a tile is laid is the one drawn with it - a special piece is not an
-    // alternative there, so the choice isn't offered.
     canPlaySpecial: boolean = $derived.by(
         () => this.isPlacing && this.bonusPlacementHexes.length === 0
     )
@@ -264,23 +247,17 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return pending?.playerId === this.myPlayer?.id ? pending : undefined
     }
 
-    // Asked of the engine rather than matched against a list of machine states. More than one
-    // state permits a placement - the ordinary turn, and the ship owed after a tile is laid -
-    // and hard-coding them meant the board highlighted hexes it then refused to act on.
     isPlacing: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.PlacePiece)
     )
 
-    // Planets this probe could survey: those its player now leads on probe influence. Empty at
-    // every other moment. Never settled by the engine, even when there is only one: skipping is
-    // always an option.
+    // Not auto-selected even when only one: skipping is always allowed.
     choosablePlanets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
         if (!this.isMyTurn || !pending || pending.exploringPlanet) return []
         return pending.playerId === this.myPlayer?.id ? pending.candidatePlanets : []
     })
 
-    // The revealed cards to choose between, once the planet is settled.
     technologyChoices: TechnologyCard[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
         if (!this.isMyTurn || !pending?.exploringPlanet) return []
@@ -288,14 +265,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return pending.candidates ?? []
     })
 
-    // The technologies already spent, grouped by what they DO rather than listed card by card.
-    // Two cards with the same effect differ only in which planet colours they match, and a flat
-    // list of twenty is not something a player reads mid-turn - whereas "three Railguns gone"
-    // is. The colours are kept alongside each group, since they are about to mean something (a
-    // colour will stand for a concept - military, economic - rather than being decoration).
-    //
-    // Sorted by count and then name, so the pile has a stable order and does not reshuffle under
-    // the cursor as it grows.
     discardedTechnologies: { name: string; count: number; colors: string[] }[] = $derived.by(() => {
         const groups = new Map<string, { name: string; count: number; colors: Set<string> }>()
 
@@ -314,19 +283,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     discardedTechnologyCount: number = $derived(this.gameState.technologyDiscard?.length ?? 0)
 
-    // What is left to be turned over. Shown beside the discard because the two together say how
-    // much of the deck is still unknown - and the deck is reshuffled from the discard when it
-    // runs dry, so neither number means much without the other.
     technologyDeckCount: number = $derived(this.gameState.technologyDeck.remaining)
 
-    // The cards turned over on the way to this exploration's choice that are NOT part of it: a
-    // probe on a red planet keeps drawing until it has enough reds, and everything that came up
-    // without red is set aside.
-    //
-    // Kept out of the choice row on purpose - they are not choices, and mixing them in buried the
-    // real ones - but they are worth being able to look at. They say what has just left the deck,
-    // and once a colour stands for a concept rather than being decoration, "you turned over three
-    // military cards looking for an economic one" is a real read on what is left.
     setAsideCards: TechnologyCard[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
         if (!pending?.revealed) return []
@@ -335,8 +293,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return pending.revealed.filter((card) => !choosable.has(card.id))
     })
 
-    // Which probe is choosing, and between which planets. Only while the choice is this
-    // player's - the arrows are an invitation to click, not a report.
     explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
         () => {
             const pending = this.gameState.pendingExploration
@@ -345,7 +301,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         }
     )
 
-    // Which fighter is firing, and at what. Only while the shot is this player's.
     attackChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
         () => {
             const pending = this.gameState.pendingAttack
@@ -360,20 +315,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return pending.playerId === this.myPlayer?.id ? pending.targets : []
     })
 
-    // Every station pair projecting a blockade, whoever owns it. Drawn for everyone, since a
-    // corridor you can't see is a rule you can only discover by being refused.
     sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
 
-    // Every planet sharing a colour with this one, and whether their pair has already been
-    // collected. Asked per planet rather than listed for the whole board on purpose: a colour with
-    // four planets has six pairs, and drawing them all at once would bury the board under exactly
-    // the clutter we keep clearing off it. "What is left for THIS planet" is the question a player
-    // has while weighing a placement.
-    //
-    // A spent pair is spent for good and for everybody - the record is never pruned, so a pair
-    // collected on turn three stays collected even if the chain is broken and never rebuilt. That
-    // is the whole reason this needs showing: nothing on the board remembered it, so players were
-    // being asked to.
     planetPairsFrom(coords: AxialCoordinates): { to: AxialCoordinates; spent: boolean }[] {
         const hex = getHex(this.gameState.board, coords)
         if (hex?.kind !== HexKind.Planet || hex.color === undefined) return []
@@ -386,33 +329,22 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             .map((other) => ({ to: other, spent: spent.has(planetPairKey(coords, other)) }))
     }
 
-    // Stations of one player standing side by side. These are joined for scoring exactly as two
-    // stations across a sight line are (see stationComplex), but nothing on the board said so -
-    // the wavy beam is drawn only for the ones with a GAP between them, so the plainest kind of
-    // link was the invisible one, and a row of touching stations looked like separate pieces that
-    // happened to be near each other.
     stationTubes: StationTube[] = $derived(stationTubesOf(this.gameState.board))
 
-    // The neighbours of a hex holding one of this player's stations: the links a station there
-    // has, or would have if it were placed - the placement ghost asks the same question.
     linkedStationNeighbors(coords: AxialCoordinates, playerId: string): AxialCoordinates[] {
         return linkedStationNeighbors(this.gameState.board, coords, playerId)
     }
 
-    // Hexes this player's probes are shut out of. Only meaningful while holding a probe, so
-    // the board isn't cluttered with a restriction that doesn't apply to the piece in hand.
     hexesClosedToMe: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
         if (!playerId || this.pieceToPlace?.type !== PieceType.Probe) return []
         return hexesClosedToProbesOf(this.gameState.board, playerId)
     })
 
-    // Set while this player has a tile to lay.
     isPlacingTile: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.PlaceTile)
     )
 
-    // The tile waiting to be laid, so the board can show what is about to land.
     pendingTile = $derived(this.gameState.pendingTile?.tile)
 
     tileRotation: number = $derived(this.isPlacingTile ? (this.selection.rotation?.value ?? 0) : 0)
@@ -421,7 +353,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isPlacingTile ? legalTilePlacements(this.gameState.board) : []
     )
 
-    // Where this tile could go at its current rotation.
     tileOrigins: AxialCoordinates[] = $derived(
         this.allTilePlacements
             .filter((placement) => placement.rotation === this.tileRotation)
@@ -434,19 +365,16 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.select('rotation', rotation)
     }
 
-    // Set while the ship that follows a laid tile is owed, which may only land on that tile.
     bonusPlacementHexes: AxialCoordinates[] = $derived.by(() => {
         const tileId = this.gameState.bonusPlacementTileId
         if (!tileId || !this.isMyTurn) return []
         return openHexesOfTile(this.gameState.board, tileId)
     })
 
-    // Set while a technology's immediate effect is waiting on this player.
     isMovingForTechnology: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.MovePiece)
     )
 
-    // The pieces that could be stepped, or - once one is picked up - where it can go.
     movableHexes: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
         if (!this.isMovingForTechnology || !playerId) return []
@@ -457,11 +385,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return moves.map((move) => move.from)
     })
 
-    // What the board should invite a click on right now. One list keeps the board component
-    // from having to know which decision is outstanding.
     highlightedHexes: AxialCoordinates[] = $derived.by(() => {
-        // Choosing a fighter to wake takes precedence over the placement it interrupts: while the
-        // question is "which fighter", the board should offer fighters and nothing else.
         if (this.choosingFeint) return this.feintHexes
         if (this.choosingWormhole) return this.wormholeHexes
         if (this.choosingDownload) return this.downloadHexes
@@ -484,14 +408,10 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.hexesClosedToMe.some((blocked) => sameHex(blocked, coords))
     }
 
-    // Where a fighter about to be placed could shoot, shown before it lands so the placement
-    // can be aimed rather than discovered.
     previewTargetsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
         if (!piece || piece.type !== PieceType.Fighter || !this.isPlacing) return []
 
-        // Answered against a copy with the piece already standing there, so this is the
-        // engine's own rule rather than a second implementation of it.
         const board = structuredClone($state.snapshot(this.gameState.board))
         const hex = board.hexes[hexKey(coords)]
         if (!hex) return []
@@ -499,22 +419,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return attackableTargets(board, coords, piece.playerId)
     }
 
-    // Which planets a probe could survey if it landed here - the same question
-    // previewTargetsFor asks about a fighter's shot, so a player can see the consequence of a
-    // placement before committing to it rather than discovering it afterwards.
-    //
-    // Unlike the fighter's, this needs no hypothetical board: which planets are in reach
-    // depends on the board and on the probe's own type, not on anything the probe changes by
-    // arriving. It is asked of the engine's own rule all the same.
     previewProbeDestinationsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
         if (!piece || piece.type !== PieceType.Probe || !this.isPlacing) return []
         return probeDestinations(this.gameState, coords, piece)
     }
 
-    // Full Torpedo Spread. Available only with more than one piece in reach, matching the engine:
-    // on a single target a spread is an ordinary shot, and spending three turns on that is a trap
-    // rather than a choice.
     canSpread: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.AttackSpread)
     )
@@ -537,7 +447,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.selection = toggleEarendelTarget(this.selection, coords)
     }
 
-    // The engine refuses a spread of one.
     get canConfirmSpread(): boolean {
         return this.spreading && this.spreadTargets.length > 1
     }
@@ -552,34 +461,16 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
-    // Planets where a claim is ticking: a player's probe surveyed it and staked its technology,
-    // which becomes theirs at the start of their next turn if their probes still lead there.
-    // Read straight from the engine's record of claims, since the choice of planet is not
-    // something the board alone can say.
     pendingClaims: { coords: AxialCoordinates; playerId: string }[] = $derived(
         this.gameState.probeClaims.map(({ coords, playerId }) => ({ coords, playerId }))
     )
 
-    // Every boundary where a CONTROLLING piece meets the planet it controls: the planet, the
-    // neighbouring hex the piece stands on, and whose it is.
-    //
-    // Only the controller's own edges, so the board shows the answer rather than the arithmetic -
-    // a planet with three enemy ships around it and one of mine draws one line, not four, and
-    // that line says who is winning.
-    //
-    // Control here is the INCLUSIVE kind, the one that pays end-game points, so a tie draws both
-    // players' edges and reads as genuinely shared. That is deliberately a different question
-    // from the hourglass, which tracks the strict hold a technology needs: the wiggle says who
-    // scores this planet, the hourglass says who is about to take what it holds.
     controlEdges: { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] =
         $derived.by(() => {
             const edges: { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] =
                 []
 
             for (const planet of planetCoordinates(this.gameState.board)) {
-                // Exactly one controller now, or none. A tie no longer draws both players' lines:
-                // drawing level takes nothing, so the incumbent's lines stay and the challenger
-                // gets none - which is the difference between "we are equal" and "it is mine".
                 const controller = controllerOf(this.gameState, planet)
                 if (!controller) continue
 
@@ -593,10 +484,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return edges
         })
 
-    // The control lines worth showing while a piece is hovered: its owner's lines into every
-    // planet beside it. That is the hovered piece's own hold, and the friendly pieces sharing in
-    // it - the rest of the board's lines stay hidden, because drawn all at once they buried
-    // everything else. Nothing when the hex holds no piece.
     controlEdgesFor(
         coords: AxialCoordinates
     ): { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] {
@@ -615,9 +502,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
     }
 
-    // Updated Logistics: whether the power is available to spend, and which of this player's
-    // fighters could actually do something with it. A fighter with nothing in reach is left out,
-    // since the engine refuses it rather than spending three turns on an impossible shot.
     canUseUpdatedLogistics: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseUpdatedLogistics)
     )
@@ -637,9 +521,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
-    // Tactical Feint: two clicks, because a swap has two ends. The first picks one of the
-    // player's own ships, the second the enemy ship it trades places with - and until the second
-    // arrives nothing has been sent, so the first is freely taken back.
     canUseTacticalFeint: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseTacticalFeint)
     )
@@ -675,16 +556,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.toggleOrigin(coords, this.feintableShips)
     }
 
-    // Trade Route Wormhole: two clicks like the feint, and for the same reason - a journey has
-    // two ends. The first picks the traveller, the second where it comes out.
     canUseTradeRouteWormhole: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseTradeRouteWormhole)
     )
 
     choosingWormhole: boolean = $derived(this.activePower === Power.Wormhole)
 
-    // Both ends come straight from the engine's own helpers rather than being worked out again
-    // here: which hexes are on a route is exactly the rule, and two answers to it would drift.
     travellableShips: AxialCoordinates[] = $derived.by(() => {
         if (!this.canUseTradeRouteWormhole || !this.myPlayer) return []
         return wormholableShips(this.gameState.board, this.myPlayer.id)
@@ -696,8 +573,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return wormholeDestinations(this.gameState.board, from, playerId)
     }
 
-    // The near end until one is chosen, then the far end - so the highlights ask one question at
-    // a time.
     wormholeFrom: AxialCoordinates | undefined = $derived(
         this.choosingWormhole ? this.validOrigin(this.travellableShips) : undefined
     )
@@ -716,18 +591,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.toggleOrigin(coords, this.travellableShips)
     }
 
-    // Immediate Download: two clicks again, but both ends are PLANETS rather than ships - the
-    // anchor holding the card, then the planet being read. A one-shot, so there is no cooldown to
-    // show; holding the stored effect is the whole test.
     canUseImmediateDownload: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseImmediateDownload)
     )
 
     choosingDownload: boolean = $derived(this.activePower === Power.Download)
 
-    // Straight from the engine's helpers: which planets hold a Download of theirs, and what each
-    // can see. Line of sight is the rule, and a second implementation of it in the UI would be a
-    // second answer to disagree with.
     downloadAnchors: AxialCoordinates[] = $derived.by(() => {
         if (!this.canUseImmediateDownload || !this.myPlayer) return []
         return downloadAnchorsFor(this.gameState, this.myPlayer.id).filter(
@@ -919,7 +788,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // The ship owed after a laid tile cannot be swapped away from.
     chooseHeld(pieceId: string) {
         if (this.pinnedHeldId || !this.canChoose) return
         this.select(
@@ -936,8 +804,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // Whether this held ship has anywhere legal to go, so the panel can grey out one that is
-    // stuck rather than letting the player wonder why the board stays dark.
     canPlaceHeld(piece: Piece): boolean {
         const playerId = this.myPlayer?.id
         if (!playerId) return false
@@ -950,7 +816,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // Surveying nothing. Always allowed; the probe stays where it is either way.
     async skipSurvey() {
         await this.applyAction(
             this.createPlayerAction(ChoosePlanet, { type: ActionType.ChoosePlanet })
@@ -975,7 +840,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     async attack(coords: AxialCoordinates) {
-        // Armed means "use it if it helps": the engine refuses a Railgun that changes nothing.
         const useRailgun = this.railgunArmed && this.railgunWouldMatter(coords)
         this.resetAction()
         await this.applyAction(
@@ -994,7 +858,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // Holding position rather than stepping. Always allowed: a forced move could only hurt.
     async holdPosition() {
         this.resetAction()
         await this.applyAction(this.createPlayerAction(MovePiece, { type: ActionType.MovePiece }))
@@ -1022,8 +885,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // A touch has no hover to preview with, so on touch the first tap on a placement previews
-    // it and a second tap on the same hex commits.
+    // Touch has no hover, so the first tap previews a placement and a second tap commits.
     async onTileOriginClick(origin: AxialCoordinates, touch = false) {
         if (this.busy || !this.tileOrigins.some((candidate) => sameHex(candidate, origin))) return
         if (touch && !this.isPreviewing(origin)) {
@@ -1036,7 +898,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     async onBoardClick(coords: AxialCoordinates, touch = false) {
         if (this.busy) return
 
-        // A chosen power owns the board until it is used or undone.
         switch (this.activePower) {
             case Power.Feint:
                 await this.onFeintClick(coords)
@@ -1085,7 +946,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return
         }
 
-        // A planet is never somewhere a ship can go, so a click on one is a request to read it.
         if (getHex(this.gameState.board, coords)?.technology) {
             this.togglePinnedPlanet(coords)
             return
@@ -1139,7 +999,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             : undefined
     }
 
-    // Choosing the picked origin again puts it back down; choosing another moves the choice.
     private toggleOrigin(coords: AxialCoordinates, candidates: AxialCoordinates[]) {
         if (!candidates.some((candidate) => sameHex(candidate, coords))) return
         const origin = this.originChoice

@@ -1,16 +1,7 @@
 <script lang="ts">
-    // The sky the whole game sits in: fixed to the viewport, behind every panel as well as the
-    // board, and generated fresh for each game from that game's own seed.
-    //
-    // It lives here rather than inside the board's SVG for two reasons. It has to reach behind
-    // the player panels and the history, which are outside that SVG entirely; and a sky that
-    // scrolled and rescaled with the map was wrong anyway - stars are the one thing on screen
-    // far enough away not to move when you pan across a few hexes.
     let { seed }: { seed: number } = $props()
 
-    // mulberry32: small, fast, and good enough for scattering stars. Seeded, so every player at
-    // the table sees the same sky and a rejoin doesn't redraw it differently - and so a game is
-    // recognisable by its own sky.
+    // mulberry32, seeded so every player at the table sees the same sky.
     function makeRandom(from: number) {
         let state = from >>> 0
         return () => {
@@ -22,13 +13,10 @@
         }
     }
 
-    // A fixed drawing space, stretched to cover whatever shape the window is (see
-    // preserveAspectRatio below). Wider than 16:9 so an ultrawide window doesn't run out of sky.
+    // Wider than 16:9 so an ultrawide window does not run out of sky.
     const W = 2400
     const H = 1350
 
-    // The galactic band runs corner to corner rather than straight across: a horizontal band
-    // reads as a stripe, while a tilted one reads as something the viewer is inside.
     const BAND_TILT = -27
     const BAND_Y = H * 0.52
 
@@ -38,9 +26,6 @@
         const random = makeRandom(seed)
         const stars: Star[] = []
 
-        // Two populations. The band's stars are the Milky Way: many, small, and crowded around
-        // its spine, with the crowding done by averaging three samples - that gives a soft
-        // centre-heavy scatter rather than the hard-edged strip a single uniform sample makes.
         const bandCount = 900
         for (let i = 0; i < bandCount; i++) {
             const spread = ((random() + random() + random()) / 3 - 0.5) * 2
@@ -48,8 +33,6 @@
                 x: random() * W,
                 y: BAND_Y + spread * H * 0.3,
                 r: 0.5 + random() * 1.1,
-                // Dimmer on average than the field stars: the band should read as haze that
-                // resolves into stars, not as a line of bright points.
                 o: 0.25 + random() * 0.45,
                 twinkle: random() < 0.04,
                 delay: random() * 7,
@@ -57,8 +40,6 @@
             })
         }
 
-        // The field: fewer, spread evenly, and allowed to be brighter and larger. These are what
-        // give the sky depth away from the band.
         const fieldCount = 320
         for (let i = 0; i < fieldCount; i++) {
             stars.push({
@@ -72,8 +53,6 @@
             })
         }
 
-        // Dust lanes: dark blots lying along the band. Without them the band is just a bright
-        // smear; the interruptions are what make it read as a galaxy seen edge-on.
         const lanes = Array.from({ length: 7 }, () => ({
             x: random() * W,
             y: BAND_Y + (random() - 0.5) * H * 0.22,
@@ -82,7 +61,6 @@
             o: 0.3 + random() * 0.4
         }))
 
-        // A few coloured clouds, placed anywhere, so the sky isn't uniformly grey-blue.
         const clouds = Array.from({ length: 4 }, (_unused, i) => ({
             x: random() * W,
             y: random() * H,
@@ -96,9 +74,6 @@
     })
 </script>
 
-<!-- Fixed and behind everything, and inert to the mouse: the sky must never take a click meant
-     for a hex or a panel. preserveAspectRatio="slice" fills the window in both directions,
-     cropping rather than stretching, so stars stay round at any window shape. -->
 <svg
     class="starfield"
     viewBox="0 0 {W} {H}"
@@ -135,8 +110,6 @@
         />
     {/each}
 
-    <!-- Everything belonging to the band is rotated together, so the stars, the glow and the
-         dust lanes all lie along the same axis. -->
     <g transform="rotate({BAND_TILT} {W / 2} {H / 2})">
         <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.62} ry={H * 0.17} fill="url(#sky-band-glow)" />
         <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.45} ry={H * 0.09} fill="url(#sky-band-glow)" />
@@ -155,7 +128,6 @@
             />
         {/each}
 
-        <!-- Drawn after the stars, so a lane actually obscures the ones behind it. -->
         {#each sky.lanes as lane, i (i)}
             <ellipse
                 cx={lane.x}
@@ -175,13 +147,10 @@
         inset: 0;
         width: 100%;
         height: 100%;
-        /* Behind every panel and the board alike, and untouchable. */
         z-index: -1;
         pointer-events: none;
     }
 
-    /* Never to zero: a star that disappears completely reads as a glitch rather than as air
-       moving in front of it. */
     @keyframes sky-twinkle-frames {
         0%,
         100% {
@@ -192,10 +161,7 @@
         }
     }
 
-    /* Shorthand, not longhand: Svelte scopes a component's @keyframes and rewrites the
-       reference only in the `animation` shorthand, so animation-name pointed at a name that no
-       longer existed and none of these stars were twinkling at all. The per-star duration and
-       delay still arrive inline and override the shorthand's values. */
+    /* Use the `animation` shorthand: Svelte rewrites scoped @keyframes names only there. */
     .sky-twinkle {
         animation: sky-twinkle-frames 4s ease-in-out infinite;
     }

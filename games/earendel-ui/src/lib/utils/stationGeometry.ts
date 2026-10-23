@@ -1,14 +1,9 @@
 import type { Point } from '@tabletop/common'
 
-// Shared by the station node and the truss girders between stations: the girder has to start
-// exactly where the core it plugs into ends, so both read the core's size from here.
-
 export function stationCoreRadius(hub: boolean): number {
     return hub ? 19 : 16
 }
 
-// Where a girder between two linked stations meets each core. The core is an octagon, so the
-// girder is tucked a little inside its circumradius to land on a face rather than float off it.
 export function trussEnds(
     from: Point,
     to: Point,
@@ -29,15 +24,12 @@ export function trussEnds(
     }
 }
 
-// A girder: two rails either side of the line, with lacing zig-zagging between them. Returned as
-// SVG path data - rails first, lacing second - so the caller can stroke them differently.
 export function trussPaths(start: Point, end: Point): { rails: string; lacing: string } {
     const dx = end.x - start.x
     const dy = end.y - start.y
     const length = Math.hypot(dx, dy) || 1
     const ux = dx / length
     const uy = dy / length
-    // The normal, for offsetting the rails to either side.
     const nx = -uy
     const ny = ux
     const half = 4

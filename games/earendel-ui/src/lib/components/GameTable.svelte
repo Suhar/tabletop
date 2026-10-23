@@ -26,9 +26,6 @@
     assert(gameSession instanceof EarendelGameSession, 'Earendel needs its own game session')
     setGameSession(gameSession)
 
-    // One sky per game, from the game's own seed, so it is the same for everyone at the table and
-    // survives a reload - and so two games look like two different corners of space. Falls back
-    // to the id's characters when a game carries no seed.
     const skySeed = $derived.by(() => {
         const state = gameSession.gameState
         if (state.prng?.seed) return state.prng.seed
@@ -41,7 +38,6 @@
 
 <Starfield seed={skySeed} />
 
-<!-- Full Height and Width with 8px padding-->
 <div style="--chat-height-offset: 0px;">
     <DefaultTableLayout>
         {#snippet sideContent()}
@@ -56,7 +52,6 @@
             <TechnologyPiles />
         {/snippet}
         {#snippet gameContent()}
-            <!--  Top part is not allowed to shrink -->
             <div class="shrink-0">
                 <Header />
                 {#if gameSession.isViewingHistory}
@@ -65,8 +60,7 @@
                     <InformationPanel />
                 {/if}
             </div>
-            <!--  Bottom part fills the remaining space, but hides overflow to keep it's height fixed.
-              This allows the wrapper to scale to its bounds regardless of its content size-->
+            <!-- overflow-hidden keeps the height fixed so the wrapper scales to its bounds -->
             <div class="grow-0 overflow-hidden" style="flex:1;">
                 <ScalingWrapper justify="center" controls="bottom-left" expandable>
                     <Board />

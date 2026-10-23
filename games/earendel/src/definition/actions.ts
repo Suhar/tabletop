@@ -1,6 +1,4 @@
-// Defines the entire set of action types
-
-export enum ActionType { 
+export enum ActionType {
     DrawPieces = 'drawPieces',
     UseLogisticsUpgrade = 'useLogisticsUpgrade',
     UseUpdatedLogistics = 'useUpdatedLogistics',
@@ -15,5 +13,5 @@ export enum ActionType {
     ChooseTechnology = 'chooseTechnology',
     ChoosePlanet = 'choosePlanet',
     PlacePiece = 'placePiece',
-    Pass = 'pass',
+    Pass = 'pass'
 }

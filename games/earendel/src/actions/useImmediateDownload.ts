@@ -10,13 +10,8 @@ import { activateTechnologyEffect, grantTechnology } from '../util/technologyGra
 
 export type UseImmediateDownloadMetadata = Type.Static<typeof UseImmediateDownloadMetadata>
 export const UseImmediateDownloadMetadata = Type.Object({
-    // The technology taken, so history can name it - the coordinates alone say nothing a reader
-    // would recognise.
     technologyId: Type.Optional(Type.String()),
-    // The card itself, so history can name it without looking at the board.
     technology: Type.Optional(TechnologyCard),
-    // Whether it went off at once rather than being kept. An Immediate effect downloaded this way
-    // fires on the spot, which is the difference worth recording.
     resolvedAtOnce: Type.Optional(Type.Boolean())
 })
 
@@ -27,7 +22,6 @@ export const UseImmediateDownload = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.UseImmediateDownload),
             playerId: Type.String(),
-            // The planet holding the Download, and the planet being read from.
             from: AxialCoordinates,
             to: AxialCoordinates,
             metadata: Type.Optional(UseImmediateDownloadMetadata)
@@ -41,18 +35,6 @@ export function isUseImmediateDownload(action?: GameAction): action is UseImmedi
     return action?.type === ActionType.UseImmediateDownload
 }
 
-// Takes the technology of a planet this one can see, without the wait.
-//
-// What it really buys is TIME. Every other route to a technology runs through the claim rule:
-// take a planet outright, hold it until your next turn begins, and it is yours - a full round in
-// which anyone can break the hold. A Download skips all of that. The planet it reads from can be
-// held by an opponent, deep in their territory, with a ripening claim of their own; sight is the
-// only requirement, and sight does not care who owns what.
-//
-// It does not TAKE the technology away from them - a technology gained is a record, not a token,
-// and the card stays on its planet. Two players holding the same technology is already possible
-// (a planet that changes hands after its claim ripens does exactly that), so this needs no new
-// rule to make sense of.
 export class HydratedUseImmediateDownload
     extends HydratableAction<typeof UseImmediateDownload>
     implements UseImmediateDownload
@@ -76,16 +58,11 @@ export class HydratedUseImmediateDownload
         const playerState = state.getPlayerState(this.playerId)
         const card = getHex(state.board, this.to)!.technology!
 
-        // Spent before the grant, not after: the downloaded card could itself be a stored effect,
-        // and removing "a stored Download" afterwards could take the wrong entry out of the list.
+        // Spent before the grant: the downloaded card could itself be a stored Download.
         playerState.spendStoredEffect(TechnologyEffectKind.ImmediateDownload)
 
         grantTechnology(state, this.playerId, card)
 
-        // "Available immediately" is the whole point of the name, and for an Immediate effect that
-        // means firing now rather than being remembered. Anything else - a cooldown power, a
-        // granted piece, another stored effect - is already usable the moment grantTechnology puts
-        // it in front of the player, so there is nothing more to do for those.
         const resolvedAtOnce = hasImmediateEffect(card)
         if (resolvedAtOnce) {
             activateTechnologyEffect(state, {
@@ -95,7 +72,6 @@ export class HydratedUseImmediateDownload
             })
         }
 
-        // A downloaded Beyond the Frontier draws a tile from the hidden supply at once.
         if (state.pendingTile) this.revealsInfo = true
 
         this.metadata = {
@@ -112,9 +88,6 @@ export class HydratedUseImmediateDownload
     invalidUseImmediateDownloadReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        // A downloaded Immediate effect needs the same slot a claimed one uses, and a downloaded
-        // probe-or-fighter consequence would need the others: refuse while any is occupied rather
-        // than overwrite a decision the player already owes.
         if (state.pendingTechnology || state.pendingTile) {
             return 'Finish the technology you are already resolving first.'
         }

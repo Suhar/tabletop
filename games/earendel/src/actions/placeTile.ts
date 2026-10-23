@@ -18,9 +18,7 @@ export type PlaceTileMetadata = Type.Static<typeof PlaceTileMetadata>
 export const PlaceTileMetadata = Type.Object({
     tile: Type.Optional(Tile),
     rotation: Type.Optional(Type.Number()),
-    // True when the supply was empty or there was nowhere legal to lay it.
     noTilePlaced: Type.Optional(Type.Boolean()),
-    // The tile went down but no ship followed - an empty bag, or no room on the tile.
     noShipPlaced: Type.Optional(Type.Boolean())
 })
 
@@ -31,12 +29,9 @@ export const PlaceTile = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.PlaceTile),
             playerId: Type.String(),
-            // Set when a ship was drawn with the tile. The tile itself became public when the
-            // technology was chosen, so this action only reveals if the bag gave up a ship.
+            // The tile became public when its technology was chosen; only a drawn ship reveals here.
             revealsInfo: Type.Optional(Type.Boolean()),
-            // The tile's origin hex. Absent only when no tile could be laid at all.
             coords: Type.Optional(AxialCoordinates),
-            // How far the tile is turned, 0-5. A sixth of a turn each.
             rotation: Type.Optional(Type.Number()),
             metadata: Type.Optional(PlaceTileMetadata)
         })
@@ -49,9 +44,6 @@ export function isPlaceTile(action?: GameAction): action is PlaceTile {
     return action?.type === ActionType.PlaceTile
 }
 
-// Grows the board: a tile from the supply, laid so that at least two of its hexes touch the
-// existing map. The ship that follows is a separate action, because it is a real placement
-// and everything a placement triggers has to happen to it.
 export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implements PlaceTile {
     declare type: ActionType.PlaceTile
     declare playerId: string
@@ -74,8 +66,6 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
 
         if (!this.coords) {
             state.pendingTile = undefined
-            // A new tile brings planets that have never had a controller, and can put a hex within
-            // reach of pieces that were previously too far away.
             refreshPlanetControl(state)
 
             this.metadata = { noTilePlaced: true }
@@ -84,16 +74,11 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
 
         placeTileOnBoard(state.board, pending.tile, this.coords, this.rotation ?? 0)
 
-        // The ship that follows is drawn here rather than on entering the next state, so the
-        // turn can be routed knowing whether there is anything to place. An empty bag means
-        // the tile is laid and that is that.
         const playerState = state.getPlayerState(this.playerId)
         const drawn = playerState.drawFromBag()
         const room = openHexesOfTile(state.board, pending.tile.id).length > 0
 
         if (drawn && room) {
-            // Into the same hand as anything else the turn is still holding, but pinned: only
-            // this ship may go on the new tile, and it must.
             state.heldPieces.push(drawn)
             state.bonusPlacementTileId = pending.tile.id
             state.bonusPlacementPieceId = drawn.id

@@ -22,27 +22,19 @@ import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
 import type { EarendelGameState } from '../model/gameState.js'
 
-// Setup numbers a simulation may override, to try a sizing without committing to it.
 export type SetupOverrides = BoardSetupOptions & {
     piecesPerType?: number
-    // Defaults to the game's own default turn style, so simulations measure what ships.
     turnStyle?: TurnStyle
-    // Tournament seating and a master seed, passed straight to the engine.
     start?: GameStartOptions
 }
 
 export type GameSummary = {
     playerCount: number
-    // The state the game finished in, and every action that got it there, for tests that need
-    // more than the counts below.
     finalState: EarendelGameState
     actions: GameAction[]
-    // How the game actually ended - the rules name the empty bag, but a gridlocked board
-    // ends it too, and which one fires is the whole question about sizing.
     endedBy: 'empty bag' | 'no legal placement' | 'unfinished'
     turns: number
     finished: boolean
-    // Why it stopped, when it didn't finish.
     stoppedBecause?: string
     scores: number[]
     planetsExplored: number
@@ -51,32 +43,17 @@ export type GameSummary = {
     piecesLeftInBags: number[]
     piecesDestroyed: number
     chainsScored: number
-    // Immediate technology effects actually carried out.
     technologiesResolved: number
-    // Technologies actually in players' hands at the end, against the number of planets that
-    // were explored. The gap between the two is the cost of the holding rule: a planet can be
-    // explored, and its card chosen, and still never be claimed by anybody.
     technologiesClaimed: number
-    // Tiles laid during play by the board-growing technology.
     tilesPlaced: number
-    // Ships thrown out of the game by the draft.
     discards: number
-    // Logistics Upgrades actually spent.
     upgradesSpent: number
-    // Fighters worn down a level rather than removed.
     piecesDamaged: number
-    // Station Hubs handed out by technologies - pieces that never came from a bag.
     hubsGranted: number
-    // Pieces that started in a bag and ended up nowhere. Always zero if the rules are honest:
-    // a piece is on the board, in a bag, in a hand, discarded, or destroyed. This is the check
-    // that catches a turn ending while its player still held a ship - the ship just disappears,
-    // and nothing else in the game would notice.
     piecesUnaccounted: number
 }
 
-// A tiny deterministic generator, so a simulation can be re-run exactly. Deliberately not the
-// game's own prng - that one belongs to the game state and drawing from it here would change
-// what the game itself draws.
+// Deliberately not the game's prng: drawing from it here would change what the game draws.
 function lcg(seed: number): () => number {
     let value = seed >>> 0
     return () => {
@@ -85,9 +62,6 @@ function lcg(seed: number): () => number {
     }
 }
 
-// Plays a whole game with every choice made at random. Not an AI and not meant to be one:
-// its job is to find out whether the rules as written can reach the end of a game at all,
-// and what the board looks like when they do.
 export function playRandomGame(
     playerCount: number,
     seed: number,
@@ -118,7 +92,6 @@ export function playRandomGame(
             buildBag(playerId, new Prng({ seed: seed + 1, invocations: 0 }), perType)
         )
     } else if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
-        // The opening draw happened against the old board; redraw so the turn is coherent.
         game.stackBags(
             (playerId) =>
                 game.state.players.find((player) => player.playerId === playerId)!.bag.items
@@ -154,8 +127,6 @@ export function playRandomGame(
                 .validActionsFor(playerId)
                 .includes(ActionType.UseLogisticsUpgrade)
 
-            // Spends the upgrade most of the time it is available, so both branches of the
-            // draft get exercised.
             if (canUpgrade && random() < 0.8) {
                 game.run(UseLogisticsUpgrade, {
                     type: ActionType.UseLogisticsUpgrade,
@@ -171,8 +142,6 @@ export function playRandomGame(
                 discards++
             }
         } else if (game.state.machineState === MachineState.PlacingPiece) {
-            // Any held ship with somewhere legal to go. A drafted hand may hold one that is
-            // stuck and one that isn't, so the choice of ship is part of the move.
             const options = game.state.heldPieces.flatMap((piece) =>
                 legalPlacementsFor(game.state.board, playerId, piece).map((coords) => ({
                     piece,
@@ -181,8 +150,6 @@ export function playRandomGame(
             )
 
             if (options.length === 0) {
-                // Shouldn't happen: the engine ends the game in enter() when nothing in hand
-                // can be placed. Reaching here means that check has a hole.
                 stoppedBecause = 'no legal placement, but the game did not end'
                 break
             }
@@ -201,8 +168,6 @@ export function playRandomGame(
         } else if (game.state.machineState === MachineState.Exploring) {
             const pending = game.state.pendingExploration!
             if (!pending.exploringPlanet) {
-                // Explore when there is something to explore; otherwise survey an explored planet
-                // for its technology, since every destination offered is one the bot lacks.
                 const unexplored = pending.candidatePlanets.filter(
                     (coords) => !getHex(game.state.board, coords)?.explored
                 )
@@ -250,7 +215,6 @@ export function playRandomGame(
         } else if (game.state.machineState === MachineState.ResolvingTechnology) {
             const moves = legalMovesFor(game.state.board, playerId)
             if (moves.length === 0) {
-                // enter() should have taken this for us, so reaching here is a hole.
                 stoppedBecause = 'a technology could not resolve and the game did not move on'
                 break
             }
@@ -264,7 +228,6 @@ export function playRandomGame(
             technologiesResolved++
         } else if (game.state.machineState === MachineState.Attacking) {
             const pending = game.state.pendingAttack!
-            // Fires two times in three, so both branches get exercised.
             const fire = random() < 0.67
             const shot = game
                 .run(AttackPiece, {
@@ -273,8 +236,6 @@ export function playRandomGame(
                     ...(fire ? { coords: pick(pending.targets) } : {})
                 })
                 .find(isAttackPiece)
-            // Only an actual removal takes a piece off the count - a damaged fighter is still
-            // standing, just weaker.
             if (fire && !shot?.metadata?.damaged) piecesDestroyed++
             if (shot?.metadata?.damaged) piecesDamaged++
         } else {
@@ -289,16 +250,11 @@ export function playRandomGame(
 
     const bagsEmpty = game.state.players.some((player) => player.bag.remaining === 0)
 
-    // Read from the bag definition rather than assumed: the three types are not dealt in equal
-    // numbers, and guessing that they were is how this check first got its own arithmetic wrong.
     const bagSize =
         overrides.piecesPerType !== undefined
             ? 3 * overrides.piecesPerType
             : Object.values(STARTING_BAG).reduce((total, count) => total + count, 0)
 
-    // Pieces granted by technologies were never in a bag, so they are not part of what the count
-    // has to balance. Any future granted kind belongs in this predicate too, or it will read as a
-    // piece appearing out of nowhere - which, from the bags' point of view, it is.
     const granted = (piece: { hub?: boolean }) => piece.hub === true
     const onBoard = Object.values(game.state.board.hexes)
         .map((hex) => hex.piece)
@@ -357,5 +313,4 @@ export function playRandomGame(
     }
 }
 
-// Kept so a simulation can pass a Pass without importing the action separately.
 export { Pass }

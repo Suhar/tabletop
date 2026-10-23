@@ -1,12 +1,8 @@
 import { COOLDOWN_TURNS, TechnologyEffectKind } from '../model/technology.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 
-// A cooldown is counted in the owner's OWN turns, not in rounds - so a power is idle for the same
-// stretch of that player's game whatever the player count.
-//
-// turnCount is the number of turns they have finished, so it is the same number all through the
-// turn they are taking. Using a power on a turn therefore stamps that turn's number, and the
-// power returns on the third turn after it.
+// Counted in the owner's own turns. turnCount is turns finished, so it holds steady through
+// the turn being taken.
 export function turnsSinceUse(
     state: HydratedEarendelGameState,
     playerId: string,
@@ -16,8 +12,6 @@ export function turnsSinceUse(
     return usedAt === undefined ? undefined : state.turnManager.turnCount(playerId) - usedAt
 }
 
-// Whether this player can use the power right now: they have to hold it, and its timer has to
-// have run out.
 export function canUseCooldownEffect(
     state: HydratedEarendelGameState,
     playerId: string,
@@ -31,7 +25,6 @@ export function canUseCooldownEffect(
     return since >= COOLDOWN_TURNS
 }
 
-// How many more of this player's turns until the power is ready, or 0 if it is.
 export function turnsUntilReady(
     state: HydratedEarendelGameState,
     playerId: string,

@@ -12,7 +12,6 @@ import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 
 export type AttackSpreadMetadata = Type.Static<typeof AttackSpreadMetadata>
 export const AttackSpreadMetadata = Type.Object({
-    // One entry per piece hit, so history can name them all rather than reporting a count.
     hits: Type.Optional(
         Type.Array(
             Type.Object({
@@ -31,9 +30,6 @@ export const AttackSpread = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.AttackSpread),
             playerId: Type.String(),
-            // Which neighbours are being fired on. "Any or all", so this is a subset the player
-            // chooses rather than simply everything in reach - sparing one can matter, since
-            // clearing a piece may hand a planet to a third party or open your own blockade.
             targets: Type.Array(AxialCoordinates),
             metadata: Type.Optional(AttackSpreadMetadata)
         })
@@ -46,11 +42,6 @@ export function isAttackSpread(action?: GameAction): action is AttackSpread {
     return action?.type === ActionType.AttackSpread
 }
 
-// Full Torpedo Spread: one fighter's attack, landing on several of its neighbours at once.
-//
-// Each hit goes through resolveShot, the same function a single attack uses, so a spread cannot
-// wear a fighter down differently or ignore an escort. What makes it a spread is only that it
-// does that more than once, from one pendingAttack, for one cooldown.
 export class HydratedAttackSpread
     extends HydratableAction<typeof AttackSpread>
     implements AttackSpread
@@ -73,11 +64,7 @@ export class HydratedAttackSpread
         const pending = state.pendingAttack!
         startCooldown(state, this.playerId, TechnologyEffectKind.FullTorpedoSpread)
 
-        // Resolved in the order given. It matters: a spread can hit a piece that was escorting
-        // another, and the escort is judged against the board as it stands when each shot lands -
-        // so shooting the guard first can open up its neighbour. Rather than freeze the board and
-        // pretend the volley is simultaneous, the targets were all checked as legal at validation
-        // time and each is then fired in turn.
+        // In the order given: escorts are judged as each shot lands (rules.md, Escort).
         const hits: NonNullable<AttackSpreadMetadata['hits']> = []
         for (const target of this.targets) {
             const result = resolveShot(state.board, pending.fighterCoords, target)
@@ -107,8 +94,6 @@ export class HydratedAttackSpread
             return 'Your Full Torpedo Spread is not ready.'
         }
 
-        // "Any or all" still means at least one: declining is what AttackPiece with no target is
-        // for, and it costs no cooldown.
         if (this.targets.length === 0) {
             return 'Choose at least one target, or hold fire instead.'
         }
@@ -119,7 +104,6 @@ export class HydratedAttackSpread
             }
         }
 
-        // A spread of one is an ordinary shot and should not cost three turns of a power.
         if (this.targets.length < 2) {
             return 'A spread needs more than one target - fire normally instead.'
         }

@@ -10,17 +10,10 @@ import { Piece, powerOf } from './pieces.js'
 import { PlanetColor } from './planetColor.js'
 import { TechnologyCard } from './technology.js'
 
-// Re-exported so the many modules that reach for a planet colour by way of the board keep
-// working; the enum itself lives in planetColor.ts to keep board and technology acyclic.
+// Re-exported for existing importers; defined in planetColor.ts to keep board and technology
+// acyclic.
 export { PlanetColor, PLANET_COLORS } from './planetColor.js'
 
-// The board is hexes, laid down four at a time as diamond-shaped TILES. A hex is either a
-// planet or open space; a tile carries two of each. Pieces (ships) occupy a single hex.
-//
-// State keys hexes by coordinatesToNumber(axial) rather than by a "q,r" string - the same
-// choice Kaivai's board makes, and the reason its cells are Record<number, Cell>. A runtime
-// HexGrid can always be rebuilt from these when pathfinding or geometry is needed; the
-// stored form stays plain data that typebox can validate and the engine can clone.
 export const BOARD_ORIENTATION = HexOrientation.Flat
 
 export enum HexKind {
@@ -30,28 +23,13 @@ export enum HexKind {
 
 export type Hex = Type.Static<typeof Hex>
 export const Hex = Type.Object({
-    // Its own coordinates, even though the hexes record is keyed by them. The key is a
-    // Szudzik pairing (see coordinatesToNumber) and libs/common ships no inverse, so
-    // carrying the coords is how a hex stays self-describing when iterating - the same
-    // choice Kaivai's Cell makes.
+    // Carried alongside the key: libs/common has no inverse of coordinatesToNumber.
     coords: AxialCoordinates,
-    // Which tile laid this hex down - kept so the UI can draw tile seams, and so a rule
-    // that cares about whole tiles has something to group by.
     tileId: Type.String(),
     kind: Type.Enum(HexKind),
-    // Planet hexes only.
     color: Type.Optional(Type.Enum(PlanetColor)),
-    // The technology housed here, chosen by whoever explored it. Set once and permanent.
-    // The explorer gains it outright, and so does anyone who later holds the planet with
-    // strictly more power than anyone else - and nobody ever loses it again.
-    //
-    // The whole card rather than its id, so anything looking at the board can name the
-    // technology and say what it does without a lookup table to consult.
     technology: Type.Optional(TechnologyCard),
-    // The ship standing here, if any. A planet hex is never occupied: ships sit AROUND
-    // planets and exert power on them (see planetControl).
     piece: Type.Optional(Piece),
-    // Set once a probe has explored this planet. Only meaningful on planet hexes.
     explored: Type.Optional(Type.Boolean())
 })
 
@@ -72,26 +50,19 @@ export function getHex(board: EarendelBoard, coords: AxialCoordinates): Hex | un
     return board.hexes[hexKey(coords)]
 }
 
-// One step in each of the six directions, in clockwise order. Because the order is
-// clockwise, direction i and direction i+3 are exactly opposite - which is what lets a
-// straight line be walked out from a hex in both directions at once (see lineOfSight).
 export const HEX_STEPS: AxialCoordinates[] = ClockwiseFlatHexDirections.map((direction) =>
     hexNeighborCoords({ q: 0, r: 0 }, BOARD_ORIENTATION, direction)
 )
 
-// The six hexes touching this one.
 export function neighborsOf(coords: AxialCoordinates): AxialCoordinates[] {
     return HEX_STEPS.map((step) => ({ q: coords.q + step.q, r: coords.r + step.r }))
 }
 
-// A hex a ship can be placed on: on the board, not a planet, and unoccupied.
 export function isOpenHex(board: EarendelBoard, coords: AxialCoordinates): boolean {
     const hex = getHex(board, coords)
     return hex !== undefined && hex.kind === HexKind.Open && hex.piece === undefined
 }
 
-// Whether a ship can be placed anywhere at all. Only ever false on a wholly gridlocked
-// board, but the turn has to have an out when it is.
 export function hasOpenHex(board: EarendelBoard): boolean {
     return Object.values(board.hexes).some(
         (hex) => hex.kind === HexKind.Open && hex.piece === undefined
@@ -99,17 +70,12 @@ export function hasOpenHex(board: EarendelBoard): boolean {
 }
 
 export type PlanetControl = {
-    // Every player with power adjacent to the planet, highest first.
     powerByPlayerId: Record<string, number>
-    // Who controls it: the players tied for the most power, or empty when no one has any.
-    // Ties are NOT broken - each tied player takes the full reward.
+    // Ties are not broken: each tied player scores in full (rules.md, Control and scoring).
     controllingPlayerIds: string[]
     power: number
 }
 
-// Control of a planet is decided by the power a player has in the six hexes around it -
-// probes contribute nothing, stations 1, fighters 2 (see PIECE_POWER). Ties stand: every
-// tied player controls it and scores it in full.
 export function planetControl(board: EarendelBoard, coords: AxialCoordinates): PlanetControl {
     const powerByPlayerId: Record<string, number> = {}
 
@@ -124,22 +90,14 @@ export function planetControl(board: EarendelBoard, coords: AxialCoordinates): P
         if (value > power) power = value
     }
 
-    // Zero power controls nothing - a planet ringed only by probes stays unclaimed, which is
-    // what makes a probe an explorer rather than a claim.
     const controllingPlayerIds =
-        power > 0 ? Object.keys(powerByPlayerId).filter((playerId) => powerByPlayerId[playerId] === power) : []
+        power > 0
+            ? Object.keys(powerByPlayerId).filter((playerId) => powerByPlayerId[playerId] === power)
+            : []
 
     return { powerByPlayerId, controllingPlayerIds, power }
 }
 
-// The player who OUTRIGHT holds a planet: strictly more power than any other player, not
-// merely tied for the most. Undefined when the strongest presence is shared, or when nobody
-// has any power there at all.
-//
-// Deliberately stricter than planetControl. Control is generous where points are concerned -
-// tied players each score the planet in full - and strict where technology is concerned:
-// sharing a planet's points is fine, sharing its technology is not. A tie hands nobody the
-// technology, so matching an opponent's presence is not a way to copy what they hold.
 export function dominantPlayerId(
     board: EarendelBoard,
     coords: AxialCoordinates

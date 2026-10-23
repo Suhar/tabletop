@@ -30,9 +30,7 @@
 
     let gameSession = getGameSession()
 
-    // Planet colours are the game's own five, not player colours - a planet belongs to nobody.
-    // All cool, where every player colour is warm (see EarendelColors), so a piece never matches
-    // the planet it stands beside.
+    // Cool colours only: every player colour is warm (see EarendelColors).
     const PLANET_FILL: Record<PlanetColor, string> = {
         [PlanetColor.Periwinkle]: '#859bfd',
         [PlanetColor.Aqua]: '#22d6fd',
@@ -62,8 +60,6 @@
         })
     )
 
-    // Where a tile could be laid. These sit OFF the current board, so they have to be part
-    // of the view or they would be drawn outside it.
     let ghosts = $derived(
         gameSession.tileOrigins.map((origin) => ({
             origin,
@@ -79,12 +75,7 @@
         }))
     )
 
-    // The board is generated and can grow mid-game, so its extent isn't known ahead of time -
-    // the view has to be measured from the hexes that actually exist, plus anywhere a tile
-    // is currently being offered.
-    //
-    // Kept as numbers as well as a string, because anything drawn on top of the board - a
-    // popup, say - has to be kept inside these bounds or the SVG simply clips it away.
+    // Kept as numbers too: an overlay must stay inside the viewBox or the SVG clips it.
     let view = $derived.by(() => {
         const boxes = [
             ...placed.map((entry) => entry.box),
@@ -107,8 +98,7 @@
     let hovered: AxialCoordinates | undefined = $state(undefined)
     let hoveredTileOrigin: AxialCoordinates | undefined = $state(undefined)
 
-    // Touch has no hover: a tap on a hex the session does not act on inspects it instead, until
-    // the board changes.
+    // Touch has no hover, so a tap on a hex the session does not act on inspects it.
     let inspected: AxialCoordinates | undefined = $derived.by(() => {
         void gameSession.gameState
         return undefined
@@ -138,59 +128,35 @@
         await gameSession.onBoardClick(coords, touch)
     }
 
-    // The ship about to be placed, previewed on the hex under the cursor rather than announced
-    // by lighting up every hex it could go on. Thirty pulsing hexes told the player where they
-    // MAY place; a single ghost tells them what they ARE placing and where it will land, which
-    // is the question actually being asked.
-    //
-    // Only while a ship is being placed: a tile placement, an exploration choice, a shot and a
-    // technology step are all choices BETWEEN hexes, where the hexes themselves are the thing
-    // to look at and there is no single piece to preview.
     let ghostPiece = $derived(gameSession.isPlacing ? gameSession.pieceToPlace : undefined)
     let showGhost = $derived(ghostPiece !== undefined)
 
-    // Locked to the hovered hex, and only when that hex would actually accept the piece - a
-    // ghost on an illegal hex would promise a placement the engine then refuses.
     let ghostEntry = $derived.by(() => {
         const at = placementFocus
         if (!showGhost || !at || !gameSession.isHighlighted(at)) return undefined
         return placed.find((entry) => sameHex(entry.hex.coords, at))
     })
 
-    // What the fighter being placed could attack if it landed on the hovered hex. Shown before
-    // the placement so the shot can be aimed rather than discovered afterwards.
     let previewTargets: AxialCoordinates[] = $derived(
         placementFocus ? gameSession.previewTargetsFor(placementFocus) : []
     )
 
-    // The planets a probe could be sent to from the hovered hex. The fighter's equivalent is
-    // previewTargets just above; between them they let a player see what a placement will DO
-    // before committing, instead of finding out once it is too late to choose differently.
     let previewProbeDestinations: AxialCoordinates[] = $derived(
         placementFocus ? gameSession.previewProbeDestinationsFor(placementFocus) : []
     )
 
-    // Control lines appear only for the piece under the cursor and the friendly pieces holding
-    // the same planets - drawn for the whole board at once, they made it unreadable.
     let shownControlEdges = $derived(focused ? gameSession.controlEdgesFor(focused) : [])
 
-    // A sine wave along the segment between two stations. Sampled rather than drawn with arcs
-    // so the wavelength stays constant however long or however angled the line is.
+    // Sampled rather than drawn with arcs so the wavelength stays constant at any length or angle.
     function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
         return waveBetween(hexGeometry(from).center, hexGeometry(to).center)
     }
 
-    // Two ways of showing who controls a planet, one at a time. The wavy boundary line is kept
-    // whole rather than deleted - it works, and it may well come back - so switching between them
-    // is a matter of flipping these.
     const SHOW_CONTROL_WAVE = false
     const SHOW_CONTROL_DOTS = true
 
-    // Dots marching from a controlling piece to the planet it holds. Spaced along the line
-    // between the two hex centres, but inset at both ends so the run starts clear of the piece
-    // and stops short of the planet's disc rather than disappearing under either.
     const CONTROL_DOTS = 9
-    const CONTROL_DOT_CYCLE = 1.5 // seconds for one dot to travel the whole run
+    const CONTROL_DOT_CYCLE = 1.5
 
     function controlDots(from: AxialCoordinates, planet: AxialCoordinates) {
         const start = hexGeometry(from).center
@@ -203,28 +169,20 @@
         const ux = dx / length
         const uy = dy / length
 
-        // The full span, centre of the piece's hex to centre of the planet's. The run was inset
-        // clear of both at first, which read as a detached dash floating in the gap; anchoring it
-        // in the two centres is what makes it read as a line FROM the piece TO the planet.
         return Array.from({ length: CONTROL_DOTS }, (_unused, i) => {
             const along = (length * i) / (CONTROL_DOTS - 1)
             return {
                 x: start.x + ux * along,
                 y: start.y + uy * along,
-                // Staggered so the bright one travels toward the planet: the dot nearest the
-                // piece lights first, and each one after it a fraction of a cycle later.
                 delay: (i * CONTROL_DOT_CYCLE) / CONTROL_DOTS
             }
         })
     }
 
-    // The directions, from a station's hex, of the friendly stations it is linked to - the sides
-    // its girders leave from, which therefore carry no docking stub.
     function linkedAngles(coords: AxialCoordinates, playerId: string): number[] {
         return anglesTo(coords, gameSession.linkedStationNeighbors(coords, playerId))
     }
 
-    // A hex's outline pulled in toward its centre by `inset` pixels.
     function insetPoints(coords: AxialCoordinates, inset: number): string {
         const { center, vertices } = hexGeometry(coords)
         return vertices
@@ -245,9 +203,6 @@
         })
     }
 
-    // The shared edge between two neighbouring hexes: the two vertices they have in common.
-    // Found by matching vertices rather than by mapping a direction to an edge index, so it
-    // cannot go wrong if the hex orientation ever changes.
     function sharedEdge(a: AxialCoordinates, b: AxialCoordinates) {
         const va = hexGeometry(a).vertices
         const vb = hexGeometry(b).vertices
@@ -257,9 +212,6 @@
         return shared.length === 2 ? { start: shared[0], end: shared[1] } : undefined
     }
 
-    // Same sine sampling as wavePath, over two arbitrary points. A short edge needs a shorter
-    // wavelength and a smaller amplitude than a sight line spanning the board, so both scale
-    // with the distance instead of being fixed.
     function waveBetween(
         start: { x: number; y: number },
         end: { x: number; y: number },
@@ -271,7 +223,6 @@
         const length = Math.hypot(dx, dy)
         if (length === 0) return ''
 
-        // Unit vectors along the line and across it.
         const ux = dx / length
         const uy = dy / length
         const px = -uy
@@ -305,7 +256,6 @@
         }
     })
 
-    // Which planet's technology to show: the pinned one, else whatever is under the cursor.
     let shownTechnology = $derived.by(() => {
         const coords = gameSession.pinnedPlanet ?? focused
         if (!coords) return undefined
@@ -320,9 +270,7 @@
         }
     })
 
-    // Beside the planet if it fits, otherwise on its other side, and kept inside the view
-    // either way. The board is scaled to its viewBox, so anything hanging over the edge is not
-    // squeezed in - it is cut off.
+    // The SVG clips anything outside its viewBox.
     function popupPosition(
         center: { x: number; y: number },
         width: number,
@@ -342,15 +290,7 @@
         }
     }
 
-    // An arc from a fighter to something it could attack: the flight path of a missile.
-    //
-    // Attacker and target are always adjacent, so every arc spans the same short distance and
-    // bows the same amount. The bow is biased towards the top of the screen, which reads as
-    // lifting off the board rather than sliding across it.
-    //
-    // pathLength normalises the path to 100 units, so one dash animation flies any of them at
-    // the same rate whichever way they point - and lets the missile and its trail be two dash
-    // patterns on the same curve, which is what keeps the head exactly at the front.
+    // pathLength 100 lets one dash animation fly every arc at the same rate.
     const ARC_BOW = 34
 
     function attackArc(from: AxialCoordinates, to: AxialCoordinates) {
@@ -361,7 +301,6 @@
         const dy = end.y - start.y
         const length = Math.hypot(dx, dy) || 1
 
-        // Perpendicular, flipped so it always leans upward.
         let nx = -dy / length
         let ny = dx / length
         if (ny > 0) {
@@ -374,14 +313,9 @@
             y: (start.y + end.y) / 2 + ny * ARC_BOW
         }
 
-        // Right to the middle of the target hex: the missile is aimed at the piece, not at the
-        // edge of the space it stands in.
         return `M${start.x},${start.y} Q${control.x},${control.y} ${end.x},${end.y}`
     }
 
-    // A triangle pointing from a probe at a planet it could explore, with the vector to nudge it
-    // along as it pulses. Quieter than the missiles on purpose: exploring is an invitation,
-    // firing is a threat.
     function reachPointer(from: AxialCoordinates, to: AxialCoordinates) {
         const start = hexGeometry(from).center
         const end = hexGeometry(to).center
@@ -392,7 +326,6 @@
         const ux = dx / length
         const uy = dy / length
 
-        // Sat between the two, closer to the planet it is pointing at.
         const at = { x: start.x + ux * length * 0.58, y: start.y + uy * length * 0.58 }
         const size = 15
 
@@ -406,7 +339,6 @@
                 `${base.x + wing.x},${base.y + wing.y}`,
                 `${base.x - wing.x},${base.y - wing.y}`
             ].join(' '),
-            // Pulses along its own direction, so the movement says which way it is pointing.
             nudge: { x: ux * 9, y: uy * 9 }
         }
     }
@@ -436,13 +368,6 @@
 </script>
 
 <svg {viewBox} class="w-[1200px] max-w-full select-none" role="presentation">
-    <!-- No backdrop and no sky of its own: the starfield behind the WHOLE table (see
-         Starfield, mounted in GameTable) shows through this SVG, so the board sits in the same
-         sky as the panels rather than carrying a rectangle of its own. The board's tiled
-         patterns and their twinkling stars are gone with it - a sky in board coordinates
-         rescaled and slid about with the map, which stars are the one thing far enough away not
-         to do. -->
-
     {#each placed as entry (entry.hex.tileId + entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const hex = entry.hex}
         {@const highlighted = gameSession.isHighlighted(hex.coords)}
@@ -458,10 +383,6 @@
             onpointerleave={onHexPointerLeave}
             class={highlighted ? 'cursor-pointer' : ''}
         >
-            <!-- A planet's hex is tinted in its own colour. Raised from 0.28 to 0.42: the tint
-                 is doing real work now, saying which colour a hex belongs to from across the
-                 board, so it has to be legible against the dark field rather than merely
-                 present. -->
             <polygon
                 points={entry.points}
                 fill={hex.kind === HexKind.Planet ? planetColor : '#141c2e'}
@@ -470,10 +391,7 @@
                 stroke-width="2"
             />
             {#if hex.kind === HexKind.Planet}
-                <!-- A brighter boundary in the planet's own colour, so planet hexes stand out from
-                     open space. Inset from the shared edge rather than drawn on it: a neighbouring
-                     hex is drawn later and its dim edge would paint over half of a line on the
-                     boundary itself. -->
+                <!-- Inset so a neighbour drawn later cannot paint over half of the line. -->
                 <polygon
                     points={insetPoints(hex.coords, 2.5)}
                     fill="none"
@@ -485,20 +403,12 @@
             {/if}
 
             {#if hex.kind === HexKind.Planet}
-                <!-- Each colour gets its own silhouette, so a board can be read at a glance
-                     without matching hues: a ringed world, a binary pair, a haloed one, a moon,
-                     a crescent. Shape carries the colour, which is what makes five kinds of
-                     planet tell themselves apart at speed - and it survives a player who can't
-                     separate the reds from the greens.
-                     Unexplored planets stay dimmer and dashed, as before, whatever the shape. -->
                 {@const bodyOpacity = hex.explored ? 1 : 0.45}
                 {@const dash = hex.explored ? '' : '5 4'}
                 {@const spin = `transform-box: view-box; transform-origin: ${entry.center.x}px ${entry.center.y}px;`}
 
                 {#if hex.color === PlanetColor.Mint}
-                    <!-- Ringed, like Saturn: a tilted ellipse cutting across the body. Drawn
-                         before the body so the near half of the ring reads as passing behind
-                         it, then again after at partial opacity for the front half. -->
+                    <!-- Drawn behind the body here and again in front at partial opacity. -->
                     <ellipse
                         cx={entry.center.x}
                         cy={entry.center.y}
@@ -513,8 +423,6 @@
                 {/if}
 
                 {#if hex.color === PlanetColor.Aqua}
-                    <!-- Binary: two bodies of equal weight turning about their common centre,
-                         so there is no single disc at all. -->
                     <g class="planet-binary" style={spin}>
                         <circle
                             cx={entry.center.x - 15}
@@ -538,7 +446,6 @@
                         />
                     </g>
                 {:else}
-                    <!-- The single disc every other kind is built around. -->
                     <circle
                         cx={entry.center.x}
                         cy={entry.center.y}
@@ -552,8 +459,6 @@
                 {/if}
 
                 {#if hex.color === PlanetColor.Teal}
-                    <!-- Aura: two haloes breathing out of phase, so the glow reads as radiating
-                         rather than simply blinking. -->
                     <circle
                         cx={entry.center.x}
                         cy={entry.center.y}
@@ -577,8 +482,6 @@
                 {/if}
 
                 {#if hex.color === PlanetColor.Periwinkle}
-                    <!-- A single moon, going round. One satellite rather than two, so it can't
-                         be mistaken for the binary. -->
                     <g class="planet-moon" style={spin}>
                         <circle
                             cx={entry.center.x + 40}
@@ -591,8 +494,6 @@
                 {/if}
 
                 {#if hex.color === PlanetColor.Violet}
-                    <!-- Crescent: a shadow drifting across the disc, so the planet shows a phase.
-                         Clipped to the body so the shadow can't spill onto the hex. -->
                     <clipPath id="planet-clip-{hex.coords.q},{hex.coords.r}">
                         <circle cx={entry.center.x} cy={entry.center.y} r="27" />
                     </clipPath>
@@ -610,17 +511,10 @@
                 {/if}
                 {@const claimant = gameSession.claimOn(hex.coords)}
                 {#if claimant}
-                    <!-- A claim ticking on this planet: the player whose probe surveyed it takes
-                         its technology at the start of their next turn, if their probes still
-                         lead there. Drawn in that player's colour, so the board answers "whose
-                         timer?" and not merely "a timer".
-                         Tucked into the hex's lower-left, clear of the planet body in the middle
-                         and of the technology mark on top of it. -->
                     {@const hx = entry.center.x - 30}
                     {@const hy = entry.center.y + 20}
                     {@const claimColor = gameSession.colors.getPlayerUiColor(claimant)}
                     <g class="claim-glass" pointer-events="none">
-                        <!-- The frame: two bowls and the pinch between them. -->
                         <path
                             d="M {hx - 6} {hy - 9} L {hx + 6} {hy - 9} L {hx} {hy} Z"
                             fill={claimColor}
@@ -653,8 +547,6 @@
                 {/if}
 
                 {#if hex.technology}
-                    <!-- A mark, not a label: the name and what it does are too much text for a
-                         hex, so they go in a popup on hover or click instead. -->
                     <circle
                         cx={entry.center.x}
                         cy={entry.center.y}
@@ -683,15 +575,7 @@
                 {/if}
             {/if}
 
-            <!-- The red outline that used to ring a piece in range of the fighter you are
-                 holding is gone: the ghost missile arc drawn to that piece now says the same
-                 thing, and says it better - it shows WHICH fighter would be shooting and along
-                 what path, where a ring on the target left the shooter implied. -->
-
             {#if gameSession.spreading && gameSession.isSpreadTarget(hex.coords)}
-                <!-- Picked for the volley. A filled ring rather than the dashed outline a single
-                     target gets, so a chosen target reads as committed-but-not-yet-fired - the
-                     one state no other attack in the game has. -->
                 <polygon
                     points={entry.points}
                     fill="#ff8a3d"
@@ -702,8 +586,6 @@
             {/if}
 
             {#if gameSession.railgunArmed && gameSession.railgunWouldMatter(hex.coords)}
-                <!-- Where the Railgun changes the outcome. Everything else in reach dies to an
-                     ordinary shot, so it is not worth a three-turn power. -->
                 <polygon
                     points={entry.points}
                     fill="none"
@@ -714,7 +596,6 @@
             {/if}
 
             {#if gameSession.movingFrom && sameHex(gameSession.movingFrom, hex.coords)}
-                <!-- Picked up, waiting for a destination. Click it again to put it back down. -->
                 <polygon
                     points={entry.points}
                     fill="#ffd479"
@@ -725,10 +606,6 @@
             {/if}
 
             {#if gameSession.feintFrom && sameHex(gameSession.feintFrom, hex.coords)}
-                <!-- The near end of a feint, chosen and waiting for the ship it trades places
-                     with. Violet, matching its button, so it doesn't read as the yellow of a
-                     Tactical Shift's picked-up piece - the two are easy to confuse and only one
-                     of them moves an enemy. -->
                 <polygon
                     points={entry.points}
                     fill="#c4a2ff"
@@ -739,9 +616,6 @@
             {/if}
 
             {#if gameSession.wormholeFrom && sameHex(gameSession.wormholeFrom, hex.coords)}
-                <!-- Picked to travel, waiting for a destination. Teal, matching its button, so
-                     the three "click one of your ships" powers are told apart by colour rather
-                     than by remembering which one you pressed. -->
                 <polygon
                     points={entry.points}
                     fill="#7fe3d4"
@@ -752,9 +626,6 @@
             {/if}
 
             {#if gameSession.downloadFrom && sameHex(gameSession.downloadFrom, hex.coords)}
-                <!-- The Download's own planet, chosen and waiting for something to read. Emerald,
-                     matching its button - the fourth of these two-click powers, and the only one
-                     whose ends are both planets. -->
                 <polygon
                     points={entry.points}
                     fill="#7ff0c0"
@@ -769,8 +640,6 @@
             {/if}
 
             {#if gameSession.isClosedToMe(hex.coords)}
-                <!-- Shut to the probe in hand. Shown only while holding one, since the
-                     blockade doesn't apply to anything else. -->
                 <polygon
                     points={entry.points}
                     fill="#ff6b5e"
@@ -782,12 +651,6 @@
             {/if}
 
             {#if highlighted}
-                <!-- While a SHIP is being placed the ghost following the cursor says both what
-                     is landing and where, so the pulse would be a second answer to a question
-                     already answered - and a board of thirty pulsing hexes is what made this
-                     hard to read. It stays for every other decision (a tile's origins, a
-                     planet to explore, a target to shoot, a piece to step), where there is no
-                     ghost and the hexes themselves are the choice. -->
                 {#if showGhost}
                     <polygon
                         points={entry.points}
@@ -811,8 +674,7 @@
         </g>
     {/each}
 
-    <!-- Pieces sit above every hex so one can slide across the board (see PieceMoveAnimator).
-         Keyed by piece and hex: a moved piece mounts afresh at its new hex on the state swap. -->
+    <!-- Above every hex so a piece can slide across; keyed by piece and hex so a moved piece remounts. -->
     {#each placed as entry (entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const piece = entry.hex.piece}
         {#if piece}
@@ -847,9 +709,6 @@
         {/if}
     {/each}
 
-    <!-- The ship about to land, shown on the hex under the cursor. Drawn after every hex so it
-         is never painted over by a neighbour, and pointer-events: none so it can't eat the click
-         it is inviting. -->
     {#if ghostEntry && ghostPiece}
         {@const ghostColor = gameSession.colors.getPlayerUiColor(ghostPiece.playerId)}
         <g class="place-ghost" style="pointer-events: none;">
@@ -860,8 +719,6 @@
                     level={ghostPiece.level ?? PieceLevel.Two}
                 />
             {:else if ghostPiece.type === PieceType.Station}
-                <!-- Docked to the stations it would link to, so the ghost shows the complex the
-                     placement would make. -->
                 <StationShape
                     center={ghostEntry.center}
                     color={ghostColor}
@@ -878,8 +735,6 @@
         </g>
     {/if}
 
-    <!-- Places a new tile could go. Each marker is the tile's origin hex; hovering shows the
-         whole four-hex footprint, so it is clear what is about to land and where. -->
     {#each ghosts as ghost (ghost.origin.q + ',' + ghost.origin.r)}
         {@const previewing =
             tilePreviewOrigin && sameHex(tilePreviewOrigin, ghost.origin)}
@@ -918,8 +773,6 @@
         </g>
     {/each}
 
-    <!-- What a planet holds, on hover or once clicked. Drawn near the end so it sits above the
-         board; the blockades below are drawn after it only because they are part of the map. -->
     {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
         {@const width = 300}
         {@const lines = wrap(technologyAbility(shown.card), 34)}
@@ -950,15 +803,6 @@
         </g>
     {/each}
 
-    <!-- Who holds each planet, drawn on the boundary itself: a wiggly line in the controller's
-         colour along every edge where one of their pieces meets the planet. Shown only around
-         the hovered piece (see shownControlEdges), not for the whole board at once.
-         Only the controller's edges are drawn, so this says who is winning rather than showing
-         the whole contest - a planet with three enemy ships around it and one of mine gets one
-         line. A tie draws both players' lines, which is what a shared planet should look like,
-         since a tie pays both in full.
-         The wave is the same figure the station sight lines use, at a shorter wavelength and
-         smaller amplitude to suit an edge rather than a span of board. -->
     {#each shownControlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
         {@const edgeColor = gameSession.colors.getPlayerUiColor(edge.playerId)}
 
@@ -978,11 +822,6 @@
         {/if}
 
         {#if SHOW_CONTROL_DOTS}
-            <!-- A run of dots from the piece to the planet, with a bright one travelling along
-                 it: the piece end lights first, so the motion reads as the piece exerting its
-                 hold on the planet rather than the planet drawing on the piece. Direction is the
-                 whole point of choosing dots over a static line - a wavy boundary says THAT a
-                 piece controls the planet, a run of dots says which way the control flows. -->
             {#each controlDots(edge.from, edge.planet) as dot, i (i)}
                 <circle
                     cx={dot.x}
@@ -997,21 +836,9 @@
         {/if}
     {/each}
 
-    <!-- What the placement being considered WOULD do: the same marks as the live versions
-         below, but held rather than played, and dimmed.
-         Held is the important part. The live missile flies its arc over and over because it is
-         asking for a decision; a ghost that did the same would be a board full of motion for
-         something that hasn't happened, and would read as a shot already fired. So the ghost
-         arc is drawn once, complete and still - the path a shot would take - while the ghost
-         pointers keep a gentle pulse, since a still triangle looks like a marker that has been
-         placed rather than an intention. -->
     {#if ghostEntry}
         {#each previewTargets as target, index (target.q + ',' + target.r)}
             {@const path = attackArc(ghostEntry.hex.coords, target)}
-            <!-- Up from 0.42/3 to 0.53/3.75, a quarter stronger in both weight and opacity:
-                 with the target ring gone this is the only sign that a shot is on offer, so it
-                 has to carry on its own. Still dashed and still held rather than flying, so it
-                 cannot be mistaken for a shot already taken. -->
             <path
                 d={path}
                 fill="none"
@@ -1038,7 +865,6 @@
         {/each}
     {/if}
 
-    <!-- Where a probe could explore: a triangle per planet, pulsing the way it points. -->
     {#each gameSession.explorationChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
         {@const pointer = reachPointer(gameSession.explorationChoice!.from, target)}
         <polygon
@@ -1051,10 +877,6 @@
         />
     {/each}
 
-    <!-- Where a fighter could fire: a missile flying the arc, trail behind it, over and over
-         until a target is picked or the shot is passed up. The missile and the trail are two
-         dash patterns on the SAME curve, which is what keeps the head exactly at the front of
-         what has been drawn - and follows the bend without any rotation maths. -->
     {#each gameSession.attackChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
         {@const path = attackArc(gameSession.attackChoice!.from, target)}
         {@const delay = `${index * 200}ms`}
@@ -1085,7 +907,7 @@
         </g>
     {/each}
 
-    <!-- A shot landing, drawn about the origin so BlastAnimator scales each part about the blast. -->
+    <!-- Drawn about the origin so BlastAnimator scales each part about the blast. -->
     {#each blasts.blasts as entry (entry.key)}
         <g transform="translate({entry.at.x} {entry.at.y})" pointer-events="none">
             <g use:registerElement={{ registry: blasts.elements, key: entry.key }}>
@@ -1143,15 +965,6 @@
         </g>
     {/each}
 
-    <!-- Station blockades, drawn last so they read above the hexes they cross. Two stations
-         of one player with clear space between them shut that space to everyone else's
-         probes; anything else may be placed there, and doing so breaks the line. -->
-    <!-- Which same-coloured planets this one has already been paired with, shown while the cursor
-         rests on it. A pair pays once, ever, to whoever joins it first, and the record is never
-         pruned - so a pair collected on turn three is still spent even though nothing on the board
-         shows a connection any more. Nothing displayed it at all before, which left players
-         remembering it, and getting it wrong costs a lot when the payout is superlinear.
-         On hover rather than always, because a colour with four planets has six pairs. -->
     {#if focused}
         {@const focusedHex = focused}
         {@const focusedColor = placed.find((entry) => sameHex(entry.hex.coords, focusedHex))?.hex
@@ -1174,8 +987,6 @@
                     stroke-dasharray={pair.spent ? '3 9' : '2 7'}
                 />
                 {#if pair.spent}
-                    <!-- Struck through at the midpoint. Dimming alone says "less important" where
-                         a cross says "closed" - and closed is the fact. -->
                     <g
                         stroke="#dce6ff"
                         stroke-opacity="0.5"
@@ -1190,13 +1001,7 @@
         {/each}
     {/if}
 
-    <!-- Truss girders: two of a player's stations standing side by side are joined by a girder
-         from one core to the other, so a complex reads as one built structure. They count as one
-         complex for scoring whether they touch or see each other across a gap, and the beam only
-         ever showed the gap kind - so without these the plainest link on the board had nothing
-         drawn on it.
-         Drawn here rather than with each station because a girder crosses into the neighbouring
-         hex, whose own fill would otherwise paint over half of it. -->
+    <!-- Drawn here rather than with each station: a neighbouring hex fill would cover half a girder. -->
     {#each gameSession.stationTubes as tube (stationTubeKey(tube))}
         {@const color = gameSession.colors.getPlayerUiColor(tube.playerId)}
         {@const ends = trussEnds(
@@ -1210,9 +1015,7 @@
         </g>
     {/each}
 
-    <!-- Girders being made by the action now animating, with the stations that made them: the
-         visible board still holds the state before the action, so neither exists there yet.
-         Each girder is revealed by a clip that widens along it from the new station outward. -->
+    <!-- The visible board still holds the state before the action, so these are drawn here. -->
     {#each trussGrowth.arriving as station (station.coords.q + ',' + station.coords.r)}
         <StationShape
             center={hexGeometry(station.coords).center}
@@ -1261,22 +1064,11 @@
 </svg>
 
 <style>
-    /* Clicking a hex focuses it - they carry role="button" so the board is operable without a
-       mouse - and the browser then draws a focus ring, which looked like a box the game had
-       drawn around the piece just placed and left behind until the next click. These all have
-       tabindex="-1", so they are not reachable by Tab and the ring was telling the player
-       nothing they could act on. */
+    /* Hexes are tabindex="-1" buttons, so a focus ring only leaves a stray box after a click. */
     svg :global([role='button']:focus) {
         outline: none;
     }
 
-    /* The hourglass turns over, slowly, and pauses between turns - sand running rather than a
-       spinner. The long hold at each end is what makes it read as waiting; a continuous rotation
-       would read as loading.
-
-       This was lost once already: it sat in a stretch of CSS that was removed wholesale when the
-       board's own starfield went, and the hourglass spent a while rendering static and tiny
-       enough to miss entirely. */
     @keyframes claim-glass-frames {
         0%,
         44% {
@@ -1297,17 +1089,7 @@
         animation: claim-glass-frames 6s ease-in-out infinite;
     }
 
-    /* One dot brightens and fades while the next takes over, so a pulse travels the run. The
-       peak is deliberately narrow - bright for about a tenth of the cycle, then falling away
-       over a third - which leaves a short lit tail behind the leading dot instead of the whole
-       run glowing at once. Never fully dark, so the path stays legible between pulses.
-
-       Note the `animation` SHORTHAND. Svelte renames a component's @keyframes to a scoped name
-       and rewrites the reference only in the shorthand, so the longhand animation-name this was
-       first written with pointed at a keyframe that no longer existed - and the dots simply sat
-       there at full brightness. Every animation in this file uses the shorthand for that reason.
-       Duration and delay are overridden per dot inline, which longhand declarations may do
-       against a shorthand in a class. */
+    /* Use the `animation` shorthand: Svelte rewrites scoped @keyframes names only there. */
     @keyframes control-dot-frames {
         0% {
             opacity: 0.18;
@@ -1323,18 +1105,11 @@
         }
     }
 
-    /* `backwards` holds each dot at its first, dim keyframe through its staggered delay. Without
-       it a dot shows unstyled - fully lit - until its delay runs out, so the run flickers as the
-       dots start one after another when a piece is first hovered. */
+    /* `backwards` holds each dot at its dim first keyframe through its staggered delay. */
     .control-dot {
         animation: control-dot-frames 1.5s ease-out infinite backwards;
     }
 
-    /* Planet motion. All of it is slow on purpose: a board with a dozen planets on it would be
-       exhausting if each one were busy, so these read as drift rather than as animation
-       competing with the pieces and the score floats for attention.
-       transform-box/transform-origin come in inline per planet, since each turns about its own
-       hex centre rather than the shared view box. */
     @keyframes planet-revolve {
         from {
             transform: rotate(0deg);
@@ -1344,25 +1119,18 @@
         }
     }
 
-    /* The binary pair - the slowest of the lot, since both halves are large and a quick spin
-       looks like a machine part rather than two worlds falling around each other. */
     .planet-binary {
         animation: planet-revolve 28s linear infinite;
     }
 
-    /* A moon has less mass to shift, so it goes round noticeably faster than the binary. */
     .planet-moon {
         animation: planet-revolve 14s linear infinite;
     }
 
-    /* The crescent's terminator creeping round the disc - slowest of all, because a phase is
-       something you notice having changed rather than watch changing. */
     .planet-phase {
         animation: planet-revolve 44s linear infinite;
     }
 
-    /* The aura breathes outward: growing and fading together, so it reads as light leaving the
-       planet rather than a ring changing size. */
     @keyframes planet-breathe {
         0%,
         100% {
@@ -1379,8 +1147,6 @@
         animation: planet-breathe 4.2s ease-out infinite;
     }
 
-    /* The second halo runs half a cycle behind, which is what turns one pulse into a steady
-       radiance rather than a blink with a gap in it. */
     .planet-aura-late {
         animation-delay: 2.1s;
     }
@@ -1405,12 +1171,10 @@
         }
     }
 
-    /* Light travelling along the wave, so a live blockade reads as active rather than drawn on. */
     .beam {
         animation: flow 1.6s linear infinite;
     }
 
-    /* The trail is drawn as the missile flies, then both clear and it fires again. */
     @keyframes fly-trail {
         0% {
             stroke-dashoffset: 100;
@@ -1427,8 +1191,6 @@
         }
     }
 
-    /* A single short dash sliding along the same curve: at 13 it sits just before the start, at
-       -87 it has just arrived, so it is always at the head of the trail. */
     @keyframes fly-missile {
         0% {
             stroke-dashoffset: 13;
@@ -1445,7 +1207,6 @@
         }
     }
 
-    /* Staggered per target by an inline delay, so several shots don't fire in lockstep. */
     .missile-trail {
         animation: fly-trail 1.6s linear infinite;
     }
@@ -1454,7 +1215,6 @@
         animation: fly-missile 1.6s linear infinite;
     }
 
-    /* Nudged along its own direction, so the movement itself says which way it points. */
     @keyframes point {
         0%,
         100% {

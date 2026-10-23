@@ -11,13 +11,8 @@
 
     let gameSession = getGameSession()
 
-    // A card can be the right colour and still be unavailable, when an elevated technology
-    // turned up beside it. Saying which of the two it is keeps the rule visible instead of
-    // just greying a card out.
-
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
 
-    // Hover opens the set-aside cards from this exploration; a click pins them open.
     let setAsideHovered = $state(false)
     let setAsidePinned = $state(false)
 
@@ -28,7 +23,6 @@
         [PieceType.Fighter]: '▲'
     }
 
-    // A hub is a station with a ring around it on the board, and a nested square here.
     const glyph = (piece: { type: string; hub?: boolean }) =>
         piece.hub ? '▣' : (SHAPE[piece.type] ?? '?')
 </script>
@@ -36,26 +30,8 @@
 <div class="flex flex-col items-center gap-2 py-2 text-white">
     <div class="text-center text-sm sm:text-base min-h-[1.5rem]">{gameSession.prompt}</div>
 
-    <!-- Two ways to spend a turn, and they are exclusive: place one of the ships drawn, or play a
-         special piece instead. Side by side in one row they read as six interchangeable options,
-         which hid both the choice and its price - playing a special sends the WHOLE hand back to
-         the bag (reshuffled, so putting ships back tells nobody what is coming). That is a real
-         cost and the player should see it before clicking, not discover it afterwards. -->
     <div class="flex flex-wrap items-center justify-center gap-3">
         {#each gameSession.isMyTurn ? gameSession.heldPieces : [] as piece (piece.id)}
-            <!-- The hand sits face up before any hex is chosen, which is the whole point of
-                 drawing first: the placement is a decision made with knowledge. While a discard
-                 is owed, clicking throws that ship out; otherwise clicking picks it up.
-                 The unchosen ships were dimmed to 60%, which read as greyed-out-and-unavailable
-                 rather than as merely not-selected - they are perfectly playable, and one of them
-                 is about to be played. The border is what marks the selection - white on red,
-                 dark on the lighter warm colours, matching the text - so the
-                 dimming only has to be a whisper. A ship with nowhere legal to go stays visibly
-                 struck out, since that one genuinely cannot be used.
-                 While a discard is owed, hovering a ship greys it out - a preview of what it
-                 will look like once it is gone. A red cross was tried here first and read as a
-                 warning about a mistake, where this reads as the outcome itself, which is what
-                 the player is actually choosing between. -->
             {@const chosen = gameSession.drawnPiece?.id === piece.id
                 && !gameSession.chosenSpecialId}
             {@const stuck = !gameSession.isDiscarding && !gameSession.canPlaceHeld(piece)}
@@ -87,8 +63,6 @@
 
     {#if gameSession.canPlaySpecial && specials.length > 0}
         <div class="flex flex-wrap items-center justify-center gap-3">
-            <!-- The word doing the work. Set between the two groups rather than beside either, so
-                 it reads as a fork instead of a label on one side of it. -->
             <span class="text-xs uppercase tracking-widest opacity-60">or</span>
 
             {#each specials as special (special.id)}
@@ -105,9 +79,6 @@
                         <span class="text-xl leading-none">{glyph(special)}</span>
                         <span class="text-sm font-semibold">{describePiece(special)}</span>
                     </span>
-                    <!-- Named on the button itself. A player is about to hand several ships back
-                         for this, and a note elsewhere on the panel is not where they are looking
-                         at the moment they decide. -->
                     <span class="text-[10px] leading-none opacity-75">
                         {gameSession.heldPieces.length === 1
                             ? 'returns your drawn ship to the bag'
@@ -119,10 +90,6 @@
     {/if}
 
     {#if gameSession.technologyChoices.length > 0}
-        <!-- Only what can actually be taken. Every card turned over on the way used to be shown
-             too, greyed out and labelled with why it missed, so the flip read as a moment rather
-             than a result - but it made the choice hard to find inside a row of things that
-             weren't choices, and the misses are recorded in history anyway. -->
         <div class="flex flex-wrap items-center justify-center gap-2">
             {#each gameSession.technologyChoices as card (card.id)}
                 <button
@@ -142,10 +109,6 @@
             {/each}
         </div>
 
-        <!-- What was turned over and set aside reaching this choice: the cards that came up
-             without the planet's colour. Behind a button because they are not choices - putting
-             them in the row above buried the ones that are - but they are the only sight a player
-             gets of what has just left the deck. -->
         {#if gameSession.setAsideCards.length > 0}
             <div
                 class="relative text-xs"
@@ -186,8 +149,6 @@
     {/if}
 
     {#if gameSession.canDraw}
-        <!-- The turn waits here rather than drawing on its own, so that nothing is revealed
-             until this player asks - and the player before them still has time to undo. -->
         <button
             class="rounded-md px-5 py-2 text-sm font-semibold bg-white/20 hover:bg-white/30 border-2 border-white"
             onclick={() => gameSession.drawPieces()}
@@ -207,8 +168,7 @@
     {/if}
 
     {#if gameSession.isPlacingTile}
-        <!-- Turning the tile is worth offering even when the outline doesn't move: the shape
-             repeats every half turn but the planet swaps corners. -->
+        <!-- Rotating is worth offering even when the outline repeats: the planet swaps corners. -->
         <div class="flex items-center gap-2">
             <button
                 class="rounded-md px-3 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
@@ -226,9 +186,6 @@
         </div>
     {/if}
 
-    <!-- Updated Logistics wakes a fighter that has already landed. Pressing this asks which
-         one; the board then highlights the fighters that actually have something in reach, and a
-         click sends it. -->
     {#if gameSession.canUseUpdatedLogistics}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingUpdatedLogistics
@@ -242,9 +199,6 @@
         </button>
     {/if}
 
-    <!-- Tactical Feint: two clicks on the board rather than one, since a swap has two ends. The
-         button only asks for the first; the board narrows to that ship's enemy neighbours once it
-         is picked. -->
     {#if gameSession.canUseTacticalFeint}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingFeint
@@ -262,9 +216,6 @@
         </button>
     {/if}
 
-    <!-- Immediate Download: both ends are planets, not ships. Only offered when some Download
-         planet of theirs can actually see a technology worth taking, since it is a one-shot and
-         there is no getting it back. -->
     {#if gameSession.canUseImmediateDownload}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingDownload
@@ -282,8 +233,6 @@
         </button>
     {/if}
 
-    <!-- Trade Route Wormhole: pick the traveller, then where it comes out. The board narrows to
-         that ship's own routes once it is picked, so the colour rule never has to be explained. -->
     {#if gameSession.canUseTradeRouteWormhole}
         <button
             class="rounded-md px-4 py-1.5 text-sm font-semibold border-2 {gameSession.choosingWormhole
@@ -301,9 +250,6 @@
         </button>
     {/if}
 
-    <!-- Full Torpedo Spread: arm it, click the neighbours to include, then fire. A confirm step
-         rather than firing on click, because "any or all" makes this a subset being assembled -
-         and unlike every other attack in the game, a click here is not the decision. -->
     {#if gameSession.canSpread}
         <div class="flex items-center gap-2">
             <button
@@ -369,8 +315,6 @@
 </div>
 
 <style>
-    /* While a discard is owed, the hovered ship fades toward the background and loses its
-       colour - showing the player the result rather than warning them about it. */
     .discardable {
         transition:
             opacity 120ms ease-out,

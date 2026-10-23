@@ -28,11 +28,10 @@ import {
     isUseLogisticsUpgrade
 } from '../actions/useLogisticsUpgrade.js'
 
-// This is essentially a factory that knows how to take raw action and state data
-// and return the correct hydrated class instances for Earendel. Used by the game engine
-export class EarendelHydrator
-    implements GameHydrator<EarendelGameState, HydratedEarendelGameState>
-{
+export class EarendelHydrator implements GameHydrator<
+    EarendelGameState,
+    HydratedEarendelGameState
+> {
     hydrateAction(data: GameAction): HydratedAction {
         switch (true) {
             case isPlacePiece(data): {

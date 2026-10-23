@@ -7,11 +7,6 @@ import { afterDraw } from '../util/turn.js'
 
 type PlacingBonusPieceAction = HydratedPlacePiece
 
-// The second half of the board-growing technology: a ship drawn and placed on the tile just
-// laid. A real placement, so everything a placement triggers happens to it - a probe here
-// explores, a fighter here shoots, a station here scores its group.
-//
-// Transitions: PlacingBonusPiece(PlacePiece) -> Exploring | Attacking | PlacingPiece | EndOfGame
 export class PlacingBonusPieceStateHandler implements MachineStateHandler<
     PlacingBonusPieceAction,
     HydratedEarendelGameState
@@ -33,8 +28,6 @@ export class PlacingBonusPieceStateHandler implements MachineStateHandler<
         )
     }
 
-    // Nothing to do on entry: PlaceTile already drew the ship and only routed here when
-    // there is one to place, so the turn can never arrive with nothing to do.
     enter(_context: MachineContext<HydratedEarendelGameState>) {}
 
     onAction(
@@ -49,9 +42,7 @@ export class PlacingBonusPieceStateHandler implements MachineStateHandler<
                 gameState.bonusPlacementPieceId = undefined
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
-                // afterDraw, not endPlacement: this whole detour can start at the top of a turn,
-                // from a technology claimed before the player has discarded, and the draft is
-                // still owed on the way out of it.
+                // afterDraw, not endPlacement: this detour can start before the draft discard is made.
                 return afterDraw(gameState, context, action)
             }
             default: {

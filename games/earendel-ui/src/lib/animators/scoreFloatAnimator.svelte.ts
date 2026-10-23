@@ -11,9 +11,6 @@ export type ScoreFloat = Omit<ScoreSource, 'coords'> & { key: string; at: Point 
 const RISE = 70
 const STACK_GAP = 30
 
-// Pattern B: the points an action earned rise from where they were earned. Scoped to the action
-// being animated and played on finalTimeline, so they follow any move or girder growth that
-// earned them. Only with an action: undo and history scrubbing show the new score directly.
 export class ScoreFloatAnimator {
     floats: ScoreFloat[] = $state([])
     readonly elements = new ElementRegistry<SVGGElement>()
