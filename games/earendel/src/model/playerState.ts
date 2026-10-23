@@ -13,7 +13,7 @@ export const EarendelPlayerState = Type.Evaluate(
             // The player's own bag of ships, in draw order - shuffled at setup, drawn from
             // the front. Contents are hidden from everyone (including its owner), so
             // anything that exposes state to a player has to keep it that way, and
-            // EarendelGameInitializer.initializeExplorationState reshuffles it.
+            // EarendelGameExploration reshuffles it.
             bag: Type.Array(Piece),
             // Rewards from exploring planets, kept face-up in front of the player. A turn
             // may spend one of these INSTEAD of drawing from the bag.

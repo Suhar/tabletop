@@ -6,7 +6,7 @@ import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
-import { Prng } from '@tabletop/common'
+import { type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
@@ -20,16 +20,23 @@ import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { TestGame } from './testHarness.js'
+import type { EarendelGameState } from '../model/gameState.js'
 
 // Setup numbers a simulation may override, to try a sizing without committing to it.
 export type SetupOverrides = BoardSetupOptions & {
     piecesPerType?: number
     // Defaults to the game's own default turn style, so simulations measure what ships.
     turnStyle?: TurnStyle
+    // Tournament seating and a master seed, passed straight to the engine.
+    start?: GameStartOptions
 }
 
 export type GameSummary = {
     playerCount: number
+    // The state the game finished in, and every action that got it there, for tests that need
+    // more than the counts below.
+    finalState: EarendelGameState
+    actions: GameAction[]
     // How the game actually ended - the rules name the empty bag, but a gridlocked board
     // ends it too, and which one fires is the whole question about sizing.
     endedBy: 'empty bag' | 'no legal placement' | 'unfinished'
@@ -87,12 +94,19 @@ export function playRandomGame(
     overrides: SetupOverrides = {},
     maxTurns = 2000
 ): GameSummary {
-    const game = new TestGame(playerCount, seed, {
-        turnStyle: overrides.turnStyle ?? TurnStyle.DraftThree
-    })
+    const game = new TestGame(
+        playerCount,
+        seed,
+        { turnStyle: overrides.turnStyle ?? TurnStyle.DraftThree },
+        overrides.start
+    )
 
     if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
-        game.state.board = buildStartingBoard(playerCount, new Prng({ seed, invocations: 0 }), overrides)
+        game.state.board = buildStartingBoard(
+            playerCount,
+            new Prng({ seed, invocations: 0 }),
+            overrides
+        )
     }
     if (overrides.piecesPerType !== undefined) {
         const perType = {
@@ -105,8 +119,8 @@ export function playRandomGame(
         )
     } else if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
         // The opening draw happened against the old board; redraw so the turn is coherent.
-        game.stackBags((playerId) =>
-            game.state.players.find((player) => player.playerId === playerId)!.bag
+        game.stackBags(
+            (playerId) => game.state.players.find((player) => player.playerId === playerId)!.bag
         )
     }
     const random = lcg(seed * 7919 + 13)
@@ -181,8 +195,7 @@ export function playRandomGame(
                 pieceId: choice.piece.id
             })
             chainsScored += placed.reduce(
-                (total, action) =>
-                    total + (((action as PlacePiece).metadata?.chains ?? []).length),
+                (total, action) => total + ((action as PlacePiece).metadata?.chains ?? []).length,
                 0
             )
         } else if (game.state.machineState === MachineState.Exploring) {
@@ -303,6 +316,8 @@ export function playRandomGame(
 
     return {
         playerCount,
+        finalState: game.state,
+        actions: game.processed,
         endedBy:
             game.state.machineState !== MachineState.EndOfGame
                 ? 'unfinished'
@@ -333,8 +348,7 @@ export function playRandomGame(
         hubsGranted:
             Object.values(game.state.board.hexes).filter((hex) => hex.piece?.hub).length +
             game.state.players.reduce(
-                (total, player) =>
-                    total + player.specialPieces.filter((piece) => piece.hub).length,
+                (total, player) => total + player.specialPieces.filter((piece) => piece.hub).length,
                 0
             ),
         piecesUnaccounted: playerCount * bagSize - accountedFor

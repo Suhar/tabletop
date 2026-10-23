@@ -2,6 +2,7 @@ import {
     type Game,
     type GameAction,
     GameEngine,
+    type GameStartOptions,
     GameStatus,
     type Player,
     PlayerStatus,
@@ -27,11 +28,13 @@ export class TestGame {
 
     // Defaults to the simple one-draw turn, so a test about chains or blockades exercises one
     // mechanic rather than two. Tests about the drafted turn ask for it explicitly, and the
-    // simulation runs the real default.
+    // simulation runs the real default. `start` passes tournament seating and a master seed
+    // straight through to the engine.
     constructor(
         playerCount = 2,
         seed = 1,
-        config: EarendelGameConfig = { turnStyle: TurnStyle.SinglePiece }
+        config: EarendelGameConfig = { turnStyle: TurnStyle.SinglePiece },
+        start: GameStartOptions = {}
     ) {
         const players: Player[] = Array.from({ length: playerCount }, (_, index) => ({
             id: `p${index + 1}`,
@@ -56,7 +59,7 @@ export class TestGame {
             seed
         }
 
-        const { startedGame, initialState } = this.engine.startGame(game)
+        const { startedGame, initialState } = this.engine.startGame(game, start)
         this.game = startedGame
         this.state = initialState
     }

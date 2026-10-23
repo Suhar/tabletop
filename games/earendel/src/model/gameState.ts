@@ -24,10 +24,10 @@ export const EarendelGameState = Type.Evaluate(
             players: Type.Array(EarendelPlayerState), // Redefine with the specific player state type
             machineState: Type.Enum(MachineState), // Redefine with the specific machine states
             board: EarendelBoard,
-            // The shared technology deck, in draw order, and its discard. Both are hidden
-            // information: the deck's order is what exploring reveals, so anything exposing
-            // state to a player must keep it that way (and initializeExplorationState has to
-            // reshuffle it).
+            // The shared technology deck, in draw order, and its discard. The deck's order is
+            // hidden information - it is what exploring reveals - so anything exposing state to
+            // a player must keep it that way (and EarendelGameExploration reshuffles it). The
+            // discard is face-up.
             technologyDeck: Type.Array(TechnologyCard),
             technologyDiscard: Type.Array(TechnologyCard),
             // Set while a probe placement is waiting on its player: which planet to explore
@@ -47,9 +47,7 @@ export const EarendelGameState = Type.Evaluate(
             // board.
             tileSupply: Type.Array(Tile),
             // A tile drawn and waiting to be laid.
-            pendingTile: Type.Optional(
-                Type.Object({ playerId: Type.String(), tile: Tile })
-            ),
+            pendingTile: Type.Optional(Type.Object({ playerId: Type.String(), tile: Tile })),
             // Set between laying a tile and placing the ship that follows it: that ship, and
             // only that ship, must land on this tile. The piece is named as well as the tile
             // because a drafted turn may still be holding a piece of its own.
@@ -84,7 +82,7 @@ export const EarendelGameState = Type.Evaluate(
     ])
 )
 
-const EarendelGameStateValidator = Compile(EarendelGameState)
+export const EarendelGameStateValidator = Compile(EarendelGameState)
 
 export class HydratedEarendelGameState
     extends HydratableGameState<typeof EarendelGameState, HydratedEarendelPlayerState>

@@ -2,6 +2,7 @@ import {
     type GameInitializer,
     BaseGameInitializer,
     Prng,
+    type StartingPositionAssignment,
     type UninitializedGameState
 } from '@tabletop/common'
 import { Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
@@ -24,37 +25,24 @@ export class EarendelGameInitializer
     extends BaseGameInitializer<EarendelGameState, HydratedEarendelGameState>
     implements GameInitializer<EarendelGameState, HydratedEarendelGameState>
 {
-    // When an exploration state is created, in order to avoid allowing the player to discover
-    // hidden information, this method can be used to modify the game state to hide such information.
-    // Shuffling the remaining cards in a deck would be a reasonable example.
-    initializeExplorationState(state: EarendelGameState): EarendelGameState {
-        // Exploring a game must not hand over what exploring a PLANET is supposed to reveal.
-        // Three things are hidden: the technology deck's order (which is precisely what a
-        // probe uncovers), the discard - which becomes the deck when it runs out - and every
-        // player's bag, including the explorer's own. Shuffled with Math.random rather than
-        // the seeded prng so an exploration branch can't be reproduced from the real game.
-        const explorationState = structuredClone(state)
-        shuffle(explorationState.technologyDeck, () => Math.random())
-        shuffle(explorationState.technologyDiscard, () => Math.random())
-        for (const player of explorationState.players) {
-            shuffle(player.bag, () => Math.random())
-        }
-        return explorationState
-    }
+    // Tournament seating: an assigned order replaces the shuffled turn order, and nothing else in
+    // setup depends on order, so the board, bags, deck and colours are the same either way.
+    readonly supportsStartingPositions = true
 
     // Initialize the game state based on things like the number of players and the game config
     initializeGameState(
         game: Game,
-        state: UninitializedGameState
+        state: UninitializedGameState,
+        assignment?: StartingPositionAssignment
     ): HydratedEarendelGameState {
         // Initialize a pseudo random number generator for the state
         const prng = new Prng(state.prng)
         const players = this.initializePlayers(game, prng)
 
         // Every game state has a turn manager to track whose turn it is
-        const turnManager = HydratedTurnManager.generate(players, prng.random)
+        const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
 
-        // Put players array in our randomly generated turn order
+        // Put players array in turn order
         const orderedPlayers: EarendelPlayerState[] = []
         for (const playerId of turnManager.turnOrder) {
             const player = players.find((p) => p.playerId === playerId)
@@ -78,7 +66,7 @@ export class EarendelGameInitializer
             queuedTechnologyEffects: [],
             planetControllers: {},
             scoredPlanetPairs: [],
-            probeClaims: [],
+            probeClaims: []
         })
 
         // I suppose the engine could actually do the hydration with the hydrator, but this is how it
