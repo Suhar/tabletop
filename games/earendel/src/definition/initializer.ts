@@ -16,7 +16,6 @@ import { buildStartingBoard } from '../util/boardSetup.js'
 import { buildTileSupply } from '../util/tilePlacement.js'
 import { buildFocusedTechnologyDeck, buildTechnologyDeck } from '../util/technologyDeck.js'
 import { earendelConfig, type EarendelGameConfig, FULL_DECK } from './config.js'
-import { isTechnologyEffectKind } from '../model/technology.js'
 import { EarendelColors } from './colors.js'
 
 export class EarendelGameInitializer
@@ -92,7 +91,7 @@ export class EarendelGameInitializer
 function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
     const choice = config.technologyDeck ?? FULL_DECK
 
-    return isTechnologyEffectKind(choice)
-        ? buildFocusedTechnologyDeck(prng, choice)
-        : buildTechnologyDeck(prng)
+    return choice === FULL_DECK
+        ? buildTechnologyDeck(prng)
+        : buildFocusedTechnologyDeck(prng, choice)
 }

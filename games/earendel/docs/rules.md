@@ -44,6 +44,14 @@ everyone, including the owner. Pieces are drawn blind.
 associated with **one, two, or three planet colors**; it can only be housed on a planet of a
 color it lists.
 
+The deck has **25 cards**, one for every combination of one, two or three of the five planet
+colours: 5 single-colour, 10 two-colour and 10 three-colour cards. The ten technologies are dealt
+across those cards in turn, in this order: Tactical Shift, Beyond the Frontier, Logistics
+Upgrade, Railgun, Station Upgrade, Updated Logistics, Full Torpedo Spread, Tactical Feint, Trade
+Route Wormhole, Immediate Download. The first five appear three times each and the rest twice.
+Which colours a technology carries follows from that order rather than from design; the real
+card list is still to be designed.
+
 Every technology is either **standard** or **elevated**. An elevated technology can't be
 passed over: see _Exploration_ below.
 
@@ -690,7 +698,7 @@ in the turn order simply don't get another turn.
 A tie for the highest score is a **shared win**, just as tied control of a planet pays every
 tied player in full.
 
-Everyone starts with the same 18 pieces, so the player who empties their bag first is the
+Everyone starts with the same 22 pieces, so the player who empties their bag first is the
 one who has spent the fewest turns on special pieces, not the one who was luckiest with the
 order: a draw that goes back in the bag doesn't advance that player's clock.
 
@@ -705,15 +713,16 @@ other final scoring.
 ## Game options
 
 **Technology deck.** The full deck is the normal game. Alternatively the deck can be filled
-with a single technology, one card in every planet colour, so that technology comes up on
-every exploration and every planet houses it — a way to see one effect from every angle.
+with a single technology: 60 single-colour cards, twelve in each planet colour, so that
+technology comes up on every exploration and every planet houses it — a way to see one effect
+from every angle.
 
 ---
 
 ## Undo
 
 A player may take back their own last action, up to the point where something was **revealed**.
-Two actions reveal, and undo cannot reach back past either:
+These actions reveal, and undo cannot reach back past any of them:
 
 - **Drawing at the start of a turn**, which turns that player's ships face up. This is the
   reveal that closes the previous player's window: their turn is theirs to take back until the
@@ -721,6 +730,8 @@ Two actions reveal, and undo cannot reach back past either:
 - **Choosing which planet to explore**, which turns cards off the shared technology deck. A
   player who could look and then place elsewhere would be reading the deck.
 - **Laying a tile**, which draws a ship from the bag to go on it.
+- **Anything that draws a tile** from the face-down supply: a Beyond the Frontier that comes into
+  effect, whichever action set it off.
 
 Each of those claims a reveal only when something _actually_ became public. If the technology
 deck and its discard are both spent, an exploration turns nothing over — so there is no

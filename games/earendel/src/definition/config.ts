@@ -55,8 +55,12 @@ const technologyDeckOption: ListConfigOption = {
 
 export type EarendelGameConfig = Type.Static<typeof EarendelGameConfig>
 export const EarendelGameConfig = Type.Object({
-    technologyDeck: Type.Optional(Type.String({ default: FULL_DECK })),
-    turnStyle: Type.Optional(Type.String({ default: TurnStyle.DraftThree }))
+    technologyDeck: Type.Optional(
+        Type.Union([Type.Literal(FULL_DECK), Type.Enum(TechnologyEffectKind)], {
+            default: FULL_DECK
+        })
+    ),
+    turnStyle: Type.Optional(Type.Enum(TurnStyle, { default: TurnStyle.DraftThree }))
 })
 
 const EarendelGameConfigValidator = Compile(EarendelGameConfig)

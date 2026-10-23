@@ -19,10 +19,6 @@ export enum TechnologyEffectKind {
     StationUpgrade = 'stationUpgrade'
 }
 
-export function isTechnologyEffectKind(value: string): value is TechnologyEffectKind {
-    return Object.values(TechnologyEffectKind).some((kind) => kind === value)
-}
-
 export enum TechnologyTiming {
     Immediate = 'immediate',
     Stored = 'stored',

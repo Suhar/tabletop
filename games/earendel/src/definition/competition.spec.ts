@@ -62,11 +62,12 @@ describe.each([2, 3, 4, 5])('Earendel tournaments with %i players', (count) => {
 
     // Both options change setup: the turn style decides the opening state, the deck option what
     // the technology deck holds.
+    const decks: NonNullable<EarendelGameConfig['technologyDeck']>[] = [
+        FULL_DECK,
+        ...Object.values(TechnologyEffectKind)
+    ]
     const configs: EarendelGameConfig[] = TURN_STYLES.flatMap((turnStyle) =>
-        [FULL_DECK, TechnologyEffectKind.GrowBoard].map((technologyDeck) => ({
-            turnStyle,
-            technologyDeck
-        }))
+        decks.map((technologyDeck) => ({ turnStyle, technologyDeck }))
     )
 
     it.each(configs)('changes nothing but turn order for an assigned seat (%o)', (config) => {

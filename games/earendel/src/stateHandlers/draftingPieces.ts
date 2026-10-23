@@ -39,10 +39,10 @@ export class DraftingPiecesStateHandler implements MachineStateHandler<
     }
 
     onAction(
-        _action: DraftingAction,
-        _context: MachineContext<HydratedEarendelGameState>
+        action: DraftingAction,
+        context: MachineContext<HydratedEarendelGameState>
     ): MachineState {
-        return endPlacement(_context.gameState, _context)
+        return endPlacement(context.gameState, context, action)
     }
 
     private isValidActionType(
