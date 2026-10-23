@@ -1322,7 +1322,7 @@ importers:
         specifier: workspace:*
         version: link:../../config/config-vitest
       '@typescript/native-preview':
-        specifier: '*'
+        specifier: 7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
       rimraf:
         specifier: ^6.1.0
