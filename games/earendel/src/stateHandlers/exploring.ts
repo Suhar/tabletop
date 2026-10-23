@@ -19,9 +19,10 @@ type ExploringAction = HydratedChoosePlanet | HydratedChooseTechnology
 //
 // Transitions: Exploring(ChoosePlanet)     -> Exploring | PlacingPiece | EndOfGame
 //              Exploring(ChooseTechnology) -> PlacingPiece | EndOfGame
-export class ExploringStateHandler
-    implements MachineStateHandler<ExploringAction, HydratedEarendelGameState>
-{
+export class ExploringStateHandler implements MachineStateHandler<
+    ExploringAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -75,7 +76,7 @@ export class ExploringStateHandler
             case isChoosePlanet(action): {
                 // A probe kept on the board has nothing more to do.
                 if (!action.coords) {
-                    return endPlacement(gameState, context)
+                    return endPlacement(gameState, context, action)
                 }
                 // The cards are face up now, so the second decision is waiting - same state,
                 // whose enter() will resolve it outright if there's nothing to weigh.
@@ -89,7 +90,7 @@ export class ExploringStateHandler
                 if (gameState.pendingTechnology) {
                     return MachineState.ResolvingTechnology
                 }
-                return endPlacement(gameState, context)
+                return endPlacement(gameState, context, action)
             }
             default: {
                 throw Error('Invalid action type')

@@ -12,6 +12,7 @@ import {
     placeTileOnBoard,
     TILE_ROTATIONS
 } from '../util/tilePlacement.js'
+import { returnTo } from '../util/drawBags.js'
 
 export type PlaceTileMetadata = Type.Static<typeof PlaceTileMetadata>
 export const PlaceTileMetadata = Type.Object({
@@ -74,10 +75,10 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         if (!this.coords) {
             state.pendingTile = undefined
             // A new tile brings planets that have never had a controller, and can put a hex within
-        // reach of pieces that were previously too far away.
-        refreshPlanetControl(state)
+            // reach of pieces that were previously too far away.
+            refreshPlanetControl(state)
 
-        this.metadata = { noTilePlaced: true }
+            this.metadata = { noTilePlaced: true }
             return
         }
 
@@ -97,7 +98,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
             state.bonusPlacementTileId = pending.tile.id
             state.bonusPlacementPieceId = drawn.id
         } else if (drawn) {
-            playerState.bag.push(drawn)
+            returnTo(playerState.bag, [drawn], state.getProtectedPrng().random)
         }
 
         state.pendingTile = undefined

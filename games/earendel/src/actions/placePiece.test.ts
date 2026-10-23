@@ -7,6 +7,7 @@ import { EarendelBoard, HexKind, hexKey, neighborsOf } from '../model/board.js'
 import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
 import { TechnologyTier } from '../model/technology.js'
 import { HydratedPlacePiece, PieceSource } from './placePiece.js'
+import { bagOf } from '../util/drawBags.js'
 
 const ORIGIN: AxialCoordinates = { q: 0, r: 0 }
 
@@ -29,7 +30,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         players: playerIds.map((playerId, index) => ({
             playerId,
             color: [Color.Blue, Color.Red][index],
-            bag: [{ id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }],
+            bag: bagOf([{ id: `${playerId}-fighter`, playerId, type: PieceType.Fighter }]),
             specialPieces: [],
             technologies: [],
             storedEffects: [],
@@ -45,13 +46,13 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         turnManager: { series: [], turnOrder: playerIds, turnCounts: {} },
         winningPlayerIds: [],
         board: boardWithPlanetAtOrigin(),
-        technologyDeck: [],
+        technologyDeck: bagOf([]),
         technologyDiscard: [],
         queuedTechnologyEffects: [],
         planetControllers: {},
         scoredPlanetPairs: [],
         probeClaims: [],
-        tileSupply: [],
+        tileSupply: bagOf([]),
         // The turn's draw happens when the turn opens, so a placement always arrives with
         // something already in hand.
         heldPieces: [
@@ -93,7 +94,7 @@ describe('HydratedPlacePiece', () => {
         // The piece was already face up: the player chose this hex knowing what they had.
         expect(state.board.hexes[hexKey(target)].piece?.id).toBe('p1-probe')
         expect(state.heldPieces).toEqual([])
-        expect(state.getPlayerState('p1').bag.map((p) => p.id)).toEqual(['p1-fighter'])
+        expect(state.getPlayerState('p1').bag.items.map((p) => p.id)).toEqual(['p1-fighter'])
         expect(action.metadata?.pieceType).toBe(PieceType.Probe)
     })
 
@@ -282,10 +283,12 @@ describe('HydratedPlacePiece', () => {
         expect(state.getPlayerState('p1').specialPieces).toEqual([])
         // The drawn ship goes back in the bag - a player who doesn't like what they drew can
         // spend a special instead and lose nothing by it.
-        expect(state.getPlayerState('p1').bag.map((p) => p.id).sort()).toEqual([
-            'p1-fighter',
-            'p1-probe'
-        ])
+        expect(
+            state
+                .getPlayerState('p1')
+                .bag.items.map((p) => p.id)
+                .sort()
+        ).toEqual(['p1-fighter', 'p1-probe'])
         expect(state.heldPieces).toEqual([])
         expect(action.metadata?.returnedToBag?.id).toBe('p1-probe')
     })
@@ -297,8 +300,8 @@ describe('HydratedPlacePiece', () => {
         expect(
             makePlacePiece('p1', target, PieceSource.Special, 'nope').invalidPlacePieceReason(state)
         ).toBe("That special piece isn't in front of you.")
-        expect(makePlacePiece('p1', target, PieceSource.Special).invalidPlacePieceReason(state)).toBe(
-            'No special piece was chosen.'
-        )
+        expect(
+            makePlacePiece('p1', target, PieceSource.Special).invalidPlacePieceReason(state)
+        ).toBe('No special piece was chosen.')
     })
 })

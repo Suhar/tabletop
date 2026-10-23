@@ -11,6 +11,7 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces, isDrawPieces } from '../actions/drawPieces.js'
 import { TestGame } from './testHarness.js'
+import { bagOf } from './drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -234,11 +235,11 @@ describe('claiming a technology by surveying with probes', () => {
             [at(8, 9), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = [
+        game.state.technologyDeck = bagOf([
             { id: 'tech-a', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard }
-        ]
+        ])
         game.state.technologyDiscard = []
-        game.state.tileSupply = []
+        game.state.tileSupply = bagOf([])
 
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId

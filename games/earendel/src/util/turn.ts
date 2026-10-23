@@ -1,6 +1,6 @@
-import type { MachineContext } from '@tabletop/common'
+import type { GameAction, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
-import { drawCountFor, type EarendelGameConfig } from '../definition/config.js'
+import { drawCountFor, earendelConfig, type EarendelGameConfig } from '../definition/config.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { activateNextTechnologyEffect } from './technologyGrants.js'
 
@@ -31,7 +31,7 @@ export function drawCountForPlayer(
 // turn. Everyone starts with the same 18 pieces, so the player who runs out is the one who
 // has taken the most turns, not the one who was luckiest with the order.
 export function isEndOfGame(state: HydratedEarendelGameState): boolean {
-    return state.players.some((player) => player.bag.length === 0)
+    return state.players.some((player) => player.bag.remaining === 0)
 }
 
 // The state an owed technology effect is waiting in, if one is owed at all. Both slots are
@@ -55,28 +55,42 @@ export function pendingTechnologyEffectState(
 // draftPending is what lets the discard be picked up again afterwards instead.
 export function afterDraw(
     state: HydratedEarendelGameState,
-    context?: MachineContext<HydratedEarendelGameState>
+    context?: MachineContext<HydratedEarendelGameState>,
+    action?: GameAction
 ): MachineState {
-    const effect = pendingTechnologyEffectState(state)
+    const effect = pendingTechnologyEffectState(state) ?? nextOwedEffect(state, action)
     if (effect) return effect
     if (state.draftPending) return MachineState.DraftingPieces
 
     // endPlacement rather than PlacingPiece outright: an empty bag can leave a turn with nothing
     // in hand at all, and that turn is simply over.
-    return endPlacement(state, context)
+    return endPlacement(state, context, action)
+}
+
+// Claimed effects are all carried out before the turn carries on, however the one before them
+// ended - including through a bonus ship's exploration or shot. A next effect that draws a tile
+// from the hidden supply marks the action that led to it as revealing.
+function nextOwedEffect(
+    state: HydratedEarendelGameState,
+    action?: GameAction
+): MachineState | undefined {
+    if (!activateNextTechnologyEffect(state)) return undefined
+    if (state.pendingTile && action) action.revealsInfo = true
+    return pendingTechnologyEffectState(state)
 }
 
 // Where a turn goes when an owed technology effect has just been carried out: on to the next
 // one if the turn claimed several, otherwise back to the placement it interrupted.
+//
+// The next effect may draw a tile from the hidden supply, turning it face-up. The action that
+// led to that draw is then marked as revealing, so it cannot be undone to peek and try again.
 export function afterTechnologyEffect(
+    action: GameAction,
     state: HydratedEarendelGameState,
     context?: MachineContext<HydratedEarendelGameState>
 ): MachineState {
-    if (activateNextTechnologyEffect(state)) {
-        return pendingTechnologyEffectState(state)!
-    }
     // Back to the top of the turn's own business - which may still be the discard.
-    return afterDraw(state, context)
+    return afterDraw(state, context, action)
 }
 
 // Closes out one placement.
@@ -88,8 +102,12 @@ export function afterTechnologyEffect(
 // place - answering it per path is how a held ship gets silently dropped.
 export function endPlacement(
     state: HydratedEarendelGameState,
-    context?: MachineContext<HydratedEarendelGameState>
+    context?: MachineContext<HydratedEarendelGameState>,
+    action?: GameAction
 ): MachineState {
+    const effect = nextOwedEffect(state, action)
+    if (effect) return effect
+
     if (state.heldPieces.length > 0) {
         return MachineState.PlacingPiece
     }
@@ -100,5 +118,5 @@ export function endPlacement(
         return MachineState.EndOfGame
     }
 
-    return turnStartState(context?.gameConfig as EarendelGameConfig)
+    return turnStartState(earendelConfig(context?.gameConfig))
 }

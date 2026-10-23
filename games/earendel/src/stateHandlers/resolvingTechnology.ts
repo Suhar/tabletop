@@ -14,9 +14,10 @@ type ResolvingTechnologyAction = HydratedMovePiece
 //
 // Transitions: ResolvingTechnology(MovePiece) -> PlacingTile | ResolvingTechnology
 //               | PlacingPiece | EndOfGame
-export class ResolvingTechnologyStateHandler
-    implements MachineStateHandler<ResolvingTechnologyAction, HydratedEarendelGameState>
-{
+export class ResolvingTechnologyStateHandler implements MachineStateHandler<
+    ResolvingTechnologyAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -56,7 +57,7 @@ export class ResolvingTechnologyStateHandler
             case isMovePiece(action): {
                 // A turn can claim more than one technology at once, so this hands on to the
                 // next owed effect before letting the placement resume.
-                return afterTechnologyEffect(context.gameState, context)
+                return afterTechnologyEffect(action, context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

@@ -12,9 +12,10 @@ type PlacingBonusPieceAction = HydratedPlacePiece
 // explores, a fighter here shoots, a station here scores its group.
 //
 // Transitions: PlacingBonusPiece(PlacePiece) -> Exploring | Attacking | PlacingPiece | EndOfGame
-export class PlacingBonusPieceStateHandler
-    implements MachineStateHandler<PlacingBonusPieceAction, HydratedEarendelGameState>
-{
+export class PlacingBonusPieceStateHandler implements MachineStateHandler<
+    PlacingBonusPieceAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -51,7 +52,7 @@ export class PlacingBonusPieceStateHandler
                 // afterDraw, not endPlacement: this whole detour can start at the top of a turn,
                 // from a technology claimed before the player has discarded, and the draft is
                 // still owed on the way out of it.
-                return afterDraw(gameState, context)
+                return afterDraw(gameState, context, action)
             }
             default: {
                 throw Error('Invalid action type')

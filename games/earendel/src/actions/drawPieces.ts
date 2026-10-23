@@ -8,7 +8,7 @@ import { TechnologyCard } from '../model/technology.js'
 import { drawCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
-import type { EarendelGameConfig } from '../definition/config.js'
+import { earendelConfig } from '../definition/config.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
@@ -83,11 +83,7 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         )
 
         const playerState = state.getPlayerState(this.playerId)
-        const wanted = drawCountForPlayer(
-            state,
-            this.playerId,
-            context?.gameConfig as EarendelGameConfig
-        )
+        const wanted = drawCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
 
         state.heldPieces = []
         for (let drawn = 0; drawn < wanted; drawn++) {
@@ -101,7 +97,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         // the time it comes back no longer says whether the draft has happened.
         state.draftPending = state.heldPieces.length > 1
 
-        this.revealsInfo = state.heldPieces.length > 0
+        // Drawing ships turns them face-up, and so does a claimed Beyond the Frontier's tile.
+        this.revealsInfo = state.heldPieces.length > 0 || state.pendingTile !== undefined
         this.metadata = {
             drawn: [...state.heldPieces],
             ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {}),

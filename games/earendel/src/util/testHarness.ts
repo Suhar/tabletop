@@ -1,6 +1,7 @@
 import {
+    assert,
     type Game,
-    type GameAction,
+    GameAction,
     GameEngine,
     type GameStartOptions,
     GameStatus,
@@ -9,6 +10,7 @@ import {
     createAction
 } from '@tabletop/common'
 import type * as Type from 'typebox'
+import { Value } from 'typebox/value'
 import { EarendelRuntime } from '../definition/runtime.js'
 import { type EarendelGameConfig, TurnStyle } from '../definition/config.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
@@ -16,6 +18,7 @@ import type { Piece } from '../model/pieces.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { DrawPieces } from '../actions/drawPieces.js'
+import { bagOf, drawFrom } from './drawBags.js'
 
 // A game driven through the real engine rather than by calling apply() directly. Anything
 // about the turn spine - who is active, when a turn ends, which system actions fire - is only
@@ -72,7 +75,7 @@ export class TestGame {
     // action would rightly refuse a second one.
     stackBags(bag: (playerId: string) => Piece[]) {
         for (const player of this.state.players) {
-            player.bag = bag(player.playerId)
+            player.bag = bagOf(bag(player.playerId))
         }
 
         const playerId = this.activePlayerId
@@ -85,7 +88,7 @@ export class TestGame {
         const wanted = Math.max(1, this.state.heldPieces.length)
         this.state.heldPieces = []
         for (let drawn = 0; drawn < wanted; drawn++) {
-            const piece = active.bag.shift()
+            const piece = drawFrom(active.bag)
             if (!piece) break
             this.state.heldPieces.push(piece)
         }
@@ -105,11 +108,13 @@ export class TestGame {
     // Opens the turn first if it hasn't been: a real player clicks Draw, but a test about
     // chains or blockades shouldn't have to say so before every placement. Tests that care
     // about the draw itself assert on `processed`, which records it.
-    run<T extends Type.TSchema>(schema: T, data: Partial<Type.Static<T>>): GameAction[] {
-        const opening = data as { type?: string; playerId?: string }
+    run<T extends Type.TSchema>(
+        schema: T,
+        data: Partial<Type.Static<T>> & { type: string; playerId?: string }
+    ): GameAction[] {
         if (
             this.state.machineState === MachineState.StartOfTurn &&
-            opening.type !== ActionType.DrawPieces
+            data.type !== ActionType.DrawPieces
         ) {
             this.run(DrawPieces, { type: ActionType.DrawPieces, playerId: this.activePlayerId })
         }
@@ -118,10 +123,8 @@ export class TestGame {
     }
 
     private submit<T extends Type.TSchema>(schema: T, data: Partial<Type.Static<T>>): GameAction[] {
-        const action = createAction(schema, {
-            gameId: this.game.id,
-            ...data
-        } as Partial<Type.Static<T>>) as GameAction
+        const action = createAction(schema, { ...data, gameId: this.game.id })
+        assert(Value.Check(GameAction, action), 'Test actions must be game actions')
 
         const result = this.engine.executeAction({ action, state: this.state, game: this.game })
         this.state = result.updatedState

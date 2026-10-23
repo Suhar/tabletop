@@ -9,6 +9,7 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { TestGame } from '../util/testHarness.js'
+import { bagOf } from '../util/drawBags.js'
 
 const PLANET_A: AxialCoordinates = { q: 0, r: 0 }
 // A hex touching PLANET_A - where a probe goes to reach it.
@@ -68,7 +69,7 @@ function scenario({
 }) {
     const game = new TestGame()
     game.state.board = testBoard({ secondPlanet })
-    game.state.technologyDeck = deck
+    game.state.technologyDeck = bagOf(deck)
     game.state.technologyDiscard = []
     game.stackBags(bag)
     return game
@@ -122,8 +123,8 @@ describe('the turn spine', () => {
         // The ship they didn't fancy is back in the bag, so declining a draw costs nothing
         // but the turn's placement.
         const moverState = game.state.players.find((p) => p.playerId === mover)!
-        expect(moverState.bag).toHaveLength(2)
-        expect(moverState.bag.map((piece) => piece.id)).toContain(drawnId)
+        expect(moverState.bag.remaining).toBe(2)
+        expect(moverState.bag.items.map((piece) => piece.id)).toContain(drawnId)
         // The turn has passed and the next player has not drawn yet - nothing is face up until
         // they ask for it, which is what leaves this player time to undo.
         expect(game.state.heldPieces).toEqual([])
@@ -300,7 +301,10 @@ describe('the turn spine', () => {
     it('never sends a probe by itself, even to the only planet in reach', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
-            deck: [card('periwinkle-1', PlanetColor.Periwinkle), card('periwinkle-2', PlanetColor.Periwinkle)]
+            deck: [
+                card('periwinkle-1', PlanetColor.Periwinkle),
+                card('periwinkle-2', PlanetColor.Periwinkle)
+            ]
         })
         const mover = game.activePlayerId
 
@@ -320,7 +324,7 @@ describe('the turn spine', () => {
         ])
         expect(game.state.pendingExploration?.candidatePlanets).toEqual([PLANET_A])
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBeUndefined()
-        expect(game.state.technologyDeck).toHaveLength(2)
+        expect(game.state.technologyDeck.remaining).toBe(2)
     })
 
     it('leaves the probe on the board when it surveys, and reveals by its level', () => {
@@ -352,13 +356,16 @@ describe('the turn spine', () => {
             'periwinkle-2',
             'periwinkle-3'
         ])
-        expect(game.state.technologyDeck.map((c) => c.id)).toEqual(['periwinkle-4'])
+        expect(game.state.technologyDeck.items.map((c) => c.id)).toEqual(['periwinkle-4'])
     })
 
     it('keeps the probe on the board when the player declines to send it', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
-            deck: [card('periwinkle-1', PlanetColor.Periwinkle), card('periwinkle-2', PlanetColor.Periwinkle)]
+            deck: [
+                card('periwinkle-1', PlanetColor.Periwinkle),
+                card('periwinkle-2', PlanetColor.Periwinkle)
+            ]
         })
         const mover = game.activePlayerId
 
@@ -382,7 +389,10 @@ describe('the turn spine', () => {
         // Nothing explored, nothing turned over, and the probe stays where it was put.
         expect(game.state.board.hexes[hexKey(APPROACH)].piece?.id).toBe(`${mover}-probe`)
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBeUndefined()
-        expect(game.state.technologyDeck.map((c) => c.id)).toEqual(['periwinkle-1', 'periwinkle-2'])
+        expect(game.state.technologyDeck.items.map((c) => c.id)).toEqual([
+            'periwinkle-1',
+            'periwinkle-2'
+        ])
         expect(game.state.technologyDiscard).toEqual([])
         expect(game.state.pendingExploration).toBeUndefined()
 
@@ -394,7 +404,10 @@ describe('the turn spine', () => {
     it('turns nothing over for a planet already explored, which keeps what it holds', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
-            deck: [card('periwinkle-1', PlanetColor.Periwinkle), card('periwinkle-2', PlanetColor.Periwinkle)]
+            deck: [
+                card('periwinkle-1', PlanetColor.Periwinkle),
+                card('periwinkle-2', PlanetColor.Periwinkle)
+            ]
         })
         const planet = game.state.board.hexes[hexKey(PLANET_A)]
         planet.explored = true
@@ -429,7 +442,10 @@ describe('the turn spine', () => {
         expect(game.state.probeClaims).toEqual([
             { playerId: mover, coords: PLANET_A, technologyId: 'held' }
         ])
-        expect(game.state.technologyDeck.map((c) => c.id)).toEqual(['periwinkle-1', 'periwinkle-2'])
+        expect(game.state.technologyDeck.items.map((c) => c.id)).toEqual([
+            'periwinkle-1',
+            'periwinkle-2'
+        ])
         expect(game.state.technologyDiscard).toEqual([])
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
@@ -437,7 +453,10 @@ describe('the turn spine', () => {
     it('leaves the probe holding every planet it stands beside after it surveys', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
-            deck: [card('periwinkle-1', PlanetColor.Periwinkle), card('periwinkle-2', PlanetColor.Periwinkle)],
+            deck: [
+                card('periwinkle-1', PlanetColor.Periwinkle),
+                card('periwinkle-2', PlanetColor.Periwinkle)
+            ],
             secondPlanet: true
         })
         const mover = game.activePlayerId
@@ -516,7 +535,10 @@ describe('the turn spine', () => {
         // Whereas a flip that did turn something over does claim one.
         const seen = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
-            deck: [card('periwinkle-1', PlanetColor.Periwinkle), card('periwinkle-2', PlanetColor.Periwinkle)]
+            deck: [
+                card('periwinkle-1', PlanetColor.Periwinkle),
+                card('periwinkle-2', PlanetColor.Periwinkle)
+            ]
         })
         const seenMover = seen.activePlayerId
         seen.run(PlacePiece, {

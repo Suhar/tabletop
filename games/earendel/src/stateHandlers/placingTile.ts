@@ -11,9 +11,10 @@ type PlacingTileAction = HydratedPlaceTile
 // Still the exploring player's turn: a technology has handed them a tile to lay.
 //
 // Transitions: PlacingTile(PlaceTile) -> PlacingBonusPiece | PlacingPiece | EndOfGame
-export class PlacingTileStateHandler
-    implements MachineStateHandler<PlacingTileAction, HydratedEarendelGameState>
-{
+export class PlacingTileStateHandler implements MachineStateHandler<
+    PlacingTileAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -56,7 +57,7 @@ export class PlacingTileStateHandler
                 if (gameState.bonusPlacementTileId) {
                     return MachineState.PlacingBonusPiece
                 }
-                return afterTechnologyEffect(gameState, context)
+                return afterTechnologyEffect(action, gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

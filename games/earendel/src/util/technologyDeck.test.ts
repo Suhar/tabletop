@@ -8,6 +8,7 @@ import {
     revealForExploration,
     type TechnologyPiles
 } from './technologyDeck.js'
+import { bagOf } from './drawBags.js'
 import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
 
 const prng = () => new Prng({ seed: 5, invocations: 0 })
@@ -19,12 +20,12 @@ function card(id: string, ...colors: PlanetColor[]): TechnologyCard {
 describe('revealForExploration', () => {
     it('flips until enough cards show the planet’s colour', () => {
         const piles: TechnologyPiles = {
-            deck: [
+            deck: bagOf([
                 card('a', PlanetColor.Periwinkle),
                 card('b', PlanetColor.Aqua),
                 card('c', PlanetColor.Periwinkle, PlanetColor.Teal),
                 card('d', PlanetColor.Periwinkle)
-            ],
+            ]),
             discard: []
         }
 
@@ -33,19 +34,20 @@ describe('revealForExploration', () => {
         // Stops the moment the second Periwinkle card appears - 'd' is never turned over.
         expect(result.candidates.map((c) => c.id)).toEqual(['a', 'c'])
         expect(result.flipped.map((c) => c.id)).toEqual(['a', 'b', 'c'])
-        expect(piles.deck.map((c) => c.id)).toEqual(['d'])
+        expect(piles.deck.items.map((c) => c.id)).toEqual(['d'])
+        expect(piles.deck.remaining).toBe(1)
         expect(result.exhausted).toBe(false)
     })
 
     it('offers only the matching cards as candidates', () => {
         // Cards without the colour are turned over on the way and are never choosable.
         const piles: TechnologyPiles = {
-            deck: [
+            deck: bagOf([
                 card('miss1', PlanetColor.Mint),
                 card('hit1', PlanetColor.Violet),
                 card('miss2', PlanetColor.Teal),
                 card('hit2', PlanetColor.Violet, PlanetColor.Mint)
-            ],
+            ]),
             discard: []
         }
 
@@ -57,7 +59,7 @@ describe('revealForExploration', () => {
 
     it('reshuffles the discard when the deck runs out mid-reveal', () => {
         const piles: TechnologyPiles = {
-            deck: [card('a', PlanetColor.Teal)],
+            deck: bagOf([card('a', PlanetColor.Teal)]),
             discard: [card('b', PlanetColor.Teal), card('c', PlanetColor.Periwinkle)]
         }
 
@@ -71,7 +73,7 @@ describe('revealForExploration', () => {
     it('explores with fewer candidates when both piles are spent', () => {
         // A level 3 probe on a colour with only one card left anywhere.
         const piles: TechnologyPiles = {
-            deck: [card('only', PlanetColor.Aqua), card('other', PlanetColor.Periwinkle)],
+            deck: bagOf([card('only', PlanetColor.Aqua), card('other', PlanetColor.Periwinkle)]),
             discard: []
         }
 
@@ -79,11 +81,11 @@ describe('revealForExploration', () => {
 
         expect(result.candidates.map((c) => c.id)).toEqual(['only'])
         expect(result.exhausted).toBe(true)
-        expect(piles.deck).toEqual([])
+        expect(piles.deck).toEqual({ items: [], remaining: 0 })
     })
 
     it('explores with no candidates at all rather than hanging', () => {
-        const piles: TechnologyPiles = { deck: [], discard: [] }
+        const piles: TechnologyPiles = { deck: bagOf([]), discard: [] }
 
         const result = revealForExploration(piles, PlanetColor.Periwinkle, 2, prng())
 
@@ -97,7 +99,7 @@ describe('revealForExploration', () => {
         // can't hand the same card back - which would otherwise let one card satisfy a
         // level 3 probe by itself.
         const piles: TechnologyPiles = {
-            deck: [card('a', PlanetColor.Teal)],
+            deck: bagOf([card('a', PlanetColor.Teal)]),
             discard: []
         }
 
@@ -136,14 +138,11 @@ describe('buildTechnologyDeck', () => {
 
 describe('buildFocusedTechnologyDeck', () => {
     it('fills the deck with one effect in every colour, so it always comes up', () => {
-        const deck = buildFocusedTechnologyDeck(
-            prng(),
-            TechnologyEffectKind.MoveFriendlyPiece
-        )
+        const deck = buildFocusedTechnologyDeck(prng(), TechnologyEffectKind.MoveFriendlyPiece)
 
-        expect(deck.every((card) => card.effect?.kind === TechnologyEffectKind.MoveFriendlyPiece)).toBe(
-            true
-        )
+        expect(
+            deck.every((card) => card.effect?.kind === TechnologyEffectKind.MoveFriendlyPiece)
+        ).toBe(true)
         // Every colour is represented, so whatever planet a probe reaches finds a match.
         for (const color of Object.values(PlanetColor)) {
             expect(deck.some((card) => card.colors.includes(color))).toBe(true)

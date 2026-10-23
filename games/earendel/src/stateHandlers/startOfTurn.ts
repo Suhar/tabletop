@@ -15,9 +15,10 @@ type StartOfTurnAction = HydratedDrawPieces
 //
 // Transitions: StartOfTurn(DrawPieces) -> PlacingTile | ResolvingTechnology | DraftingPieces
 //               | PlacingPiece | EndOfGame
-export class StartOfTurnStateHandler
-    implements MachineStateHandler<StartOfTurnAction, HydratedEarendelGameState>
-{
+export class StartOfTurnStateHandler implements MachineStateHandler<
+    StartOfTurnAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -51,7 +52,7 @@ export class StartOfTurnStateHandler
             case isDrawPieces(action): {
                 // Technologies claimed by this draw act before anything else - see afterDraw,
                 // which also knows whether a discard is still owed behind them.
-                return afterDraw(context.gameState, context)
+                return afterDraw(context.gameState, context, action)
             }
             default: {
                 throw Error('Invalid action type')

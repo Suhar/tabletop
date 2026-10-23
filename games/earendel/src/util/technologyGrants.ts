@@ -1,12 +1,4 @@
-import type { AxialCoordinates } from '@tabletop/common'
-import {
-    dominantPlayerId,
-    type EarendelBoard,
-    getHex,
-    HexKind,
-    neighborsOf,
-    planetCoordinates
-} from '../model/board.js'
+import { getHex } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import {
     cooldownEffectOf,
@@ -18,6 +10,7 @@ import {
 } from '../model/technology.js'
 import type { PendingTechnology } from '../model/exploration.js'
 import { probeLeaderOf } from './probes.js'
+import { drawFrom } from './drawBags.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
 // Settles this player's probe claims at the start of their turn: every claim whose planet their
@@ -136,7 +129,7 @@ export function activateTechnologyEffect(
     effect: PendingTechnology
 ) {
     if (effect.kind === TechnologyEffectKind.GrowBoard) {
-        const tile = state.tileSupply.shift()
+        const tile = drawFrom(state.tileSupply)
         if (tile) state.pendingTile = { playerId: effect.playerId, tile }
         return
     }

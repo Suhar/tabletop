@@ -1,10 +1,10 @@
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, HexKind } from '../model/board.js'
-import { PieceSource, PlacePiece } from '../actions/placePiece.js'
+import { isPlacePiece, PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
-import { AttackPiece } from '../actions/attackPiece.js'
+import { AttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
 import { type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
@@ -120,7 +120,8 @@ export function playRandomGame(
     } else if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
         // The opening draw happened against the old board; redraw so the turn is coherent.
         game.stackBags(
-            (playerId) => game.state.players.find((player) => player.playerId === playerId)!.bag
+            (playerId) =>
+                game.state.players.find((player) => player.playerId === playerId)!.bag.items
         )
     }
     const random = lcg(seed * 7919 + 13)
@@ -194,10 +195,9 @@ export function playRandomGame(
                 pieceSource: PieceSource.Bag,
                 pieceId: choice.piece.id
             })
-            chainsScored += placed.reduce(
-                (total, action) => total + ((action as PlacePiece).metadata?.chains ?? []).length,
-                0
-            )
+            chainsScored += placed
+                .filter(isPlacePiece)
+                .reduce((total, action) => total + (action.metadata?.chains ?? []).length, 0)
         } else if (game.state.machineState === MachineState.Exploring) {
             const pending = game.state.pendingExploration!
             if (!pending.exploringPlanet) {
@@ -266,15 +266,17 @@ export function playRandomGame(
             const pending = game.state.pendingAttack!
             // Fires two times in three, so both branches get exercised.
             const fire = random() < 0.67
-            const [shot] = game.run(AttackPiece, {
-                type: ActionType.AttackPiece,
-                playerId,
-                ...(fire ? { coords: pick(pending.targets) } : {})
-            })
+            const shot = game
+                .run(AttackPiece, {
+                    type: ActionType.AttackPiece,
+                    playerId,
+                    ...(fire ? { coords: pick(pending.targets) } : {})
+                })
+                .find(isAttackPiece)
             // Only an actual removal takes a piece off the count - a damaged fighter is still
             // standing, just weaker.
-            if (fire && !(shot as AttackPiece).metadata?.damaged) piecesDestroyed++
-            if ((shot as AttackPiece).metadata?.damaged) piecesDamaged++
+            if (fire && !shot?.metadata?.damaged) piecesDestroyed++
+            if (shot?.metadata?.damaged) piecesDamaged++
         } else {
             stoppedBecause = `stuck in ${game.state.machineState}`
             break
@@ -285,7 +287,7 @@ export function playRandomGame(
         (hex) => hex.kind === HexKind.Planet
     )
 
-    const bagsEmpty = game.state.players.some((player) => player.bag.length === 0)
+    const bagsEmpty = game.state.players.some((player) => player.bag.remaining === 0)
 
     // Read from the bag definition rather than assumed: the three types are not dealt in equal
     // numbers, and guessing that they were is how this check first got its own arithmetic wrong.
@@ -309,7 +311,7 @@ export function playRandomGame(
         game.state.players.reduce(
             (total, player) =>
                 total +
-                player.bag.length +
+                player.bag.remaining +
                 player.specialPieces.filter((piece) => !granted(piece)).length,
             0
         )
@@ -333,7 +335,7 @@ export function playRandomGame(
         openHexesLeft: Object.values(game.state.board.hexes).filter(
             (hex) => hex.kind === HexKind.Open && !hex.piece
         ).length,
-        piecesLeftInBags: game.state.players.map((player) => player.bag.length),
+        piecesLeftInBags: game.state.players.map((player) => player.bag.remaining),
         piecesDestroyed,
         chainsScored,
         technologiesResolved,

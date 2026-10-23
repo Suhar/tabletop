@@ -5,18 +5,18 @@ import {
     type StartingPositionAssignment,
     type UninitializedGameState
 } from '@tabletop/common'
-import { Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
+import { assertExists, Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
+import { bagOf } from '../util/drawBags.js'
 import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState.js'
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
 import { turnStartState } from '../util/turn.js'
-import type { Piece } from '../model/pieces.js'
 import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
 import { buildTileSupply } from '../util/tilePlacement.js'
 import { buildFocusedTechnologyDeck, buildTechnologyDeck } from '../util/technologyDeck.js'
-import { EarendelGameConfig, FULL_DECK } from './config.js'
-import { TechnologyEffectKind } from '../model/technology.js'
+import { earendelConfig, type EarendelGameConfig, FULL_DECK } from './config.js'
+import { isTechnologyEffectKind } from '../model/technology.js'
 import { EarendelColors } from './colors.js'
 
 // This class is responsible for initializing a new game, including setting up the initial game state and
@@ -36,8 +36,12 @@ export class EarendelGameInitializer
         assignment?: StartingPositionAssignment
     ): HydratedEarendelGameState {
         // Initialize a pseudo random number generator for the state
+        // Public randomness lays out what everyone sees: colours, turn order, the board. The
+        // protected stream shuffles what nobody may see: the bags, the deck and the tile supply.
         const prng = new Prng(state.prng)
-        const players = this.initializePlayers(game, prng)
+        assertExists(state.protectedPrng, 'Earendel setup requires protected randomness')
+        const secret = new Prng(state.protectedPrng)
+        const players = this.initializePlayers(game, prng, secret)
 
         // Every game state has a turn manager to track whose turn it is
         const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
@@ -51,7 +55,7 @@ export class EarendelGameInitializer
             }
         }
 
-        const config = game.config as EarendelGameConfig
+        const config = earendelConfig(game.config)
 
         const earendelGameState: EarendelGameState = Object.assign(state, {
             players: orderedPlayers,
@@ -60,9 +64,9 @@ export class EarendelGameInitializer
             turnManager: turnManager,
             // Two tiles per player, each with its own planet layout (see buildStartingBoard).
             board: buildStartingBoard(game.players.length, prng),
-            technologyDeck: buildDeckFor(config, prng),
+            technologyDeck: bagOf(buildDeckFor(config, secret)),
             technologyDiscard: [],
-            tileSupply: buildTileSupply(game.players.length, prng),
+            tileSupply: bagOf(buildTileSupply(game.players.length, secret)),
             queuedTechnologyEffects: [],
             planetControllers: {},
             scoredPlanetPairs: [],
@@ -75,7 +79,7 @@ export class EarendelGameInitializer
     }
 
     // Initialize player states for all players in the game
-    private initializePlayers(game: Game, prng: Prng): EarendelPlayerState[] {
+    private initializePlayers(game: Game, prng: Prng, secret: Prng): EarendelPlayerState[] {
         // Assign colors randomly to players
         const colors = structuredClone(EarendelColors)
         shuffle(colors, prng.random)
@@ -88,7 +92,7 @@ export class EarendelGameInitializer
                 // once here and thereafter drawn from the front. Whoever empties theirs ends
                 // the game (see EndOfGame), so every player has exactly the same number of
                 // turns' worth of pieces.
-                bag: buildBag(player.id, prng),
+                bag: bagOf(buildBag(player.id, secret)),
                 specialPieces: [],
                 technologies: [],
                 storedEffects: [],
@@ -105,10 +109,9 @@ export class EarendelGameInitializer
 // The full deck unless the config names a single technology to fill it with, which is a
 // testing aid rather than a variant (see config.ts).
 function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
-    const choice = config?.technologyDeck ?? FULL_DECK
-    const kinds = Object.values(TechnologyEffectKind) as string[]
+    const choice = config.technologyDeck ?? FULL_DECK
 
-    return kinds.includes(choice)
-        ? buildFocusedTechnologyDeck(prng, choice as TechnologyEffectKind)
+    return isTechnologyEffectKind(choice)
+        ? buildFocusedTechnologyDeck(prng, choice)
         : buildTechnologyDeck(prng)
 }

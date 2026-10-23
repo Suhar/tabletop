@@ -9,9 +9,10 @@ import { planetPointsByPlayer } from '../util/scoring.js'
 
 // Terminal state. The game ends the instant a player empties their bag - mid-round, with no
 // final go-around - so this is reached straight from a turn ending.
-export class EndOfGameStateHandler
-    implements MachineStateHandler<HydratedAction, HydratedEarendelGameState>
-{
+export class EndOfGameStateHandler implements MachineStateHandler<
+    HydratedAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         _action: HydratedAction,
         _context: MachineContext<HydratedEarendelGameState>
@@ -49,10 +50,7 @@ export class EndOfGameStateHandler
         gameState.activePlayerIds = []
     }
 
-    onAction(
-        _action: HydratedAction,
-        _context: MachineContext<HydratedEarendelGameState>
-    ): string {
+    onAction(_action: HydratedAction, _context: MachineContext<HydratedEarendelGameState>): string {
         throw Error('No actions are valid at the end of the game')
     }
 }

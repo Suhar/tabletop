@@ -120,10 +120,10 @@ export function buildStartingBoard(
 }
 
 function shuffledTileKinds(prng: Prng, planetsPerTile: number): HexKind[] {
-    const kinds = [
-        ...Array(planetsPerTile).fill(HexKind.Planet),
-        ...Array(TILE_HEX_OFFSETS.length - planetsPerTile).fill(HexKind.Open)
-    ] as HexKind[]
+    const kinds: HexKind[] = [
+        ...Array.from({ length: planetsPerTile }, () => HexKind.Planet),
+        ...Array.from({ length: TILE_HEX_OFFSETS.length - planetsPerTile }, () => HexKind.Open)
+    ]
     shuffle(kinds, prng.random)
     return kinds
 }

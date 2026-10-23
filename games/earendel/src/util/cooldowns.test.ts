@@ -9,6 +9,7 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { canUseCooldownEffect, turnsUntilReady } from './cooldowns.js'
 import { TestGame } from './testHarness.js'
+import { bagOf } from './drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -44,8 +45,8 @@ function scenario() {
         piece: ship(other, PieceType.Fighter, PieceLevel.Two)
     }
     game.state.board = board
-    game.state.technologyDeck = []
-    game.state.tileSupply = []
+    game.state.technologyDeck = bagOf([])
+    game.state.tileSupply = bagOf([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.Railgun
     ]
@@ -219,7 +220,7 @@ describe('Railgun', () => {
             piece: ship(other, PieceType.Probe, PieceLevel.Two)
         }
         game.state.board = board
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
             TechnologyEffectKind.Railgun
         ]
@@ -269,7 +270,7 @@ describe('Railgun', () => {
             piece: ship(other, PieceType.Fighter, PieceLevel.Three)
         }
         game.state.board = board
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
             TechnologyEffectKind.Railgun
         ]

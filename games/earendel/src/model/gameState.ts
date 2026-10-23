@@ -1,9 +1,11 @@
 import {
+    DrawBag,
     GameResult,
     GameState,
     HydratableGameState,
     HydratedTurnManager,
-    PrngState
+    PrngState,
+    Visibility
 } from '@tabletop/common'
 import { EarendelPlayerState, HydratedEarendelPlayerState } from './playerState.js'
 import * as Type from 'typebox'
@@ -14,6 +16,7 @@ import { Piece } from './pieces.js'
 import { TechnologyCard } from './technology.js'
 import { PendingExploration, PendingTechnology, ProbeClaim } from './exploration.js'
 import { Tile } from './tile.js'
+import type { Bag } from '../util/drawBags.js'
 import { PendingAttack } from './attack.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
@@ -28,7 +31,7 @@ export const EarendelGameState = Type.Evaluate(
             // hidden information - it is what exploring reveals - so anything exposing state to
             // a player must keep it that way (and EarendelGameExploration reshuffles it). The
             // discard is face-up.
-            technologyDeck: Type.Array(TechnologyCard),
+            technologyDeck: DrawBag(TechnologyCard),
             technologyDiscard: Type.Array(TechnologyCard),
             // Set while a probe placement is waiting on its player: which planet to explore
             // (when it reached more than one), and then which revealed technology to keep.
@@ -45,7 +48,7 @@ export const EarendelGameState = Type.Evaluate(
             heldPieces: Type.Array(Piece),
             // Tiles held back from the starting map, drawn by the technology that grows the
             // board.
-            tileSupply: Type.Array(Tile),
+            tileSupply: DrawBag(Tile),
             // A tile drawn and waiting to be laid.
             pendingTile: Type.Optional(Type.Object({ playerId: Type.String(), tile: Tile })),
             // Set between laying a tile and placing the ship that follows it: that ship, and
@@ -84,9 +87,15 @@ export const EarendelGameState = Type.Evaluate(
 
 export const EarendelGameStateValidator = Compile(EarendelGameState)
 
+// What a player or spectator receives: the hidden piles' items emptied and the protected random
+// state neutralised. Hydration accepts this as well as the complete canonical state.
+export const EarendelProjectedState = Visibility.createProjectionSchema(EarendelGameState)
+export type EarendelProjectedState = Type.Static<typeof EarendelProjectedState>
+export const EarendelProjectedStateValidator = Compile(EarendelProjectedState)
+
 export class HydratedEarendelGameState
-    extends HydratableGameState<typeof EarendelGameState, HydratedEarendelPlayerState>
-    implements EarendelGameState
+    extends HydratableGameState<typeof EarendelProjectedState, HydratedEarendelPlayerState>
+    implements EarendelProjectedState
 {
     // Declare properties to satisfy the interface, they will be populated by the base class
     declare id: string
@@ -99,7 +108,7 @@ export class HydratedEarendelGameState
     declare turnManager: HydratedTurnManager
     declare machineState: MachineState
     declare board: EarendelBoard
-    declare technologyDeck: TechnologyCard[]
+    declare technologyDeck: Bag<TechnologyCard>
     declare technologyDiscard: TechnologyCard[]
     declare pendingExploration?: PendingExploration
     declare heldPieces: Piece[]
@@ -108,7 +117,7 @@ export class HydratedEarendelGameState
     declare queuedTechnologyEffects: PendingTechnology[]
     declare draftPending?: boolean
     declare planetControllers: Record<string, string>
-    declare tileSupply: Tile[]
+    declare tileSupply: Bag<Tile>
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string
     declare bonusPlacementPieceId?: string
@@ -117,8 +126,8 @@ export class HydratedEarendelGameState
     declare result?: GameResult
     declare winningPlayerIds: string[]
 
-    constructor(data: EarendelGameState) {
-        super(data, EarendelGameStateValidator)
+    constructor(data: EarendelProjectedState) {
+        super(data, EarendelProjectedStateValidator)
 
         this.players = data.players.map((player) => new HydratedEarendelPlayerState(player))
     }

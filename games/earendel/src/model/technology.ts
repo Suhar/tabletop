@@ -39,6 +39,10 @@ export enum TechnologyEffectKind {
     StationUpgrade = 'stationUpgrade'
 }
 
+export function isTechnologyEffectKind(value: string): value is TechnologyEffectKind {
+    return Object.values(TechnologyEffectKind).some((kind) => kind === value)
+}
+
 // When an effect happens. Immediate ones resolve the moment the technology is chosen; stored
 // ones are put in front of the player and spent later, once each.
 export enum TechnologyTiming {

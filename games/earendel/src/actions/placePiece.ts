@@ -1,12 +1,6 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import {
-    AxialCoordinates,
-    GameAction,
-    HydratableAction,
-    MachineContext,
-    shuffle
-} from '@tabletop/common'
+import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey, isOpenHex } from '../model/board.js'
@@ -14,6 +8,7 @@ import { Piece, PieceType } from '../model/pieces.js'
 import { resolveArrival } from '../util/arrival.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
+import { returnTo } from '../util/drawBags.js'
 
 // Where the ship being placed comes from. Named pieceSource rather than source because
 // GameAction already has a `source` (User vs System) and shadowing it silently breaks the
@@ -114,10 +109,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             // The hand goes back in the bag, since a special piece is played instead of it.
             returnedToBag = state.heldPieces[0]
             if (state.heldPieces.length > 0) {
-                playerState.bag.push(...state.heldPieces)
-                state.heldPieces = []
                 // Reshuffled, so putting one back tells the player nothing about what is next.
-                shuffle(playerState.bag, state.getPublicPrng().random)
+                returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
+                state.heldPieces = []
             }
         }
 

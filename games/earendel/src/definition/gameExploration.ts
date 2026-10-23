@@ -1,6 +1,6 @@
 import type { GameExploration } from '@tabletop/common'
 import { shuffle } from '@tabletop/common'
-import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
+import { type EarendelProjectedState, HydratedEarendelGameState } from '../model/gameState.js'
 
 // Prepares an Exploration branch from the real game so that exploring cannot hand over what play
 // keeps secret. Three things are hidden: the technology deck's order (precisely what a probe
@@ -9,15 +9,15 @@ import { type EarendelGameState, HydratedEarendelGameState } from '../model/game
 // branch can neither read the real order nor reconstruct it.
 //
 // The discard is face-up, so it is left as it is.
-export class EarendelGameExploration implements GameExploration<EarendelGameState> {
-    createFromCanonicalState(state: EarendelGameState): EarendelGameState {
+export class EarendelGameExploration implements GameExploration<EarendelProjectedState> {
+    createFromCanonicalState(state: EarendelProjectedState): EarendelProjectedState {
         const hydrated = new HydratedEarendelGameState(state)
         const random = hydrated.getProtectedPrng().random
 
-        shuffle(hydrated.technologyDeck, random)
-        shuffle(hydrated.tileSupply, random)
+        shuffle(hydrated.technologyDeck.items, random)
+        shuffle(hydrated.tileSupply.items, random)
         for (const player of hydrated.players) {
-            shuffle(player.bag, random)
+            shuffle(player.bag.items, random)
         }
 
         return hydrated.dehydrate()

@@ -12,6 +12,7 @@ import { DiscardPiece } from '../actions/discardPiece.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { TestGame } from '../util/testHarness.js'
+import { bagOf } from '../util/drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -35,8 +36,8 @@ function emptyBoard(hexes = 30): EarendelBoard {
 function draftGame(bagSize = 9) {
     const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
     game.state.board = emptyBoard()
-    game.state.technologyDeck = []
-    game.state.tileSupply = []
+    game.state.technologyDeck = bagOf([])
+    game.state.tileSupply = bagOf([])
     game.stackBags((playerId) => Array.from({ length: bagSize }, () => station(playerId)))
     return game
 }
@@ -51,7 +52,7 @@ describe('a drafted turn', () => {
         expect(game.validActionsFor(mover)).toEqual([ActionType.DiscardPiece])
 
         const discarded = game.state.heldPieces[1]
-        const bagBefore = game.state.players.find((p) => p.playerId === mover)!.bag.length
+        const bagBefore = game.state.players.find((p) => p.playerId === mover)!.bag.remaining
 
         game.run(DiscardPiece, {
             type: ActionType.DiscardPiece,
@@ -62,7 +63,7 @@ describe('a drafted turn', () => {
         // Out of the game, not back to the bag: that is what makes a draft cost something.
         expect(game.state.heldPieces).toHaveLength(2)
         expect(game.state.heldPieces.map((piece) => piece.id)).not.toContain(discarded.id)
-        expect(game.state.players.find((p) => p.playerId === mover)!.bag).toHaveLength(bagBefore)
+        expect(game.state.players.find((p) => p.playerId === mover)!.bag.remaining).toBe(bagBefore)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
 
@@ -288,8 +289,8 @@ describe('a drafted turn', () => {
         }
         game.state.board = board
         game.state.probeClaims = [{ playerId: mover, coords: at(0, 3), technologyId: 'shift' }]
-        game.state.tileSupply = []
-        game.state.technologyDeck = []
+        game.state.tileSupply = bagOf([])
+        game.state.technologyDeck = bagOf([])
         game.state.technologyDiscard = []
         game.stackBags((playerId) => [
             { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
@@ -357,7 +358,7 @@ describe('a drafted turn', () => {
         const draft = draftGame(9)
         const mover = draft.activePlayerId
         const bagOf = (game: TestGame, playerId: string) =>
-            game.state.players.find((p) => p.playerId === playerId)!.bag.length
+            game.state.players.find((p) => p.playerId === playerId)!.bag.remaining
 
         // Three gone from the bag for two placements.
         expect(bagOf(draft, mover)).toBe(6)

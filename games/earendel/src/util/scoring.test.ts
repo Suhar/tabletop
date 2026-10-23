@@ -7,6 +7,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame } from './testHarness.js'
+import { bagOf } from './drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -110,7 +111,7 @@ describe('planet points at the end of the game', () => {
             [at(1, 0), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
 
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId

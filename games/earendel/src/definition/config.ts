@@ -1,5 +1,7 @@
 import * as Type from 'typebox'
+import { Compile } from 'typebox/compile'
 import {
+    assert,
     ConfigOptionType,
     type GameConfigOptions,
     type ListConfigOption
@@ -62,6 +64,16 @@ export const EarendelGameConfig = Type.Object({
     technologyDeck: Type.Optional(Type.String({ default: FULL_DECK })),
     turnStyle: Type.Optional(Type.String({ default: TurnStyle.DraftThree }))
 })
+
+const EarendelGameConfigValidator = Compile(EarendelGameConfig)
+
+// The game's configuration read as Earendel's. Every field is optional, so an absent
+// configuration reads as the defaults.
+export function earendelConfig(config: unknown): EarendelGameConfig {
+    const value = config ?? {}
+    assert(EarendelGameConfigValidator.Check(value), 'Invalid Earendel configuration')
+    return value
+}
 
 export const EarendelGameConfigOptions: GameConfigOptions = [turnStyleOption, technologyDeckOption]
 

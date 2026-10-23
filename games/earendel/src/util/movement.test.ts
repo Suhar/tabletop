@@ -11,6 +11,7 @@ import { MovePiece } from '../actions/movePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { TestGame } from './testHarness.js'
+import { bagOf } from './drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -115,16 +116,16 @@ describe('an immediate technology', () => {
             [at(7, 7), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = [
+        game.state.technologyDeck = bagOf([
             {
                 id: 'mover-tech',
                 colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
-        ]
+        ])
         game.state.technologyDiscard = []
-        game.state.tileSupply = []
+        game.state.tileSupply = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
             ship(playerId, PieceType.Station),
@@ -267,16 +268,16 @@ describe('an immediate technology', () => {
             [at(7, 7), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = [
+        game.state.technologyDeck = bagOf([
             {
                 id: 'mover-tech',
                 colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
             }
-        ]
+        ])
         game.state.technologyDiscard = []
-        game.state.tileSupply = []
+        game.state.tileSupply = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
             ship(playerId, PieceType.Station),

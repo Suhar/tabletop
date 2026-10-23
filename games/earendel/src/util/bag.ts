@@ -1,11 +1,5 @@
 import { Prng, shuffle } from '@tabletop/common'
-import {
-    LEVELLED_TYPES,
-    type Piece,
-    PieceLevel,
-    PieceType,
-    STARTING_BAG
-} from '../model/pieces.js'
+import { LEVELLED_TYPES, type Piece, PieceLevel, PieceType, STARTING_BAG } from '../model/pieces.js'
 
 // One player's starting bag, shuffled. Piece ids are stable and unique so the UI can key on
 // them and history can name a specific ship.
@@ -19,7 +13,8 @@ export function buildBag(
 ): Piece[] {
     const bag: Piece[] = []
 
-    for (const [type, count] of Object.entries(perType) as [PieceType, number][]) {
+    for (const type of Object.values(PieceType)) {
+        const count = perType[type]
         // Levelled types are split evenly between the two levels: a level 3 probe reveals
         // more technology, a level 3 fighter is simply stronger, so which one you draw
         // shapes the turn. Halving keeps the split even at whatever count is set.

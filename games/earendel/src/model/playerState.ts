@@ -1,8 +1,9 @@
-import { Hydratable, PlayerState } from '@tabletop/common'
+import { DrawBag, Hydratable, PlayerState } from '@tabletop/common'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { Color } from '@tabletop/common'
 import { Piece } from './pieces.js'
+import { type Bag, drawFrom } from '../util/drawBags.js'
 import { TechnologyEffectKind } from './technology.js'
 
 export type EarendelPlayerState = Type.Static<typeof EarendelPlayerState>
@@ -10,11 +11,9 @@ export const EarendelPlayerState = Type.Evaluate(
     Type.Intersect([
         PlayerState,
         Type.Object({
-            // The player's own bag of ships, in draw order - shuffled at setup, drawn from
-            // the front. Contents are hidden from everyone (including its owner), so
-            // anything that exposes state to a player has to keep it that way, and
-            // EarendelGameExploration reshuffles it.
-            bag: Type.Array(Piece),
+            // The player's own bag of ships, shuffled at setup and drawn from the front. Its
+            // contents are hidden from everyone, including its owner; only `remaining` is public.
+            bag: DrawBag(Piece),
             // Rewards from exploring planets, kept face-up in front of the player. A turn
             // may spend one of these INSTEAD of drawing from the bag.
             specialPieces: Type.Array(Piece),
@@ -48,7 +47,7 @@ export class HydratedEarendelPlayerState
 {
     declare playerId: string
     declare color: Color
-    declare bag: Piece[]
+    declare bag: Bag<Piece>
     declare specialPieces: Piece[]
     declare technologies: string[]
     declare storedEffects: TechnologyEffectKind[]
@@ -59,7 +58,7 @@ export class HydratedEarendelPlayerState
     // The game ends the moment any player's bag runs out (see EndOfGame), so this is the
     // clock everything else is measured against.
     get bagIsEmpty(): boolean {
-        return this.bag.length === 0
+        return this.bag.remaining === 0
     }
 
     hasCooldownEffect(kind: TechnologyEffectKind): boolean {
@@ -76,7 +75,7 @@ export class HydratedEarendelPlayerState
     }
 
     drawFromBag(): Piece | undefined {
-        return this.bag.shift()
+        return drawFrom(this.bag)
     }
 
     constructor(data: EarendelPlayerState) {

@@ -106,7 +106,7 @@ export class HydratedChoosePlanet
             piles,
             planet.color!,
             pending.probeLevel,
-            state.getPublicPrng()
+            state.getProtectedPrng()
         )
         state.technologyDeck = piles.deck
         state.technologyDiscard = piles.discard

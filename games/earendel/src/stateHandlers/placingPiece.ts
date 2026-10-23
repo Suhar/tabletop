@@ -35,9 +35,10 @@ type PlacingPieceAction =
 //
 // Transitions: PlacingPiece(PlacePiece) -> Exploring | PlacingPiece | EndOfGame
 //              PlacingPiece(Pass)       -> PlacingPiece | EndOfGame
-export class PlacingPieceStateHandler
-    implements MachineStateHandler<PlacingPieceAction, HydratedEarendelGameState>
-{
+export class PlacingPieceStateHandler implements MachineStateHandler<
+    PlacingPieceAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -57,9 +58,7 @@ export class PlacingPieceStateHandler
             ActionType.UseTradeRouteWormhole,
             ActionType.UseImmediateDownload,
             ActionType.Pass
-        ].filter((actionType) =>
-            this.isValidActionType(actionType, playerId, context)
-        )
+        ].filter((actionType) => this.isValidActionType(actionType, playerId, context))
     }
 
     enter(context: MachineContext<HydratedEarendelGameState>) {
@@ -118,7 +117,7 @@ export class PlacingPieceStateHandler
                 // effect - needs no state of its own, and the turn simply carries on.
                 const owed = pendingTechnologyEffectState(gameState)
                 if (owed) return owed
-                return endPlacement(gameState, context)
+                return endPlacement(gameState, context, action)
             }
             case isUseTradeRouteWormhole(action):
             case isUseTacticalFeint(action): {
@@ -132,7 +131,7 @@ export class PlacingPieceStateHandler
                 if (gameState.pendingAttack) {
                     return MachineState.Attacking
                 }
-                return endPlacement(gameState, context)
+                return endPlacement(gameState, context, action)
             }
             case isPlacePiece(action): {
                 // A placement that owes the player a decision holds the turn open. A piece
@@ -144,7 +143,7 @@ export class PlacingPieceStateHandler
                 if (gameState.pendingAttack) {
                     return MachineState.Attacking
                 }
-                return endPlacement(gameState, context)
+                return endPlacement(gameState, context, action)
             }
             case isPass(action): {
                 // Only ever reached when the player had nothing they could legally place,

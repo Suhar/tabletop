@@ -1,4 +1,5 @@
 import { Prng, shuffle } from '@tabletop/common'
+import { type Bag, drawFrom, returnTo } from './drawBags.js'
 import { PlanetColor } from '../model/board.js'
 import {
     matchesColor,
@@ -8,7 +9,7 @@ import {
 } from '../model/technology.js'
 
 export type TechnologyPiles = {
-    deck: TechnologyCard[]
+    deck: Bag<TechnologyCard>
     discard: TechnologyCard[]
 }
 
@@ -44,19 +45,18 @@ export function revealForExploration(
     const flipped: TechnologyCard[] = []
 
     while (candidates.length < count) {
-        if (piles.deck.length === 0) {
+        if (piles.deck.remaining === 0) {
             if (piles.discard.length === 0) {
                 return { candidates, flipped, exhausted: true }
             }
             // Reshuffling the discard is what makes the deck effectively endless. Note the
             // cards flipped during THIS reveal aren't in the discard yet - they're on the
             // table - so they can't come back around within a single exploration.
-            piles.deck = piles.discard
+            returnTo(piles.deck, piles.discard, prng.random)
             piles.discard = []
-            shuffle(piles.deck, prng.random)
         }
 
-        const card = piles.deck.shift()!
+        const card = drawFrom(piles.deck)!
         flipped.push(card)
         if (matchesColor(card, color)) candidates.push(card)
     }
@@ -87,7 +87,7 @@ export const DEAL_ELEVATED = false
 // Dealt round-robin across the deck so every effect gets exercised in play, and so an elevated
 // card is not strictly worse than a standard one for having no effect. Real technologies
 // replace this wholesale.
-const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
+const PLACEHOLDER_EFFECTS = [
     TechnologyEffectKind.MoveFriendlyPiece,
     TechnologyEffectKind.GrowBoard,
     TechnologyEffectKind.LogisticsUpgrade,
@@ -98,14 +98,14 @@ const PLACEHOLDER_EFFECTS: TechnologyEffectKind[] = [
     TechnologyEffectKind.TacticalFeint,
     TechnologyEffectKind.TradeRouteWormhole,
     TechnologyEffectKind.ImmediateDownload
-]
+] as const satisfies readonly TechnologyEffectKind[]
 
 // Every effect there is, so a new one cannot be written, wired up and then never dealt. The
 // bottom three were exactly that: added, tested, and absent from this list, which meant no game
 // could ever produce them.
-const _EVERY_EFFECT_IS_DEALT: Record<TechnologyEffectKind, true> = Object.fromEntries(
-    PLACEHOLDER_EFFECTS.map((kind) => [kind, true])
-) as Record<TechnologyEffectKind, true>
+type UndealtEffect = Exclude<TechnologyEffectKind, (typeof PLACEHOLDER_EFFECTS)[number]>
+// Fails to compile, naming the missing effect, when one is left out of PLACEHOLDER_EFFECTS.
+const _EVERY_EFFECT_IS_DEALT: [UndealtEffect] extends [never] ? true : UndealtEffect = true
 // A deck of nothing but the named effect, one card per planet colour so that whatever a probe
 // reaches, the effect comes up. A testing aid - see the technologyDeck config option.
 export function buildFocusedTechnologyDeck(

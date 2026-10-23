@@ -8,6 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from './placePiece.js'
 import { AttackSpread } from './attackSpread.js'
 import { TestGame } from '../util/testHarness.js'
+import { bagOf } from '../util/drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -51,8 +52,8 @@ function scenario() {
     board.hexes[hexKey(at(0, 1))].piece = ship(other, PieceType.Probe)
     board.hexes[hexKey(at(-1, 1))].piece = ship(other, PieceType.Probe)
     game.state.board = board
-    game.state.technologyDeck = []
-    game.state.tileSupply = []
+    game.state.technologyDeck = bagOf([])
+    game.state.tileSupply = bagOf([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.FullTorpedoSpread
     ]

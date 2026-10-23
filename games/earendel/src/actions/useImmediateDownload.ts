@@ -95,6 +95,9 @@ export class HydratedUseImmediateDownload
             })
         }
 
+        // A downloaded Beyond the Frontier draws a tile from the hidden supply at once.
+        if (state.pendingTile) this.revealsInfo = true
+
         this.metadata = {
             technologyId: card.id,
             technology: card,

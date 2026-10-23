@@ -26,6 +26,7 @@ import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { TurnStyle } from '../definition/config.js'
 import { TestGame } from './testHarness.js'
+import { bagOf } from './drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -193,20 +194,22 @@ describe('growing the board in play', () => {
         }
         game.state.board = board
 
-        game.state.technologyDeck = [
+        game.state.technologyDeck = bagOf([
             {
                 id: 'grow-tech',
                 colors: [PlanetColor.Periwinkle],
                 tier: TechnologyTier.Standard,
                 effect: { kind: TechnologyEffectKind.GrowBoard }
             }
-        ]
+        ])
         game.state.technologyDiscard = []
-        game.state.tileSupply = Array.from({ length: supplyCount }, (_unused, index) => ({
-            id: `spare-${index}`,
-            planetOffset: 0,
-            color: PlanetColor.Teal
-        }))
+        game.state.tileSupply = bagOf(
+            Array.from({ length: supplyCount }, (_unused, index) => ({
+                id: `spare-${index}`,
+                planetOffset: 0,
+                color: PlanetColor.Teal
+            }))
+        )
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
             ship(playerId, PieceType.Station),
@@ -385,9 +388,9 @@ describe('growing the board in play', () => {
         }
         game.state.board = board
         game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: 'grow-tech' }]
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.state.technologyDiscard = []
-        game.state.tileSupply = [{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }]
+        game.state.tileSupply = bagOf([{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station),

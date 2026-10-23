@@ -16,9 +16,10 @@ type AttackingAction = HydratedAttackPiece | HydratedAttackSpread
 // there is a single target - firing is optional, so one target is still a real decision.
 //
 // Transitions: Attacking(AttackPiece) -> PlacingPiece | EndOfGame
-export class AttackingStateHandler
-    implements MachineStateHandler<AttackingAction, HydratedEarendelGameState>
-{
+export class AttackingStateHandler implements MachineStateHandler<
+    AttackingAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>
@@ -50,7 +51,7 @@ export class AttackingStateHandler
             case isAttackPiece(action):
             case isAttackSpread(action): {
                 // Both end the shot, so both hand the turn back the same way.
-                return endPlacement(context.gameState, context)
+                return endPlacement(context.gameState, context, action)
             }
             default: {
                 throw Error('Invalid action type')

@@ -15,9 +15,10 @@ type DraftingAction = HydratedDiscardPiece | HydratedUseLogisticsUpgrade
 // on and the draw happens - PlacingPiece only takes over once there is a hand to place from.
 //
 // Transitions: DraftingPieces(DiscardPiece) -> PlacingPiece | EndOfGame
-export class DraftingPiecesStateHandler
-    implements MachineStateHandler<DraftingAction, HydratedEarendelGameState>
-{
+export class DraftingPiecesStateHandler implements MachineStateHandler<
+    DraftingAction,
+    HydratedEarendelGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedEarendelGameState>

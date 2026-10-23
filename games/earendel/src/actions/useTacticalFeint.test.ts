@@ -10,6 +10,7 @@ import { isUseTacticalFeint, UseTacticalFeint } from './useTacticalFeint.js'
 import { ChoosePlanet } from './choosePlanet.js'
 import { TestGame } from '../util/testHarness.js'
 import { controllerKey } from '../util/control.js'
+import { bagOf } from '../util/drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -43,8 +44,8 @@ function scenario(mine: PieceType, theirs: PieceType, level?: PieceLevel) {
     board.hexes[hexKey(at(0, 0))].piece = ship(mover, mine, level)
     board.hexes[hexKey(at(1, 0))].piece = ship(other, theirs)
     game.state.board = board
-    game.state.technologyDeck = []
-    game.state.tileSupply = []
+    game.state.technologyDeck = bagOf([])
+    game.state.tileSupply = bagOf([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.TacticalFeint
     ]
@@ -153,7 +154,11 @@ describe('Tactical Feint', () => {
     })
 
     it('takes control of a planet the swap reaches', () => {
-        const { game, mover, other } = scenario(PieceType.Fighter, PieceType.Probe, PieceLevel.Three)
+        const { game, mover, other } = scenario(
+            PieceType.Fighter,
+            PieceType.Probe,
+            PieceLevel.Three
+        )
         game.state.board.hexes[hexKey(at(2, 0))] = {
             coords: at(2, 0),
             tileId: 't1',

@@ -10,6 +10,7 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { TestGame } from '../util/testHarness.js'
+import { bagOf } from '../util/drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -120,7 +121,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -149,7 +150,7 @@ describe('a fighter arriving', () => {
         expect((shot as AttackPiece).metadata?.target?.playerId).toBe(other)
         // Out of the game entirely, not back into its owner's bag - which still holds exactly
         // the two it started with, since that player has not opened their turn yet.
-        expect(game.state.players.find((p) => p.playerId === other)!.bag).toHaveLength(2)
+        expect(game.state.players.find((p) => p.playerId === other)!.bag.remaining).toBe(2)
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
     })
@@ -164,7 +165,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
             ship(playerId, PieceType.Station)
@@ -202,7 +203,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.One) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -292,7 +293,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -328,7 +329,7 @@ describe('a fighter arriving', () => {
             [at(2, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -361,8 +362,8 @@ describe('a fighter arriving', () => {
             [at(6, 5), {}]
         ])
         game.state.probeClaims = [{ playerId: bystander, coords: at(0, 0), technologyId: 'tech-a' }]
-        game.state.technologyDeck = []
-        game.state.tileSupply = []
+        game.state.technologyDeck = bagOf([])
+        game.state.tileSupply = bagOf([])
         // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
@@ -416,7 +417,7 @@ describe('a fighter arriving', () => {
             [at(4, 4), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = []
+        game.state.technologyDeck = bagOf([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -451,7 +452,7 @@ describe('the starting bag', () => {
         const game = new TestGame()
         // A player who hasn't taken a turn yet, so their bag is still whole - the player on
         // turn has already drawn.
-        const bag = game.state.players.find((p) => p.playerId !== game.activePlayerId)!.bag
+        const bag = game.state.players.find((p) => p.playerId !== game.activePlayerId)!.bag.items
 
         const levelsOf = (type: PieceType) =>
             bag.filter((piece) => piece.type === type).map((piece) => piece.level)

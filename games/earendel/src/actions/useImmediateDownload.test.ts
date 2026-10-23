@@ -2,17 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
-import {
-    type TechnologyCard,
-    TechnologyEffectKind,
-    TechnologyTier
-} from '../model/technology.js'
+import { type TechnologyCard, TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { UseImmediateDownload } from './useImmediateDownload.js'
 import { planetsInSightOf } from '../util/lineOfSight.js'
 import { downloadTargetsFrom } from '../util/download.js'
 import { TestGame } from '../util/testHarness.js'
+import { bagOf } from '../util/drawBags.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -69,8 +66,8 @@ function scenario(farEffect: TechnologyEffectKind | undefined = TechnologyEffect
     planet(board, at(8, 0), card('tech-far', farEffect))
 
     game.state.board = board
-    game.state.technologyDeck = []
-    game.state.tileSupply = []
+    game.state.technologyDeck = bagOf([])
+    game.state.tileSupply = bagOf([])
     const playerState = game.state.players.find((p) => p.playerId === mover)!
     // Gained the hard way already: they hold the Download card and its stored effect.
     playerState.technologies = ['tech-download']
@@ -184,9 +181,7 @@ describe('Immediate Download', () => {
         // Blocked by a ship standing between the two planets.
         game.state.board.hexes[hexKey(at(5, 0))].piece = ship(mover, PieceType.Probe)
         expect(downloadTargetsFrom(game.hydrated, mover, at(2, 0))).toEqual([])
-        expect(() =>
-            game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
-        ).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
         delete game.state.board.hexes[hexKey(at(5, 0))].piece
 
         // Already theirs - nothing to download, and a one-shot power would be wasted.
@@ -194,25 +189,19 @@ describe('Immediate Download', () => {
             'tech-download',
             'tech-far'
         ]
-        expect(() =>
-            game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
-        ).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
         game.state.players.find((p) => p.playerId === mover)!.technologies = ['tech-download']
 
         // Unexplored, so it holds no technology to read.
         delete game.state.board.hexes[hexKey(at(8, 0))].technology
         game.state.board.hexes[hexKey(at(8, 0))].explored = false
-        expect(() =>
-            game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
-        ).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
     })
 
     it('must be spent from a planet actually holding the player’s Download', () => {
         const { game, mover } = scenario()
         // The far planet is in sight and holds a technology, but it isn't the anchor.
-        expect(() =>
-            game.run(UseImmediateDownload, download(mover, at(8, 0), at(2, 0)))
-        ).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(8, 0), at(2, 0)))).toThrow()
     })
 
     it('is not offered without the stored effect', () => {

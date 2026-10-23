@@ -1,8 +1,9 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { GameAction, HydratableAction, MachineContext, shuffle } from '@tabletop/common'
+import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
+import { returnTo } from '../util/drawBags.js'
 
 export type PassMetadata = Type.Static<typeof PassMetadata>
 export const PassMetadata = Type.Object({})
@@ -44,9 +45,8 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
         // shorten the game for reasons no one could see.
         if (state.heldPieces.length > 0) {
             const playerState = state.getPlayerState(this.playerId)
-            playerState.bag.push(...state.heldPieces)
+            returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
             state.heldPieces = []
-            shuffle(playerState.bag, state.getPublicPrng().random)
         }
 
         this.metadata = {}

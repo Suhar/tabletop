@@ -1,16 +1,11 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import {
-    AxialCoordinates,
-    GameAction,
-    HydratableAction,
-    MachineContext
-} from '@tabletop/common'
+import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, hexKey, sameHex } from '../model/board.js'
-import { Piece, PieceLevel } from '../model/pieces.js'
+import { sameHex } from '../model/board.js'
+import { Piece } from '../model/pieces.js'
 import { AttackOutcome, attackOutcomeAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
@@ -27,7 +22,7 @@ export const AttackPieceMetadata = Type.Object({
     // The level it was left on, when damaged.
     levelAfter: Type.Optional(Type.Number()),
     // The fighter's owner passed up the shot.
-    declined: Type.Optional(Type.Boolean()),
+    declined: Type.Optional(Type.Boolean())
     // Removing a piece can change who holds a nearby planet outright - including handing it
     // to a player who had nothing to do with the attack.
 })
@@ -127,7 +122,7 @@ export class HydratedAttackPiece
         if (!this.coords) return undefined
 
         if (!pending.targets.some((target) => sameHex(target, this.coords!))) {
-            return "That piece is out of reach, or too strong for this fighter to touch."
+            return 'That piece is out of reach, or too strong for this fighter to touch.'
         }
 
         if (this.useRailgun) {
