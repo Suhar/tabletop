@@ -1,76 +1,52 @@
-import Fastify from 'fastify'
-import type {
-    FastifyHttp2Options,
-    FastifyHttpOptions,
-    FastifyInstance,
-    RawServerBase
-} from 'fastify'
-import rawBody from 'fastify-raw-body'
-import { restartable, type ApplicationFactory } from '@fastify/restartable'
-import { app } from './app/app.js'
-import * as http2 from 'node:http2'
-import * as http from 'node:http'
+import { BackendSupervisor } from './runtime/backendSupervisor.js'
+import { createBackendGateway } from './runtime/backendGateway.js'
+import { createBackendHealthServer } from './runtime/backendHealth.js'
+import { deriveSessionKey } from './runtime/sessionKey.js'
 
-const host = process.env['HOST'] ?? 'localhost'
-const port = process.env['PORT'] ? Number(process.env['PORT']) : 3000
-
-const service: string = process.env['K_SERVICE'] ?? 'local'
-
-const registerApp = async <Server extends RawServerBase>(server: FastifyInstance<Server>) => {
-    await server.register(rawBody, {
-        global: false,
-        runFirst: true
-    })
-
-    // Register your application as a normal plugin.
-    await server.register(app)
-
-    return server
+const supervisor = new BackendSupervisor({
+    entry: new URL(
+        import.meta.url.endsWith('.ts') ? './worker.ts' : './worker.js',
+        import.meta.url
+    ),
+    env: {
+        SESSION_KEY: await deriveSessionKey(
+            process.env['SESSION_SECRET'] ||
+                'youneedtosetthevalueintheenv.localfiletosomethingelse',
+            process.env['SESSION_SALT'] ?? ''
+        )
+    }
+})
+const gateway = createBackendGateway(process.env['K_SERVICE'] === 'backend', supervisor)
+const health = createBackendHealthServer(supervisor, () => gateway.server.listening)
+let closing = false
+async function shutdown(code: number) {
+    if (closing) return
+    closing = true
+    health.close()
+    health.closeAllConnections()
+    await Promise.all([gateway.close(), supervisor.close()])
+    process.exit(code)
 }
-
-const createHttpApp: ApplicationFactory<http.Server> = async (fastifyFactory, options) => {
-    const server = fastifyFactory(options)
-
-    return registerApp(server)
-}
-
-const createHttp2App: ApplicationFactory<http2.Http2Server> = async (fastifyFactory, options) => {
-    const server = fastifyFactory(options)
-
-    return registerApp(server)
-}
-
-const startServer = <Server extends RawServerBase>(server: FastifyInstance<Server>) => {
-    server.listen({ port, host }, (err) => {
-        if (err) {
-            server.log.error(err)
-            process.exit(1)
-        } else {
-            console.log(`[ ready ] http://${host}:${port}`)
-        }
-    })
-}
-
-if (service === 'backend') {
-    const server = await restartable(
-        createHttp2App,
-        {
-            http2: true,
-            logger: true,
-            pluginTimeout: 20000
-        } as FastifyHttp2Options<http2.Http2Server>,
-        Fastify
-    )
-
-    startServer(server)
-} else {
-    const server = await restartable(
-        createHttpApp,
-        {
-            logger: true
-        } as FastifyHttpOptions<http.Server>,
-        Fastify
-    )
-
-    startServer(server)
+process.on('SIGTERM', () => void shutdown(0))
+process.on('SIGINT', () => void shutdown(0))
+gateway.server.on('error', (error) => {
+    console.error('Backend listener failed', error)
+    void shutdown(1)
+})
+health.on('error', (error) => {
+    console.error('Backend health listener failed', error)
+    void shutdown(1)
+})
+try {
+    health.listen({ port: Number(process.env['BACKEND_HEALTH_PORT'] ?? 8081), host: '0.0.0.0' })
+    await supervisor.start()
+    if (!closing) {
+        // Not 'localhost', which can resolve to ::1 alone while the frontend proxy dials IPv4.
+        const host = process.env['HOST'] ?? '127.0.0.1'
+        const port = Number(process.env['PORT'] ?? 3000)
+        gateway.server.listen({ port, host }, () => console.log(`[ ready ] http://${host}:${port}`))
+    }
+} catch (error) {
+    console.error('Backend startup failed', error)
+    await shutdown(1)
 }

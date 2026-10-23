@@ -1,17 +1,34 @@
 import type { GameRuntime } from '@tabletop/common'
-import { DefaultStateLogger } from '@tabletop/common'
-import type { HydratedKaivaiGameState, KaivaiGameState } from '../model/gameState.js'
+import { DefaultStateLogger, Visibility } from '@tabletop/common'
+import {
+    KaivaiGameStateValidator,
+    type HydratedKaivaiGameState,
+    KaivaiGameState,
+    type KaivaiProjectedState
+} from '../model/gameState.js'
 import { KaivaiHydrator } from './hydrator.js'
 import { KaivaiGameInitializer } from './gameInitializer.js'
 import { KaivaiApiActions } from './apiActions.js'
 import { KaivaiStateHandlers } from './stateHandlers.js'
 import { KaivaiColors } from './colors.js'
 
-export const KaivaiRuntime: GameRuntime<KaivaiGameState, HydratedKaivaiGameState> = {
+import { KaivaiActionSchemas } from './actionSchemas.js'
+import { KaivaiGameExploration } from './gameExploration.js'
+import { KaivaiScoring } from './scoring.js'
+
+export const KaivaiRuntime = {
+    randomnessVersion: 1,
+    exploration: new KaivaiGameExploration(),
     initializer: new KaivaiGameInitializer(),
+    canonicalStateValidator: KaivaiGameStateValidator,
     hydrator: new KaivaiHydrator(),
     stateHandlers: KaivaiStateHandlers,
     apiActions: KaivaiApiActions,
     playerColors: KaivaiColors,
-    stateLogger: new DefaultStateLogger()
-}
+    stateLogger: new DefaultStateLogger(),
+    scoring: new KaivaiScoring(),
+    visibility: {
+        state: Visibility.createProjector(KaivaiGameState),
+        actions: Visibility.createActionProjector(KaivaiActionSchemas)
+    }
+} satisfies GameRuntime<KaivaiProjectedState, HydratedKaivaiGameState>

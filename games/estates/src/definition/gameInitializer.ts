@@ -3,12 +3,18 @@ import {
     type RandomFunction,
     BaseGameInitializer,
     Prng,
+    assertExists,
     Color,
+    type StartingPositionAssignment,
     type UninitializedGameState
 } from '@tabletop/common'
 import { Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
-import { EstatesGameState, HydratedEstatesGameState } from '../model/gameState.js'
-import { EstatesPlayerState } from '../model/playerState.js'
+import {
+    EstatesGameState,
+    EstatesProjectedState,
+    HydratedEstatesGameState
+} from '../model/gameState.js'
+import { EstatesPlayerState, StartingMoney } from '../model/playerState.js'
 
 import { MachineState } from './states.js'
 import { BoardRow, EstatesGameBoard, Site } from '../components/gameBoard.js'
@@ -18,26 +24,32 @@ import { Cube } from '../components/cube.js'
 import { PieceType } from '../components/pieceType.js'
 
 export class EstatesGameInitializer
-    extends BaseGameInitializer<EstatesGameState, HydratedEstatesGameState>
-    implements GameInitializer<EstatesGameState, HydratedEstatesGameState>
+    extends BaseGameInitializer<EstatesProjectedState, HydratedEstatesGameState>
+    implements GameInitializer<EstatesProjectedState, HydratedEstatesGameState>
 {
-    initializeExplorationState(state: EstatesGameState): EstatesGameState {
-        const hydratedState = new HydratedEstatesGameState(state)
-        hydratedState.roofs.shuffle()
-        return hydratedState.dehydrate()
-    }
+    readonly supportsStartingPositions = true
 
-    initializeGameState(game: Game, state: UninitializedGameState): HydratedEstatesGameState {
+    initializeGameState(
+        game: Game,
+        state: UninitializedGameState,
+        assignment?: StartingPositionAssignment
+    ): HydratedEstatesGameState {
         const prng = new Prng(state.prng)
         const players = this.initializePlayers(game)
-        const turnManager = HydratedTurnManager.generate(players, prng.random)
+        const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
 
         const board = this.initializeBoard()
+        const roofPrngState = (state.systemVersion ?? 1) >= 3 ? state.protectedPrng : state.prng
+        assertExists(roofPrngState, 'Roof initialization requires a random generator')
+        const roofPrng = (state.systemVersion ?? 1) >= 3 ? new Prng(roofPrngState) : prng
 
         const estatesState: EstatesGameState = Object.assign(state, {
             players: players,
             turnManager: turnManager,
-            machineState: MachineState.StartOfTurn,
+            machineState: MachineState.StartOfTurn as const,
+            ...((state.systemVersion ?? 1) >= 3
+                ? { hiddenMoney: game.config?.hiddenMoney === true }
+                : {}),
             board,
             certificates: [
                 Company.Skyline,
@@ -48,7 +60,7 @@ export class EstatesGameInitializer
                 Company.Sienna
             ],
             cubes: this.intializeCubes(prng.random),
-            roofs: HydratedRoofBag.create(prng.random),
+            roofs: HydratedRoofBag.create(roofPrng.random),
             visibleRoofs: new Array(12).fill(true),
             mayor: true,
             barrierOne: true,
@@ -68,7 +80,7 @@ export class EstatesGameInitializer
                 playerId: player.id,
                 color: Color.White,
                 certificates: [],
-                money: 12,
+                money: StartingMoney,
                 stolen: 0,
                 score: 0
             }

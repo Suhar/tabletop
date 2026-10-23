@@ -5,6 +5,7 @@
         "check": "turbo run check",
         "clean": "turbo run clean",
         "clean:node": "rimraf node_modules /**/node_modules",
+        "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
         "watch": "turbo watch dev --filter=@tabletop/frontend --filter=@tabletop/backend",
         "dev": "turbo dev --filter=@tabletop/frontend --filter=@tabletop/backend",
         "email": "turbo watch dev --filter=@tabletop/email",
@@ -14,7 +15,10 @@
         "watch:backend": "turbo watch dev --filter=@tabletop/backend",
         "start:backend": "turbo run start --filter=@tabletop/backend",
         "update-games": "turbo update-games",
-        "deploy:tui": "node tools/deploy/esm/cli.js tui"
+        "bug-reports": "node tools/bug-reports/src/cli.mjs",
+        "deploy": "node tools/deploy/esm/cli.js",
+        "investigate": "node tools/investigate/src/cli.mjs",
+        "rehearse": "pnpm --filter @tabletop/tools exec tsx src/rehearsal/cli.mjs"
     },
     "devDependencies": {
         "@turbo/gen": "^2.8.0",
@@ -26,7 +30,7 @@
         "vitest": "^4.0.17"
     },
     "engines": {
-        "node": ">=18"
+        "node": ">=24"
     },
     "name": "tabletop",
     "packageManager": "pnpm@10.28.2",
@@ -38,6 +42,6 @@
         "tools/*"
     ],
     "dependencies": {
-        "nanoid": "^5.1.6"
+        "nanoid": "5.1.6"
     }
 }

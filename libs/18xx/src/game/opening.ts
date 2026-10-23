@@ -1,0 +1,132 @@
+import type { GameConfig, PlayerState, Prng, StartingPositionAssignment } from '@tabletop/common'
+import { assert, assertExists } from '@tabletop/common'
+import type * as Type from 'typebox'
+import type { OfferPileAuction } from '../auctions/offerPileAuction.js'
+import type { SelectionAuctionRules } from '../auctions/selectionAuction.js'
+import type { WaterfallAuctionRules } from '../auctions/waterfallAuction.js'
+import type { CompanyState } from '../company/companyState.js'
+import type { MapStateData } from '../map/mapState.js'
+import type { StockMarket } from '../stock/stockMarket.js'
+import type { TrainState } from '../trains/train.js'
+import type {
+    EighteenXXRuntimeSchema,
+    EighteenXXState,
+    HydratedEighteenXXState,
+    TitleStateSchema
+} from './eighteenXXState.js'
+
+export type OpeningSetup = {
+    players: readonly PlayerState[]
+    prng: Prng
+    config: GameConfig
+    startingPositions?: StartingPositionAssignment
+}
+/** What a title's starting cash can depend on, which the table also knows. */
+export type StartingCashSetup = { playerCount: number; config: GameConfig }
+/** The starting cash rule of a title whose cash depends only on the player count. */
+export function startingCashByPlayerCount(
+    cash: Readonly<Record<number, number>>
+): (setup: StartingCashSetup) => number {
+    return ({ playerCount }) => {
+        const amount = cash[playerCount]
+        assertExists(amount, `No starting cash for ${playerCount} players`)
+        return amount
+    }
+}
+export type InitialPosition = CompanyState &
+    MapStateData &
+    TrainState & { stockMarket: StockMarket }
+export type InitialTitleState<Schema extends TitleStateSchema> = Omit<
+    Type.Static<Schema>,
+    keyof EighteenXXState
+>
+
+export type Opening<
+    Schema extends TitleStateSchema = EighteenXXRuntimeSchema,
+    State extends HydratedEighteenXXState<Schema> & HydratedEighteenXXState =
+        HydratedEighteenXXState<Schema> & HydratedEighteenXXState
+> = {
+    position: InitialPosition
+    begin(state: State): void
+} & (Record<never, never> extends InitialTitleState<Schema>
+    ? { titleState?: InitialTitleState<Schema> }
+    : { titleState: InitialTitleState<Schema> })
+
+/** Starts play in a machine state with its first player, as an opening's `begin` does. */
+export function beginOpening(
+    state: HydratedEighteenXXState,
+    machineState: string,
+    playerId: string
+): void {
+    state.turnManager.newFirstPlayer(playerId)
+    state.turnManager.series = [{ type: 'turn', playerId, start: 0 }]
+    state.activePlayerIds = [playerId]
+    state.machineState = machineState
+}
+
+export function drawFirstPlayer(
+    playerIds: readonly string[],
+    prng: Prng,
+    startingPositions?: StartingPositionAssignment
+): string {
+    // The ordinary draw is consumed either way so the rest of the seeded setup is unchanged.
+    const drawnPlayerId = playerIds[prng.randInt(playerIds.length)]
+    return startingPositions?.playerIds[0] ?? drawnPlayerId
+}
+
+export function beginWaterfallAuction(
+    rules: WaterfallAuctionRules,
+    startingPositions?: StartingPositionAssignment
+): Opening['begin'] {
+    return (state) => {
+        const firstPlayerId = drawFirstPlayer(
+            state.turnManager.turnOrder,
+            state.getPublicPrng(),
+            startingPositions
+        )
+        state.openingAuction = {
+            remainingLotIds: rules.lots(state).map((lot) => lot.id),
+            reservations: [],
+            nextPlayerId: firstPlayerId,
+            passedPlayerIds: [],
+            discount: 0,
+            awards: [],
+            completed: false
+        }
+        beginOpening(state, 'WaterfallAuction', firstPlayerId)
+    }
+}
+
+export function beginSelectionAuction(
+    rules: SelectionAuctionRules,
+    startingPositions?: StartingPositionAssignment
+): Opening['begin'] {
+    return (state) => {
+        const firstPlayerId = drawFirstPlayer(
+            state.turnManager.turnOrder,
+            state.getPublicPrng(),
+            startingPositions
+        )
+        state.turnManager.newFirstPlayer(firstPlayerId)
+        state.selectionAuction = {
+            remainingLotIds: rules.lots(state).map((lot) => lot.id),
+            nominatorId: firstPlayerId,
+            passedPlayerIds: [],
+            awards: [],
+            closedLotIds: [],
+            completed: false
+        }
+        beginOpening(state, 'SelectionAuction', firstPlayerId)
+    }
+}
+
+export function beginOfferPileAuction(auction: OfferPileAuction): Opening['begin'] {
+    return (state) => {
+        assert(
+            state.players.some((player) => player.playerId === auction.auctioneerId),
+            'The first auctioneer must be a player'
+        )
+        state.offerAuction = auction
+        beginOpening(state, 'OfferingLot', auction.auctioneerId)
+    }
+}

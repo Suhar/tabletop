@@ -1,0 +1,142 @@
+import { RELIQUARY_MODIFIERS, Suit, cardDefinitions } from '@tabletop/oath'
+import { escapeRegExp, nameSeats, seatParts, type SeatPart, type Seats } from '$lib/model/names.js'
+
+/**
+ * R-10.13 — whose warbands a counted phrase names: "Imperial", a seat by name, the viewer's
+ * ("your"), the actor's ("their own"), or no one, which leaves them the row's.
+ */
+export type WarbandWhose =
+    | { kind: 'imperial' }
+    | { kind: 'seat'; name: string }
+    | { kind: 'viewer' }
+    | { kind: 'actor' }
+    | { kind: 'row' }
+
+/**
+ * A run of panel text: words, a seat, a favor, secret or warband token with its count, or a suit's
+ * or the skull's symbol.
+ */
+export type TextPart =
+    | SeatPart
+    | { kind: 'favor'; count?: number }
+    | { kind: 'secret'; count?: number }
+    | { kind: 'suit'; suit: Suit; bank: boolean }
+    | { kind: 'warband'; count: number; whose: WarbandWhose; words: string }
+    | { kind: 'skull'; words: string }
+
+export interface TokenOptions {
+    warbands?: boolean
+    /** "skull" and "skulls" as the skull's symbol: only the rows that ask for it. */
+    skulls?: boolean
+    /** Text naming seats by id: each seat apart for its chip, a counted warband's owner in its token's words. */
+    seats?: { names: Seats; viewerId: string | undefined }
+}
+
+const SUITS = Object.values(Suit)
+const SUIT_ALTERNATIVES = SUITS.join('|')
+const ONE = new Set(['a', 'an', 'one'])
+
+// The banners' names ("the People's Favor", "the Darkest Secret") stay words; so does "order"
+// unless it names the suit's bank or its cards.
+const ALTERNATIVES = [
+    String.raw`\b(?:the )?(?<bankSuit>${SUIT_ALTERNATIVES}) bank\b`,
+    String.raw`\b(?<cardSuit>${SUIT_ALTERNATIVES})(?= (?:advisers?|cards?|denizens?|sites?)\b)`,
+    String.raw`(?<!people['’]s )\b(?:(?<favorCount>\d+|an?|one) )?favor\b`,
+    String.raw`(?<!darkest )\b(?:(?<secretCount>\d+|an?|one) )?secrets?\b`
+]
+const WARBANDS = String.raw`\b(?<warbandCount>\d+|an?|one) (?<warbandWhose>(?<imperial>Imperial )|(?<viewer>of your (?:own )?)|(?<actor>of their own )|of (?<seat>[^,;:—]+?)['’]s )?(?<warbandNoun>warbands?)\b`
+
+const SKULLS = String.raw`\b(?<skull>skulls?)\b`
+
+const COUNTED_WARBANDS = new RegExp(WARBANDS, 'gi')
+
+function patternOf(options: TokenOptions): RegExp {
+    const alternatives = [
+        ...(options.warbands ? [WARBANDS] : []),
+        ...ALTERNATIVES,
+        ...(options.skulls ? [SKULLS] : [])
+    ]
+    return new RegExp(alternatives.join('|'), 'gi')
+}
+
+const CARD_NAMES = [
+    ...cardDefinitions().map((card) => card.name),
+    ...RELIQUARY_MODIFIERS.map((trait) => trait.name)
+].sort((a, b) => b.length - a.length)
+const CARD_NAME = new RegExp(String.raw`\b(${CARD_NAMES.map(escapeRegExp).join('|')})\b`)
+
+function countOf(word: string | undefined): number | undefined {
+    if (word === undefined) return undefined
+    return ONE.has(word.toLowerCase()) ? 1 : Number(word)
+}
+
+function suitNamed(name: string): Suit {
+    const suit = SUITS.find((s) => s === name.toLowerCase())
+    if (!suit) throw Error(`${name} is not a suit`)
+    return suit
+}
+
+/** Panel text with favor, secrets and suits as their tokens and symbols, the rest as words. */
+export function tokenParts(text: string, options: TokenOptions = {}): TextPart[] {
+    const { seats } = options
+    const pattern = patternOf(options)
+    const owned = seats && options.warbands ? ownersInWords(text, seats.names) : text
+    const runs = owned
+        .split(CARD_NAME)
+        .flatMap((run, i): TextPart[] =>
+            i % 2 === 1 ? [{ kind: 'text', text: run }] : tokenRun(run, pattern)
+        )
+    const parts = runs.reduce<TextPart[]>((merged, part) => {
+        const last = merged.at(-1)
+        if (part.kind === 'text' && last?.kind === 'text') last.text += part.text
+        else merged.push(part)
+        return merged
+    }, [])
+    if (!seats) return parts
+    return parts.flatMap((part): TextPart[] =>
+        part.kind === 'text' ? seatParts(part.text, seats.names.seats, seats.viewerId) : [part]
+    )
+}
+
+// R-10.13 — a counted warband's token swallows its owner, drawn by colour, so the name stays in its words.
+function ownersInWords(text: string, names: Seats): string {
+    return text.replace(COUNTED_WARBANDS, (phrase) => nameSeats(phrase, names, undefined))
+}
+
+function warbandWhose(groups: Record<string, string | undefined>): WarbandWhose {
+    if (groups.imperial) return { kind: 'imperial' }
+    if (groups.viewer) return { kind: 'viewer' }
+    if (groups.actor) return { kind: 'actor' }
+    if (groups.seat) return { kind: 'seat', name: groups.seat }
+    return { kind: 'row' }
+}
+
+function tokenRun(text: string, pattern: RegExp): TextPart[] {
+    const parts: TextPart[] = []
+    let from = 0
+    for (const match of text.matchAll(pattern)) {
+        const at = match.index ?? 0
+        if (at > from) parts.push({ kind: 'text', text: text.slice(from, at) })
+        const groups = match.groups ?? {}
+        const { bankSuit, cardSuit, favorCount, secretCount, warbandCount, skull } = groups
+        if (warbandCount) {
+            const count = countOf(warbandCount) ?? 1
+            const whose = warbandWhose(groups)
+            // One warband is "warband"; one of a seat's keeps "of their warbands".
+            const one = count === 1 && (whose.kind === 'imperial' || whose.kind === 'row')
+            parts.push({
+                kind: 'warband',
+                count,
+                whose,
+                words: `${groups.warbandWhose ?? ''}${one ? 'warband' : groups.warbandNoun}`
+            })
+        } else if (bankSuit) parts.push({ kind: 'suit', suit: suitNamed(bankSuit), bank: true })
+        else if (cardSuit) parts.push({ kind: 'suit', suit: suitNamed(cardSuit), bank: false })
+        else if (skull) parts.push({ kind: 'skull', words: skull })
+        else if (/favor$/i.test(match[0])) parts.push({ kind: 'favor', count: countOf(favorCount) })
+        else parts.push({ kind: 'secret', count: countOf(secretCount) })
+        from = at + match[0].length
+    }
+    if (from < text.length) parts.push({ kind: 'text', text: text.slice(from) })
+    return parts
+}

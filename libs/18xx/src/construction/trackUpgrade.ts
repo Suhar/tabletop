@@ -1,0 +1,103 @@
+import { sameTileEndpoint } from '../tiles/topology.js'
+import type { TileEndpoint, TileFace, TileNode, TilePath } from '../tiles/tile.js'
+
+export type TileNodeMapping = Readonly<Record<string, string>>
+
+export function sameStopCounts(before: TileFace, after: TileFace): boolean {
+    return ['city', 'town', 'offboard'].every(
+        (kind) =>
+            before.nodes.filter((node) => node.kind === kind).length ===
+            after.nodes.filter((node) => node.kind === kind).length
+    )
+}
+
+/**
+ * The node mappings preserving a tile's track and stops; ``townsBecomeCities`` lets a town map
+ * onto a city, as when a title promotes a town within its colour.
+ */
+export function tileUpgradeMappings(
+    before: TileFace,
+    after: TileFace,
+    options: { townsBecomeCities?: boolean } = {}
+): TileNodeMapping[] {
+    const mappings: TileNodeMapping[] = []
+    const cityTargets = trackLessCityTargets(before, after)
+    function visit(index: number, mapping: Record<string, string>) {
+        const node = before.nodes[index]
+        if (!node) {
+            if (before.paths.every((path) => preservesPath(path, after, mapping)))
+                mappings.push({ ...mapping })
+            return
+        }
+        for (const target of after.nodes) {
+            if (
+                node.kind !== target.kind &&
+                !(options.townsBecomeCities && node.kind === 'town' && target.kind === 'city')
+            )
+                continue
+            if (cityTargets && node.kind === 'city' && cityTargets.get(node.id) !== target.id)
+                continue
+            if (
+                Object.values(mapping).includes(target.id) &&
+                (node.kind !== 'city' ||
+                    before.nodes.filter((entry) => entry.kind === 'city').length <=
+                        after.nodes.filter((entry) => entry.kind === 'city').length)
+            )
+                continue
+            mapping[node.id] = target.id
+            visit(index + 1, mapping)
+            delete mapping[node.id]
+        }
+    }
+    visit(0, {})
+    return mappings
+}
+
+/**
+ * Cities with no track have nothing to preserve, so an upgrade keeps their order: the first
+ * city becomes the first city of the new tile, and so on.
+ */
+function trackLessCityTargets(before: TileFace, after: TileFace): Map<string, string> | undefined {
+    const cities = before.nodes.filter((node) => node.kind === 'city')
+    const targets = after.nodes.filter((node) => node.kind === 'city')
+    if (
+        cities.length < 2 ||
+        cities.length !== targets.length ||
+        before.paths.some((path) =>
+            path.endpoints.some(
+                (end) => end.kind === 'node' && cities.some((city) => city.id === end.nodeId)
+            )
+        )
+    )
+        return undefined
+    return new Map(cities.map((city, index) => [city.id, targets[index].id]))
+}
+
+export function preservesPath(path: TilePath, after: TileFace, mapping: TileNodeMapping): boolean {
+    const endpoints = path.endpoints.map((end): TileEndpoint =>
+        end.kind === 'node' ? { kind: 'node', nodeId: mapping[end.nodeId] } : end
+    )
+    const visited: TileEndpoint[] = []
+    const queue = [endpoints[0]]
+    while (queue.length) {
+        const current = queue.shift()!
+        if (sameTileEndpoint(current, endpoints[1])) return true
+        if (visited.some((end) => sameTileEndpoint(end, current))) continue
+        visited.push(current)
+        if (
+            !sameTileEndpoint(current, endpoints[0]) &&
+            (current.kind === 'edge' ||
+                after.nodes.find((node) => node.id === current.nodeId)?.kind !== 'junction')
+        )
+            continue
+        for (const next of after.paths) {
+            if (sameTileEndpoint(next.endpoints[0], current)) queue.push(next.endpoints[1])
+            if (sameTileEndpoint(next.endpoints[1], current)) queue.push(next.endpoints[0])
+        }
+    }
+    return false
+}
+
+export function fixedNodeRevenue(node: TileNode): number {
+    return node.kind !== 'junction' && node.revenue.kind === 'fixed' ? node.revenue.amount : 0
+}

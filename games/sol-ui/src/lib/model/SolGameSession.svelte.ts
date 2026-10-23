@@ -1,4 +1,8 @@
-import { AnimationContext, GameSession } from '@tabletop/frontend-components'
+import {
+    AnimationContext,
+    GameSession,
+    type PresentedTransition
+} from '@tabletop/frontend-components'
 import {
     ActionType,
     Card,
@@ -228,22 +232,14 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
         new SvelteMap<string, PlayerStateOverride>()
     )
 
-    skipReset = false
-
     override async onGameStateChange({
-        to,
-        from,
-        action,
-        animationContext
+        action
     }: {
         to: HydratedSolGameState
         from?: HydratedSolGameState
         action?: GameAction
         animationContext: AnimationContext
     }) {
-        // Activating an effect is a state change noop really, so we should
-        // not reset the action before the state change.  This allows for the user to do it
-        // in the middle of other actions like moving.  Undo may be an issue here though.
         if (isActivateEffect(action)) {
             if (action.effect === EffectType.Catapult) {
                 this.chosenNumDivers = undefined
@@ -251,22 +247,25 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
             if (action.effect === EffectType.Hyperdrive && (this.chosenNumDivers ?? 0) > 1) {
                 this.chosenNumDivers = 1
             }
-            if (action.effect !== EffectType.Motivate) {
-                this.skipReset = true
-            }
-            if (action.effect === EffectType.Hatch) {
-                this.skipReset = true
-            }
         }
     }
 
-    override beforeNewState(): void {
-        // Always clear forced call to action
+    // Motivate changes what can move, so it ends a move draft; other activations continue it.
+    override beforeNewState(transition: PresentedTransition): void {
         this.forcedCallToAction = undefined
-        if (!this.skipReset) {
+        if (!this.continuesOwnMove(transition)) {
             this.resetAction()
         }
-        this.skipReset = false
+    }
+
+    private continuesOwnMove(transition: PresentedTransition): boolean {
+        return (
+            transition.kind === 'own-action' &&
+            transition.actions.length > 0 &&
+            transition.actions.every(
+                (action) => isActivateEffect(action) && action.effect !== EffectType.Motivate
+            )
+        )
     }
 
     numPlayerCanMoveFromSource(): number {
@@ -501,7 +500,7 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
             this.gameState.board.requiresGateBetween(this.chosenSource, this.chosenDestination)
         ) {
             // console.log('checking gates')
-            do {
+            for (;;) {
                 const choiceData = this.getGateChoices(
                     this.chosenSource,
                     this.chosenDestination,
@@ -531,7 +530,7 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
                 } else {
                     break
                 }
-            } while (true)
+            }
         }
 
         const playerDivers = this.gameState.board
@@ -818,18 +817,13 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
                 number,
                 { coords: OffsetCoordinates; divers: Sundiver[] }
             > = new Map()
-            const secondCells = this.gameState.board.neighborsAt(this.chosenSource, Direction.Out)
-            for (const cell of secondCells) {
-                const divers = this.gameState.board.sundiversForPlayerAt(
-                    this.myPlayer.id,
-                    cell.coords
-                )
-                if (divers.length > 0) {
-                    sundiversByCoords.set(coordinatesToNumber(cell.coords), {
-                        coords: cell.coords,
-                        divers
-                    })
-                }
+            const secondCells = this.gameState.board.transmitTowerSecondCells(
+                this.myPlayer.id,
+                this.chosenSource
+            )
+            for (const coords of secondCells) {
+                const divers = this.gameState.board.sundiversForPlayerAt(this.myPlayer.id, coords)
+                sundiversByCoords.set(coordinatesToNumber(coords), { coords, divers })
             }
 
             if (sundiversByCoords.size > 1) {
@@ -860,18 +854,13 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
                 number,
                 { coords: OffsetCoordinates; divers: Sundiver[] }
             > = new Map()
-            const thirdCells = this.gameState.board.neighborsAt(this.chosenDiverCell, Direction.Out)
-            for (const cell of thirdCells) {
-                const divers = this.gameState.board.sundiversForPlayerAt(
-                    this.myPlayer.id,
-                    cell.coords
-                )
-                if (divers.length > 0) {
-                    sundiversByCoords.set(coordinatesToNumber(cell.coords), {
-                        coords: cell.coords,
-                        divers
-                    })
-                }
+            const thirdCells = this.gameState.board.transmitTowerThirdCells(
+                this.myPlayer.id,
+                this.chosenDiverCell
+            )
+            for (const coords of thirdCells) {
+                const divers = this.gameState.board.sundiversForPlayerAt(this.myPlayer.id, coords)
+                sundiversByCoords.set(coordinatesToNumber(coords), { coords, divers })
             }
 
             if (sundiversByCoords.size > 1) {

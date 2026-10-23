@@ -1,38 +1,59 @@
 import path from 'node:path'
 import {
-    GameService,
-    LibraryService,
+    AblyService,
+    AblyTransport,
+    BugReportService,
+    CatalogService,
+    ChatService,
     CloudTasksTaskService,
+    createLocalManifest,
+    DefaultNotificationService,
+    DiscordBotApi,
+    DiscordService,
+    DiscordTransport,
     EmailService,
+    EnvSecretsService,
+    EnvService,
+    FirestoreChatStore,
+    FirestoreGameStore,
+    FirestoreNotificationStore,
+    FirestorePreferenceStore,
     FirestoreTokenStore,
+    FirestoreTournamentStore,
+    FirestoreLeagueStore,
+    FirestoreSiteStatsStore,
     FirestoreUserStore,
+    GameService,
+    ProjectedHistoryCache,
+    LibraryService,
+    type LibraryServiceOptions,
+    TitleLibrary,
+    LOCAL_WORKSPACE_ROOT,
     LocalTaskService,
+    NotificationService,
+    NullPubSubService,
+    PreferenceService,
+    PubSubService,
+    PubSubTransport,
+    parseRealtimeSigningKey,
+    RealtimeTokenIssuer,
+    RedisCacheService,
+    RedisPublisher,
+    RedisPubSubService,
+    RedisService,
+    ResendEmailService,
+    SecretsService,
+    STATIC_ROOT,
     TaskService,
     TokenService,
+    TournamentService,
+    TournamentStallAlerts,
+    LeagueService,
+    SiteStatsService,
     UserService,
-    SecretsService,
-    EnvSecretsService,
-    FirestoreGameStore,
-    NotificationService,
-    PubSubService,
-    DiscordService,
-    FirestoreNotificationStore,
-    DefaultNotificationService,
-    DiscordTransport,
-    WebPushTransport,
-    AblyTransport,
-    AblyService,
-    NullPubSubService,
-    RedisPubSubService,
-    RedisCacheService,
-    RedisService,
-    ChatService,
-    FirestoreChatStore,
-    ResendEmailService,
-    PubSubTransport,
-    EnvService
+    WebPushTransport
 } from '@tabletop/backend-services'
-import type { GameDefinition } from '@tabletop/common'
+import { TitleValidation } from '../../runtime/titleValidation.js'
 
 import { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
@@ -42,6 +63,7 @@ declare module 'fastify' {
         taskService: TaskService
         tokenService: TokenService
         userService: UserService
+        preferenceService: PreferenceService
         emailService: EmailService
         secretsService: SecretsService
         gameService: GameService
@@ -52,76 +74,111 @@ declare module 'fastify' {
         chatService: ChatService
         cacheService: RedisCacheService
         libraryService: LibraryService
+        titleValidation: TitleValidation
+        catalogService: CatalogService
+        tournamentService: TournamentService
+        tournamentStallAlerts: TournamentStallAlerts
+        leagueService: LeagueService
+        siteStatsService: SiteStatsService
+        bugReportService: BugReportService | undefined
+        realtimeTokenIssuer: RealtimeTokenIssuer | undefined
     }
 }
 
 const service: string = process.env['K_SERVICE'] ?? 'local'
 const TASKS_HOST = process.env['TASKS_HOST'] ?? ''
-const STATIC_ROOT = process.env['STATIC_ROOT'] ?? '.local-static'
 const SITE_MANIFEST_PATH =
     process.env['SITE_MANIFEST_PATH'] ?? path.join(STATIC_ROOT, 'config', 'site-manifest.json')
 
 const useAbly = !!process.env['ABLY_API_KEY']
+const useRealtimeRelay = !!process.env['REALTIME_SIGNING_KEY']
+const BUG_REPORT_CHANNEL_ID = process.env['DISCORD_BUG_REPORT_CHANNEL_ID']
 
-export default fp(async (fastify: FastifyInstance) => {
+type ServicesOptions = Pick<LibraryServiceOptions, 'whileLoadingTitle'>
+
+export default fp(async (fastify: FastifyInstance, options: ServicesOptions) => {
     const secretsService = new EnvSecretsService()
     const emailService = await ResendEmailService.createEmailService(secretsService)
     const redisService = await RedisService.createRedisService(secretsService)
+    fastify.addHook('onClose', async () => redisService.destroy())
     const redisCacheService = new RedisCacheService(redisService)
+    fastify.addHook('onClose', async () => redisCacheService.destroy())
 
+    const titleValidation = new TitleValidation()
     const libraryService = new LibraryService(redisCacheService, {
         manifestPath: SITE_MANIFEST_PATH,
-        allowFallback: EnvService.isLocal(),
-        useCache: !EnvService.isLocal()
+        fallbackManifest: EnvService.isLocal()
+            ? () => createLocalManifest(LOCAL_WORKSPACE_ROOT)
+            : undefined,
+        useCache: !EnvService.isLocal(),
+        whileLoadingTitle: options.whileLoadingTitle
     })
-
-    let availableTitles: Record<string, GameDefinition> = {}
-    try {
-        availableTitles = await libraryService.getTitlesMap()
-    } catch (error) {
-        console.warn('Unable to load game definitions from manifest', error)
-    }
-
-    const taskService: TaskService =
-        service === 'local'
-            ? new LocalTaskService(TASKS_HOST)
-            : new CloudTasksTaskService(TASKS_HOST)
-    const tokenService = new TokenService(new FirestoreTokenStore(fastify.firestore))
-    const userService = new UserService(
-        new FirestoreUserStore(redisCacheService, fastify.firestore, service === 'local'),
-        tokenService,
-        taskService
+    await libraryService.getTitlesMap()
+    const availableTitles = new TitleLibrary(
+        (id) => libraryService.getGeneration(id)?.definition,
+        () => libraryService.currentTitles()
     )
+    fastify.decorate('titleValidation', titleValidation)
+
+    const taskService: TaskService = EnvService.isLocal()
+        ? new LocalTaskService(TASKS_HOST)
+        : new CloudTasksTaskService(TASKS_HOST)
+    const tokenService = new TokenService(new FirestoreTokenStore(fastify.firestore))
+    const userStore = new FirestoreUserStore(
+        redisCacheService,
+        fastify.firestore,
+        service === 'local'
+    )
+    const userService = new UserService(userStore, tokenService, taskService)
 
     let pubSubService: PubSubService = new NullPubSubService()
     if (!useAbly) {
-        pubSubService = await RedisPubSubService.createPubSubService(redisService)
+        const redisPubSubService = await RedisPubSubService.createPubSubService(redisService)
+        fastify.addHook('onClose', async () => redisPubSubService.destroy())
+        pubSubService = redisPubSubService
     }
 
+    const notificationStore = new FirestoreNotificationStore(redisCacheService, fastify.firestore)
     const notificationService = await DefaultNotificationService.createNotificationService(
-        new FirestoreNotificationStore(redisCacheService, fastify.firestore),
+        notificationStore,
         pubSubService
     )
 
+    const gameStore = new FirestoreGameStore(redisCacheService, fastify.firestore)
     const gameService = new GameService(
-        new FirestoreGameStore(redisCacheService, fastify.firestore),
+        gameStore,
         userService,
         tokenService,
         taskService,
         notificationService,
         redisCacheService,
-        availableTitles
+        availableTitles,
+        new ProjectedHistoryCache(redisService.client)
     )
 
-    const discordService = new DiscordService(notificationService, userService)
-
-    if (process.env['DISCORD_BOT_TOKEN']) {
-        const discordTransport = await DiscordTransport.createDiscordTransport(
-            secretsService,
-            gameService
+    fastify.decorate(
+        'siteStatsService',
+        new SiteStatsService(
+            { games: gameStore, users: userStore, subscriptions: notificationStore },
+            new FirestoreSiteStatsStore(fastify.firestore),
+            taskService,
+            redisCacheService
         )
+    )
+
+    const catalogService = new CatalogService(path.join(STATIC_ROOT, 'games'))
+
+    const discordBotApi = process.env['DISCORD_BOT_TOKEN']
+        ? new DiscordBotApi(await secretsService.getSecret('DISCORD_BOT_TOKEN'))
+        : undefined
+    const discordTransport = discordBotApi
+        ? new DiscordTransport(libraryService, catalogService, discordBotApi)
+        : undefined
+    if (discordTransport) {
         notificationService.addTransport(discordTransport)
     }
+
+    const discordService = new DiscordService(notificationService, userService, discordTransport)
 
     const webPushTransport = await WebPushTransport.createWebPushTransport(secretsService)
     notificationService.addTransport(webPushTransport)
@@ -131,10 +188,18 @@ export default fp(async (fastify: FastifyInstance) => {
         notificationService.addTopicTransport(ablyTransport)
         const ablyService = await AblyService.createAblyService(secretsService)
         fastify.decorate('ablyService', ablyService)
-    } else {
-        const pubSubTransport = new PubSubTransport(pubSubService)
-        notificationService.addTopicTransport(pubSubTransport)
     }
+    if (!useAbly || useRealtimeRelay) {
+        notificationService.addTopicTransport(new PubSubTransport(new RedisPublisher(redisService)))
+    }
+    fastify.decorate(
+        'realtimeTokenIssuer',
+        useRealtimeRelay
+            ? new RealtimeTokenIssuer(
+                  parseRealtimeSigningKey(await secretsService.getSecret('REALTIME_SIGNING_KEY'))
+              )
+            : undefined
+    )
 
     const chatService = new ChatService(
         gameService,
@@ -142,15 +207,64 @@ export default fp(async (fastify: FastifyInstance) => {
     )
 
     fastify.decorate('taskService', taskService)
+    const tournamentStore = new FirestoreTournamentStore(redisCacheService, fastify.firestore)
+    const tournamentService = new TournamentService(
+        tournamentStore,
+        userService,
+        availableTitles,
+        notificationService,
+        gameService,
+        taskService
+    )
+    fastify.decorate('tournamentService', tournamentService)
+    fastify.decorate(
+        'tournamentStallAlerts',
+        new TournamentStallAlerts(
+            gameStore,
+            tournamentStore,
+            userService,
+            redisCacheService,
+            taskService,
+            discordTransport,
+            process.env['FRONTEND_HOST'] ?? ''
+        )
+    )
+    fastify.decorate(
+        'leagueService',
+        new LeagueService(
+            new FirestoreLeagueStore(redisCacheService, fastify.firestore),
+            tournamentService,
+            userService,
+            taskService,
+            notificationService
+        )
+    )
+    fastify.addHook('onClose', async () => {
+        if (taskService instanceof LocalTaskService) taskService.close()
+    })
     fastify.decorate('tokenService', tokenService)
     fastify.decorate('userService', userService)
+    fastify.decorate(
+        'preferenceService',
+        new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
+    )
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)
     fastify.decorate('gameService', gameService)
     fastify.decorate('libraryService', libraryService)
+    fastify.decorate('catalogService', catalogService)
     fastify.decorate('pubSubService', pubSubService)
     fastify.decorate('notificationService', notificationService)
     fastify.decorate('discordService', discordService)
     fastify.decorate('chatService', chatService)
     fastify.decorate('cacheService', redisCacheService)
+    fastify.decorate(
+        'bugReportService',
+        discordBotApi && BUG_REPORT_CHANNEL_ID
+            ? new BugReportService(gameService, userService, discordBotApi, {
+                  forumChannelId: BUG_REPORT_CHANNEL_ID,
+                  frontendHost: process.env['FRONTEND_HOST'] ?? ''
+              })
+            : undefined
+    )
 })

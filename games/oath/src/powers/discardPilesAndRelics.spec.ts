@@ -1,0 +1,781 @@
+import { describe, expect, it } from 'vitest'
+import { buildAction, machineContext } from '../testing/actions.js'
+import { Color, getPrng, type Visibility } from '@tabletop/common'
+import { HydratedOathGameState } from '../model/gameState.js'
+import { HydratedUseActionPower, UseActionPower } from '../actions/useActionPower.js'
+import { HydratedSearch, Search, SearchSource } from '../actions/search.js'
+import { HydratedSearchResolve, SearchPlay, SearchResolve } from '../actions/searchResolve.js'
+import { MachineState } from '../definition/states.js'
+import { ActPhaseStateHandler } from '../stateHandlers/actPhase.js'
+import { Banner, CardKind, PlayerStatus, Region } from '../model/oathEnums.js'
+import { reliquarySlotId } from '../util/setup.js'
+import { createOathVault, type OathVault } from '../model/vault.js'
+import { testPlayer, testState, openTurn } from '../testing/fixture.js'
+import { type PowerChoice } from '../util/powerChoice.js'
+import { PowerTiming, powerIndexOf } from '../data/cardPowers.js'
+import { type ModifierUse } from '../util/modifiers.js'
+import '../powers/index.js'
+import { PowerQuestionKind } from '../model/question.js'
+import { answerQuestion } from '../testing/steps.js'
+import { region, slot, modifierUse, yes } from '../testing/choices.js'
+import { INN, FILLER } from '../testing/cards.js'
+import { IMPERIAL_WARBANDS } from '../model/warbandCounts.js'
+import { served, servedJson, spectator } from '../testing/projection.js'
+import { OathVisibility } from '../definition/runtime.js'
+import { OathRevision } from '../util/revision.js'
+import { RunMode, engine } from '../testing/engine.js'
+import { testGame } from '../testing/game.js'
+
+const FAE = 'denizen.beast.fae-merchant'
+const BREAKER = 'denizen.hearth.relic-breaker'
+const MUSHROOMS = 'denizen.beast.mushrooms'
+const AUGURY = 'denizen.arcane.augury'
+const ERRAND_BOY = 'denizen.beast.errand-boy'
+const OBSERVATORY = 'denizen.arcane.observatory'
+const HARP = 'relic.truthful-harp'
+const SONGS = 'denizen.hearth.tavern-songs'
+const SCRYER = 'denizen.discord.scryer'
+const BRACKEN = 'denizen.beast.bracken'
+const CONVOYS = 'denizen.nomad.convoys'
+const ORACLE = 'denizen.nomad.oracle'
+const AMBITIONS = 'denizen.discord.royal-ambitions'
+const PACT = 'denizen.nomad.ancient-pact'
+const TENTS = 'denizen.nomad.tents'
+const WOLVES = 'denizen.beast.wolves'
+const PILE_C1 = 'denizen.hearth.ballot-box'
+const PILE_C2 = 'denizen.beast.rangers'
+const PILE_C3 = 'denizen.order.wrestlers'
+const PILE_P1 = 'denizen.nomad.elders'
+const PILE_P2 = 'denizen.discord.naysayers'
+const CUP = 'relic.cup-of-plenty'
+const DRUM = 'relic.dragonskin-drum'
+const MAP = 'relic.map'
+const RING = 'relic.ring-of-devotion'
+
+function board(
+    cards: Record<string, string[]> = {},
+    advisers: Record<string, string[]> = {},
+    over: Record<string, Record<string, unknown>> = {},
+    state: Record<string, unknown> = {}
+) {
+    const adv = (id: string) => (advisers[id] ?? []).map((cardId) => ({ cardId, faceUp: true }))
+    const s = testState(
+        [
+            testPlayer({
+                playerId: 'ruler',
+                color: Color.Red,
+                status: PlayerStatus.Exile,
+                siteId: 'c1',
+                favor: 4,
+                secrets: 4,
+                supply: 5,
+                warbandsOnBoard: { ruler: 4 },
+                warbandsInPersonalBank: { ruler: 6 },
+                advisers: adv('ruler'),
+                ...over['ruler']
+            }),
+            testPlayer({
+                playerId: 'chancellor',
+                color: Color.Purple,
+                status: PlayerStatus.Chancellor,
+                siteId: 'h1',
+                favor: 2,
+                secrets: 2,
+                supply: 5,
+                warbandsOnBoard: { [IMPERIAL_WARBANDS]: 3 },
+                warbandsInPersonalBank: { [IMPERIAL_WARBANDS]: 12 },
+                advisers: adv('chancellor'),
+                ...over['chancellor']
+            })
+        ],
+        {
+            chancellorPlayerId: 'chancellor',
+            denizensBySite: { c1: [], c2: [], p1: [], h1: [], ...cards },
+            warbandsBySite: {
+                c1: { ruler: 1 },
+                c2: { ruler: 2 },
+                p1: {},
+                h1: { [IMPERIAL_WARBANDS]: 2 }
+            },
+            siteCards: {
+                c1: 'site.plains',
+                c2: 'site.river',
+                p1: 'site.marshes',
+                h1: 'site.mountain'
+            },
+            discardPileCounts: { cradle: 3, provinces: 2, hinterland: 0 },
+            discardTopBackType: { cradle: CardKind.Denizen, provinces: CardKind.Denizen },
+            ...state
+        }
+    )
+    openTurn(s, 'ruler')
+    return s
+}
+function vaultFor(over: Parameters<typeof createOathVault>[0] = {}): OathVault {
+    const vault = createOathVault(
+        {
+            discardPiles: {
+                cradle: [PILE_C1, PILE_C2, PILE_C3],
+                provinces: [PILE_P1, PILE_P2],
+                hinterland: []
+            },
+            composeWorldDeck: () => [INN, 'vision.supremacy', TENTS, 'vision.people'],
+            ...over
+        },
+        getPrng(1)
+    )
+    // Assigned after the shuffle, so the relic draws are known.
+    vault.relicDeck = [DRUM, MAP, RING]
+    return vault
+}
+function serverUse(
+    s: ReturnType<typeof board>,
+    vault: OathVault,
+    cardId: string,
+    choices?: PowerChoice[]
+) {
+    const action = buildAction(UseActionPower, {
+        playerId: 'ruler',
+        cardId,
+        powerIndex: powerIndexOf(cardId, PowerTiming.Action),
+        choices
+    })
+    s.vault = vault
+    const hydrated = new HydratedUseActionPower(action)
+    hydrated.apply(s)
+    return hydrated
+}
+function serverSearch(s: ReturnType<typeof board>, vault: OathVault, modifiers?: ModifierUse[]) {
+    const action = buildAction(Search, {
+        playerId: 'ruler',
+        drawFrom: SearchSource.Discard,
+        revealsInfo: true,
+        modifiers
+    })
+    s.vault = vault
+    const hydrated = new HydratedSearch(action)
+    hydrated.apply(s)
+    return hydrated
+}
+function serverResolve(
+    s: ReturnType<typeof board>,
+    vault: OathVault,
+    fields: Partial<SearchResolve>
+) {
+    const action = buildAction(SearchResolve, { playerId: 'ruler', ...fields })
+    s.vault = vault
+    const hydrated = new HydratedSearchResolve(action)
+    hydrated.apply(s)
+    return hydrated
+}
+
+describe('relics', () => {
+    it('Fae Merchant — draws the top relic, then sends one you hold (or the new one) to the bottom, seeing it', () => {
+        const s = board({ c1: [FAE] }, {}, { ruler: { relicIds: [CUP, 'relic.grand-scepter'] } })
+        const vault = vaultFor()
+        const a = serverUse(s, vault, FAE)
+        expect(a.revealsInfo).toBe(true)
+        expect(s.pendingQuestions?.queue[0]).toMatchObject({
+            kind: PowerQuestionKind.BottomRelic,
+            askedPlayerId: 'ruler',
+            relicCardId: DRUM
+        })
+        expect(s.getPlayerState('ruler').relicIds).toEqual([CUP, 'relic.grand-scepter'])
+        // The Grand Scepter is never put down.
+        expect(() =>
+            answerQuestion(s, 'ruler', {
+                kind: PowerQuestionKind.BottomRelic,
+                heldRelicCardId: 'relic.grand-scepter'
+            })
+        ).toThrow(/Grand Scepter/)
+        const kept = answerQuestion(s, 'ruler', {
+            kind: PowerQuestionKind.BottomRelic,
+            heldRelicCardId: CUP
+        })
+        expect(s.getPlayerState('ruler').relicIds).toEqual(['relic.grand-scepter', DRUM])
+        expect(vault.relicDeck).toEqual([MAP, RING, CUP])
+        expect(kept.metadata?.relicToDeckBottom).toBe(CUP)
+        // A held relic was public, so every player knows it lies at the bottom.
+        expect(s.players.map((player) => player.knownRelicDeckBottom)).toEqual([[CUP], [CUP]])
+        expect(kept.metadata?.summary).toContain(DRUM)
+
+        const t = board({ c1: [FAE] }, {}, { ruler: { relicIds: [CUP] } })
+        const v = vaultFor()
+        serverUse(t, v, FAE)
+        const unkept = answerQuestion(t, 'ruler', { kind: PowerQuestionKind.BottomRelic })
+        expect(t.getPlayerState('ruler').relicIds).toEqual([CUP])
+        expect(v.relicDeck).toEqual([MAP, RING, DRUM])
+        expect(t.players.map((player) => player.knownRelicDeckBottom)).toEqual([[DRUM], []])
+        // R-9.4 — a relic drawn and sent down unkept is named only in the Actor-protected fields.
+        expect(unkept.metadata?.summary).not.toContain(DRUM)
+    })
+
+    it('Relic Breaker — a facedown relic at your site goes under the deck for three warbands', () => {
+        const s = board(
+            { c1: [BREAKER] },
+            {},
+            { chancellor: { peekedRelicSlotIds: ['slot-1'], peekedRelics: { 'slot-1': CUP } } },
+            { relicsBySite: { c1: [{ slotId: 'slot-1' }] } }
+        )
+        const vault = vaultFor({ relicFacedown: { 'slot-1': CUP } })
+        const a = serverUse(s, vault, BREAKER, [slot('slot-1')])
+        expect(s.relicSlotsAt('c1')).toEqual([])
+        expect(s.getPlayerState('ruler').warbandsOnBoard['ruler']).toBe(7)
+        expect(vault.relicDeck).toEqual([DRUM, MAP, RING, CUP])
+        expect(vault.relicFacedown['slot-1']).toBeUndefined()
+        // R-9.4 — the card never lets its user look, so the record names the slot and not the relic.
+        expect(a.metadata?.relicToDeckBottom).toBeUndefined()
+        expect(a.metadata?.relicSlotToBottom).toBe('slot-1')
+        expect(JSON.stringify(a.metadata)).not.toContain(CUP)
+        // Only a player who had peeked at the slot knows what went down.
+        expect(s.players.map((player) => player.knownRelicDeckBottom)).toEqual([[], [CUP]])
+        expect(() =>
+            serverUse(board({ c1: [BREAKER] }), vaultFor(), BREAKER, [slot('slot-1')])
+        ).toThrow()
+    })
+
+    it('Relic Breaker used by a Citizen records the warbands gained as their own', () => {
+        const s = board(
+            { c1: [BREAKER] },
+            {},
+            { ruler: { status: PlayerStatus.Citizen } },
+            { relicsBySite: { c1: [{ slotId: 'slot-1' }] } }
+        )
+        const a = serverUse(s, vaultFor({ relicFacedown: { 'slot-1': CUP } }), BREAKER, [
+            slot('slot-1')
+        ])
+        expect(a.metadata?.summary).toBe(
+            'Relic Breaker: the relic went to the bottom of the relic deck; gained 3 warbands'
+        )
+        expect(a.metadata?.warbandOwner).toBe('ruler')
+    })
+})
+
+describe('discard piles', () => {
+    it('Mushrooms — free, one card, from the bottom of your pile', () => {
+        const s = board({ c1: [MUSHROOMS] })
+        const use = [modifierUse(MUSHROOMS)]
+        expect(HydratedSearch.plan(s, 'ruler', SearchSource.Discard, use).cost).toBe(0)
+        expect(HydratedSearch.drawCount(s, 'ruler', use, SearchSource.Discard)).toBe(1)
+        expect(HydratedSearch.reasonCannotSearch(s, 'ruler', SearchSource.WorldDeck, use)).toMatch(
+            /not searching a discard pile/
+        )
+        const vault = vaultFor()
+        const a = serverSearch(s, vault, use)
+        expect(a.metadata?.draw.drawnCardIds).toEqual([PILE_C3])
+        expect(vault.discardPiles.cradle).toEqual([PILE_C1, PILE_C2])
+        expect(s.getPlayerState('ruler').supply).toBe(5)
+        expect(s.discardPileCounts.cradle).toBe(2)
+    })
+
+    describe('Mushrooms with Augury — the one card Mushrooms sets is what Augury adds to (their Q&As)', () => {
+        const atRevision = OathRevision.CardFixes1
+        const before = OathRevision.PlanCostsAndSearchPlays
+        const declared = (cardIds: string[]) => cardIds.map((cardId) => modifierUse(cardId))
+        const table = (oathRevision: number) =>
+            board({ c1: [MUSHROOMS, AUGURY] }, {}, {}, { oathRevision })
+
+        it('draws two from the bottom of the pile, in either declaration order', () => {
+            for (const order of [
+                [MUSHROOMS, AUGURY],
+                [AUGURY, MUSHROOMS]
+            ]) {
+                expect(
+                    HydratedSearch.drawCount(
+                        table(atRevision),
+                        'ruler',
+                        declared(order),
+                        SearchSource.Discard
+                    )
+                ).toBe(2)
+                const s = table(atRevision)
+                const vault = vaultFor()
+                expect(serverSearch(s, vault, declared(order)).metadata?.draw.drawnCardIds).toEqual(
+                    [PILE_C3, PILE_C2]
+                )
+                expect(vault.discardPiles.cradle).toEqual([PILE_C1])
+            }
+        })
+
+        it('R-X.4 — in a game created before revision 4 the order declared decides: Augury first draws one', () => {
+            expect(
+                HydratedSearch.drawCount(
+                    table(before),
+                    'ruler',
+                    declared([MUSHROOMS, AUGURY]),
+                    SearchSource.Discard
+                )
+            ).toBe(2)
+            expect(
+                HydratedSearch.drawCount(
+                    table(before),
+                    'ruler',
+                    declared([AUGURY, MUSHROOMS]),
+                    SearchSource.Discard
+                )
+            ).toBe(1)
+        })
+
+        it('R-X.4 — each revision’s Search with Augury declared first replays unchanged', () => {
+            for (const [revision, drawn] of [
+                [before, 1],
+                [atRevision, 2]
+            ]) {
+                const s = table(revision)
+                s.vault = vaultFor()
+                const start = s.dehydrate()
+                const game = testGame(['ruler', 'chancellor'])
+                const recorded = engine.runNext(
+                    buildAction(Search, {
+                        playerId: 'ruler',
+                        drawFrom: SearchSource.Discard,
+                        revealsInfo: true,
+                        modifiers: declared([AUGURY, MUSHROOMS])
+                    }),
+                    structuredClone(start),
+                    game
+                )
+                expect(
+                    recorded.updatedState.players.find((p) => p.playerId === 'ruler')?.handIds
+                ).toHaveLength(drawn)
+
+                let replayed = structuredClone(start)
+                for (const action of recorded.processedActions)
+                    replayed = engine.run(
+                        structuredClone(action),
+                        replayed,
+                        game,
+                        RunMode.Single
+                    ).updatedState
+                expect(replayed).toEqual(recorded.updatedState)
+            }
+        })
+    })
+
+    describe('the Marshes take their one card off what Mushrooms sets (R-11.11-H1)', () => {
+        const atRevision = OathRevision.EngineFixes12
+        const before = OathRevision.EngineFixes11
+        const declared = (cardIds: string[]) => cardIds.map((cardId) => modifierUse(cardId))
+        const marshes = {
+            c1: 'site.marshes',
+            c2: 'site.river',
+            p1: 'site.plains',
+            h1: 'site.mountain'
+        }
+        const table = (
+            oathRevision: number,
+            cards: string[],
+            over: Record<string, Record<string, unknown>> = {}
+        ) => board({ c1: cards }, {}, over, { oathRevision, siteCards: marshes })
+        const draw = (s: ReturnType<typeof board>, cardIds: string[]) =>
+            HydratedSearch.drawCount(s, 'ruler', declared(cardIds), SearchSource.Discard)
+        const searchWith = (cardIds: string[]) =>
+            buildAction(Search, {
+                playerId: 'ruler',
+                drawFrom: SearchSource.Discard,
+                revealsInfo: true,
+                modifiers: declared(cardIds)
+            })
+
+        it('Mushrooms with Augury at the Marshes draws one, the bottom card of the pile', () => {
+            const s = table(atRevision, [MUSHROOMS, AUGURY])
+            expect(draw(s, [MUSHROOMS, AUGURY])).toBe(1)
+            expect(draw(s, [AUGURY, MUSHROOMS])).toBe(1)
+            const vault = vaultFor()
+            expect(
+                serverSearch(s, vault, declared([MUSHROOMS, AUGURY])).metadata?.draw.drawnCardIds
+            ).toEqual([PILE_C3])
+            expect(vault.discardPiles.cradle).toEqual([PILE_C1, PILE_C2])
+        })
+
+        it('Mushrooms alone at the Marshes would draw nothing, so that Search is refused and not offered', () => {
+            const s = table(atRevision, [MUSHROOMS])
+            expect(draw(s, [MUSHROOMS])).toBe(0)
+            expect(
+                HydratedSearch.reasonCannotSearch(
+                    s,
+                    'ruler',
+                    SearchSource.Discard,
+                    declared([MUSHROOMS])
+                )
+            ).toBe('this Search would draw no card')
+            expect(HydratedSearch.legalSources(s, 'ruler', declared([MUSHROOMS]))).toEqual([])
+            // Without Mushrooms the Marshes' Search is offered as before.
+            expect(HydratedSearch.legalSources(s, 'ruler')).toEqual([
+                SearchSource.WorldDeck,
+                SearchSource.Discard
+            ])
+        })
+
+        it("the refusal reads only what the seat sees: the same on the ruler's own view, nothing copied", () => {
+            // The chancellor's facedown adviser is in the server's state and not in the ruler's view.
+            const s = table(atRevision, [MUSHROOMS], {
+                chancellor: { advisers: [{ cardId: TENTS, faceUp: false }] }
+            })
+            const ruler: Visibility.Perspective = { kind: 'player', playerId: 'ruler' }
+            const ownView = OathVisibility.state.guardForExecution(
+                new HydratedOathGameState(served(s, ruler)),
+                ruler
+            )
+            const server = JSON.stringify(s.dehydrate())
+            for (const state of [s, ownView]) {
+                expect(
+                    HydratedSearch.drawCount(
+                        state,
+                        'ruler',
+                        declared([MUSHROOMS]),
+                        SearchSource.Discard
+                    )
+                ).toBe(0)
+                expect(
+                    HydratedSearch.reasonCannotSearch(
+                        state,
+                        'ruler',
+                        SearchSource.Discard,
+                        declared([MUSHROOMS])
+                    )
+                ).toBe('this Search would draw no card')
+                expect(HydratedSearch.legalSources(state, 'ruler', declared([MUSHROOMS]))).toEqual(
+                    []
+                )
+                expect(HydratedSearch.legalSources(state, 'ruler')).toEqual([
+                    SearchSource.WorldDeck,
+                    SearchSource.Discard
+                ])
+            }
+            expect(JSON.stringify(s.dehydrate())).toBe(server)
+        })
+
+        it('the engine refuses that Search, so the game never waits in Searching on an empty hand', () => {
+            const s = table(atRevision, [MUSHROOMS])
+            s.vault = vaultFor()
+            const start = s.dehydrate()
+            expect(() =>
+                engine.runNext(
+                    searchWith([MUSHROOMS]),
+                    structuredClone(start),
+                    testGame(['ruler', 'chancellor'])
+                )
+            ).toThrow(/this Search would draw no card/)
+        })
+
+        it('Mushrooms with Truthful Harp at the Marshes draws two', () => {
+            const s = table(atRevision, [MUSHROOMS], { ruler: { relicIds: [HARP] } })
+            expect(draw(s, [MUSHROOMS, HARP])).toBe(2)
+        })
+
+        it('Mushrooms drawing from another pile at the Marshes: an empty pile is refused as empty, a full one as drawing nothing', () => {
+            const s = table(atRevision, [MUSHROOMS], {
+                ruler: { advisers: [{ cardId: ERRAND_BOY, faceUp: true }] }
+            })
+            const errand = (to: Region) => [
+                modifierUse(MUSHROOMS),
+                modifierUse(ERRAND_BOY, [region(to)])
+            ]
+            expect(
+                HydratedSearch.reasonCannotSearch(
+                    s,
+                    'ruler',
+                    SearchSource.Discard,
+                    errand(Region.Hinterland)
+                )
+            ).toBe('the hinterland discard pile is empty')
+            expect(
+                HydratedSearch.drawCount(s, 'ruler', errand(Region.Provinces), SearchSource.Discard)
+            ).toBe(0)
+            expect(
+                HydratedSearch.reasonCannotSearch(
+                    s,
+                    'ruler',
+                    SearchSource.Discard,
+                    errand(Region.Provinces)
+                )
+            ).toBe('this Search would draw no card')
+            const o = table(atRevision, [MUSHROOMS, OBSERVATORY])
+            const observe = [
+                modifierUse(MUSHROOMS),
+                modifierUse(OBSERVATORY, [region(Region.Provinces)])
+            ]
+            expect(
+                HydratedSearch.reasonCannotSearch(o, 'ruler', SearchSource.Discard, observe)
+            ).toBe('this Search would draw no card')
+        })
+
+        it('without a card that sets the count, the Marshes draw as before: Augury 3, Truthful Harp 4, none 2', () => {
+            for (const revision of [before, atRevision]) {
+                const s = table(revision, [AUGURY], { ruler: { relicIds: [HARP] } })
+                expect(draw(s, [AUGURY])).toBe(3)
+                expect(draw(s, [HARP])).toBe(4)
+                expect(draw(s, [])).toBe(2)
+                expect(HydratedSearch.drawCount(s, 'ruler')).toBe(2)
+            }
+        })
+
+        it('Mushrooms away from the Marshes still draws one, two with Augury', () => {
+            const s = board({ c1: [MUSHROOMS, AUGURY] }, {}, {}, { oathRevision: atRevision })
+            expect(draw(s, [MUSHROOMS])).toBe(1)
+            expect(draw(s, [MUSHROOMS, AUGURY])).toBe(2)
+        })
+
+        it('R-X.4 — before revision 16 Mushrooms at the Marshes draws one, two with Augury, and replays unchanged', () => {
+            const s = table(before, [MUSHROOMS, AUGURY])
+            expect(draw(s, [MUSHROOMS])).toBe(1)
+            expect(draw(s, [MUSHROOMS, AUGURY])).toBe(2)
+            expect(
+                HydratedSearch.reasonCannotSearch(
+                    s,
+                    'ruler',
+                    SearchSource.Discard,
+                    declared([MUSHROOMS])
+                )
+            ).toBeUndefined()
+            s.vault = vaultFor()
+            const start = s.dehydrate()
+            const game = testGame(['ruler', 'chancellor'])
+            const recorded = engine.runNext(searchWith([MUSHROOMS]), structuredClone(start), game)
+            expect(recorded.updatedState.machineState).toBe(MachineState.Searching)
+            expect(
+                recorded.updatedState.players.find((p) => p.playerId === 'ruler')?.handIds
+            ).toHaveLength(1)
+            let replayed = structuredClone(start)
+            for (const action of recorded.processedActions)
+                replayed = engine.run(
+                    structuredClone(action),
+                    replayed,
+                    game,
+                    RunMode.Single
+                ).updatedState
+            expect(replayed).toEqual(recorded.updatedState)
+        })
+    })
+
+    it('Tavern Songs and Scryer — a peek, recorded for the peeker and nothing moved', () => {
+        const s = board({ c1: [SONGS, SCRYER] })
+        const vault = vaultFor()
+        const a = serverUse(s, vault, SONGS)
+        expect(a.metadata?.peeked).toEqual([PILE_C1, PILE_C2, PILE_C3])
+        expect(a.metadata?.summary).not.toMatch(/d\.c1/)
+        expect(a.revealsInfo).toBe(true)
+        expect(vault.discardPiles.cradle).toEqual([PILE_C1, PILE_C2, PILE_C3])
+        const b = serverUse(s, vault, SCRYER, [region(Region.Provinces)])
+        expect(b.metadata?.peeked).toEqual([PILE_P1, PILE_P2])
+        expect(s.getPlayerState('ruler').secrets).toBe(3)
+        // Kept by position from the bottom of each pile.
+        expect(s.getPlayerState('ruler').knownDiscardPiles).toEqual({
+            cradle: [PILE_C3, PILE_C2, PILE_C1],
+            provinces: [PILE_P2, PILE_P1],
+            hinterland: []
+        })
+        expect(s.getPlayerState('chancellor').knownDiscardPiles).toEqual({
+            cradle: [],
+            provinces: [],
+            hinterland: []
+        })
+    })
+
+    it("Bracken — the Search's discards go to the pile you name, on top or underneath", () => {
+        const s = board({ c1: [BRACKEN] })
+        const vault = vaultFor()
+        const use = [modifierUse(BRACKEN, [region(Region.Provinces), yes])]
+        serverSearch(s, vault, use)
+        expect(s.pendingSearchModifiers?.[0]?.choices).toEqual([region(Region.Provinces), yes])
+        s.getPlayerState('ruler').handIds = [INN, 'vision.supremacy', WOLVES]
+        const r = serverResolve(s, vault, {
+            keptCardId: INN,
+            discardOrder: [WOLVES, 'vision.supremacy'],
+            play: SearchPlay.Adviser,
+            faceUp: false
+        })
+        expect(r.metadata?.discardPileRegion).toBe(Region.Provinces)
+        expect(r.metadata?.discardToBottom).toBe(true)
+        expect(vault.discardPiles.provinces).toEqual([PILE_P1, PILE_P2, WOLVES, 'vision.supremacy'])
+        expect(s.discardPileCounts.provinces).toBe(4)
+        expect(s.discardTopBackType?.provinces).toBe(CardKind.Denizen)
+        const t = board({ c1: [BRACKEN] })
+        const v = vaultFor()
+        serverSearch(t, v, [modifierUse(BRACKEN, [region(Region.Hinterland)])])
+        t.getPlayerState('ruler').handIds = [INN, 'vision.supremacy', WOLVES]
+        serverResolve(t, v, {
+            keptCardId: INN,
+            discardOrder: [WOLVES, 'vision.supremacy'],
+            play: SearchPlay.Adviser,
+            faceUp: false
+        })
+        expect(v.discardPiles.hinterland).toEqual(['vision.supremacy', WOLVES])
+        expect(t.discardPileCounts.hinterland).toBe(2)
+        expect(t.discardTopBackType?.hinterland).toBe(CardKind.Vision)
+    })
+
+    it("Convoys — another region's pile lands on top of yours", () => {
+        const s = board({ c1: [CONVOYS] })
+        const vault = vaultFor()
+        const a = serverUse(s, vault, CONVOYS, [region(Region.Provinces)])
+        expect(vault.discardPiles.cradle).toEqual([PILE_P1, PILE_P2, PILE_C1, PILE_C2, PILE_C3])
+        expect(vault.discardPiles.provinces).toEqual([])
+        expect(s.discardPileCounts).toEqual({ cradle: 5, provinces: 0, hinterland: 0 })
+        expect(s.discardTopBackType?.provinces).toBeUndefined()
+        expect(a.metadata?.mergePiles).toEqual({ from: Region.Provinces, to: Region.Cradle })
+        expect(() =>
+            serverUse(board({ c1: [CONVOYS] }), vaultFor(), CONVOYS, [region(Region.Cradle)])
+        ).toThrow()
+    })
+
+    it('Oracle — the next Vision in the deck comes to hand, and the machine holds as for a Search', () => {
+        const s = board({ c1: [ORACLE] })
+        const vault = vaultFor()
+        const a = serverUse(s, vault, ORACLE)
+        expect(s.getPlayerState('ruler').handIds).toEqual(['vision.supremacy'])
+        expect(vault.worldDeck).toEqual([INN, TENTS, 'vision.people'])
+        expect(s.visionsDrawn).toBe(1)
+        // R-9.4 — the public top back follows the deck the Vision left.
+        expect(s.topCardBackType).toBe(CardKind.Denizen)
+        expect(s.worldDeckExhausted).toBe(false)
+        expect(a.metadata?.opensSearch).toBe(true)
+        // R-2.7.1 — the draw itself is public, as a Search's stop on a Vision is.
+        expect(a.metadata?.visionDrawn).toBe(true)
+        expect(OathVisibility.actions.project(a.dehydrate(), spectator)).toHaveProperty(
+            'metadata.visionDrawn',
+            true
+        )
+        expect(new ActPhaseStateHandler().onAction(a, machineContext(s))).toBe(
+            MachineState.Searching
+        )
+        expect(s.getPlayerState('ruler').secrets).toBe(2)
+        // R-9.4 — the Vision drawn reaches its drawer alone, in state and in the record.
+        expect(served(s, { kind: 'player', playerId: 'ruler' }).players[0].handIds).toEqual([
+            'vision.supremacy'
+        ])
+        for (const perspective of [
+            { kind: 'player', playerId: 'chancellor' } as const,
+            spectator
+        ]) {
+            expect(servedJson(s, perspective)).not.toContain('vision.supremacy')
+            expect(
+                JSON.stringify(OathVisibility.actions.project(a.dehydrate(), perspective))
+            ).not.toContain('vision.supremacy')
+        }
+        serverResolve(s, vault, {
+            keptCardId: 'vision.supremacy',
+            discardOrder: [],
+            play: SearchPlay.RevealedVision
+        })
+        expect(s.getPlayerState('ruler').revealedVisionId).toBe('vision.supremacy')
+    })
+})
+
+describe('Oracle keeps the public deck facts current (R-9.4)', () => {
+    it('taking the only card leaves the deck exhausted with no top back', () => {
+        const s = board(
+            { c1: [ORACLE] },
+            {},
+            {},
+            { topCardBackType: CardKind.Vision, worldDeckExhausted: false }
+        )
+        serverUse(s, vaultFor({ composeWorldDeck: () => ['vision.people'] }), ORACLE)
+        expect(s.topCardBackType).toBeUndefined()
+        expect(s.worldDeckExhausted).toBe(true)
+    })
+})
+
+describe('Citizenship with a Reliquary relic', () => {
+    function playAdviser(
+        s: ReturnType<typeof board>,
+        vault: OathVault,
+        cardId: string,
+        choices?: PowerChoice[]
+    ) {
+        s.getPlayerState('ruler').handIds = [cardId, FILLER]
+        return serverResolve(s, vault, {
+            keptCardId: cardId,
+            discardOrder: [FILLER],
+            play: SearchPlay.Adviser,
+            faceUp: true,
+            choices
+        })
+    }
+
+    it('Royal Ambitions — an Exile ruling more sites than the Chancellor takes a Reliquary relic and the seat', () => {
+        // ruler rules c1 and c2; the Chancellor rules h1.
+        const s = board()
+        const vault = vaultFor({
+            relicFacedown: {
+                [reliquarySlotId(0)]: CUP,
+                [reliquarySlotId(1)]: DRUM,
+                [reliquarySlotId(2)]: MAP,
+                [reliquarySlotId(3)]: RING
+            }
+        })
+        const a = playAdviser(s, vault, AMBITIONS, [yes, slot(reliquarySlotId(1))])
+        expect(s.getPlayerState('ruler').status).toBe(PlayerStatus.Citizen)
+        expect(s.getPlayerState('ruler').relicIds).toEqual([DRUM])
+        expect(s.reliquarySlots().map((r) => r.slotId)).toEqual([
+            reliquarySlotId(0),
+            reliquarySlotId(2),
+            reliquarySlotId(3)
+        ])
+        expect(a.metadata?.endsActPhase).toBe(true)
+        expect(vault.relicFacedown[reliquarySlotId(1)]).toBeUndefined()
+        const weak = board(
+            {},
+            {},
+            {},
+            { warbandsBySite: { c1: { ruler: 1 }, c2: {}, p1: {}, h1: { [IMPERIAL_WARBANDS]: 2 } } }
+        )
+        expect(() =>
+            playAdviser(weak, vaultFor(), AMBITIONS, [yes, slot(reliquarySlotId(0))])
+        ).toThrow(/not more than the Chancellor/)
+        const keep = board()
+        playAdviser(keep, vaultFor(), AMBITIONS)
+        expect(keep.getPlayerState('ruler').status).toBe(PlayerStatus.Exile)
+        expect(keep.reliquarySlots()).toHaveLength(4)
+    })
+
+    it('Relic Thief — a relic taken by Royal Ambitions or kept from Fae Merchant is a take it may roll for', () => {
+        const thief = {
+            chancellor: {
+                siteId: 'c2',
+                advisers: [{ cardId: 'denizen.discord.relic-thief', faceUp: true }]
+            }
+        }
+        const asked = (s: ReturnType<typeof board>) =>
+            s.pendingQuestions?.queue.find((q) => q.kind === PowerQuestionKind.RelicThiefRoll)
+        const s = board({}, {}, thief)
+        playAdviser(s, vaultFor({ relicFacedown: { [reliquarySlotId(1)]: DRUM } }), AMBITIONS, [
+            yes,
+            slot(reliquarySlotId(1))
+        ])
+        expect(asked(s)).toMatchObject({
+            askedPlayerId: 'chancellor',
+            takerPlayerId: 'ruler',
+            relicCardIds: [DRUM]
+        })
+        const kept = board({ c1: [FAE] }, {}, { ...thief, ruler: { relicIds: [CUP] } })
+        serverUse(kept, vaultFor(), FAE)
+        answerQuestion(kept, 'ruler', { kind: PowerQuestionKind.BottomRelic, heldRelicCardId: CUP })
+        expect(asked(kept)).toMatchObject({ takerPlayerId: 'ruler', relicCardIds: [DRUM] })
+        const unkept = board({ c1: [FAE] }, {}, { ...thief, ruler: { relicIds: [CUP] } })
+        serverUse(unkept, vaultFor(), FAE)
+        answerQuestion(unkept, 'ruler', { kind: PowerQuestionKind.BottomRelic })
+        expect(asked(unkept)).toBeUndefined()
+    })
+
+    it('Ancient Pact — the Darkest Secret is given to the Chancellor, unburned (its Q&A), for the seat and a relic', () => {
+        const ds = {
+            banners: {
+                [Banner.DarkestSecret]: { holderPlayerId: 'ruler', value: 2 },
+                [Banner.PeoplesFavor]: { value: 1 }
+            }
+        }
+        const s = board({}, {}, {}, ds)
+        const vault = vaultFor({ relicFacedown: { [reliquarySlotId(0)]: CUP } })
+        playAdviser(s, vault, PACT, [yes, slot(reliquarySlotId(0))])
+        expect(s.getPlayerState('ruler').status).toBe(PlayerStatus.Citizen)
+        expect(s.banners[Banner.DarkestSecret].holderPlayerId).toBe('chancellor')
+        // R-2.5.3 — a Seize burns two secrets, never below one.
+        expect(s.banners[Banner.DarkestSecret].value).toBe(2)
+        expect(s.getPlayerState('ruler').relicIds).toEqual([CUP])
+        expect(() =>
+            playAdviser(board(), vaultFor(), PACT, [yes, slot(reliquarySlotId(0))])
+        ).toThrow(/Darkest Secret/)
+    })
+})

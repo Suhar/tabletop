@@ -1,6 +1,12 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { GameAction, HydratableAction, MachineContext, assert, assertExists } from '@tabletop/common'
+import {
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    assert,
+    assertExists
+} from '@tabletop/common'
 import { HydratedIndonesiaGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { CompanyType } from '../definition/companyType.js'
@@ -116,7 +122,7 @@ export class HydratedMergeCompanies
             state.getPlayerState(ownerPayment.ownerId).cash += ownerPayment.payout
         }
 
-        const mergedCompanyId = state.getPrng().randId()
+        const mergedCompanyId = state.getPublicPrng().randId()
         const mergedDeeds = [...companyA.deeds, ...companyB.deeds]
 
         const resultingGood = proposal.resultingGood
@@ -191,11 +197,12 @@ export class HydratedMergeCompanies
                 }
             }
             if (proposal.isSiapSaji) {
-                autoRemovedTouchingSiapSajiCount = this.autoRemoveMergedAreasTouchingExistingSiapSaji(
-                    state,
-                    mergedCompanyId,
-                    mergedCultivatedAreaIds
-                )
+                autoRemovedTouchingSiapSajiCount =
+                    this.autoRemoveMergedAreasTouchingExistingSiapSaji(
+                        state,
+                        mergedCompanyId,
+                        mergedCultivatedAreaIds
+                    )
             }
         }
 

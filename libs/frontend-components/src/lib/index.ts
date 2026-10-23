@@ -7,9 +7,11 @@ export { default as GameChat } from './components/GameChat.svelte'
 export { default as ChatToast } from './components/ChatToast.svelte'
 export { default as EmojiPicker } from './components/EmojiPicker.svelte'
 export { default as HotseatPanel } from './components/HotseatPanel.svelte'
+export { default as ViewingHistoryLine } from './components/ViewingHistoryLine.svelte'
 export { default as DefaultSideContent } from './components/DefaultSideContent.svelte'
 export { default as DefaultTableLayout } from './components/DefaultTableLayout.svelte'
 export { default as DefaultTabs } from './components/DefaultTabs.svelte'
+export { default as GameToaster } from './components/GameToaster.svelte'
 export { default as Floater } from './components/Floater.svelte'
 export { default as Typeahead } from './components/Typeahead.svelte'
 export { default as GameEditForm } from './components/GameEditForm.svelte'
@@ -40,6 +42,16 @@ export * from './network/responseTypes.js'
 export * from './network/errors.js'
 export * from './network/versionChecker.js'
 export * from './model/gameSession.svelte.js'
+export * from './model/viewedHistoryPosition.js'
+export * from './model/gameContext.svelte.js'
+export * from './model/gameReconciliation.js'
+export type {
+    PresentedTransition,
+    TransitionIntent,
+    TransitionKind,
+    TransitionRequest,
+    TransitionStep
+} from './model/transitionPresenter.js'
 export * from './model/gameSessionContext.js'
 export * from './model/appContext.js'
 export * from './model/stagedSelection.js'
@@ -50,6 +62,36 @@ export * from './definition/gameColorizer.js'
 export * from './utils/colorblindPalette.js'
 export * from './utils/animations.js'
 export * from './utils/trimInput.js'
+export * from './utils/clipboard.js'
+export * from './utils/saveToDevice.js'
+export * from './utils/fileSlug.js'
+export * from './utils/timeAgo.js'
 export * from './utils/dynamicComponent.js'
 export * from './utils/publishCssVarFromRect.js'
 export * from './utils/runeBackedStore.svelte.js'
+export * from './utils/pinToNewest.js'
+export * from './utils/wheelDelta.js'
+
+export * from './utils/validateLocalGameState.js'
+
+export { TitlePreferences } from './preferences/titlePreferences.svelte.js'
+
+export { default as TabWorkspace } from './components/TabWorkspace.svelte'
+export type { WorkspaceTab, WorkspaceFixedPane } from './components/workspaceTypes.js'
+export type { WorkspaceInitialSplit, SplitAxis } from './components/tabWorkspace.js'
+export type {
+    SavedWorkspace,
+    SavedPane,
+    InitialWorkspace
+} from './components/workspacePersistence.js'
+
+export { DebouncedLayout } from './preferences/debouncedLayout.svelte.js'
+
+export {
+    restoreWorkspace,
+    restoreWorkspaceTabs,
+    saveWorkspace
+} from './components/workspacePersistence.js'
+export { workspaceLayout } from './components/tabWorkspace.js'
+
+export type { GameSessionView, GameHistoryView } from './model/gameSessionView.js'

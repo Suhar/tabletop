@@ -1,4 +1,11 @@
-import { SantiagoBoard, CropType, SquareType, CanalSegment, isFieldSquare } from '../model/board.js'
+import {
+    SantiagoBoard,
+    CropType,
+    SquareType,
+    CanalSegment,
+    isFieldSquare,
+    orthogonalNeighbors
+} from '../model/board.js'
 import { isConnectedToSpring, isCanalPlaced } from './irrigation.js'
 
 // Returns true when (col, row) is a valid spot to plant — any empty square is valid.
@@ -19,13 +26,14 @@ export function isPlaceableSegment(board: SantiagoBoard, segment: CanalSegment):
     return !isCanalPlaced(board, segment) && isConnectedToSpring(board, segment)
 }
 
-// Valid spring locations at game start: any intersection except the four corners.
+// Valid spring locations at game start: any intersection on the board. The four corners
+// used to be excluded, both for a randomized spring and for a first player placing it by
+// hand; that restriction is gone, so all 20 intersections are open.
 export function validSpringPlacements(): { col: number; row: number }[] {
     const spots: { col: number; row: number }[] = []
     for (let col = 0; col <= 4; col++) {
         for (let row = 0; row <= 3; row++) {
-            const isCorner = (col === 0 || col === 4) && (row === 0 || row === 3)
-            if (!isCorner) spots.push({ col, row })
+            spots.push({ col, row })
         }
     }
     return spots
@@ -42,9 +50,12 @@ export function validNeutralTilePlacements(board: SantiagoBoard): { col: number;
         for (let row = 0; row < 6; row++) {
             if (board.squares[col][row].type !== SquareType.Empty) continue
             anyEmpty.push({ col, row })
-            for (const [nc, nr] of [[col - 1, row], [col + 1, row], [col, row - 1], [col, row + 1]] as [number, number][]) {
+            for (const [nc, nr] of orthogonalNeighbors(col, row)) {
                 if (nc < 0 || nc >= 8 || nr < 0 || nr >= 6) continue
-                if (isFieldSquare(board.squares[nc][nr])) { adjacent.push({ col, row }); break }
+                if (isFieldSquare(board.squares[nc][nr])) {
+                    adjacent.push({ col, row })
+                    break
+                }
             }
         }
     }

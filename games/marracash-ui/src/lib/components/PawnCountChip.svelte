@@ -1,0 +1,66 @@
+<script lang="ts">
+    import type { MarketColor } from '@tabletop/marracash'
+    import Pawn from '$lib/components/Pawn.svelte'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { PawnCountChip, pawnCountChipWidth } from '$lib/utils/pawnCountChip.js'
+    import { BaskervilleCentralShift, centredBaseline } from '$lib/utils/textBaseline.js'
+
+    const CountSize = 16
+
+    let {
+        color,
+        count,
+        x,
+        y,
+        label,
+        highlighted = false
+    }: {
+        color: MarketColor
+        count: number
+        x: number
+        y: number
+        label: string
+        highlighted?: boolean
+    } = $props()
+
+    const gameSession = getGameSession()
+
+    let palette = $derived(gameSession.marketPalettes[color])
+    let width = $derived(pawnCountChipWidth(count))
+    let left = $derived(-width / 2 + PawnCountChip.padding)
+</script>
+
+<g transform="translate({x} {y})" aria-label={label}>
+    {#if highlighted}
+        <rect
+            x={-width / 2}
+            y={-PawnCountChip.height / 2}
+            {width}
+            height={PawnCountChip.height}
+            rx="10"
+            fill="none"
+            stroke="#ffffff"
+            stroke-width="9"
+            class="candidate-halo"
+        ></rect>
+    {/if}
+    <rect
+        x={-width / 2}
+        y={-PawnCountChip.height / 2}
+        {width}
+        height={PawnCountChip.height}
+        rx="10"
+        fill="#ffffff"
+        fill-opacity="0.85"
+        stroke={palette.stroke}
+        stroke-width="1.5"
+    ></rect>
+    <Pawn {color} x={left + PawnCountChip.pawnWidth / 2} y={0} size={PawnCountChip.pawnSize} />
+    <text
+        x={left + PawnCountChip.pawnWidth + PawnCountChip.gap}
+        y={centredBaseline(1, CountSize, BaskervilleCentralShift)}
+        font-size={CountSize}
+        font-weight="700"
+        fill={palette.stroke}>{count}</text
+    >
+</g>

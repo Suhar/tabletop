@@ -41,7 +41,7 @@ export class HydratedPlaceTurnOrderBid
         super(data, PlaceTurnOrderBidValidator)
     }
 
-    apply(state: HydratedIndonesiaGameState, context?: MachineContext) {
+    apply(state: HydratedIndonesiaGameState, _context?: MachineContext) {
         if (!this.isValidPlaceTurnOrderBid(state)) {
             throw Error('Invalid PlaceTurnOrderBid action')
         }
@@ -69,14 +69,10 @@ export class HydratedPlaceTurnOrderBid
 
     isValidPlaceTurnOrderBid(state: HydratedIndonesiaGameState): boolean {
         const playerState = state.getPlayerState(this.playerId)
-        return (
-            Number.isInteger(this.amount) &&
-            this.amount >= 0 &&
-            this.amount <= playerState.cash
-        )
+        return Number.isInteger(this.amount) && this.amount >= 0 && this.amount <= playerState.cash
     }
 
-    static canPlaceTurnOrderBid(state: HydratedIndonesiaGameState, playerId: string): boolean {
+    static canPlaceTurnOrderBid(_state: HydratedIndonesiaGameState, _playerId: string): boolean {
         return true
     }
 }

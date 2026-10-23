@@ -58,7 +58,10 @@ export function isChoosePlanet(action?: GameAction): action is ChoosePlanet {
 //
 // Surveying a planet that is already explored turns nothing over: the one technology on offer is
 // the one the planet already holds.
-export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> implements ChoosePlanet {
+export class HydratedChoosePlanet
+    extends HydratableAction<typeof ChoosePlanet>
+    implements ChoosePlanet
+{
     declare type: ActionType.ChoosePlanet
     declare playerId: string
     declare revealsInfo?: boolean
@@ -99,7 +102,12 @@ export class HydratedChoosePlanet extends HydratableAction<typeof ChoosePlanet> 
         markExplored(state.board, this.coords)
 
         const piles = { deck: state.technologyDeck, discard: state.technologyDiscard }
-        const result = revealForExploration(piles, planet.color!, pending.probeLevel, state.getPrng())
+        const result = revealForExploration(
+            piles,
+            planet.color!,
+            pending.probeLevel,
+            state.getPublicPrng()
+        )
         state.technologyDeck = piles.deck
         state.technologyDiscard = piles.discard
 

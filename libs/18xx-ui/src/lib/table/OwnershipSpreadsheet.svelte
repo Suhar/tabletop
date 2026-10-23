@@ -1,0 +1,1907 @@
+<script lang="ts">
+    import CertificateCount from '../stock/CertificateCount.svelte'
+    import { cashText, optionalMoney } from '../presentation/money.js'
+    import './playerTint.css'
+    import {
+        companySharePrice,
+        DefaultCompanyPricePresentation,
+        type CompanyPricePresentation
+    } from './companyPresentation.js'
+    import { assert, assertExists, type GameAction } from '@tabletop/common'
+    import { companyLastRun } from './companyLastRun.js'
+    import {
+        cashOwnedBy,
+        nextOperatingCompany,
+        certificatesInPool,
+        signedShares,
+        controllingOwner,
+        getCompany,
+        sameOwner,
+        playersWithBankruptLast,
+        sharesOwned,
+        trainsOwnedBy,
+        type Company,
+        type Owner,
+        type PurchaseRequest,
+        type ValuationRules,
+        isObsoleteTrain
+    } from '@tabletop/18xx'
+    import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
+    import type { NumberedShareNames } from './companyPresentation.js'
+    import { ownerPortfolio } from '../finance/ownerPortfolio.js'
+    import PlayerName from './PlayerName.svelte'
+    import OperatingHistory from './OperatingHistory.svelte'
+    import { spreadsheetCompanies } from './spreadsheetCompanies.js'
+    import { numberedSharesOwned } from './numberedShares.js'
+    import SpreadsheetOutline from './SpreadsheetOutline.svelte'
+    import { playerPurchaseContribution } from '../stock/purchaseContribution.js'
+    import {
+        nextSpreadsheetSort,
+        orderedAs,
+        seatOrderFrom,
+        sortedForSpreadsheet,
+        spreadsheetSortDirection,
+        type SpreadsheetSort,
+        type SpreadsheetSortColumn,
+        type SpreadsheetSortDirection
+    } from './spreadsheetSort.js'
+
+    import CompanyToken from '../tokens/CompanyToken.svelte'
+    import TrainBadge from '../trains/TrainBadge.svelte'
+
+    let {
+        session,
+        pricePresentation = DefaultCompanyPricePresentation,
+        fillWidth = false,
+        onPreviewMap,
+        companyOrder,
+        marketPoolId,
+        ipoPoolId,
+        exchangePoolId,
+        valuationRules,
+        trainColors,
+        numberedShareNames = {},
+        includedCompanyIds = [],
+        includedPortfolioCompanyIds = [],
+        portfolioCompanyIds = []
+    }: {
+        pricePresentation?: CompanyPricePresentation
+        fillWidth?: boolean
+        companyOrder?: readonly string[]
+        onPreviewMap: (action: GameAction) => void
+        session: EighteenXXSessionView
+        marketPoolId: string
+        ipoPoolId?: string
+        exchangePoolId?: string
+        trainColors: Readonly<Record<string, string>>
+        valuationRules: ValuationRules
+        numberedShareNames?: NumberedShareNames
+        includedCompanyIds?: readonly string[]
+        portfolioCompanyIds?: readonly string[]
+        includedPortfolioCompanyIds?: readonly string[]
+    } = $props()
+    type PendingShareTrade =
+        | { kind: 'buy'; request: PurchaseRequest }
+        | { kind: 'sell'; companyId: string; ownerId: string }
+    const money = $derived(session.presentation.money)
+    let shareConfirmation = $state<HTMLDivElement>()
+    let pendingTrade = $state<PendingShareTrade>()
+    let confirmationPosition = $state({ top: 0, left: 0 })
+    const tradingDisabled = $derived(
+        session.busy ||
+            session.updatingVisibleState ||
+            session.isViewingHistory ||
+            !session.myPlayer ||
+            !session.gameState.activePlayerIds.includes(session.myPlayer.id)
+    )
+    const availablePurchases = $derived(
+        tradingDisabled
+            ? []
+            : session.stock.purchaseChoices.filter((choice) => choice.result.details)
+    )
+    const availableSales = $derived(
+        tradingDisabled ? [] : session.stock.saleChoices.filter((choice) => choice.result.details)
+    )
+    const pendingPurchaseChoices = $derived.by(() => {
+        const trade = pendingTrade
+        return trade?.kind === 'buy'
+            ? availablePurchases.filter(
+                  (choice) => choice.request.certificateId === trade.request.certificateId
+              )
+            : []
+    })
+    const pendingPlayerPurchase = $derived(
+        pendingPurchaseChoices.find((choice) => choice.request.buyer.kind === 'player')
+    )
+    const pendingPurchaseChoice = $derived(pendingPlayerPurchase ?? pendingPurchaseChoices[0])
+    const pendingCompanyPurchases = $derived(
+        pendingPurchaseChoices.filter((choice) => choice.request.buyer.kind === 'company')
+    )
+    const pendingSaleChoices = $derived(
+        pendingTrade?.kind === 'sell'
+            ? saleChoicesForCell(pendingTrade.companyId, pendingTrade.ownerId)
+            : []
+    )
+    const operatingCompanyId = $derived(
+        session.gameState.stockRound.completed &&
+            session.gameState.operatingSet &&
+            !session.gameState.result
+            ? nextOperatingCompany(session.gameState)
+            : undefined
+    )
+    const currentPlayerOwners = $derived(
+        new Set(
+            operatingCompanyId ? [] : session.gameState.activePlayerIds.map((id) => `player:${id}`)
+        )
+    )
+    const companies = $derived(
+        spreadsheetCompanies(
+            session.gameState,
+            session.charters,
+            session.actions,
+            session.gameState.actionCount,
+            companyOrder,
+            includedCompanyIds
+        )
+    )
+    const periods = ['Current', 'Player income', 'Company payouts'] as const
+    let period = $state<(typeof periods)[number]>('Current')
+    $effect(() => {
+        if (
+            period !== 'Current' ||
+            (pendingTrade?.kind === 'buy' && !pendingPurchaseChoice) ||
+            (pendingTrade?.kind === 'sell' && !pendingSaleChoices.length)
+        )
+            shareConfirmation?.hidePopover()
+    })
+    let scrolled = $state(false)
+    const maxPinnedLabelShare = 0.35
+    let scrollViewportWidth = $state(0)
+    let labelColumnWidth = $state(0)
+    const pinLabelColumn = $derived(labelColumnWidth <= scrollViewportWidth * maxPinnedLabelShare)
+    const view = $derived(
+        session.preferences.values.spreadsheetView === 'company' ? 'Company' : 'Player'
+    )
+    function soldThisRound(ownerId: string, companyId: string): boolean {
+        const gameState = session.gameState
+        return (
+            gameState.machineState === 'StockRound' &&
+            !gameState.stockRound.completed &&
+            gameState.stockRound.sales.some(
+                (sale) => sale.companyId === companyId && ownerIdFor(sale.owner) === ownerId
+            )
+        )
+    }
+    function ownerIdFor(owner: Owner): string {
+        return owner.kind === 'player'
+            ? `player:${owner.playerId}`
+            : owner.kind === 'company'
+              ? `company:${owner.companyId}`
+              : 'bank'
+    }
+    const firstPoolId = $derived(ipoPoolId ? 'ipo' : 'market')
+    const poolColumnLabels: Readonly<Record<string, string>> = {
+        ipo: 'IPO',
+        market: 'Market',
+        treasury: 'Treas.',
+        exchange: 'Exch.'
+    }
+    const portfolioColumnLabels = $derived(
+        new Map(portfolioCompanyIds.map((id) => [`company:${id}`, session.companyInitials(id)]))
+    )
+    // A pool's shorts, such as the market's, count against its shares.
+    function poolShares(poolId: string, companyId: string): number {
+        return certificatesInPool(session.gameState, poolId).reduce(
+            (sum, certificate) =>
+                sum + (certificate.companyId === companyId ? signedShares(certificate) : 0),
+            0
+        )
+    }
+    function playerShareNumbers(ownerId: string, companyId: string): number[] {
+        if (!numberedShareNames[companyId] || !ownerId.startsWith('player:')) return []
+        return numberedSharesOwned(
+            session.gameState,
+            { kind: 'player', playerId: ownerId.slice(7) },
+            companyId
+        )
+    }
+    type PurchaseCertificate = (typeof availablePurchases)[number]['certificate']
+    const inPool = (poolId: string) => (certificate: PurchaseCertificate) =>
+        certificate.poolId === poolId
+    function purchaseForCell(companyId: string, ownerId: string) {
+        const owner = owners.find((candidate) => candidate.id === ownerId)
+        const sells = owner && 'sells' in owner ? owner.sells : undefined
+        return sells
+            ? availablePurchases.find(
+                  (choice) =>
+                      choice.certificate.companyId === companyId && sells(choice.certificate)
+              )
+            : undefined
+    }
+    function saleChoicesForCell(companyId: string, ownerId: string) {
+        return availableSales.filter(
+            (choice) =>
+                choice.sale.companyId === companyId && ownerIdFor(choice.request.seller) === ownerId
+        )
+    }
+    function openShareConfirmation(event: MouseEvent, trade: PendingShareTrade) {
+        const target = event.currentTarget
+        assert(target instanceof HTMLElement, 'A share trade requires a source cell')
+        const bounds = target.getBoundingClientRect()
+        pendingTrade = trade
+        confirmationPosition = {
+            top:
+                bounds.bottom + 160 < window.innerHeight
+                    ? bounds.bottom + 6
+                    : Math.max(8, bounds.top - 160),
+            left: Math.max(116, Math.min(bounds.left + bounds.width / 2, window.innerWidth - 116))
+        }
+        shareConfirmation?.showPopover()
+    }
+    function confirmBuy(buyer: Owner) {
+        const choice = pendingPurchaseChoices.find((option) =>
+            sameOwner(option.request.buyer, buyer)
+        )
+        assertExists(choice, 'Choose an available share purchase')
+        shareConfirmation?.hidePopover()
+        session.stock.selectPurchase(choice.request)
+        void session.stock.confirmPurchase()
+    }
+    function confirmSale(shares: number) {
+        const choice = pendingSaleChoices.find((option) => option.sale.shares === shares)
+        assertExists(choice, 'Choose an available share sale')
+        shareConfirmation?.hidePopover()
+        session.stock.selectSale(choice.request)
+        void session.stock.confirmSale()
+    }
+    const portfolioOwners = $derived(
+        portfolioCompanyIds.map((ownerId) => ({
+            id: `company:${ownerId}`,
+            name: session.companyName(ownerId),
+            controllerId: controllingOwner(session.gameState, ownerId)?.playerId,
+            count: (companyId: string) =>
+                sharesOwned(session.gameState, companyId, {
+                    kind: 'company',
+                    companyId: ownerId
+                })
+        }))
+    )
+    const seatOrder = $derived(
+        seatOrderFrom(
+            session.gameState.players.map((player) => player.playerId),
+            session.myPrimaryPlayer?.id
+        )
+    )
+    type OwnerStatistics = {
+        turnOrder?: number
+        cash: number
+        shares: number
+        netWorth: number
+        certs?: { count: number; limit: number }
+    }
+    function ownerStatisticsFor(owner: Owner, certs?: OwnerStatistics['certs']): OwnerStatistics {
+        const { cash, netWorth, shares } = ownerPortfolio(
+            session.gameState,
+            owner,
+            valuationRules,
+            session.charters
+        )
+        return { cash, shares, netWorth, certs }
+    }
+    function firstSortDirection(column: SpreadsheetSortColumn<never>): SpreadsheetSortDirection {
+        const first = nextSpreadsheetSort(undefined, 'column', column.directions)
+        assertExists(first, 'A sortable column needs a sort direction')
+        return first.direction
+    }
+    const ownerStatisticKeys = ['cash', 'shares', 'certs', 'netWorth'] as const
+    type OwnerStatistic = (typeof ownerStatisticKeys)[number]
+    type OwnerStatisticColumn = SpreadsheetSortColumn<OwnerStatistics> & {
+        label: string
+        text: (values: OwnerStatistics) => string
+    }
+    const ownerStatisticColumns: Record<OwnerStatistic, OwnerStatisticColumn> = {
+        cash: {
+            label: 'Cash',
+            value: (values) => values.cash,
+            text: (values) => money(values.cash)
+        },
+        shares: {
+            label: 'Shares',
+            value: (values) => values.shares,
+            text: (values) => String(values.shares)
+        },
+        certs: {
+            label: 'Certs',
+            value: (values) => values.certs?.count,
+            text: (values) => (values.certs ? `${values.certs.count}/${values.certs.limit}` : '—')
+        },
+        netWorth: {
+            label: 'Net worth',
+            value: (values) => values.netWorth,
+            text: (values) => money(values.netWorth)
+        }
+    }
+    type PlayerSortKey = OwnerStatistic | 'turnOrder'
+    const playerSortColumns: Record<PlayerSortKey, SpreadsheetSortColumn<OwnerStatistics>> = {
+        ...ownerStatisticColumns,
+        turnOrder: { value: (values) => values.turnOrder, directions: ['ascending'] }
+    }
+    type CompanyStatistic = 'value' | 'cash' | 'lastRun' | `column:${string}`
+    const titleColumns = $derived(session.presentation.companyColumns ?? [])
+    const companyStatisticHeadings = $derived([
+        pricePresentation.label,
+        'Cash',
+        'Trains',
+        'Tokens',
+        'Last run',
+        ...titleColumns.map((column) => column.label)
+    ])
+    const companyStatisticCount = $derived(companyStatisticHeadings.length)
+    let playerSort = $state<SpreadsheetSort<PlayerSortKey>>()
+    let companySort = $state<SpreadsheetSort<CompanyStatistic>>()
+    const seatedPlayers = $derived(
+        seatOrder.map((playerId) => {
+            const turn = playersWithBankruptLast(session.gameState).indexOf(playerId)
+            assert(turn >= 0, 'Every seated player has a turn position')
+            return {
+                playerId,
+                ...ownerStatisticsFor(
+                    { kind: 'player', playerId },
+                    session.playerCertificates(playerId)
+                ),
+                turnOrder: turn
+            }
+        })
+    )
+    const playerOrder = $derived(
+        sortedForSpreadsheet(seatedPlayers, playerSort, playerSortColumns).map(
+            (player) => player.playerId
+        )
+    )
+    const owners = $derived(
+        [
+            ...playerOrder.flatMap((playerId) => [
+                {
+                    id: `player:${playerId}`,
+                    name: session.getPlayerName(playerId),
+                    count: (companyId: string) =>
+                        sharesOwned(session.gameState, companyId, { kind: 'player', playerId })
+                },
+                ...portfolioOwners.filter((owner) => owner.controllerId === playerId)
+            ]),
+            ...portfolioOwners.filter((owner) => !owner.controllerId),
+            ...(ipoPoolId
+                ? [
+                      {
+                          id: 'ipo',
+                          name: 'IPO',
+                          count: (companyId: string) => poolShares(ipoPoolId, companyId),
+                          sells: inPool(ipoPoolId)
+                      }
+                  ]
+                : []),
+            {
+                id: 'market',
+                name: 'Market',
+                count: (companyId: string) => poolShares(marketPoolId, companyId),
+                sells: inPool(marketPoolId)
+            },
+            {
+                id: 'treasury',
+                name: 'Treasury',
+                count: (companyId: string) =>
+                    sharesOwned(session.gameState, companyId, { kind: 'company', companyId }),
+                sells: (certificate: PurchaseCertificate) =>
+                    certificate.owner.kind === 'company' &&
+                    certificate.owner.companyId === certificate.companyId
+            },
+            ...(exchangePoolId
+                ? [
+                      {
+                          id: 'exchange',
+                          name: 'Exchange',
+                          count: (companyId: string) => poolShares(exchangePoolId, companyId)
+                      }
+                  ]
+                : [])
+        ].filter(
+            (owner) =>
+                (owner.id !== 'exchange' && owner.id !== 'treasury') ||
+                companies.some((company) => owner.count(company.id) > 0)
+        )
+    )
+    const includedPortfolioOwners = $derived(
+        portfolioOwners.filter(
+            (owner) =>
+                owner.controllerId &&
+                includedPortfolioCompanyIds.some((id) => owner.id === `company:${id}`)
+        )
+    )
+    const footnoteId = $props.id()
+    const ownerConnections = $derived(
+        owners.map((owner, index) => {
+            const controllerId = portfolioOwners.find(
+                (entry) => entry.id === owner.id
+            )?.controllerId
+            const nextControllerId = portfolioOwners.find(
+                (entry) => entry.id === owners[index + 1]?.id
+            )?.controllerId
+            return {
+                controlled: !!controllerId,
+                continues:
+                    !!nextControllerId &&
+                    (nextControllerId === controllerId || owner.id === `player:${nextControllerId}`)
+            }
+        })
+    )
+    const companyRows = $derived(
+        companies.map((company) => ({
+            company,
+            value: companySharePrice(
+                session.stockMarketChart,
+                session.gameState.stockMarket,
+                company.id
+            ),
+            // Par is the IPO purchase price, so it only matters while the IPO is selling.
+            par:
+                ipoPoolId &&
+                company.started &&
+                !company.closed &&
+                poolShares(ipoPoolId, company.id) > 0
+                    ? company.parPrice
+                    : undefined,
+            stations: session.gameState.stations.filter(
+                (station) => station.companyId === company.id
+            ),
+            cash: cashOwnedBy(session.gameState, { kind: 'company', companyId: company.id }),
+            lastRun: companyLastRun(session.actions, session.gameState.actionCount, company.id),
+            presidentId:
+                company.president?.kind === 'player'
+                    ? `player:${company.president.playerId}`
+                    : company.president?.kind === 'company'
+                      ? `company:${company.president.companyId}`
+                      : undefined,
+            shares: owners.map((owner) => owner.count(company.id)),
+            shareNumbers: owners.map((owner) => playerShareNumbers(owner.id, company.id))
+        }))
+    )
+    type CompanyRow = (typeof companyRows)[number]
+    const showPar = $derived(
+        pricePresentation.showPar && companyRows.some((row) => row.par !== undefined)
+    )
+    function parBefore(ownerId: string): boolean {
+        return showPar && ownerId === 'ipo'
+    }
+    const companySortColumns = $derived.by(
+        (): Record<CompanyStatistic, SpreadsheetSortColumn<CompanyRow>> => {
+            const operatingOrder = orderedAs(
+                session.stockMarketChart.order(session.gameState.stockMarket)
+            )
+            return {
+                value: {
+                    value: (row) => row.value,
+                    tieOrder: (a, b) => operatingOrder(a.company.id, b.company.id)
+                },
+                cash: { value: (row) => (typeof row.cash === 'number' ? row.cash : undefined) },
+                lastRun: { value: (row) => row.company.lastRunRevenue },
+                ...Object.fromEntries(
+                    titleColumns.map((column) => [
+                        `column:${column.id}`,
+                        {
+                            value: (row: CompanyRow) =>
+                                column.value(session.gameState, row.company.id)
+                        }
+                    ])
+                )
+            }
+        }
+    )
+    const rows = $derived(sortedForSpreadsheet(companyRows, companySort, companySortColumns))
+    const statistics = $derived(
+        new Map([
+            ...seatedPlayers.map((player): [string, OwnerStatistics] => [
+                `player:${player.playerId}`,
+                player
+            ]),
+            ...portfolioCompanyIds.map((companyId): [string, OwnerStatistics] => [
+                `company:${companyId}`,
+                ownerStatisticsFor({ kind: 'company', companyId })
+            ])
+        ])
+    )
+    function ownerPlayerColor(ownerId: string) {
+        return ownerId.startsWith('player:')
+            ? session.colors.getPlayerBgColorValue(ownerId.slice(7))
+            : undefined
+    }
+    function poolAlternate(ownerId: string) {
+        return (
+            owners
+                .filter((owner) => owner.id in poolColumnLabels)
+                .findIndex((owner) => owner.id === ownerId) %
+                2 ===
+            1
+        )
+    }
+    function ownerTintColor(ownerId: string) {
+        const controllerId = portfolioOwners.find((entry) => entry.id === ownerId)?.controllerId
+        return (
+            ownerPlayerColor(ownerId) ??
+            (controllerId ? session.colors.getPlayerBgColorValue(controllerId) : undefined)
+        )
+    }
+</script>
+
+{#snippet financialValue(ownerId: string, key: OwnerStatistic)}
+    {@const values = statistics.get(ownerId)}
+    {@const included =
+        key === 'netWorth' && includedPortfolioOwners.some((owner) => owner.id === ownerId)}
+    <span
+        class:included-net-worth={included}
+        aria-describedby={included ? `${footnoteId}-${ownerId}` : undefined}
+        >{#if key === 'certs' && values?.certs}<CertificateCount
+                count={values.certs.count}
+                limit={values.certs.limit}
+            />{:else}{values ? ownerStatisticColumns[key].text(values) : '—'}{/if}{#if included}<sup
+                >*</sup
+            >{/if}</span
+    >
+{/snippet}
+
+{#snippet turnOrderSort()}
+    {@render sortButton(
+        'Player',
+        spreadsheetSortDirection(playerSort, 'turnOrder'),
+        'ascending',
+        () =>
+            (playerSort = nextSpreadsheetSort(
+                playerSort,
+                'turnOrder',
+                playerSortColumns.turnOrder.directions
+            )),
+        { title: 'Sort players by turn order', toggle: true }
+    )}
+{/snippet}
+
+{#snippet sortArrow(direction: SpreadsheetSortDirection, preview = false)}
+    <span class="sort-arrow" class:preview aria-hidden="true"
+        ><svg viewBox="0 0 8 6"
+            ><path d={direction === 'ascending' ? 'M0 6 4 0 8 6Z' : 'M0 0 4 6 8 0Z'}></path></svg
+        ></span
+    >
+{/snippet}
+
+<!-- An unsorted header previews, on hover, the direction its first click applies. -->
+{#snippet sortButton(
+    label: string,
+    direction: SpreadsheetSortDirection | undefined,
+    firstDirection: SpreadsheetSortDirection,
+    onclick: () => void,
+    { title, toggle = false }: { title?: string; toggle?: boolean } = {}
+)}
+    <button class="sort-header" {title} aria-pressed={toggle ? !!direction : undefined} {onclick}
+        ><span class="sort-label">{label}</span>{#if direction}{@render sortArrow(
+                direction
+            )}{:else}{@render sortArrow(firstDirection, true)}{/if}</button
+    >
+{/snippet}
+
+{#snippet companySortHeader(scope: 'col' | 'row', label: string, key: CompanyStatistic)}
+    {@const direction = spreadsheetSortDirection(companySort, key)}
+    <th {scope} class:company-stat-start={scope === 'col'} aria-sort={direction}
+        >{@render sortButton(
+            label,
+            direction,
+            firstSortDirection(companySortColumns[key]),
+            () =>
+                (companySort = nextSpreadsheetSort(
+                    companySort,
+                    key,
+                    companySortColumns[key].directions
+                ))
+        )}</th
+    >
+{/snippet}
+
+{#snippet playerSortHeader(scope: 'col' | 'row', key: OwnerStatistic, statStart = false)}
+    {@const direction = spreadsheetSortDirection(playerSort, key)}
+    <th {scope} class:stat-start={statStart} aria-sort={direction}
+        >{@render sortButton(
+            ownerStatisticColumns[key].label,
+            direction,
+            firstSortDirection(playerSortColumns[key]),
+            () =>
+                (playerSort = nextSpreadsheetSort(
+                    playerSort,
+                    key,
+                    playerSortColumns[key].directions
+                ))
+        )}</th
+    >
+{/snippet}
+
+{#snippet ownerLabel(owner: { id: string; name: string }, column = false)}
+    {@const color = ownerPlayerColor(owner.id)}
+    {#if color}
+        <PlayerName name={owner.name} {color} dot={false} />
+    {:else if portfolioColumnLabels.has(owner.id)}
+        <span class="owner-name portfolio-full">{owner.name}</span>
+        <span class="owner-name portfolio-short">{portfolioColumnLabels.get(owner.id)}</span>
+    {:else}<span class="owner-name"
+            >{column ? (poolColumnLabels[owner.id] ?? owner.name) : owner.name}</span
+        >{/if}
+{/snippet}
+
+{#snippet companyCash(cash: number | 'unlimited' | undefined)}
+    {cashText(money, cash)}
+{/snippet}
+
+{#snippet lastRunCell(row: CompanyRow)}
+    {@const company = row.company}
+    {#if company.lastRunRevenue === undefined}<span class="empty">—</span>
+    {:else if row.lastRun}
+        {@const { run, withheld } = row.lastRun}
+        <button
+            class="last-run"
+            class:withheld
+            disabled={session.busy || session.updatingVisibleState}
+            aria-label={`View ${session.companyName(company.id)}'s last run for ${money(company.lastRunRevenue)}${withheld ? ', withheld' : ''}`}
+            onclick={() => onPreviewMap(run)}>{money(company.lastRunRevenue)}</button
+        >
+    {:else}<span class="last-run-revenue">{money(company.lastRunRevenue)}</span>{/if}
+{/snippet}
+
+{#snippet companyTrains(companyId: string)}
+    <span class="company-trains">
+        {#each trainsOwnedBy(session.gameState, { kind: 'company', companyId }) as train (train.id)}
+            <TrainBadge
+                name={session.trainShortLabel(train.definitionId)}
+                color={trainColors[train.definitionId]}
+                obsolete={isObsoleteTrain(train)}
+            />
+        {:else}<span class="empty">—</span>{/each}
+    </span>
+{/snippet}
+
+{#snippet shareCell(
+    shares: number,
+    companyId: string,
+    ownerId: string,
+    poolStart = false,
+    president = false,
+    matrix = true,
+    sold = false,
+    operating = false,
+    poolAlt = false,
+    numbers: readonly number[] = []
+)}
+    {@const purchase = shares > 0 ? purchaseForCell(companyId, ownerId) : undefined}
+    {@const saleChoices = shares > 0 ? saleChoicesForCell(companyId, ownerId) : []}
+    <td
+        class:operating-column={operating}
+        class:sold
+        class:share-cell={matrix}
+        class:available-pool={!matrix}
+        class:pool-alt={poolAlt}
+        class:empty={shares === 0}
+        class:short={shares < 0}
+        class:pool-start={poolStart}
+        class:tradable={!!purchase || saleChoices.length > 0}
+    >
+        {#if purchase}
+            <button
+                class="share-trade"
+                aria-label={`Buy ${session.companyName(companyId)} from ${owners.find((owner) => owner.id === ownerId)?.name}`}
+                onclick={(event) =>
+                    openShareConfirmation(event, { kind: 'buy', request: purchase.request })}
+                ><span class="share-value">{shares}</span></button
+            >
+        {:else if saleChoices.length}
+            <button
+                class="share-trade"
+                aria-label={`Sell ${session.companyName(companyId)} shares`}
+                onclick={(event) =>
+                    openShareConfirmation(event, { kind: 'sell', companyId, ownerId })}
+                >{@render shareHolding(String(shares), president, numbers)}</button
+            >
+        {:else if shares < 0}
+            <span class="share-value" title={`Short ${-shares}`}
+                >{shares}<span class="sr-only"> short</span></span
+            >
+        {:else}
+            {@render shareHolding(shares === 0 ? '' : String(shares), president, numbers)}
+        {/if}
+    </td>
+{/snippet}
+
+{#snippet parCell(par: number | undefined, operating: boolean)}
+    <td class="pool-start value-cell" class:operating-column={operating}
+        >{par?.toLocaleString('en-US') ?? '—'}</td
+    >
+{/snippet}
+
+{#snippet shareValue(text: string, president: boolean)}
+    <span class="share-value" class:president
+        >{text}{#if president}<span class="badge" aria-label="President">P</span>{/if}</span
+    >
+{/snippet}
+
+{#snippet shareHolding(text: string, president: boolean, numbers: readonly number[])}
+    {#if numbers.length}
+        {@const label = ` (${numbers.join(',')})`}
+        <span class="noted-value" class:president data-note={label}
+            >{@render shareValue(text, president)}<span class="value-note">{label}</span></span
+        >
+    {:else}
+        {@render shareValue(text, president)}
+    {/if}
+{/snippet}
+
+{#snippet companyLabel(company: Company)}
+    <span class="company">
+        {#if session.mapView.stations[company.id]}
+            <CompanyToken appearance={session.mapView.stations[company.id]} size={22} />
+        {/if}
+        <span title={session.companyName(company.id)}>{session.companyInitials(company.id)}</span>
+    </span>
+{/snippet}
+
+<div class="spreadsheet" class:fill-width={fillWidth}>
+    <div class="toolbar" role="group" aria-label="Spreadsheet controls">
+        <div
+            class="view-toggle axis-toggle period-toggle"
+            role="group"
+            aria-label="Spreadsheet period"
+            style:--segments={periods.length}
+            style:--selected={periods.indexOf(period)}
+        >
+            <span class="thumb" aria-hidden="true"></span>
+            {#each periods as option (option)}
+                <button aria-pressed={period === option} onclick={() => (period = option)}
+                    >{option === 'Player income'
+                        ? 'Income'
+                        : option === 'Company payouts'
+                          ? 'Payouts'
+                          : option}</button
+                >
+            {/each}
+        </div>
+        {#if period === 'Current'}<div
+                class="view-toggle axis-toggle"
+                role="group"
+                aria-label="Spreadsheet view"
+            >
+                <button
+                    class="swap-axes"
+                    aria-label="Swap rows and columns"
+                    title={view === 'Company' ? 'Show players as rows' : 'Show companies as rows'}
+                    onclick={() =>
+                        session.preferences.set(
+                            { spreadsheetView: view === 'Company' ? 'player' : 'company' },
+                            'family'
+                        )}>X ↔ Y</button
+                >
+            </div>{/if}
+    </div>
+    <div class="sheet-spacing" aria-hidden="true"></div>
+    <div class="sheet-content">
+        {#if period !== 'Current'}
+            <OperatingHistory
+                {money}
+                rounds={session.operatingIncomeHistory()}
+                players={seatOrder.map((playerId) => ({
+                    playerId,
+                    name: session.getPlayerName(playerId),
+                    color: session.colors.getPlayerBgColorValue(playerId)
+                }))}
+                appearances={session.mapView.stations}
+                view={period === 'Player income' ? 'Player' : 'Company'}
+                companyInitials={(companyId) => session.companyInitials(companyId)}
+                companyName={(companyId) => session.companyName(companyId)}
+                {onPreviewMap}
+            />
+        {:else}
+            <div
+                class="table-scroll"
+                class:scrolled
+                class:pin-label-column={pinLabelColumn}
+                bind:clientWidth={scrollViewportWidth}
+                onscroll={(event) => (scrolled = event.currentTarget.scrollLeft > 0)}
+            >
+                <div class="outlined-table">
+                    <table
+                        aria-label="Company share ownership"
+                        class:transposed={view === 'Player'}
+                    >
+                        <colgroup>
+                            <col class="label-column" />
+                            {#if view === 'Company'}
+                                {#each owners as owner (owner.id)}
+                                    {#if parBefore(owner.id)}<col class="pool-section" />{/if}
+                                    <col class:pool-section={owner.id in poolColumnLabels} />
+                                {/each}
+                                <col span={companyStatisticCount} class="financial-section" />
+                            {:else}
+                                {#each companies as company (company.id)}<col />{/each}
+                                <col span={ownerStatisticKeys.length} class="financial-section" />
+                            {/if}
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th
+                                    scope="col"
+                                    class="axis-corner"
+                                    bind:offsetWidth={labelColumnWidth}
+                                >
+                                    <span class="axis-labels"
+                                        >{#if view === 'Player'}{@render turnOrderSort()}{:else}Company{/if}<span
+                                            class="axis-split"
+                                            ><span class="sr-only">{' / '}</span></span
+                                        >{#if view === 'Player'}Company{:else}{@render turnOrderSort()}{/if}</span
+                                    >
+                                </th>
+                                {#if view === 'Company'}
+                                    {#each owners as owner, index (owner.id)}{#if parBefore(owner.id)}<th
+                                                scope="col"
+                                                class="pool-start">Par</th
+                                            >{/if}<th
+                                            scope="col"
+                                            class:pool-start={owner.id === firstPoolId}
+                                            class:current-player-column={currentPlayerOwners.has(
+                                                owner.id
+                                            )}
+                                            class:player-tinted-header={!!ownerTintColor(owner.id)}
+                                            class:controlled-tint={!ownerPlayerColor(owner.id)}
+                                            style:--player-color={ownerTintColor(owner.id)}
+                                            title={owner.name}
+                                            ><span class="column-owner-label">
+                                                {#if ownerConnections[index].controlled}<span
+                                                        class="column-ownership-connector incoming"
+                                                        aria-hidden="true"
+                                                    ></span>{/if}
+                                                {@render ownerLabel(owner, true)}
+                                                {#if ownerConnections[index].continues}<span
+                                                        class="column-ownership-connector outgoing"
+                                                        aria-hidden="true"
+                                                    ></span>{/if}
+                                            </span></th
+                                        >{/each}
+                                    {@render companySortHeader(
+                                        'col',
+                                        pricePresentation.label,
+                                        'value'
+                                    )}
+                                    {@render companySortHeader('col', 'Cash', 'cash')}
+                                    <th scope="col">Trains</th>
+                                    <th scope="col">Tokens</th>
+                                    {@render companySortHeader('col', 'Last run', 'lastRun')}
+                                    {#each titleColumns as column (column.id)}{@render companySortHeader(
+                                            'col',
+                                            column.label,
+                                            `column:${column.id}`
+                                        )}{/each}
+                                {:else}
+                                    {#each rows as row (row.company.id)}
+                                        <th
+                                            scope="col"
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}
+                                            aria-label={session.companyName(row.company.id)}
+                                            >{@render companyLabel(row.company)}</th
+                                        >
+                                    {/each}
+                                    {#each ownerStatisticKeys as key, index (key)}{@render playerSortHeader(
+                                            'col',
+                                            key,
+                                            index === 0
+                                        )}{/each}
+                                {/if}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#if view === 'Company'}
+                                {#each rows as row (row.company.id)}
+                                    <tr
+                                        class:operating-company={row.company.id ===
+                                            operatingCompanyId}
+                                    >
+                                        <th
+                                            scope="row"
+                                            aria-label={session.companyName(row.company.id)}
+                                            >{@render companyLabel(row.company)}</th
+                                        >
+                                        {#each row.shares as shares, index (index)}{#if parBefore(owners[index].id)}{@render parCell(
+                                                    row.par,
+                                                    false
+                                                )}{/if}{@render shareCell(
+                                                shares,
+                                                row.company.id,
+                                                owners[index].id,
+                                                owners[index].id === firstPoolId,
+                                                row.presidentId === owners[index].id,
+                                                !(owners[index].id in poolColumnLabels),
+                                                soldThisRound(owners[index].id, row.company.id),
+                                                false,
+                                                poolAlternate(owners[index].id),
+                                                row.shareNumbers[index]
+                                            )}{/each}
+                                        <td class="company-stat-start bright-cell value-cell"
+                                            >{row.value === undefined
+                                                ? '—'
+                                                : row.value.toLocaleString('en-US')}</td
+                                        >
+                                        <td class="company-stat-start bright-cell"
+                                            >{@render companyCash(row.cash)}</td
+                                        >
+                                        <td class="bright-cell"
+                                            >{@render companyTrains(row.company.id)}</td
+                                        >
+                                        <td class="bright-cell token-cell"
+                                            >{row.stations.filter(
+                                                (station) => station.status === 'available'
+                                            ).length}/{row.stations.length}</td
+                                        >
+                                        <td class="company-stat-start"
+                                            >{@render lastRunCell(row)}</td
+                                        >
+                                        {#each titleColumns as column (column.id)}<td
+                                                class="company-stat-start bright-cell"
+                                                >{column.text(
+                                                    session.gameState,
+                                                    row.company.id
+                                                )}</td
+                                            >{/each}
+                                    </tr>
+                                {/each}
+                                {#each ownerStatisticKeys as key, index (key)}
+                                    <tr class="financial-row" class:stat-start={index === 0}>
+                                        {@render playerSortHeader('row', key)}
+                                        {#each owners as owner (owner.id)}
+                                            {#if parBefore(owner.id)}<td class="pool-start void"
+                                                ></td>{/if}
+                                            <td
+                                                class:pool-start={owner.id === firstPoolId &&
+                                                    !parBefore(owner.id)}
+                                                class:bright-cell={statistics.has(owner.id)}
+                                                class:player-financial={!!ownerTintColor(owner.id)}
+                                                style:--player-color={ownerTintColor(owner.id)}
+                                                class:token-cell={key === 'shares' &&
+                                                    statistics.has(owner.id)}
+                                                class:empty={!statistics.has(owner.id)}
+                                                class:void={owner.id in poolColumnLabels}
+                                                >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
+                                                        owner.id,
+                                                        key
+                                                    )}{/if}</td
+                                            >
+                                        {/each}
+                                        {#each { length: companyStatisticCount } as _, column (column)}<td
+                                                class="void"
+                                            ></td>{/each}
+                                    </tr>
+                                {/each}
+                            {:else}
+                                {#each owners as owner, index (owner.id)}
+                                    {#if parBefore(owner.id)}
+                                        <tr class="pool-start pool-row">
+                                            <th scope="row" class="non-player-owner">Par</th>
+                                            {#each rows as row (row.company.id)}{@render parCell(
+                                                    row.par,
+                                                    row.company.id === operatingCompanyId
+                                                )}{/each}
+                                            {#each ownerStatisticKeys as _, statIndex (statIndex)}<td
+                                                    class:stat-start={statIndex === 0}
+                                                    class="void"
+                                                ></td>{/each}
+                                        </tr>
+                                    {/if}
+                                    <tr
+                                        class:current-player={currentPlayerOwners.has(owner.id)}
+                                        class:pool-start={owner.id === firstPoolId}
+                                        class:after-par={parBefore(owner.id)}
+                                        class:pool-row={owner.id in poolColumnLabels}
+                                    >
+                                        <th
+                                            scope="row"
+                                            title={owner.name}
+                                            class:non-player-owner={!owner.id.startsWith('player:')}
+                                            class:player-tinted-header={!!ownerTintColor(owner.id)}
+                                            class:controlled-tint={!ownerPlayerColor(owner.id)}
+                                            style:--player-color={ownerTintColor(owner.id)}
+                                            class:controlled-owner={ownerConnections[index]
+                                                .controlled}
+                                            class:ownership-continues={ownerConnections[index]
+                                                .continues}>{@render ownerLabel(owner)}</th
+                                        >
+                                        {#each rows as row (row.company.id)}{@render shareCell(
+                                                row.shares[index],
+                                                row.company.id,
+                                                owner.id,
+                                                false,
+                                                row.presidentId === owner.id,
+                                                !(owner.id in poolColumnLabels),
+                                                soldThisRound(owner.id, row.company.id),
+                                                row.company.id === operatingCompanyId,
+                                                poolAlternate(owner.id),
+                                                row.shareNumbers[index]
+                                            )}{/each}
+                                        {#each ownerStatisticKeys as key, statIndex (key)}
+                                            <td
+                                                class:stat-start={statIndex === 0}
+                                                class:bright-cell={statistics.has(owner.id)}
+                                                class:player-financial={!!ownerTintColor(owner.id)}
+                                                style:--player-color={ownerTintColor(owner.id)}
+                                                class:token-cell={key === 'shares' &&
+                                                    statistics.has(owner.id)}
+                                                class:empty={!statistics.has(owner.id)}
+                                                class:void={owner.id in poolColumnLabels}
+                                                >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
+                                                        owner.id,
+                                                        key
+                                                    )}{/if}</td
+                                            >
+                                        {/each}
+                                    </tr>
+                                {/each}
+                                <tr class="company-stat-start financial-row">
+                                    {@render companySortHeader(
+                                        'row',
+                                        pricePresentation.label,
+                                        'value'
+                                    )}
+                                    {#each rows as row (row.company.id)}<td
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}
+                                            class="bright-cell value-cell"
+                                            >{row.value === undefined
+                                                ? '—'
+                                                : row.value.toLocaleString('en-US')}</td
+                                        >{/each}
+                                    {#each ownerStatisticKeys as _, index (index)}<td
+                                            class:stat-start={index === 0}
+                                            class="void"
+                                        ></td>{/each}
+                                </tr>
+                                <tr class="company-stat-start financial-row">
+                                    {@render companySortHeader('row', 'Cash', 'cash')}
+                                    {#each rows as row (row.company.id)}<td
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}
+                                            class="bright-cell">{@render companyCash(row.cash)}</td
+                                        >{/each}
+                                    {#each ownerStatisticKeys as _, index (index)}<td
+                                            class:stat-start={index === 0}
+                                            class="void"
+                                        ></td>{/each}
+                                </tr>
+                                <tr class="financial-row">
+                                    <th scope="row">Trains</th>
+                                    {#each rows as row (row.company.id)}<td
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}
+                                            class="bright-cell"
+                                            >{@render companyTrains(row.company.id)}</td
+                                        >{/each}
+                                    {#each ownerStatisticKeys as _, index (index)}<td
+                                            class:stat-start={index === 0}
+                                            class="void"
+                                        ></td>{/each}
+                                </tr>
+                                <tr class="financial-row">
+                                    <th scope="row">Tokens</th>
+                                    {#each rows as row (row.company.id)}
+                                        <td
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}
+                                            class="bright-cell token-cell"
+                                            >{row.stations.filter(
+                                                (station) => station.status === 'available'
+                                            ).length}/{row.stations.length}</td
+                                        >
+                                    {/each}
+                                    {#each ownerStatisticKeys as _, index (index)}<td
+                                            class:stat-start={index === 0}
+                                            class="void"
+                                        ></td>{/each}
+                                </tr>
+                                <tr class="company-stat-start financial-row">
+                                    {@render companySortHeader('row', 'Last run', 'lastRun')}
+                                    {#each rows as row (row.company.id)}<td
+                                            class:operating-column={row.company.id ===
+                                                operatingCompanyId}>{@render lastRunCell(row)}</td
+                                        >{/each}
+                                    {#each ownerStatisticKeys as _, index (index)}<td
+                                            class:stat-start={index === 0}
+                                            class="void"
+                                        ></td>{/each}
+                                </tr>
+                                {#each titleColumns as column (column.id)}
+                                    <tr class="company-stat-start financial-row">
+                                        {@render companySortHeader(
+                                            'row',
+                                            column.label,
+                                            `column:${column.id}`
+                                        )}
+                                        {#each rows as row (row.company.id)}<td
+                                                class:operating-column={row.company.id ===
+                                                    operatingCompanyId}
+                                                class="bright-cell"
+                                                >{column.text(
+                                                    session.gameState,
+                                                    row.company.id
+                                                )}</td
+                                            >{/each}
+                                        {#each ownerStatisticKeys as _, index (index)}<td
+                                                class:stat-start={index === 0}
+                                                class="void"
+                                            ></td>{/each}
+                                    </tr>
+                                {/each}
+                            {/if}
+                        </tbody>
+                    </table>
+                    <SpreadsheetOutline />
+                </div>
+            </div>
+            {#each includedPortfolioOwners as owner (owner.id)}
+                <p class="wealth-footnote" id={`${footnoteId}-${owner.id}`}>
+                    * {owner.name}'s net worth is included in its controlling player's net worth.
+                </p>
+            {/each}
+        {/if}
+    </div>
+    <div
+        class="share-confirmation"
+        popover="auto"
+        role="dialog"
+        aria-label="Confirm share trade"
+        bind:this={shareConfirmation}
+        style:top={`${confirmationPosition.top}px`}
+        style:left={`${confirmationPosition.left}px`}
+        ontoggle={(event) => {
+            if (event.newState === 'closed') pendingTrade = undefined
+        }}
+    >
+        {#if pendingPurchaseChoice?.result.details && pendingPurchaseChoice.certificate.kind === 'share'}
+            <div class="trade-question">
+                Buy {pendingPurchaseChoice.certificate.shares}
+                <CompanyToken
+                    appearance={session.mapView.stations[
+                        pendingPurchaseChoice.certificate.companyId
+                    ]}
+                    size={24}
+                />
+                for {money(pendingPurchaseChoice.result.details.price)}?
+            </div>
+            <div class="trade-answer">
+                {#if pendingPlayerPurchase}<button
+                        class="confirm-trade"
+                        disabled={tradingDisabled}
+                        onclick={() => confirmBuy(pendingPlayerPurchase.request.buyer)}>Yes</button
+                    >{/if}
+                <button onclick={() => shareConfirmation?.hidePopover()}>No</button>
+                {#if pendingCompanyPurchases.length}
+                    <div class="company-buy-row">
+                        {#each pendingCompanyPurchases as choice (ownerIdFor(choice.request.buyer))}
+                            {#if choice.result.details}
+                                {@const contribution = playerPurchaseContribution(
+                                    choice.result.details,
+                                    session.myPlayer?.id
+                                )}
+                                <button
+                                    class="company-buy"
+                                    disabled={tradingDisabled}
+                                    data-purchase-buyer={ownerIdFor(choice.request.buyer)}
+                                    onclick={() => confirmBuy(choice.request.buyer)}
+                                >
+                                    As {session.ownerName(
+                                        choice.request.buyer
+                                    )}{#if contribution > 0}{' + '}{money(contribution)}{/if}
+                                </button>
+                            {/if}
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {:else if pendingTrade?.kind === 'sell' && pendingSaleChoices.length}
+            {@const maximumSale = Math.max(
+                ...pendingSaleChoices.map((choice) => choice.sale.shares)
+            )}
+            <div class="trade-question">
+                Sell
+                <CompanyToken
+                    appearance={session.mapView.stations[pendingTrade.companyId]}
+                    size={24}
+                />
+                {maximumSale === 1 ? 'share' : 'shares'}?
+            </div>
+            {#if maximumSale === 1}
+                <div class="sale-proceeds">
+                    Proceeds {optionalMoney(money, pendingSaleChoices[0].result.details?.proceeds)}
+                </div>
+                <div class="trade-answer">
+                    <button
+                        class="confirm-trade"
+                        disabled={tradingDisabled}
+                        onclick={() => confirmSale(1)}>Yes</button
+                    >
+                    <button onclick={() => shareConfirmation?.hidePopover()}>No</button>
+                </div>
+            {:else}
+                <div class="sale-options">
+                    {#each pendingSaleChoices as choice (choice.sale.shares)}
+                        <button
+                            disabled={tradingDisabled}
+                            aria-label={`Sell ${choice.sale.shares} ${choice.sale.shares === 1 ? 'share' : 'shares'} for ${optionalMoney(money, choice.result.details?.proceeds)}`}
+                            data-sale-shares={choice.sale.shares}
+                            onclick={() => confirmSale(choice.sale.shares)}
+                        >
+                            <span
+                                >{choice.sale.shares}
+                                {choice.sale.shares === 1 ? 'share' : 'shares'}</span
+                            >
+                            <strong>{optionalMoney(money, choice.result.details?.proceeds)}</strong>
+                        </button>
+                    {/each}
+                </div>
+                <div class="trade-answer">
+                    <button onclick={() => shareConfirmation?.hidePopover()}>No</button>
+                </div>
+            {/if}
+        {/if}
+    </div>
+</div>
+
+<style>
+    .share-confirmation {
+        position: fixed;
+        inset: auto;
+        transform: translateX(-50%);
+        margin: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--rail-border, #c7b8a6);
+        border-radius: 8px;
+        background: var(--rail-surface, #fffdf8);
+        color: var(--rail-text, #514536);
+        box-shadow: 0 6px 18px #0005;
+        font-size: 13px;
+    }
+    .trade-question,
+    .trade-answer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .trade-question {
+        white-space: nowrap;
+    }
+    .trade-answer {
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+    .company-buy-row {
+        display: flex;
+        flex: 1 1 100%;
+        justify-content: center;
+        gap: 6px;
+    }
+    .trade-answer button,
+    .sale-options button {
+        border: 1px solid var(--rail-border, #c7b8a6);
+        border-radius: 4px;
+        padding: 3px 14px;
+        background: var(--rail-surface-raised, #efe7db);
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+    .trade-answer .confirm-trade,
+    .sale-options button {
+        border-color: #236147;
+        background: #287452;
+        color: #fff;
+        font-weight: 700;
+    }
+    .trade-answer .confirm-trade:hover:not(:disabled),
+    .sale-options button:hover:not(:disabled) {
+        background: #1d6043;
+    }
+    .trade-answer .company-buy {
+        border-color: var(--rail-solid, #2c4652);
+        background: var(--rail-solid, #2c4652);
+        color: #fff;
+    }
+    .trade-answer .company-buy:hover:not(:disabled) {
+        filter: brightness(1.15);
+    }
+    .sale-proceeds {
+        margin-top: 6px;
+        text-align: center;
+        color: var(--rail-muted, #95816a);
+    }
+    .sale-options {
+        display: grid;
+        gap: 4px;
+        margin-top: 8px;
+    }
+    .sale-options button {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        min-width: 150px;
+    }
+    .trade-answer button:focus-visible,
+    .sale-options button:focus-visible,
+    .share-trade:focus-visible {
+        outline: 2px solid var(--rail-focus, #a87948);
+        outline-offset: -2px;
+    }
+    td.tradable {
+        padding: 0;
+    }
+    .share-trade {
+        display: block;
+        width: 100%;
+        border: 0;
+        padding: 4px var(--cell-padding-inline);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+    .share-trade:hover {
+        background: var(--rail-surface-selected, #dfd1be);
+    }
+    .included-net-worth {
+        color: var(--rail-muted, #998b79);
+    }
+    .included-net-worth sup {
+        font-size: 9px;
+        margin-left: 1px;
+    }
+    .wealth-footnote {
+        margin: 4px 0 8px;
+        padding-inline: 6px;
+        color: var(--rail-muted, #887969);
+        font-size: 11px;
+    }
+    .owner-name {
+        display: inline-block;
+        vertical-align: middle;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .portfolio-short {
+        display: none;
+    }
+    table {
+        --sheet-cell: var(--rail-surface, #222c37);
+        --sheet-label: var(--rail-surface-raised, #2b3744);
+        --sheet-pool: var(--sheet-cell);
+        --sheet-market: #1b3d45;
+        --sheet-financial: var(--rail-surface-inset, #1b232d);
+        --sheet-sold: #4a2a33;
+        --sheet-rule: #2f3b48;
+        --sheet-divider: #5b6d80;
+    }
+    .share-cell {
+        --cell-fill: var(--sheet-financial);
+    }
+    .available-pool {
+        --cell-fill: var(--sheet-pool);
+    }
+    td.available-pool.pool-alt {
+        --cell-fill: color-mix(in srgb, #ffffff 3%, var(--sheet-pool));
+    }
+    .pool-row {
+        --row-fill: var(--sheet-pool);
+    }
+    .financial-row {
+        --row-fill: var(--sheet-financial);
+    }
+    .bright-cell,
+    td:has(.last-run, .last-run-revenue) {
+        --cell-fill: var(--sheet-financial);
+    }
+    td.player-financial {
+        --cell-fill: color-mix(in srgb, var(--player-color) 15%, var(--sheet-cell));
+    }
+    td.sold {
+        --cell-fill: var(--sheet-sold);
+    }
+    td.value-cell {
+        --cell-fill: color-mix(in srgb, var(--sheet-market) 45%, var(--sheet-cell));
+    }
+    td {
+        background: var(--cell-fill, var(--row-fill, transparent));
+    }
+    tbody tr:hover td {
+        background: color-mix(
+            in srgb,
+            var(--rail-text, #e3e9ef) 9%,
+            var(--cell-fill, var(--row-fill, var(--sheet-cell)))
+        );
+    }
+    tbody tr:hover th {
+        background: color-mix(
+            in srgb,
+            var(--rail-text, #e3e9ef) 9%,
+            var(--player-tinted-background, var(--sheet-label))
+        );
+    }
+    td:has(.last-run) {
+        position: relative;
+        padding: 0;
+    }
+    .sort-header {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 3px;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .financial-row .sort-header {
+        flex-direction: row-reverse;
+    }
+    .sort-arrow svg {
+        --label-cap-height: 0.73em;
+        --arrow-height: 6px;
+        position: relative;
+        bottom: calc((var(--label-cap-height) - var(--arrow-height)) / 2);
+        display: block;
+        width: 8px;
+        height: var(--arrow-height);
+        fill: currentColor;
+    }
+    /* Room for Player's hover arrow before the corner's split line. */
+    .sort-header + .axis-split {
+        margin-left: 3px;
+    }
+    .sort-label {
+        text-decoration: underline dotted color-mix(in srgb, currentColor 40%, transparent);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+    }
+    /* A negative margin cancels the preview's width and gap, so revealing it never shifts the label. */
+    .sort-arrow.preview {
+        margin-right: -11px;
+        visibility: hidden;
+        opacity: 0.45;
+    }
+    .financial-row .sort-arrow.preview {
+        margin-right: 0;
+        margin-left: -11px;
+    }
+    @media (hover: hover) {
+        .sort-header:hover .sort-label {
+            text-decoration-color: currentColor;
+        }
+        .sort-header:hover .sort-arrow.preview {
+            visibility: visible;
+        }
+    }
+    .sort-header:focus-visible {
+        outline: 2px solid var(--rail-focus, #b8cddd);
+        outline-offset: 2px;
+    }
+    .last-run {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        border: 0;
+        padding: 4px var(--cell-padding-inline);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+    }
+    .last-run::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+    }
+    .last-run:hover:enabled::after {
+        background: var(--rail-hover, #ffffff66);
+    }
+    .last-run:focus-visible {
+        outline: 2px solid var(--rail-focus, #9e7752);
+        outline-offset: -2px;
+    }
+    .last-run:disabled {
+        cursor: default;
+    }
+    .withheld {
+        color: var(--rail-negative, #b33a32);
+    }
+
+    thead th,
+    tbody th {
+        background: var(--sheet-label);
+    }
+    .axis-corner {
+        overflow: hidden;
+    }
+    /* Labels take only their content's width, leaving a full-width sheet's spare room to the data. */
+    .label-column {
+        width: 0;
+    }
+    .axis-labels {
+        display: inline-flex;
+        align-items: center;
+    }
+    /* Taller than the cell, which clips it, so the line meets the cell's top and bottom edges. */
+    .axis-split {
+        align-self: center;
+        width: 26px;
+        height: 60px;
+        margin: -21px 0;
+        background: linear-gradient(
+            to top right,
+            transparent calc(50% - 0.75px),
+            currentColor calc(50% - 0.75px) calc(50% + 0.75px),
+            transparent calc(50% + 0.75px)
+        );
+        opacity: 0.55;
+    }
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    th.player-tinted-header {
+        background: var(--player-tinted-background);
+    }
+    tbody th.player-tinted-header {
+        box-shadow: inset 3px 0 0 var(--player-color);
+    }
+    thead th.player-tinted-header {
+        box-shadow: inset 0 3px 0 var(--player-color);
+    }
+    th.player-tinted-header.controlled-tint {
+        box-shadow: none;
+    }
+
+    .company-trains {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 3px;
+    }
+    .share-value {
+        position: relative;
+        display: inline-block;
+        text-box: trim-both cap alphabetic;
+    }
+    .share-value.president {
+        font-weight: 650;
+    }
+    .badge {
+        position: absolute;
+        color: var(--rail-muted, #a79888);
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        left: 100%;
+        margin-left: 2px;
+        top: 0;
+        text-box: trim-both cap alphabetic;
+    }
+    /* A hidden copy of the note before the value keeps the value centered in its cell. */
+    .noted-value {
+        white-space: pre;
+    }
+    .noted-value::before,
+    .value-note {
+        color: var(--rail-muted, #a79888);
+        font-size: 0.85em;
+    }
+    .noted-value::before {
+        content: attr(data-note);
+        visibility: hidden;
+    }
+    .noted-value.president::before {
+        margin-right: 7px;
+    }
+    .noted-value.president .value-note {
+        margin-left: 7px;
+    }
+    .sheet-spacing {
+        flex: 0 1 20px;
+        min-height: 0;
+    }
+    .sheet-content {
+        flex-shrink: 0;
+        width: fit-content;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+    .fill-width .sheet-spacing {
+        display: none;
+    }
+    .fill-width .sheet-content {
+        width: 100%;
+    }
+    .fill-width .sheet-content :global(table) {
+        width: 100%;
+    }
+    .toolbar {
+        display: flex;
+        flex-shrink: 0;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding-block: 8px;
+        background: var(--rail-table-background, #18212b);
+    }
+    .table-scroll {
+        overflow-x: auto;
+    }
+    .outlined-table {
+        position: relative;
+    }
+    .view-toggle {
+        display: flex;
+        align-items: center;
+        width: max-content;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 999px;
+        background: var(--rail-surface, #222c37);
+        margin: 0;
+    }
+    .view-toggle button {
+        border: 0;
+        border-radius: 999px;
+        padding: 3px 12px;
+        font: inherit;
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--rail-muted, #7f8e9e);
+        background: transparent;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .view-toggle button:hover {
+        color: var(--rail-text, #e3e9ef);
+    }
+    .view-toggle button[aria-pressed='true'] {
+        background: var(--rail-solid, #40576b);
+        color: #ffffff;
+        font-weight: 600;
+    }
+    .period-toggle {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(var(--segments), minmax(0, 1fr));
+        gap: 0;
+    }
+    .period-toggle button {
+        position: relative;
+        transition: color 180ms ease;
+    }
+    .period-toggle button[aria-pressed='true'] {
+        background: transparent;
+    }
+    .period-toggle .thumb {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        left: 2px;
+        width: calc((100% - 4px) / var(--segments));
+        border-radius: 999px;
+        background: var(--rail-solid, #40576b);
+        transform: translateX(calc(var(--selected) * 100%));
+        transition: transform 180ms ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .period-toggle button,
+        .period-toggle .thumb {
+            transition: none;
+        }
+    }
+    .view-toggle button:focus-visible {
+        outline: 2px solid var(--rail-focus, #b8cddd);
+        outline-offset: 1px;
+    }
+    .swap-axes {
+        color: var(--rail-text, #e3e9ef);
+    }
+    .transposed .company {
+        justify-content: center;
+    }
+    .spreadsheet {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        container-type: inline-size;
+        width: 100%;
+        min-width: 0;
+    }
+    table {
+        --cell-padding-inline: 13px;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 0 0 8px;
+    }
+    th,
+    td {
+        padding: 4px 13px;
+        border-bottom: 1px solid var(--sheet-rule);
+    }
+    /* :where() keeps these rules below the section dividers in specificity. */
+    tr > :where(* + *:not(.void)) {
+        border-left: 1px solid #ffffff10;
+    }
+    thead th:has(> .column-owner-label > .incoming) {
+        border-left: 0;
+    }
+    thead th {
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--rail-text, #e3e9ef);
+        font-weight: 600;
+        border-bottom: 2px solid var(--sheet-divider);
+    }
+    th:first-child {
+        text-align: left;
+        padding-left: 12px;
+    }
+    tr > th:first-child {
+        position: relative;
+        z-index: 1;
+        border-right: 2px solid var(--sheet-divider);
+    }
+    .pin-label-column tr > th:first-child {
+        position: sticky;
+        left: 0;
+    }
+    .scrolled tr > th:first-child {
+        z-index: 3;
+    }
+    tbody th {
+        font-weight: 500;
+    }
+    th.non-player-owner,
+    .financial-row > th {
+        text-align: right;
+    }
+    tbody th.controlled-owner {
+        text-align: left;
+    }
+    th.controlled-owner {
+        padding-left: 36px;
+    }
+    .controlled-owner::before {
+        content: '';
+        position: absolute;
+        left: 19px;
+        top: -1px;
+        height: calc(50% + 1px);
+        width: 12px;
+        border-left: 1px solid var(--rail-border, #b7a58f);
+        border-bottom: 1px solid var(--rail-border, #b7a58f);
+        pointer-events: none;
+    }
+    .ownership-continues::after {
+        content: '';
+        position: absolute;
+        left: 19px;
+        top: calc(50% + 7px);
+        bottom: -1px;
+        border-left: 1px solid var(--rail-border, #b7a58f);
+        pointer-events: none;
+    }
+    .controlled-owner.ownership-continues::after {
+        top: 50%;
+    }
+    .column-owner-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-height: 20px;
+    }
+    .column-ownership-connector {
+        flex: 1;
+        min-width: 12px;
+        border-top: 1px solid var(--rail-border, #b7a58f);
+    }
+    .column-ownership-connector.incoming {
+        margin-left: calc(-1 * var(--cell-padding-inline));
+    }
+    .column-ownership-connector.outgoing {
+        margin-right: calc(-1 * var(--cell-padding-inline));
+    }
+    td {
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+    .company {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+    .stat-start > th,
+    .stat-start > td {
+        border-top: 2px solid var(--sheet-divider);
+    }
+    .transposed .stat-start {
+        border-left: 2px solid var(--sheet-divider);
+    }
+    table:not(.transposed) .pool-start,
+    table:not(.transposed) .company-stat-start {
+        border-left: 2px solid var(--sheet-divider);
+    }
+    .transposed tr.pool-start > th,
+    .transposed tr.pool-start > td {
+        border-top: 2px solid var(--sheet-divider);
+    }
+    .transposed tr.company-stat-start > th,
+    .transposed tr.company-stat-start > td {
+        border-top: 2px solid var(--sheet-divider);
+    }
+    /* A short reads as a signed count in the negative colour. */
+    .short .share-value {
+        color: var(--rail-negative, #b33a32);
+        font-style: italic;
+    }
+    .empty {
+        color: var(--rail-muted, #a79888);
+    }
+    td.void {
+        background: var(--rail-table-background, #18212b);
+        border: 0;
+    }
+    tbody tr:hover td.void {
+        background: var(--rail-table-background, #18212b);
+    }
+    .transposed tr.company-stat-start > td.void,
+    .transposed tr.after-par > td.void {
+        border-top: 0;
+    }
+    tr.stat-start > td.void {
+        border-top: 2px solid var(--sheet-divider);
+    }
+    tbody tr:last-child > :not(.void) {
+        border-bottom: 2px solid var(--sheet-divider);
+    }
+    @container (max-width: 800px) {
+        table {
+            --cell-padding-inline: 7px;
+        }
+        th,
+        td {
+            padding-inline: 7px;
+        }
+    }
+    @container (max-width: 560px) {
+        table {
+            --cell-padding-inline: 5px;
+        }
+        .portfolio-full {
+            display: none;
+        }
+        .portfolio-short {
+            display: block;
+        }
+        th,
+        td {
+            padding-inline: 5px;
+        }
+    }
+</style>

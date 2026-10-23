@@ -1,0 +1,923 @@
+<script lang="ts">
+    // A medium city's ring stands clear of its town dot by the track's half-width.
+    const TownRingGap = 3.4
+    import MapTrackJoins from './MapTrackJoins.svelte'
+    import MapRoutes from './MapRoutes.svelte'
+    import CompanyToken from '../tokens/CompanyToken.svelte'
+    import type { StationAppearance } from './stationPresentation.js'
+    import type { StationReservation } from '@tabletop/18xx'
+    import type { BoundingBox } from '@tabletop/common'
+    import TileArtwork from '../tiles/TileArtwork.svelte'
+    import TileSymbol from '../tiles/TileSymbol.svelte'
+    import { PortSymbol } from '../tiles/tileSymbols.js'
+    import { MountainIcon } from './terrainIcons.js'
+    import { ClassicTileAppearance, type TileAppearance } from '../tiles/tileAppearance.js'
+    import {
+        assertMapOverlays,
+        mapViewport,
+        type BoardArtwork,
+        printedMapReservations,
+        mapBorderCosts,
+        terrainRowWidths,
+        type MapDrawing,
+        type MapSelection,
+        type MapToken,
+        type MapRoute
+    } from './mapDrawing.js'
+
+    let {
+        scene,
+        legalLocationIds = [],
+        highlightedLocationIds = legalLocationIds,
+        outlinedLocationIds = [],
+        maskUnavailableLocations = false,
+        previewLocationId,
+        translucentLocationId,
+        selection,
+        tokens = [],
+        reservations,
+        stationAppearances = {},
+        routes = [],
+        appearance = ClassicTileAppearance,
+        revenueStageColors,
+        hexDiameter = 100,
+        artwork,
+        extents,
+        terrainDiscounts = {},
+        onselect
+    }: {
+        scene: MapDrawing
+        legalLocationIds?: readonly string[]
+        highlightedLocationIds?: readonly string[]
+        /** Hexes outlined as a selected hex is, without selecting them. */
+        outlinedLocationIds?: readonly string[]
+        maskUnavailableLocations?: boolean
+        previewLocationId?: string
+        translucentLocationId?: string
+        selection?: MapSelection
+        tokens?: readonly MapToken[]
+        reservations?: readonly StationReservation[]
+        stationAppearances?: Readonly<Record<string, StationAppearance>>
+        routes?: readonly MapRoute[]
+        revenueStageColors?: Readonly<Record<string, string>>
+        appearance?: TileAppearance
+        hexDiameter?: number
+        artwork?: BoardArtwork
+        extents?: readonly BoundingBox[]
+        /** Taken off printed terrain and border costs of each terrain kind. */
+        terrainDiscounts?: Readonly<Record<string, number>>
+        onselect?: (selection: MapSelection) => void
+    } = $props()
+    const viewport = $derived(mapViewport(scene, hexDiameter, artwork, extents))
+    const perimeterMaskId = $props.id()
+    const perimeterRoundingId = `${perimeterMaskId}-rounding`
+    const currentReservations = $derived(reservations ?? printedMapReservations(scene))
+    const entries = $derived.by(() => {
+        assertMapOverlays(scene, tokens, routes, currentReservations)
+        return scene.locations
+    })
+    let focusedLocationId = $derived.by((): string | undefined => {
+        scene
+        return undefined
+    })
+    let hoveredLocationId = $derived.by((): string | undefined => {
+        scene
+        maskUnavailableLocations
+        legalLocationIds
+        return undefined
+    })
+    const selectedPath = $derived(selection?.kind === 'path' ? selection.pathId : undefined)
+
+    function borderColor(kind: string): string {
+        return kind === 'water' ? '#226db5' : kind === 'mountain' ? '#875e36' : '#b02235'
+    }
+    const borderCosts = $derived(
+        mapBorderCosts(scene).map((cost) => ({
+            ...cost,
+            amount: Math.max(0, cost.amount - (terrainDiscounts[cost.kind] ?? 0))
+        }))
+    )
+    // A hex of several terrain kinds takes its largest discount once.
+    function terrainCost(terrain: { cost: number; kinds: readonly string[] }) {
+        return Math.max(
+            0,
+            terrain.cost - Math.max(0, ...terrain.kinds.map((kind) => terrainDiscounts[kind] ?? 0))
+        )
+    }
+
+    function select(event: MouseEvent | KeyboardEvent, target: MapSelection) {
+        if (!onselect) return
+        if (event instanceof KeyboardEvent && event.key !== 'Enter' && event.key !== ' ') return
+        event.stopPropagation()
+        event.preventDefault()
+        if (maskUnavailableLocations && !legalLocationIds.includes(target.locationId)) return
+        onselect?.(target)
+    }
+    // A placed marker's badge straddles the hex's top corner.
+    const PlacedBadge = { width: 30, height: 16, icon: 12, drop: 3 }
+    function placedMarkers(entry: (typeof entries)[number]) {
+        return (entry.location.markers ?? []).flatMap((marker) => {
+            const art = entry.markerArt[marker.id]
+            return art && 'placed' in art ? [{ id: marker.id, ...art.placed }] : []
+        })
+    }
+    function topCorner(polygon: string) {
+        const points = polygon.split(' ').map((point) => {
+            const [x, y] = point.split(',').map(Number)
+            return { x, y }
+        })
+        const top = Math.min(...points.map((point) => point.y))
+        const highest = points.filter((point) => point.y - top < 0.5)
+        return {
+            x: highest.reduce((sum, point) => sum + point.x, 0) / highest.length,
+            y: top
+        }
+    }
+</script>
+
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={viewport.width}
+    height={viewport.height}
+    viewBox={`${viewport.bounds.x} ${viewport.bounds.y} ${viewport.bounds.width} ${viewport.bounds.height}`}
+    data-presentation={artwork ? 'published' : 'generic'}
+    role="group"
+    aria-label={`${scene.map.definition.name} map`}
+    class="map-scene"
+>
+    {#if artwork}
+        <image
+            data-map-layer="board-artwork"
+            href={artwork.imageUrl}
+            {...viewport.bounds}
+            preserveAspectRatio="none"
+            pointer-events="none"
+        ></image>
+    {/if}
+    {#if maskUnavailableLocations}
+        <defs>
+            <filter
+                id={perimeterRoundingId}
+                filterUnits="userSpaceOnUse"
+                {...scene.bounds}
+                color-interpolation-filters="sRGB"
+            >
+                <feGaussianBlur stdDeviation="5"></feGaussianBlur>
+                <feComponentTransfer>
+                    <feFuncA type="linear" slope="20" intercept="-9.5"></feFuncA>
+                </feComponentTransfer>
+            </filter>
+            <mask id={perimeterMaskId} maskUnits="userSpaceOnUse" {...scene.bounds}>
+                <g
+                    fill="white"
+                    stroke="white"
+                    stroke-width="50"
+                    stroke-linejoin="round"
+                    filter={`url(#${perimeterRoundingId})`}
+                >
+                    {#each entries as entry (entry.location.id)}
+                        <polygon
+                            transform={`translate(${entry.center.x} ${entry.center.y})`}
+                            points={entry.drawing.polygon}
+                        ></polygon>
+                    {/each}
+                </g>
+                <g fill="black">
+                    {#each entries as entry (entry.location.id)}
+                        <polygon
+                            transform={`translate(${entry.center.x} ${entry.center.y})`}
+                            points={entry.drawing.polygon}
+                        ></polygon>
+                    {/each}
+                </g>
+            </mask>
+        </defs>
+        <rect
+            {...scene.bounds}
+            mask={`url(#${perimeterMaskId})`}
+            fill="#24272b"
+            fill-opacity="0.45"
+            pointer-events="none"
+            data-map-layer="masked-perimeter"
+        ></rect>
+    {/if}
+    {#each entries as entry (entry.location.id)}
+        {@const id = entry.location.id}
+        {@const yellowUpgradeLabels = (entry.location.upgradeLabels ?? []).filter(
+            (label) => ['yellow', 'green'].includes(label.color) && ['X', 'T'].includes(label.label)
+        )}
+        {@const overlayLabels = yellowUpgradeLabels.filter(
+            (label) => !entry.face.labels.includes(label.label)
+        )}
+
+        {@const available =
+            !!onselect && (!maskUnavailableLocations || legalLocationIds.includes(id))}
+        {@const selected = selection?.locationId === id}
+        {@const target: MapSelection = { kind: 'hex', locationId: id }}
+        {#if entry.hidden}
+            <g data-map-location={id} data-placed={entry.placed} data-hidden="true"></g>
+        {:else}
+            <g
+                transform={`translate(${entry.center.x} ${entry.center.y})`}
+                data-map-location={id}
+                data-placed={entry.placed}
+                opacity={id === translucentLocationId ? 0.55 : 1}
+                class:unavailable={!available}
+                aria-disabled={!available}
+                role="button"
+                tabindex={available ? 0 : -1}
+                aria-label={`${id}${entry.location.name ? ` ${entry.location.name}` : ''}`}
+                aria-pressed={selected}
+                onfocus={(event) =>
+                    (focusedLocationId = event.currentTarget.matches(':focus-visible')
+                        ? id
+                        : undefined)}
+                onblur={() => (focusedLocationId = undefined)}
+                onpointerenter={() => (hoveredLocationId = id)}
+                onpointerleave={() => (hoveredLocationId = undefined)}
+                onclick={(event) => select(event, target)}
+                onkeydown={(event) => select(event, target)}
+            >
+                {#snippet selectedTrack()}
+                    {#if selected && selection?.kind === 'path'}
+                        {#each entry.drawing.paths.filter((path) => path.id === selectedPath) as path (path.id)}
+                            <path d={path.d} fill="none" stroke="#d52f83" stroke-width="3"></path>
+                        {/each}
+                    {/if}
+                {/snippet}
+                <polygon points={entry.drawing.polygon} fill="transparent"></polygon>
+                {#if !artwork || entry.placed}
+                    <TileArtwork
+                        face={entry.face}
+                        drawing={entry.drawing}
+                        appearance={entry.outline.length < 6
+                            ? { ...appearance, edge: { color: 'none', width: 0 } }
+                            : appearance}
+                        {revenueStageColors}
+                        showZeroRevenue={false}
+                        joints={entry.joints}
+                    >
+                        {#snippet trackOverlay()}
+                            {@render selectedTrack()}
+                        {/snippet}
+                    </TileArtwork>
+                {:else}
+                    {@render selectedTrack()}
+                {/if}
+                {#each entry.drawing.nodes as node (node.node.id)}
+                    {@const reservedCompanyIds = currentReservations
+                        .filter(
+                            (reservation) =>
+                                reservation.locationId === id && reservation.nodeId === node.node.id
+                        )
+                        .map((reservation) => reservation.companyId)}
+                    <!-- A reservation holds a space, not a particular one: show it in the free spaces. -->
+                    {@const reservedBySlot = node.slots
+                        .map((_, slot) => slot)
+                        .filter(
+                            (slot) =>
+                                !tokens.some(
+                                    (token) =>
+                                        token.locationId === id &&
+                                        token.nodeId === node.node.id &&
+                                        token.slot === slot
+                                )
+                        )
+                        .slice(0, reservedCompanyIds.length)
+                        .reduce<Record<number, string>>(
+                            (reserved, slot, index) => ({
+                                ...reserved,
+                                [slot]: reservedCompanyIds[index]
+                            }),
+                            {}
+                        )}
+                    {@const tokenSize = 2 * node.slotRadius}
+                    {#each node.slots as point, slot (slot)}
+                        {@const token = tokens.find(
+                            (token) =>
+                                token.locationId === id &&
+                                token.nodeId === node.node.id &&
+                                token.slot === slot
+                        )}
+                        {#if token}
+                            <g data-map-token={token.id}>
+                                <CompanyToken
+                                    appearance={token}
+                                    size={tokenSize}
+                                    x={point.x - tokenSize / 2}
+                                    y={point.y - tokenSize / 2}
+                                />
+                            </g>
+                        {/if}
+                        {@const reservedAppearance = stationAppearances[reservedBySlot[slot]]}
+                        {#if !token && reservedAppearance}
+                            <g class="reserved-token" data-map-reservation={reservedBySlot[slot]}>
+                                <title>{`Reserved for ${reservedAppearance.label}`}</title>
+                                <CompanyToken
+                                    appearance={reservedAppearance}
+                                    size={tokenSize}
+                                    x={point.x - tokenSize / 2}
+                                    y={point.y - tokenSize / 2}
+                                />
+                            </g>
+                        {:else if slot === 0 && reservedCompanyIds.length && !token && !stationAppearances[reservedCompanyIds[0]]}
+                            <text
+                                x={point.x}
+                                y={point.y}
+                                text-anchor="middle"
+                                dominant-baseline="central"
+                                font-size="5"
+                                fill="#52545b"
+                                paint-order="stroke"
+                                stroke="none"
+                                stroke-width="1"
+                                data-map-reservation>{reservedCompanyIds.join('/')}</text
+                            >
+                        {/if}
+                    {/each}
+                {/each}
+                {#if entry.townRing}
+                    {#each entry.drawing.nodes.filter((node) => node.node.kind === 'town') as node (node.node.id)}
+                        <circle
+                            class="town-ring"
+                            data-map-town-ring={entry.location.id}
+                            cx={node.center.x}
+                            cy={node.center.y}
+                            r={node.dotRadius + TownRingGap}
+                        ></circle>
+                    {/each}
+                {/if}
+                {#if !artwork || entry.placed}
+                    <g
+                        class="map-annotations"
+                        fill="#202c31"
+                        text-anchor="middle"
+                        paint-order="stroke"
+                        stroke={appearance.colors[entry.face.color]}
+                        stroke-width="1.7"
+                    >
+                        {#if !entry.placed && entry.location.terrain}
+                            {@const terrain = entry.location.terrain}
+                            {@const cost = `${scene.terrainCostPrefix}${terrainCost(terrain)}`}
+                            {@const widths = terrainRowWidths(terrain.kinds.length, cost)}
+                            {@const iconWidth = widths.icons}
+                            {@const labelWidth = widths.cost}
+                            <g
+                                data-map-terrain
+                                transform={`translate(${-(iconWidth + labelWidth) / 2} ${entry.terrainY})`}
+                            >
+                                {#each terrain.kinds as kind, index (kind)}
+                                    <g transform={`translate(${index * 19} 0)`} stroke="none">
+                                        {#if kind === 'mountain'}
+                                            <path d={MountainIcon.path} fill={MountainIcon.fill}
+                                            ></path>
+                                        {:else if kind === 'water'}
+                                            <path
+                                                transform="translate(4 0) scale(0.75 1)"
+                                                d="M0 -2 C3 -4 6 -4 9 -2 S15 0 18 -2 M0 2 C3 0 6 0 9 2 S15 4 18 2"
+                                                fill="none"
+                                                stroke="#287fab"
+                                                stroke-width="1.8"
+                                                stroke-linecap="round"
+                                            ></path>
+                                        {:else if kind === 'lake'}
+                                            <ellipse cx="9" cy="0" rx="8" ry="4.5" fill="#287fab"
+                                            ></ellipse>
+                                        {:else}
+                                            <text x="8" y="4" font-size="11" font-weight="700"
+                                                >{kind}</text
+                                            >
+                                        {/if}
+                                    </g>
+                                {/each}
+                                <text
+                                    x={iconWidth ? iconWidth + 2 : 0}
+                                    y="4"
+                                    text-anchor="start"
+                                    font-size="10"
+                                    font-weight="750">{cost}</text
+                                >
+                            </g>
+                        {/if}
+                        {#if (!entry.placed || entry.face.color === 'yellow') && overlayLabels.length}
+                            {@const text = overlayLabels.map((label) => label.label).join(' ')}
+                            {@const font = appearance.labelFont ?? { size: 12, weight: 850 }}
+                            <g
+                                data-map-upgrade-label
+                                transform="translate(-30 0)"
+                                aria-label={`${overlayLabels.map((label) => label.label).join(' ')} upgrade location`}
+                                dominant-baseline="central"
+                                fill={appearance.ink}
+                                stroke="none"
+                            >
+                                <text
+                                    x="0"
+                                    font-size={text.length > 2
+                                        ? (font.longSize ?? font.size)
+                                        : font.size}
+                                    font-weight={font.weight}
+                                    font-family={font.family}>{text}</text
+                                >
+                            </g>
+                        {/if}
+                        {#each entry.location.markers ?? [] as marker (marker.id)}
+                            {@const art = entry.markerArt[marker.id]}
+                            {#if art && 'imageUrl' in art && !entry.placed}
+                                <image href={art.imageUrl} x="-25" y="-25" width="50" height="40"
+                                ></image>
+                            {:else if art && 'centeredLabel' in art && !entry.placed}
+                                <text
+                                    data-map-marker-label={marker.id}
+                                    text-anchor="middle"
+                                    dominant-baseline="central"
+                                    font-size="10"
+                                    font-weight="750"
+                                    fill={appearance.ink}>{marker.label}</text
+                                >
+                            {:else if art && 'tileSymbol' in art && !entry.face.symbols?.includes(art.tileSymbol)}
+                                <g
+                                    data-map-marker-symbol={art.tileSymbol}
+                                    transform="translate(0 31)"
+                                    stroke="none"
+                                >
+                                    <title>{marker.label}</title>
+                                    <TileSymbol
+                                        symbol={art.tileSymbol}
+                                        ink={appearance.ink}
+                                        paper={appearance.paper}
+                                    />
+                                </g>
+                            {/if}
+                        {/each}
+                        {#each entry.revenueAnnotations as annotation, index (index)}
+                            {#if annotation.kind === 'badge'}
+                                <g
+                                    data-map-revenue-badge={annotation.markerId}
+                                    transform={`translate(${annotation.x} ${annotation.y})`}
+                                    stroke="none"
+                                >
+                                    {#if annotation.arrows}
+                                        {@const x = annotation.width / 2}
+                                        {@const y = annotation.height / 2}
+                                        <polygon
+                                            points={`${-x - y},0 ${-x},${-y} ${x},${-y} ${x + y},0 ${x},${y} ${-x},${y}`}
+                                            fill={appearance.ink}
+                                        ></polygon>
+                                    {:else}
+                                        <rect
+                                            x={-annotation.width / 2}
+                                            y={-annotation.height / 2}
+                                            width={annotation.width}
+                                            height={annotation.height}
+                                            rx="5.5"
+                                            fill={appearance.ink}
+                                        ></rect>
+                                    {/if}
+                                    <text
+                                        text-anchor="middle"
+                                        dominant-baseline="central"
+                                        font-size="8"
+                                        font-weight="800"
+                                        fill={appearance.paper}>{annotation.label}</text
+                                    >
+                                </g>
+                            {:else if annotation.kind === 'token'}
+                                <image
+                                    data-map-placed-token={annotation.markerId}
+                                    href={annotation.imageUrl}
+                                    x={annotation.x - annotation.radius}
+                                    y={annotation.y - annotation.radius}
+                                    width={annotation.radius * 2}
+                                    height={annotation.radius * 2}
+                                    ><title>{annotation.label}</title></image
+                                >
+                            {:else}
+                                <g
+                                    data-map-revenue-symbol={annotation.markerId}
+                                    transform={`translate(${annotation.x} ${annotation.y}) scale(${annotation.radius / PortSymbol.radius})`}
+                                >
+                                    <title>{annotation.label}</title>
+                                    <TileSymbol
+                                        symbol={annotation.symbol}
+                                        ink={appearance.ink}
+                                        paper={annotation.symbol === 'port'
+                                            ? (appearance.colors.blue ?? appearance.paper)
+                                            : appearance.paper}
+                                    />
+                                    <circle
+                                        r={PortSymbol.radius}
+                                        fill="none"
+                                        stroke="#5d584a"
+                                        stroke-width="0.5"
+                                    ></circle>
+                                </g>
+                            {/if}
+                        {/each}
+                        <text y="36" font-size="5" font-weight="650" data-map-markers
+                            >{(entry.location.markers ?? [])
+                                .filter((marker) => !entry.markerArt[marker.id])
+                                .map((marker) => marker.label)
+                                .join(' · ')}</text
+                        >
+                    </g>
+                {/if}
+                {#each entry.drawing.paths as path (path.id)}
+                    {@const pathTarget: MapSelection = { kind: 'path', locationId: id, pathId: path.id }}
+                    <path
+                        data-map-path={path.id}
+                        d={path.d}
+                        fill="none"
+                        stroke="transparent"
+                        stroke-width="12"
+                        role="button"
+                        tabindex={available ? 0 : -1}
+                        aria-label={`${id} path ${path.id}`}
+                        class="hit-path"
+                        onclick={(event) => select(event, pathTarget)}
+                        onkeydown={(event) => select(event, pathTarget)}
+                    ></path>
+                {/each}
+                {#each entry.drawing.nodes as node (node.node.id)}
+                    {#if node.slots.length === 0}
+                        {@const nodeTarget: MapSelection = { kind: 'node', locationId: id, nodeId: node.node.id }}
+                        <circle
+                            data-map-node={node.node.id}
+                            cx={node.center.x}
+                            cy={node.center.y}
+                            r="9"
+                            fill="transparent"
+                            role="button"
+                            tabindex={available ? 0 : -1}
+                            aria-label={`${id} ${node.node.kind} ${node.node.id}`}
+                            class="hit-node"
+                            onclick={(event) => select(event, nodeTarget)}
+                            onkeydown={(event) => select(event, nodeTarget)}
+                        ></circle>
+                    {/if}
+                    {#each node.slots as point, slot (slot)}
+                        {@const slotTarget: MapSelection = { kind: 'slot', locationId: id, nodeId: node.node.id, slot }}
+                        <circle
+                            data-map-slot={`${node.node.id}:${slot}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r={node.slotRadius}
+                            fill="transparent"
+                            stroke={selected &&
+                            selection?.kind === 'slot' &&
+                            selection.nodeId === node.node.id &&
+                            selection.slot === slot
+                                ? '#d52f83'
+                                : 'none'}
+                            stroke-width="2"
+                            role="button"
+                            tabindex={available ? 0 : -1}
+                            aria-label={`${id} ${node.node.id} slot ${slot + 1}`}
+                            class="hit-node"
+                            onclick={(event) => select(event, slotTarget)}
+                            onkeydown={(event) => select(event, slotTarget)}
+                        ></circle>
+                    {/each}
+                {/each}
+            </g>
+        {/if}
+    {/each}
+    {#if !artwork}
+        <g data-map-layer="outlines" fill="none" pointer-events="none" aria-hidden="true">
+            {#each entries as entry (entry.location.id)}
+                <g
+                    data-map-outline={entry.location.id}
+                    transform={`translate(${entry.center.x} ${entry.center.y})`}
+                    stroke={appearance.mapOutline?.color ?? '#566368'}
+                    stroke-width={appearance.mapOutline?.width ?? 0.6}
+                    stroke-linecap="round"
+                >
+                    {#each entry.outline as { start, end }, index (index)}
+                        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y}></line>
+                    {/each}
+                    {#each entry.divisions as { start, end }, index (index)}
+                        <line
+                            data-map-division
+                            x1={start.x}
+                            y1={start.y}
+                            x2={end.x}
+                            y2={end.y}
+                            stroke-width="2"
+                        ></line>
+                    {/each}
+                </g>
+            {/each}
+        </g>
+    {/if}
+    <!-- Markers placed during play outline their hex beneath the borders. -->
+    <g data-map-layer="placed-marker-outlines" pointer-events="none" aria-hidden="true">
+        {#each entries as entry (entry.location.id)}
+            {@const placed = placedMarkers(entry)}
+            {#if placed.length}
+                <g
+                    data-map-placed-markers={entry.location.id}
+                    transform={`translate(${entry.center.x} ${entry.center.y})`}
+                >
+                    {#each placed as marker, index (marker.id)}
+                        <polygon
+                            points={entry.drawing.polygon}
+                            transform={`scale(${0.955 - index * 0.06})`}
+                            fill="none"
+                            stroke={marker.color}
+                            stroke-width={2.4 / (0.955 - index * 0.06)}
+                            stroke-linejoin="round"
+                        ></polygon>
+                    {/each}
+                </g>
+            {/if}
+        {/each}
+    </g>
+    {#if !artwork}
+        <g data-map-layer="borders" pointer-events="none" aria-hidden="true">
+            {#each entries as entry (entry.location.id)}
+                <g transform={`translate(${entry.center.x} ${entry.center.y})`}>
+                    {#each entry.borders as { start, end, border } (border.edge)}
+                        <line
+                            data-map-border={border.edge}
+                            x1={start.x}
+                            y1={start.y}
+                            x2={end.x}
+                            y2={end.y}
+                            stroke={borderColor(border.kind)}
+                            stroke-width="3"
+                        ></line>
+                    {/each}
+                </g>
+            {/each}
+        </g>
+        <MapTrackJoins {scene} {appearance} />
+    {/if}
+    {#if routes.length}
+        <MapRoutes {scene} {routes} {appearance} />
+    {/if}
+    {#if !artwork}
+        <g data-map-layer="names" pointer-events="none" aria-hidden="true">
+            {#each entries.filter((entry) => entry.nameShown) as entry (entry.location.id)}
+                {#each entry.nameArcs as arc, index (index)}
+                    {@const pathId = `${perimeterMaskId}-name-${entry.location.id}-${index}`}
+                    <!-- Over the top the path runs clockwise; under the foot it runs back so the letters stay upright. -->
+                    {@const middle = (arc.below ? 90 : -90) + arc.rotation}
+                    {@const from = middle + (arc.below ? 120 : -120)}
+                    {@const to = middle + (arc.below ? -120 : 120)}
+                    <g
+                        class="map-annotations"
+                        transform={`translate(${entry.center.x + arc.center.x} ${entry.center.y + arc.center.y})`}
+                        fill={appearance.ink}
+                        paint-order="stroke"
+                        stroke={appearance.colors[entry.face.color]}
+                        stroke-width="1.4"
+                    >
+                        <path
+                            id={pathId}
+                            fill="none"
+                            stroke="none"
+                            d={`M ${arc.radius * Math.cos((from * Math.PI) / 180)} ${arc.radius * Math.sin((from * Math.PI) / 180)} A ${arc.radius} ${arc.radius} 0 1 ${arc.below ? 0 : 1} ${arc.radius * Math.cos((to * Math.PI) / 180)} ${arc.radius * Math.sin((to * Math.PI) / 180)}`}
+                        ></path>
+                        <text font-size="6" font-weight="700" letter-spacing="0.15"
+                            ><textPath href={`#${pathId}`} startOffset="50%" text-anchor="middle"
+                                >{arc.text}</textPath
+                            ></text
+                        >
+                    </g>
+                {/each}
+            {/each}
+            {#each entries.filter((entry) => entry.nameShown && !entry.nameArcs.length) as entry (entry.location.id)}
+                {@const lines = entry.nameRows}
+                <!-- A city name the title places itself matches the curved names in their styles. -->
+                {@const curved = entry.namePlaced && appearance.cityNameArcs}
+                <g
+                    class="map-annotations"
+                    transform={`translate(${entry.center.x + entry.nameBaseline.x} ${entry.center.y})`}
+                    fill={curved ? appearance.ink : '#202c31'}
+                    text-anchor="middle"
+                    paint-order="stroke"
+                    stroke={appearance.colors[entry.face.color]}
+                    stroke-width={curved ? 1.4 : 1.7}
+                >
+                    <text
+                        font-size={curved ? 6 : 5}
+                        font-weight={curved ? 700 : 650}
+                        letter-spacing={curved ? 0.15 : undefined}
+                        >{#each lines as line, index (index)}<tspan
+                                x="0"
+                                y={entry.nameBaseline.y + index * 6}>{line}</tspan
+                            >{/each}</text
+                    >
+                </g>
+            {/each}
+        </g>
+    {/if}
+    <!-- Their badges cover names but stay beneath border costs. -->
+    <g data-map-layer="placed-marker-badges" pointer-events="none" aria-hidden="true">
+        {#each entries as entry (entry.location.id)}
+            {@const placed = placedMarkers(entry)}
+            {#if placed.length}
+                {@const corner = topCorner(entry.drawing.polygon)}
+                <g
+                    data-map-placed-badges={entry.location.id}
+                    transform={`translate(${entry.center.x} ${entry.center.y})`}
+                >
+                    {#each placed as marker, index (marker.id)}
+                        <g
+                            data-map-placed-marker={marker.id}
+                            transform={`translate(${corner.x + (index - (placed.length - 1) / 2) * PlacedBadge.width} ${corner.y + PlacedBadge.drop})`}
+                        >
+                            <rect
+                                x={-PlacedBadge.width / 2 + 0.5}
+                                y={-PlacedBadge.height / 2}
+                                width={PlacedBadge.width - 1}
+                                height={PlacedBadge.height}
+                                rx={PlacedBadge.height / 2}
+                                fill={marker.color}
+                                stroke={appearance.ink}
+                                stroke-width="0.7"
+                            ></rect>
+                            {#if stationAppearances[marker.companyId]}
+                                <CompanyToken
+                                    appearance={stationAppearances[marker.companyId]}
+                                    size={PlacedBadge.icon}
+                                    x={-PlacedBadge.icon - 1}
+                                    y={-PlacedBadge.icon / 2}
+                                />
+                            {/if}
+                            {#if 'tileSymbol' in marker.icon}
+                                <g
+                                    transform={`translate(${PlacedBadge.icon / 2 + 1} 0) scale(${PlacedBadge.icon / 2 / PortSymbol.radius})`}
+                                >
+                                    <TileSymbol
+                                        symbol={marker.icon.tileSymbol}
+                                        ink={appearance.ink}
+                                        paper={marker.icon.tileSymbol === 'port'
+                                            ? (appearance.colors.blue ?? appearance.paper)
+                                            : appearance.paper}
+                                    />
+                                </g>
+                            {:else}
+                                <image
+                                    href={marker.icon.imageUrl}
+                                    x="1"
+                                    y={-PlacedBadge.icon / 2}
+                                    width={PlacedBadge.icon}
+                                    height={PlacedBadge.icon}
+                                ></image>
+                            {/if}
+                        </g>
+                    {/each}
+                </g>
+            {/if}
+        {/each}
+    </g>
+    {#if !artwork}
+        <g data-map-layer="border-costs" pointer-events="none" aria-hidden="true">
+            {#each borderCosts as cost (cost.key)}
+                {@const text = `${scene.terrainCostPrefix}${cost.amount}`}
+                {@const width = Math.max(12, text.length * 4.6 + 4)}
+                <g
+                    data-map-border-cost={cost.key}
+                    transform={`translate(${cost.x} ${cost.y})`}
+                    stroke="none"
+                >
+                    <rect
+                        x={-width / 2}
+                        y="-6"
+                        {width}
+                        height="12"
+                        rx="1.5"
+                        fill={borderColor(cost.kind)}
+                        stroke={appearance.paper}
+                        stroke-width="0.8"
+                    ></rect>
+                    <text
+                        text-anchor="middle"
+                        dominant-baseline="central"
+                        font-size="7.5"
+                        font-weight="800"
+                        fill={appearance.paper}>{text}</text
+                    >
+                </g>
+            {/each}
+        </g>
+    {/if}
+    <g data-map-layer="local-lines" pointer-events="none" aria-hidden="true">
+        {#each entries.filter((entry) => !entry.placed) as entry (entry.location.id)}
+            {#each (entry.location.markers ?? []).filter((marker) => {
+                const art = entry.markerArt[marker.id]
+                return art && 'localLine' in art
+            }) as marker (marker.id)}
+                <g
+                    data-map-marker-local-line={marker.id}
+                    transform={`translate(${entry.center.x + 4} ${entry.center.y + (entry.localLineAboveY !== undefined && entry.markerArt[marker.id] && 'above' in entry.markerArt[marker.id] ? entry.localLineAboveY : 32)})`}
+                    fill={appearance.ink}
+                    dominant-baseline="central"
+                >
+                    <text
+                        x="-2"
+                        text-anchor="end"
+                        font-size="8"
+                        font-weight="850"
+                        paint-order="stroke"
+                        stroke={appearance.colors[entry.face.color]}
+                        stroke-width="2.4"
+                        stroke-linejoin="round">{marker.label}</text
+                    >
+                    <path d="M4 0H14" stroke={appearance.ink} stroke-width="1.6"></path>
+                    <circle
+                        cx="4"
+                        r="2.6"
+                        fill={appearance.paper}
+                        stroke={appearance.ink}
+                        stroke-width="1"
+                    ></circle>
+                    <circle
+                        cx="14"
+                        r="2.6"
+                        fill={appearance.paper}
+                        stroke={appearance.ink}
+                        stroke-width="1"
+                    ></circle>
+                </g>
+            {/each}
+        {/each}
+    </g>
+    {#if maskUnavailableLocations}
+        <g
+            data-map-layer="unavailable"
+            fill="#24272b"
+            fill-opacity="0.45"
+            pointer-events="none"
+            aria-hidden="true"
+        >
+            {#each entries.filter((entry) => !highlightedLocationIds.includes(entry.location.id)) as entry (entry.location.id)}
+                <polygon
+                    data-map-masked={entry.location.id}
+                    transform={`translate(${entry.center.x} ${entry.center.y})`}
+                    points={entry.drawing.polygon}
+                ></polygon>
+            {/each}
+        </g>
+    {/if}
+    <g
+        data-map-layer="highlights"
+        fill="none"
+        stroke="#f07818"
+        pointer-events="none"
+        aria-hidden="true"
+    >
+        {#each entries.filter((entry) => entry.location.id === selection?.locationId || outlinedLocationIds.includes(entry.location.id) || entry.location.id === focusedLocationId || entry.location.id === previewLocationId || (maskUnavailableLocations && entry.location.id === hoveredLocationId && legalLocationIds.includes(entry.location.id))) as entry (entry.location.id)}
+            <polygon
+                data-map-highlight={entry.location.id}
+                data-track-preview={entry.location.id === previewLocationId
+                    ? entry.location.id
+                    : undefined}
+                data-map-hover={maskUnavailableLocations &&
+                entry.location.id === hoveredLocationId &&
+                legalLocationIds.includes(entry.location.id)
+                    ? entry.location.id
+                    : undefined}
+                transform={`translate(${entry.center.x} ${entry.center.y})`}
+                points={entry.drawing.polygon}
+                stroke-width="5"
+                stroke-linejoin="round"
+            ></polygon>
+        {/each}
+    </g>
+</svg>
+
+<style>
+    /* No grayscale: WebKit ignores CSS filter functions on SVG elements, and players
+       preferred the faded colours it shows. */
+    .reserved-token {
+        opacity: 0.4;
+    }
+    .map-scene {
+        display: block;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .map-annotations {
+        pointer-events: none;
+    }
+    .unavailable {
+        pointer-events: none;
+    }
+    [role='button'] {
+        cursor: pointer;
+        outline: none;
+    }
+    .hit-path:focus-visible {
+        stroke: #d52f83;
+        stroke-width: 4;
+    }
+    .hit-node:focus-visible {
+        stroke: #d52f83;
+        stroke-width: 2;
+    }
+    .town-ring {
+        fill: none;
+        stroke: #202c31;
+        stroke-width: 1.6;
+    }
+</style>

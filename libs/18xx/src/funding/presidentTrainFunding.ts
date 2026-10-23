@@ -1,0 +1,50 @@
+import { assertExists } from '@tabletop/common'
+import { getCompany, sharesOwned } from '../finance/finance.js'
+import { companyShareCount } from '../company/companyCharters.js'
+import { reorderPendingOperatingCompanies, type OperatingRules } from '../operating/operatingSet.js'
+import { purchaseOwnershipCeiling, type StockRules } from '../stock/stockRules.js'
+import type { TrainFundingRules } from './trainFunding.js'
+
+export function presidentTrainFundingRules(options: {
+    companyOrder: OperatingRules['companyOrder']
+    saleTerms: TrainFundingRules['saleTerms']
+    sellInBlocks: boolean
+    stockRules: Pick<StockRules, 'ownershipLimit' | 'charters'>
+    protectsPresidency: TrainFundingRules['protectsPresidency']
+    /** What the title records of each sale, such as shares its president may protect. */
+    afterShareSale?: TrainFundingRules['afterShareSale']
+    /** When the president may help buy a train the company does not need. */
+    voluntaryFunding?: TrainFundingRules['voluntaryFunding']
+}): TrainFundingRules {
+    return {
+        afterShareSale(state, details) {
+            reorderPendingOperatingCompanies(state, options.companyOrder(state))
+            options.afterShareSale?.(state, details)
+        },
+        includeMarketTrains: true,
+        sellInBlocks: options.sellInBlocks,
+        contributors(state, companyId) {
+            const president = getCompany(state, companyId).president
+            assertExists(president, 'A railway requires its president')
+            return [president]
+        },
+        issuanceTerms: () => undefined,
+        saleTerms: options.saleTerms,
+        protectsPresidency: options.protectsPresidency,
+        voluntaryFunding: options.voluntaryFunding,
+        requiredSaleShares(state, seller, companyId) {
+            const company = getCompany(state, companyId)
+            if (
+                !company.started ||
+                !companyShareCount(state, options.stockRules.charters, companyId) ||
+                company.closed
+            )
+                return 0
+            return Math.max(
+                0,
+                sharesOwned(state, companyId, seller) -
+                    purchaseOwnershipCeiling(state, companyId, seller, options.stockRules)
+            )
+        }
+    }
+}

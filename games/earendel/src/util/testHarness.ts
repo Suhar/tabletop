@@ -120,7 +120,7 @@ export class TestGame {
             ...data
         } as Partial<Type.Static<T>>) as GameAction
 
-        const result = this.engine.run(action, this.state, this.game)
+        const result = this.engine.executeAction({ action, state: this.state, game: this.game })
         this.state = result.updatedState
         this.processed.push(...result.processedActions)
         return result.processedActions

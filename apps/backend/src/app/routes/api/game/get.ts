@@ -1,15 +1,26 @@
 import { FastifyInstance } from 'fastify'
+import { setTimeout as delay } from 'node:timers/promises'
+import { EnvService } from '@tabletop/backend-services'
 import { Type, type Static } from 'typebox'
+import { countTiming, measure } from '@tabletop/backend-services/diagnostics'
 
 type ParamsType = Static<typeof ParamsType>
 const ParamsType = Type.Object({
     gameId: Type.String()
 })
 
+type QueryType = Static<typeof QueryType>
+const QueryType = Type.Object({
+    view: Type.Optional(Type.Literal('host')),
+    includeActions: Type.Optional(Type.Boolean())
+})
+
 export default async function (fastify: FastifyInstance) {
-    fastify.get<{ Params: ParamsType }>(
+    fastify.get<{ Params: ParamsType; Querystring: QueryType }>(
         '/get/:gameId',
         {
+            config: { requestTiming: true },
+            schema: { querystring: QueryType },
             onRequest: fastify.auth([fastify.verifyActiveUser, fastify.verifyRoleUser], {
                 relation: 'and'
             })
@@ -20,34 +31,54 @@ export default async function (fastify: FastifyInstance) {
             }
 
             const { gameId } = request.params
-            const etagData = await fastify.gameService.getGameEtag(gameId)
-            const etag = etagData ? `W/"${etagData}"` : undefined
-            const ifNoneMatch = request.headers['if-none-match']
-            console.log('etag', etag)
-            console.log('if-none-match', ifNoneMatch)
-            if (ifNoneMatch === etag) {
-                await reply.code(304).send()
+            const hostView = request.query.view === 'host'
+            const includeActions = request.query.includeActions !== false
+            if (hostView && !fastify.gameService.canAccessHostView(request.user)) {
+                await reply.code(403).send()
                 return
             }
 
-            const game = await fastify.gameService.getGame({ gameId, withState: true })
+            const user = request.user
+            const gameEtag = await measure('game.load.etag', () =>
+                fastify.gameService.getGameEtagForUser({ gameId, hostView, user })
+            )
 
-            if (!game) {
+            if (gameEtag === undefined) {
                 await reply.code(404).send()
                 return
             }
 
-            void reply.header('ETag', etag)
-            const actions = await fastify.gameService.getGameActions(game)
-
-            // For transitioning to undo
-            if (game.state && game.state.actionChecksum === undefined) {
-                console.log('Game state has no checksum, calculating...')
-                const checksum = await fastify.gameService.backfillChecksum(game.state, actions)
-                game.state.actionChecksum = checksum
+            const historyDelay = Number(process.env.LOCAL_GAME_HISTORY_DELAY_MS ?? 0)
+            if (includeActions && EnvService.isLocal() && historyDelay > 0) {
+                await delay(historyDelay)
             }
 
-            return { status: 'ok', payload: { game, actions } }
+            const responseEtag = `W/"${gameEtag}${includeActions ? ':full' : ':state-only'}"`
+            const validator = request.headers['if-none-match']
+            const validatorMatches = validator === responseEtag
+            const validatorStatus =
+                validator === undefined ? 'missing' : validatorMatches ? 'matched' : 'mismatched'
+            countTiming(`game.load.validator.${validatorStatus}`)
+            void reply.header('ETag', responseEtag)
+            void reply.header('Cache-Control', 'private, no-cache')
+            if (validatorMatches) {
+                await reply.code(304).send()
+                return
+            }
+
+            const representation = await measure('game.load.representation', () =>
+                fastify.gameService.getGameForUser({ gameId, hostView, user, includeActions })
+            )
+
+            if (representation === undefined) {
+                await reply.code(404).send()
+                return
+            }
+
+            return {
+                status: 'ok',
+                payload: representation
+            }
         }
     )
 }

@@ -1,0 +1,121 @@
+# Game Client
+
+The Game Client maintains a responsive client-side interaction with one Game Instance. It uses Game Runtime to manage Game Contexts, present Game State, construct and apply Actions, navigate history, explore alternatives, and reconcile Hosted Games.
+
+## Session and contexts
+
+**Game Session**:
+One Game Client interaction with one Game Instance. Moving between Primary and Exploration contexts or between Live and History views does not create a new Game Session.
+_Avoid_: Session
+
+**Game Context**:
+A coherent client-side representation of a Game Instance containing its current Game State and ordered Processed Actions.
+_Avoid_: Game Timeline, Game Projection
+
+**Primary Game Context**:
+The Game Context representing the actual Local or Hosted Game Instance.
+
+**Exploration Game Context**:
+A mutable private branch derived from another Game Context for trying alternate Actions without changing its source.
+
+**Active Game Context**:
+The Primary or Exploration Game Context on which the Game Session is currently focused.
+
+**Modifiable Game Context**:
+The Active Game Context when it is eligible to receive new Actions. No Game Context is modifiable during History View.
+
+**Displayed Game State**:
+The Game State currently published to game UI components. During transition presentation, it remains at the prior state until the resulting state is ready to be displayed.
+
+**Transition Kind**:
+Why the Displayed Game State is changing: the first presentation, the Acting Player's own Action, another Player's Action, Reconciliation, Undo, History Navigation, Exploration, a switch of the Displayed Game Representation, or a direct edit of the Game State. A game UI decides from the kind which transient state survives the change.
+
+**Displayed Game Representation**:
+The Game Context currently supplying the game UI. For a Hosted Game with hidden information, it may be an ordinary Player or spectator projection, an authorized canonical Host View, or a Player projection derived locally from a retained Host Game Context for inspection.
+
+## Views and history
+
+**Live View**:
+The view that presents the Active Game Context’s latest published Game State and permits Actions when that context is modifiable.
+
+**History View**:
+A stable, read-only view of the Active Game Context at another point in its Processed Action history. Entering History View does not replace the Active Game Context.
+
+**History Navigation**:
+Moving History View backward through Action Reversal or forward through Action replay without changing the underlying Game Context.
+
+**History Step**:
+One backward or forward movement across a User Action and its generated System Action cascade. The underlying history continues to record every Processed Action individually.
+
+**Host View**:
+An authorized Developer or Administrator view of the canonical Game State and Canonical Action History. Host View is a representation choice, not a Player Perspective or Acting Player identity.
+
+## Play arrangements
+
+**Hotseat Play**:
+Play in which one Game Client permits a person to act for multiple Players. Hotseat Play is currently supported for Local Games.
+
+**Networked Play**:
+Play in which participating Users act through separate Game Clients for their associated Players. Networked Play is currently supported for Hosted Games.
+
+**Player Perspective**:
+The Player identity whose player-relative information and presentation the Game Client displays. It normally matches the Acting Player in Hotseat Play, but inspection tools may present a non-acting Player.
+_Avoid_: Viewed Player, My Player
+
+**Acting Player**:
+The Player whose identity the Game Client uses when constructing the next User Action. When multiple Players are active in Hotseat Play or Exploration, the person using the client chooses the Acting Player.
+_Avoid_: My Player
+
+Entering Admin Mode does not itself change the Acting Player when multiple Players are active. An
+explicit administrator choice temporarily selects a currently active Player for Action construction.
+With exactly one active Player, that Player is selected automatically. Debug and Admin inspection
+default to Host View. When an Acting Player is available, the inspector may independently replace the
+Displayed Game Representation with that Player Perspective while retaining the canonical Host Game
+Context. Changing the Acting Player then derives a fresh projection from the Host Game Context; it
+does not merge projections. If a selected Player becomes inactive or Admin Mode ends, the choice is
+cleared. Exploration ignores the Admin choice and uses its ordinary Hotseat Play perspective while
+active.
+
+## Client action handling
+
+**Optimistic Application**:
+Advancing a Primary Game Context with a locally processed User Action before host acceptance. Information-Revealing Actions are not applied optimistically.
+
+**Reconciliation**:
+Aligning a Primary Game Context with a host’s canonical accepted Action history after optimistic application or realtime updates.
+
+**Undo Candidate**:
+The User Action currently offered by the Game Client for Undo under its local understanding of identity, Action origin, simultaneous grouping, and information barriers. Unsequenced Out-of-Turn Actions are never candidates and never block another Player's candidate; a suffix reversal re-applies them. For a Hosted Game, the candidate remains subject to host authorization.
+
+## Action drafting
+
+**Action Draft**:
+Temporary Game Client state used to construct an Unprocessed Action. An Action Draft is not itself an Action.
+
+**Draft Stage**:
+One ordered part of an Action Draft.
+
+**Draft Entry**:
+The current value of one Draft Stage.
+
+**Manual Draft Entry**:
+A Draft Entry created through explicit user input.
+
+**Auto Draft Entry**:
+A transient Draft Entry supplied by the Game Client without explicit user input. An Undo press never stops on it.
+
+**Undo**:
+The Game Client's single reversal control. While an Action Draft holds a Manual Draft Entry, Undo removes the latest one and any downstream Draft Entries that depend on it; otherwise it reverses the Undo Candidate in Processed Action history.
+_Avoid_: Back
+
+## Exploration
+
+**Exploration**:
+A private, Local, Hotseat branch opened within a Game Session for trying alternate Actions, with unknown information simulated consistently with the explorer’s permitted knowledge at the selected branch point. It may begin from Live or History View and starts as a Transient Game Instance.
+_Avoid_: Fork
+
+**Saved Exploration**:
+An Exploration persisted as a separate Local Game Instance linked to its source. Saving it does not change the source Game Context.
+
+**Hypothetical Game State**:
+A rules-valid Game State whose unknown information is simulated while honoring facts available to the explorer at the selected branch point. Later source-Game revelations do not constrain an earlier branch. Its simulated information does not disclose the source Game’s unknown information.

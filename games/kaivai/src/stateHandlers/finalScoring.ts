@@ -14,7 +14,6 @@ import {
     isChooseScoringIsland
 } from '../actions/chooseScoringIsland.js'
 import { HydratedScoreIsland, isScoreIsland, ScoreIsland } from '../actions/scoreIsland.js'
-import { nanoid } from 'nanoid'
 import { PhaseName } from '../definition/phases.js'
 
 // Transition from FinalScoring(ScoreHuts) -> FinalScoring
@@ -23,8 +22,14 @@ import { PhaseName } from '../definition/phases.js'
 
 type FinalScoringAction = HydratedScoreHuts | HydratedChooseScoringIsland | HydratedScoreIsland
 
-export class FinalScoringStateHandler implements MachineStateHandler<FinalScoringAction, HydratedKaivaiGameState> {
-    isValidAction(action: HydratedAction, context: MachineContext<HydratedKaivaiGameState>): action is FinalScoringAction {
+export class FinalScoringStateHandler implements MachineStateHandler<
+    FinalScoringAction,
+    HydratedKaivaiGameState
+> {
+    isValidAction(
+        action: HydratedAction,
+        context: MachineContext<HydratedKaivaiGameState>
+    ): action is FinalScoringAction {
         const gameState = context.gameState
         if (action.source === ActionSource.User && !action.playerId) return false
 
@@ -38,7 +43,10 @@ export class FinalScoringStateHandler implements MachineStateHandler<FinalScorin
         return false
     }
 
-    validActionsForPlayer(_playerId: string, context: MachineContext<HydratedKaivaiGameState>): ActionType[] {
+    validActionsForPlayer(
+        _playerId: string,
+        context: MachineContext<HydratedKaivaiGameState>
+    ): ActionType[] {
         const gameState = context.gameState
         return gameState.islandsToScore.length > 0 ? [ActionType.ChooseScoringIsland] : []
     }
@@ -55,7 +63,10 @@ export class FinalScoringStateHandler implements MachineStateHandler<FinalScorin
         gameState.activePlayerIds = [nextPlayerId]
     }
 
-    onAction(action: FinalScoringAction, context: MachineContext<HydratedKaivaiGameState>): MachineState {
+    onAction(
+        action: FinalScoringAction,
+        context: MachineContext<HydratedKaivaiGameState>
+    ): MachineState {
         const gameState = context.gameState
         switch (true) {
             case isScoreHuts(action): {
@@ -70,6 +81,7 @@ export class FinalScoringStateHandler implements MachineStateHandler<FinalScorin
             }
             case isChooseScoringIsland(action): {
                 gameState.bids = {}
+                if (gameState.scoringBids !== undefined) gameState.scoringBids = []
 
                 const isUncontested = gameState.board.isUncontestableForScoring(
                     gameState.players,
@@ -92,6 +104,7 @@ export class FinalScoringStateHandler implements MachineStateHandler<FinalScorin
             }
             case isScoreIsland(action): {
                 gameState.chosenIsland = undefined
+                if (gameState.scoringBids !== undefined) gameState.scoringBids = []
 
                 if (gameState.islandsToScore.length === 0) {
                     gameState.phases.endPhase(gameState.actionCount)

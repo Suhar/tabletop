@@ -1,0 +1,225 @@
+import * as Type from 'typebox'
+import { actsFor, inReceivership, type ReceivershipRules } from '../finance/receivership.js'
+import { assert } from '@tabletop/common'
+import {
+    Owner,
+    getCompany,
+    sameOwner,
+    signedShares,
+    type Certificate,
+    type FinancialState
+} from '../finance/finance.js'
+import { CashPayment } from '../finance/cashPayments.js'
+import { StockMarketMove, type StockMarket } from '../stock/stockMarket.js'
+import type { TrainRunningState } from '../routes/route.js'
+export const EarningsChoice = Type.Union([
+    Type.Literal('pay'),
+    Type.Literal('withhold'),
+    Type.Literal('half-pay')
+])
+export type EarningsChoice = Type.Static<typeof EarningsChoice>
+export const EarningsDetails = Type.Object(
+    {
+        companyId: Type.String(),
+        choice: EarningsChoice,
+        revenue: Type.Integer({ minimum: 0 }),
+        retained: Type.Integer({ minimum: 0 }),
+        dividendPerShare: Type.Integer({ minimum: 0 }),
+        bonusPerShare: Type.Integer({ minimum: 0 }),
+        bankAdjustment: Type.Integer(),
+        payments: Type.Array(CashPayment),
+        charges: Type.Optional(Type.Array(CashPayment)),
+        marketMove: Type.Optional(StockMarketMove)
+    },
+    { additionalProperties: false }
+)
+export type EarningsDetails = Type.Static<typeof EarningsDetails>
+export const EarningsFields = { earningsDistribution: Type.Optional(EarningsDetails) }
+export type EarningsState = Type.Static<Type.TObject<typeof EarningsFields>>
+export type DistributionState = TrainRunningState & EarningsState & { stockMarket: StockMarket }
+export type DividendEntitlement = { owner: Owner; shares: number }
+export type DistributionSummary = Pick<EarningsDetails, 'choice' | 'revenue' | 'retained'> & {
+    baseDividendPerShare: number
+}
+export interface EarningsRules {
+    choices(state: DistributionState, companyId: string): EarningsChoice[]
+    shareCount(state: DistributionState, companyId: string): number
+    entitlements(state: DistributionState, companyId: string): DividendEntitlement[]
+    retainedRevenue(
+        state: DistributionState,
+        companyId: string,
+        choice: EarningsChoice,
+        revenue: number
+    ): number
+    roundDividend(state: DistributionState, companyId: string, amount: number): number
+    /**
+     * A holder's payment where the title rounds each holding rather than each share; undefined
+     * leaves the holder their shares times the dividend per share.
+     */
+    holderDividend?(
+        state: DistributionState,
+        companyId: string,
+        holding: { shares: number; choice: EarningsChoice; revenue: number }
+    ): number | undefined
+    marketEffect(
+        state: DistributionState,
+        companyId: string,
+        distribution: DistributionSummary
+    ): { move?: StockMarketMove; bonusPerShare: number }
+    afterDistribution?(state: DistributionState, companyId: string): void
+}
+export function dividendEntitlements(
+    state: FinancialState,
+    companyId: string,
+    recipient: (certificate: Extract<Certificate, { kind: 'share' | 'short' }>) => Owner | undefined
+): DividendEntitlement[] {
+    const result: DividendEntitlement[] = []
+    for (const certificate of state.certificates) {
+        if (certificate.kind === 'private' || certificate.companyId !== companyId) continue
+        const owner = recipient(certificate)
+        if (!owner) continue
+        const shares = signedShares(certificate)
+        const previous = result.find((entry) => sameOwner(entry.owner, owner))
+        if (previous) previous.shares += shares
+        else result.push({ owner: { ...owner }, shares })
+    }
+    return result.filter((entry) => entry.shares)
+}
+export class EarningsDistribution {
+    constructor(
+        private readonly state: DistributionState,
+        readonly rules: EarningsRules,
+        private readonly receivership?: ReceivershipRules
+    ) {}
+    /** The choices open to the company: the title's, or a receiver's one. */
+    choices(companyId: string): EarningsChoice[] {
+        const choices = this.rules.choices(this.state, companyId)
+        if (!this.receivership || !inReceivership(this.state, companyId)) return choices
+        const choice = this.receivership.earningsChoice(this.state, companyId)
+        assert(choices.includes(choice), 'A receiver takes one of its earnings choices')
+        return [choice]
+    }
+    /** The choice that needs no decision: a receiver's, or withholding nothing. */
+    automaticChoice(companyId: string): EarningsChoice | undefined {
+        const choices = this.choices(companyId)
+        if (this.receivership && inReceivership(this.state, companyId)) return choices[0]
+        return this.state.routeStep?.result?.revenue === 0 &&
+            this.state.routeStep.result.routes.length === 0 &&
+            choices.includes('withhold')
+            ? 'withhold'
+            : undefined
+    }
+    canAct(playerId: string, companyId: string): boolean {
+        return (
+            this.state.routeStep?.companyId === companyId &&
+            !!this.state.routeStep.result &&
+            !this.state.earningsDistribution &&
+            !getCompany(this.state, companyId).closed &&
+            actsFor(this.state, playerId, companyId)
+        )
+    }
+    evaluate(
+        companyId: string,
+        choice: EarningsChoice
+    ): { details: EarningsDetails; reason?: never } | { details?: never; reason: string } {
+        const result = this.state.routeStep?.result
+        if (
+            !result ||
+            result.companyId !== companyId ||
+            this.state.earningsDistribution ||
+            getCompany(this.state, companyId).closed
+        )
+            return { reason: 'This company is not distributing earnings.' }
+        if (!this.choices(companyId).includes(choice))
+            return { reason: 'This distribution choice is not available.' }
+        const revenue = result.revenue,
+            retained = this.rules.retainedRevenue(this.state, companyId, choice, revenue)
+        const count = this.rules.shareCount(this.state, companyId)
+        assert(count > 0 && Number.isInteger(count), 'Dividends require a positive share count')
+        assert(
+            Number.isInteger(retained) && retained >= 0 && retained <= revenue,
+            'Invalid retained revenue'
+        )
+        const base = this.rules.roundDividend(this.state, companyId, (revenue - retained) / count)
+        const effect = this.rules.marketEffect(this.state, companyId, {
+            choice,
+            revenue,
+            retained,
+            baseDividendPerShare: base
+        })
+        const dividendPerShare = base + effect.bonusPerShare
+        assert(
+            Number.isInteger(dividendPerShare) && dividendPerShare >= 0,
+            'Dividends must be whole currency units'
+        )
+        const payments: CashPayment[] = []
+        const charges: CashPayment[] = []
+        this.addPayment(payments, { kind: 'company', companyId }, retained)
+        for (const entitlement of this.rules.entitlements(this.state, companyId)) {
+            const amount =
+                this.rules.holderDividend?.(this.state, companyId, {
+                    shares: entitlement.shares,
+                    choice,
+                    revenue
+                }) ?? entitlement.shares * dividendPerShare
+            if (amount >= 0) this.addPayment(payments, entitlement.owner, amount)
+            else
+                charges.push({
+                    from: { ...entitlement.owner },
+                    to: { kind: 'bank' },
+                    amount: -amount
+                })
+        }
+        const total = payments.reduce((sum, payment) => sum + payment.amount, 0)
+        return {
+            details: {
+                companyId,
+                choice,
+                revenue,
+                retained,
+                dividendPerShare,
+                bonusPerShare: effect.bonusPerShare,
+                bankAdjustment: total - revenue,
+                payments,
+                ...(charges.length ? { charges } : {}),
+                ...(effect.move ? { marketMove: effect.move } : {})
+            }
+        }
+    }
+    private addPayment(payments: CashPayment[], owner: Owner, amount: number): void {
+        if (!amount || owner.kind === 'bank') return
+        const previous = payments.find((payment) => sameOwner(payment.to, owner))
+        if (previous) previous.amount += amount
+        else payments.push({ from: { kind: 'bank' }, to: { ...owner }, amount })
+    }
+}
+
+const AfterEarningsStates = [
+    'BuyingTrains',
+    'FundingTrain',
+    'Bankrupt',
+    'GameOver',
+    'AdvancingPhase',
+    'DiscardingTrains',
+    'RepayingLoans',
+    'RaisingCash'
+]
+export function validateEarningsDistribution(
+    state: EarningsState & {
+        machineState: string
+        routeStep?: { result?: { companyId: string; revenue: number } }
+        trainPurchaseStep?: { companyId: string }
+    },
+    operatingInterruptions: readonly string[] = []
+): void {
+    const earnings = state.earningsDistribution
+    if (!earnings) return
+    assert(
+        (AfterEarningsStates.includes(state.machineState) ||
+            operatingInterruptions.includes(state.machineState)) &&
+            earnings.companyId === state.routeStep?.result?.companyId &&
+            earnings.revenue === state.routeStep.result.revenue &&
+            (!state.trainPurchaseStep || state.trainPurchaseStep.companyId === earnings.companyId),
+        'Earnings must match the completed train run and current company'
+    )
+}

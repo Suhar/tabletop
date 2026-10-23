@@ -1,0 +1,63 @@
+import { assert, assertExists, Game, GameAction, GameEngine, GameStatus } from '@tabletop/common'
+import type { EighteenXXState } from '@tabletop/18xx'
+import * as Value from 'typebox/value'
+import { PlaygroundTitles, type FinishedGameFixture, type PlaygroundTitle } from '../titles.js'
+
+export async function finishedGame(ownerId: string, name: string, typeId: string) {
+    const title = PlaygroundTitles.find((candidate) => candidate.scenarios.info.id === typeId)
+    assertExists(title?.finishedGame, 'This title has no finished game')
+    return replayFinishedGame(title, (await title.finishedGame()).default, ownerId, name)
+}
+
+/** Replays a recorded game's actions, which need not finish it. */
+export async function replayRecordedGame(
+    title: PlaygroundTitle,
+    fixture: FinishedGameFixture,
+    ownerId: string,
+    name: string
+) {
+    const game = Value.Convert(Game, structuredClone(fixture.game))
+    assert(Value.Check(Game, game), 'Invalid finished game definition')
+    const initialState: unknown = structuredClone(fixture.initialState)
+    const validator = title.scenarios.runtime.canonicalStateValidator
+    assertExists(validator, 'An 18xx runtime validates its canonical state')
+    const isTitleState = (value: unknown): value is EighteenXXState => validator.Check(value)
+    assert(isTitleState(initialState), 'Invalid finished game opening state')
+    game.ownerId = ownerId
+    game.name = name
+    game.players = game.players.map((player) => ({ ...player, userId: ownerId }))
+    const engine = new GameEngine(title.scenarios.runtime)
+    let state = initialState
+    const actions: GameAction[] = []
+    for (const [index, command] of fixture.actions.entries()) {
+        assert(Value.Check(GameAction, command), 'Invalid finished game action')
+        const result = engine.executeCanonicalAction({ game, state, action: command })
+        state = result.updatedState
+        actions.push(...result.processedActions)
+        if (index % 100 === 99) await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+    return { game, state, actions, initialState, engine }
+}
+
+export async function replayFinishedGame(
+    title: PlaygroundTitle,
+    fixture: FinishedGameFixture,
+    ownerId: string,
+    name: string
+) {
+    const replay = await replayRecordedGame(title, fixture, ownerId, name)
+    const { game, state } = replay
+    assert(state.machineState === 'GameOver', 'Finished game replay did not finish')
+    for (const [playerId, total] of Object.entries(fixture.finalWealth))
+        assert(
+            state.finalWealth?.find((wealth) => wealth.playerId === playerId)?.total === total,
+            'Finished game wealth does not match'
+        )
+    game.status = GameStatus.Finished
+    game.startedAt = game.createdAt
+    game.finishedAt = game.createdAt
+    game.activePlayerIds = state.activePlayerIds
+    game.winningPlayerIds = state.winningPlayerIds
+    game.result = state.result
+    return replay
+}

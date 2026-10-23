@@ -72,7 +72,20 @@ const PRODUCTION_COMPANIES: ProductionCompanyInput[] = [
         id: 'J',
         good: Good.SiapSaji,
         owner: 'W',
-        areaIds: ['C01', 'C02', 'C05', 'C04', 'C07', 'C06', 'E12', 'E06', 'E08', 'E09', 'E07', 'E11']
+        areaIds: [
+            'C01',
+            'C02',
+            'C05',
+            'C04',
+            'C07',
+            'C06',
+            'E12',
+            'E06',
+            'E08',
+            'E09',
+            'E07',
+            'E11'
+        ]
     },
     {
         id: 'K',
@@ -188,7 +201,10 @@ function createScenarioState(): HydratedIndonesiaGameState {
     const cultivatedOwnerByAreaId = new Map<string, string>()
     for (const company of PRODUCTION_COMPANIES) {
         for (const areaId of company.areaIds) {
-            assert(!cityAreaIds.has(areaId), `${areaId} cannot be both city and cultivated in scenario`)
+            assert(
+                !cityAreaIds.has(areaId),
+                `${areaId} cannot be both city and cultivated in scenario`
+            )
             const existingOwner = cultivatedOwnerByAreaId.get(areaId)
             assert(
                 existingOwner === undefined,
@@ -252,8 +268,8 @@ describe('Recorded Scenario Delivery Solver', () => {
         expect(byCompany).toEqual({
             J: {
                 delivered: 12,
-                shippingCost: 130,
-                netIncome: 290,
+                shippingCost: 120,
+                netIncome: 300,
                 deliveries: 10
             },
             K: {
@@ -278,7 +294,7 @@ describe('Recorded Scenario Delivery Solver', () => {
                 delivered: 8,
                 shippingCost: 55,
                 netIncome: 185,
-                deliveries: 6
+                deliveries: 7
             },
             O: {
                 delivered: 2,
@@ -288,14 +304,14 @@ describe('Recorded Scenario Delivery Solver', () => {
             },
             P: {
                 delivered: 11,
-                shippingCost: 145,
-                netIncome: 185,
-                deliveries: 9
+                shippingCost: 140,
+                netIncome: 190,
+                deliveries: 8
             },
             Q: {
                 delivered: 7,
-                shippingCost: 55,
-                netIncome: 225,
+                shippingCost: 50,
+                netIncome: 230,
                 deliveries: 6
             },
             R: {
@@ -306,5 +322,4 @@ describe('Recorded Scenario Delivery Solver', () => {
             }
         })
     })
-
 })

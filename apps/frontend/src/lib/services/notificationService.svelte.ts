@@ -1,5 +1,11 @@
 // import { SseConnection } from '$lib/network/sseConnection.svelte'
-import { Notification, NotificationValidator, UserStatus } from '@tabletop/common'
+import {
+    isRelayStatsNotification,
+    Notification,
+    NotificationValidator,
+    UserStatus,
+    type RelayCounts
+} from '@tabletop/common'
 import type { AuthorizationService } from '$lib/services/authorizationService.svelte'
 import {
     VisibilityService,
@@ -11,6 +17,8 @@ import {
     NotificationChannel
 } from '@tabletop/frontend-components'
 import { PUBLIC_VAPID_KEY } from '$env/static/public'
+import { isPushSubscriptionChangedMessage } from '$lib/network/pushSubscriptionChangedMessage'
+import { applicationServerKeyFromVapid } from '$lib/network/applicationServerKey'
 import {
     ChannelIdentifier,
     RealtimeEventType,
@@ -19,6 +27,7 @@ import {
 } from '$lib/network/realtimeConnection'
 
 export class NotificationService {
+    readonly synchronizesOnSubscribe = true
     private applicationServerKey
 
     private listeners: Set<NotificationListener> = new Set()
@@ -27,18 +36,21 @@ export class NotificationService {
     private promptShown = $state(false)
 
     private currentSessionUserId: string | undefined = $state(undefined)
+    private userChannelReady = false
 
-    private shouldConnectRealtime: boolean = $derived.by(() => {
-        return this.currentSessionUserId !== undefined && this.visibilityService.visible
-    })
+    private shouldConnectRealtime = $derived(this.currentSessionUserId !== undefined)
+
+    relayStats: RelayCounts | undefined = $state(undefined)
+    relayStatsLive = $state(false)
 
     constructor(
         private readonly realtimeConnection: RealtimeConnection,
         private readonly visibilityService: VisibilityService,
         private readonly authorizationService: AuthorizationService,
-        private readonly api: TabletopApi
+        private readonly api: TabletopApi,
+        readonly relayStatsAvailable = false
     ) {
-        this.applicationServerKey = this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
+        this.applicationServerKey = applicationServerKeyFromVapid(PUBLIC_VAPID_KEY)
         this.realtimeConnection.setHandler(this.handleEvent)
 
         $effect.root(() => {
@@ -50,6 +62,7 @@ export class NotificationService {
                 const user = this.authorizationService.getSessionUser()
                 if (user && user.status === UserStatus.Active) {
                     if (user.id !== this.currentSessionUserId) {
+                        this.userChannelReady = false
                         this.currentSessionUserId = user.id
                         this.realtimeConnection
                             .addChannel(
@@ -71,6 +84,7 @@ export class NotificationService {
                         })
                     }
                 } else {
+                    this.userChannelReady = false
                     this.realtimeConnection
                         .removeChannel(
                             new ChannelIdentifier(
@@ -99,8 +113,13 @@ export class NotificationService {
                         console.error('Failed to connect to realtime connection', e)
                     })
                 } else {
+                    this.userChannelReady = false
                     this.realtimeConnection.disconnect()
                 }
+            })
+
+            $effect(() => {
+                this.realtimeConnection.tabVisibilityChanged(this.visibilityService.visible)
             })
         })
     }
@@ -122,6 +141,11 @@ export class NotificationService {
                 console.log('Notification permission dismissed')
                 break
         }
+        if (permission === 'granted' && this.currentSessionUserId !== undefined) {
+            this.subscribePushNotifications().catch((e) => {
+                console.error('Failed to subscribe to push notifications', e)
+            })
+        }
         return permission === 'granted'
     }
 
@@ -134,6 +158,23 @@ export class NotificationService {
     async stopListeningToGame(gameId: string) {
         await this.realtimeConnection?.removeChannel(
             new ChannelIdentifier(NotificationChannel.GameInstance, gameId)
+        )
+    }
+
+    async listenToRelayStats() {
+        if (!this.relayStatsAvailable) {
+            return
+        }
+        await this.realtimeConnection.addChannel(
+            new ChannelIdentifier(NotificationChannel.RelayStats)
+        )
+    }
+
+    async stopListeningToRelayStats() {
+        this.relayStats = undefined
+        this.relayStatsLive = false
+        await this.realtimeConnection.removeChannel(
+            new ChannelIdentifier(NotificationChannel.RelayStats)
         )
     }
 
@@ -150,8 +191,18 @@ export class NotificationService {
 
     onMounted() {
         this.mounted = true
+        // Service workers are unavailable in insecure contexts
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage)
+        }
     }
 
+    isUserChannelReady(): boolean {
+        return (
+            this.userChannelReady &&
+            this.currentSessionUserId === this.authorizationService.getSessionUser()?.id
+        )
+    }
     hasWebNotificationPermission(): boolean {
         return window.Notification.permission === 'granted'
     }
@@ -204,6 +255,18 @@ export class NotificationService {
         }
     }
 
+    private async replacePushSubscription(oldEndpoint?: string) {
+        if (this.currentSessionUserId === undefined) {
+            return
+        }
+        if (oldEndpoint) {
+            await this.api.unsubscribeFromPushNotifications(oldEndpoint).catch((e) => {
+                console.error('Failed to unregister rotated push subscription', e)
+            })
+        }
+        await this.subscribePushNotifications()
+    }
+
     private async unsubscribePushNotifications() {
         try {
             const registration = await navigator.serviceWorker.ready
@@ -218,7 +281,23 @@ export class NotificationService {
         }
     }
 
+    private handleServiceWorkerMessage = async (event: MessageEvent) => {
+        if (isPushSubscriptionChangedMessage(event.data)) {
+            await this.replacePushSubscription(event.data.oldEndpoint)
+            return
+        }
+        await this.handleEvent({
+            type: RealtimeEventType.Data,
+            channel: NotificationChannel.User,
+            data: event.data
+        })
+    }
+
     private handleEvent = async (event: RealtimeEvent) => {
+        if (event.channel === NotificationChannel.RelayStats) {
+            this.handleRelayStats(event)
+            return
+        }
         try {
             let notificationEvent
             if (event.type === RealtimeEventType.Data) {
@@ -240,6 +319,7 @@ export class NotificationService {
                 }
                 notificationEvent = dataEvent
             } else if (event.type === RealtimeEventType.Discontinuity) {
+                if (event.channel === NotificationChannel.User) this.userChannelReady = true
                 const discontinuityEvent: DiscontinuityEvent = {
                     eventType: NotificationEventType.Discontinuity,
                     channel: event.channel
@@ -263,14 +343,17 @@ export class NotificationService {
         }
     }
 
-    private urlB64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-        const rawData = atob(base64)
-        const outputArray = new Uint8Array(rawData.length)
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i)
+    private handleRelayStats(event: RealtimeEvent) {
+        if (event.type === RealtimeEventType.Discontinuity) {
+            this.relayStatsLive = true
+        } else if (event.type === RealtimeEventType.Interrupted) {
+            this.relayStatsLive = false
+            this.relayStats = undefined
+        } else if (
+            NotificationValidator.Check(event.data) &&
+            isRelayStatsNotification(event.data)
+        ) {
+            this.relayStats = event.data.data
         }
-        return outputArray
     }
 }

@@ -33,8 +33,14 @@ type StartOfTurnAction =
     | HydratedPass
     | HydratedDeconstruct
 
-export class StartOfTurnStateHandler implements MachineStateHandler<StartOfTurnAction, HydratedSolGameState> {
-    isValidAction(action: HydratedAction, _context: MachineContext<HydratedSolGameState>): action is StartOfTurnAction {
+export class StartOfTurnStateHandler implements MachineStateHandler<
+    StartOfTurnAction,
+    HydratedSolGameState
+> {
+    isValidAction(
+        action: HydratedAction,
+        _context: MachineContext<HydratedSolGameState>
+    ): action is StartOfTurnAction {
         if (!action.playerId) return false
         return (
             action.type === ActionType.Pass ||
@@ -46,7 +52,10 @@ export class StartOfTurnStateHandler implements MachineStateHandler<StartOfTurnA
         )
     }
 
-    validActionsForPlayer(playerId: string, context: MachineContext<HydratedSolGameState>): ActionType[] {
+    validActionsForPlayer(
+        playerId: string,
+        context: MachineContext<HydratedSolGameState>
+    ): ActionType[] {
         const gameState = context.gameState
         const validActions = [ActionType.Pass]
 
@@ -101,7 +110,7 @@ export class StartOfTurnStateHandler implements MachineStateHandler<StartOfTurnA
         const preEffectState = gameState.getEffectTracking()?.preEffectState
         if (preEffectState === MachineState.StartOfTurn) {
             // If effect came from here.. just clear it and don't reset the turn
-            gameState.getEffectTracking().preEffectState = undefined
+            gameState.ensureEffectTracking().preEffectState = undefined
             return
         }
 
@@ -125,13 +134,16 @@ export class StartOfTurnStateHandler implements MachineStateHandler<StartOfTurnA
         playerState.movementPoints = playerState.movement
     }
 
-    onAction(action: StartOfTurnAction, context: MachineContext<HydratedSolGameState>): MachineState {
+    onAction(
+        action: StartOfTurnAction,
+        context: MachineContext<HydratedSolGameState>
+    ): MachineState {
         switch (true) {
             case isDeconstruct(action): {
                 const state = context.gameState
                 // This is sort of cheating to remain in StartOfTurn, but deconstructing
                 // doesn't change the state machine
-                state.getEffectTracking().preEffectState = MachineState.StartOfTurn
+                state.ensureEffectTracking().preEffectState = MachineState.StartOfTurn
                 return MachineState.StartOfTurn
             }
             case isPass(action): {

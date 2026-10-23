@@ -1,8 +1,9 @@
 {
     "name": "@tabletop/frontend",
-    "version": "16.0.1",
+    "version": "23.5.0",
     "private": true,
     "type": "module",
+    "prettier": "@tabletop/prettier-config",
     "scripts": {
         "clean": "rimraf build",
         "dev": "node ../../tools/scripts/write-frontend-version.cjs && vite dev",
@@ -13,7 +14,7 @@
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "lint": "eslint .",
         "test:integration": "playwright test",
-        "test:unit": "vitest"
+        "test:unit": "vitest run && vitest run --config vitest.runes.config.ts"
     },
     "dependencies": {
         "@tabletop/common": "workspace:*",
@@ -23,8 +24,7 @@
         "es-iterator-helpers": "^1.2.2",
         "idb": "^8.0.3",
         "javascript-time-ago": "^2.5.10",
-        "nanoid": "^5.1.6",
-        "svelte-json-tree": "github:justinkwaugh/svelte-json-tree",
+        "nanoid": "5.1.6",
         "svelte-sonner": "^0.3.27",
         "typebox": "^1.0.79",
         "wretch": "^2.9.0",
@@ -38,6 +38,7 @@
         "@sveltejs/kit": "^2.48.4",
         "@sveltejs/vite-plugin-svelte": "^6.2.4",
         "@tabletop/eslint-config": "workspace:*",
+        "@tabletop/prettier-config": "workspace:*",
         "@tabletop/vitest-config": "workspace:*",
         "@tailwindcss/postcss": "^4.1.18",
         "@types/google.accounts": "^0.0.18",
@@ -49,7 +50,6 @@
         "flowbite-svelte-icons": "^3.1.0",
         "postcss": "^8.4.38",
         "prettier": "^3.8.0",
-        "prettier-plugin-svelte": "^3.4.1",
         "rimraf": "^6.1.0",
         "svelte": "^5.0.0",
         "svelte-check": "^4.3.5",

@@ -1,0 +1,114 @@
+import { CardKind, PowerChoiceKind, type PowerChoice, type WarbandOwner } from '@tabletop/oath'
+import { cardName, reliquaryLabel } from './names.js'
+
+/**
+ * One option of a card-valued choice: a card's face, or a back where the chooser may not see it
+ * (R-9.4). `key` is what the panel's draft stores.
+ */
+export type CardChoice = { key: string; label: string; caption?: string } & (
+    { cardId: string; back?: undefined } | { cardId?: undefined; back: CardKind }
+)
+
+/** Cards named by id, each its own key. */
+export function cardChoices(cardIds: readonly string[]): CardChoice[] {
+    return cardIds.map((cardId) => ({ key: cardId, cardId, label: cardName(cardId) }))
+}
+
+/**
+ * R-6.4-H1 — the relic on a Reliquary space as a card: its face to a seat that knows it (the
+ * Scepter's holder knows every one), a back to anyone else. `knownRelicAt` is the seat's knowledge.
+ */
+export function reliquaryRelicChoice(
+    slotId: string,
+    knownRelicAt: (slotId: string) => string | undefined
+): CardChoice {
+    const known = knownRelicAt(slotId)
+    return known
+        ? { key: slotId, cardId: known, label: cardName(known) }
+        : {
+              key: slotId,
+              back: CardKind.Relic,
+              label: `Facedown relic on ${reliquaryLabel(slotId)}`
+          }
+}
+
+/** A tap picks the card; a tap on a picked card untaps it; a full multi-pick takes no more. */
+export function togglePick(picked: readonly string[], key: string, max: number): string[] {
+    if (picked.includes(key)) return picked.filter((pickedKey) => pickedKey !== key)
+    if (max <= 1) return [key]
+    return picked.length >= max ? [...picked] : [...picked, key]
+}
+
+/** A single choice's draft value after a tap: the key, or none when its own card is tapped again. */
+export function toggleSingle(picked: string | undefined, key: string): string | undefined {
+    return picked === key ? undefined : key
+}
+
+/** What a power choice's option needs from the table to be drawn as a card. */
+export type CardResolvers = {
+    knownRelicAt(slotId: string): string | undefined
+    faceupSiteCardAt(siteId: string): string | undefined
+    relicSlotLabel(slotId: string): string
+    facedownAdviserLabel(playerId: string, index: number): string
+    facedownAdviserBack(playerId: string, index: number): CardKind
+    siteLabel(siteId: string): string
+    warbandOwnerName(owner: WarbandOwner): string
+}
+
+/**
+ * A power choice's option as a card, where a card stands for it: a card, a relic (its face if
+ * known, else a back), a facedown adviser (a back), or warbands at a site (the site card).
+ * Warbands on a board, players, banks, regions and counts are not cards.
+ */
+export function powerChoiceCard(
+    option: PowerChoice,
+    key: string,
+    resolve: CardResolvers
+): CardChoice | undefined {
+    switch (option.kind) {
+        case PowerChoiceKind.Card:
+            return { key, cardId: option.cardId, label: cardName(option.cardId) }
+        case PowerChoiceKind.RelicSlot: {
+            const known = resolve.knownRelicAt(option.slotId)
+            return known
+                ? { key, cardId: known, label: cardName(known) }
+                : { key, back: CardKind.Relic, label: resolve.relicSlotLabel(option.slotId) }
+        }
+        case PowerChoiceKind.FacedownAdviser:
+            return {
+                key,
+                back: resolve.facedownAdviserBack(option.playerId, option.index),
+                label: resolve.facedownAdviserLabel(option.playerId, option.index)
+            }
+        case PowerChoiceKind.Warbands: {
+            const at = option.group.at
+            if (at.kind !== 'site') return undefined
+            const caption = `${option.group.count} ${resolve.warbandOwnerName(option.group.owner)}`
+            const siteCardId = resolve.faceupSiteCardAt(at.siteId)
+            return siteCardId
+                ? {
+                      key,
+                      cardId: siteCardId,
+                      label: `${caption} at ${cardName(siteCardId)}`,
+                      caption
+                  }
+                : {
+                      key,
+                      back: CardKind.Site,
+                      label: `${caption} at ${resolve.siteLabel(at.siteId)}`,
+                      caption
+                  }
+        }
+        default:
+            return undefined
+    }
+}
+
+/** Every option as a card, or nothing when any option is not one: a row never mixes the two. */
+export function powerChoiceCards(
+    options: readonly PowerChoice[],
+    resolve: CardResolvers
+): CardChoice[] | undefined {
+    const cards = options.map((option, index) => powerChoiceCard(option, String(index), resolve))
+    return cards.every((card): card is CardChoice => card !== undefined) ? cards : undefined
+}

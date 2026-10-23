@@ -1,0 +1,548 @@
+import { expect, it } from 'vitest'
+import { HexOrientation } from '@tabletop/common'
+import { RailwayMap } from '../map/map.js'
+import { TileSet } from '../tiles/inventory.js'
+import {
+    createCityTileFace as city,
+    createTownTileFace as town,
+    createTrackTileFace as track,
+    createOffboardTileFace as offboard,
+    createStagedTileRevenue as staged
+} from '../tiles/faces.js'
+import type { TileFace } from '../tiles/tile.js'
+import { TrainDepot } from '../trains/trainDepot.js'
+import type { TrainDistance } from '../trains/train.js'
+import { RouteEvaluation, type RouteRules } from './routeEvaluation.js'
+import type { TrainRunningState, TrainRoute } from './route.js'
+function fixture(
+    faces: TileFace[],
+    distance: TrainDistance = { measure: 'revenue-centers', maximum: 3 },
+    stopGroups: Readonly<Record<number, string>> = {}
+) {
+    const map = new RailwayMap({
+        id: 'routes',
+        name: 'Routes',
+        orientation: HexOrientation.Flat,
+        locations: faces.map((preprintedTile, r) => ({
+            id: String(r),
+            coordinates: { q: 0, r },
+            preprintedTile,
+            buildable: true,
+            ...(stopGroups[r] ? { stopGroup: stopGroups[r] } : {})
+        }))
+    })
+    const tileSet = new TileSet({ id: 'empty', entries: [] }, [])
+    const depot = new TrainDepot({
+        id: 'trains',
+        trains: [{ id: 'train', name: 'Train', price: 100, distance }],
+        supply: [{ definitionId: 'train', count: 2 }]
+    })
+    const state: TrainRunningState = {
+        bank: {},
+        companies: [
+            {
+                id: 'A',
+                kind: 'major',
+                shareCount: 10,
+                president: { kind: 'player', playerId: 'one' }
+            }
+        ],
+        cash: [],
+        certificates: [],
+        certificatePools: [],
+        stations: [
+            {
+                id: 'home',
+                companyId: 'A',
+                status: 'placed',
+                position: { locationId: '0', nodeId: 'city', slot: 0 }
+            }
+        ],
+        stationReservations: [],
+        tileInventory: tileSet.createInventory(),
+        trainInventory: depot.createInventory(),
+        phaseId: 'yellow',
+        routeStep: { companyId: 'A' }
+    }
+    for (let i = 0; i < 2; i++) {
+        const train = depot.nextTrain(state.trainInventory, 'train')!
+        depot.purchase(state.trainInventory, train.id, train.definitionId, {
+            kind: 'company',
+            companyId: 'A'
+        })
+    }
+    const rules: RouteRules = {
+        map,
+        tileSet,
+        depot,
+        revenueStage: (state) => [state.phaseId],
+        requiresCity: () => false
+    }
+    const route: TrainRoute = {
+        trainId: state.trainInventory.trains[0].id,
+        start: { locationId: '0', nodeId: 'city' },
+        paths: faces.flatMap((face, index) =>
+            face.paths
+                .filter(
+                    (path) =>
+                        path.endpoints.some(
+                            (endpoint) =>
+                                endpoint.kind === 'edge' && endpoint.edge === (index === 0 ? 0 : 3)
+                        ) ||
+                        (index > 0 &&
+                            index < faces.length - 1 &&
+                            path.endpoints.some(
+                                (endpoint) => endpoint.kind === 'edge' && endpoint.edge === 0
+                            ))
+                )
+                .map((path) => ({ locationId: String(index), pathId: path.id }))
+        )
+    }
+    return { state, rules, route, running: new RouteEvaluation(state, rules) }
+}
+it('counts all visits and H borders differently, including trailing towns for + trains', () => {
+    const faces = [
+        city('yellow', [0], 20, 1),
+        town('yellow', [[3, 0]], 10),
+        city('green', [3, 0], 30, 2),
+        town('yellow', [[3]], 10)
+    ]
+    for (const [distance, expected] of [
+        [{ measure: 'hex-edges', maximum: 3 }, 3],
+        [{ measure: 'cities-and-offboards', maximum: 2 }, 2],
+        [{ measure: 'revenue-centers', maximum: 4 }, 4]
+    ] as const) {
+        const { running, route } = fixture(faces, distance)
+        const result = running.evaluate('A', [route]).result!
+        expect(result.revenue).toBe(70)
+        expect(result.routes[0].distance).toBe(expected)
+        expect(result.routes[0].visits).toHaveLength(4)
+    }
+    const { running, route } = fixture(faces)
+    expect(running.evaluate('A', [route]).reason).toContain('distance limit')
+})
+it('requires continuous track, revenue endpoints and a company station', () => {
+    const { running, route, state } = fixture([
+        city('yellow', [0], 20, 1),
+        track('yellow', [[3, 0]]),
+        city('yellow', [3], 30, 1)
+    ])
+    expect(running.evaluate('A', [route]).result?.revenue).toBe(50)
+    expect(
+        running.evaluate('A', [{ ...route, paths: [route.paths[0], route.paths[2]] }]).reason
+    ).toContain('disconnected')
+    expect(running.evaluate('A', [{ ...route, paths: route.paths.slice(0, -1) }]).reason).toContain(
+        'End the route'
+    )
+    state.stations = []
+    expect(running.evaluate('A', [route]).reason).toContain('station')
+})
+it('allows a full rival city at an endpoint but not internally; reservations do not block', () => {
+    const { running, route, state } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3, 0], 30, 1),
+        city('yellow', [3], 20, 1)
+    ])
+    state.stations.push({
+        id: 'rival',
+        companyId: 'B',
+        status: 'placed',
+        position: { locationId: '1', nodeId: 'city', slot: 0 }
+    })
+    expect(running.evaluate('A', [route]).reason).toContain('blocked')
+    expect(
+        running.evaluate('A', [{ ...route, paths: route.paths.slice(0, 2) }]).result?.revenue
+    ).toBe(50)
+    state.stations.pop()
+    state.stationReservations.push({ companyId: 'B', locationId: '1', nodeId: 'city' })
+    expect(running.evaluate('A', [route]).result?.revenue).toBe(70)
+})
+it('rejects repeated train, track, revenue center and shared borders across distinct paths', () => {
+    const { running, route, state } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3], 30, 1)
+    ])
+    expect(running.evaluate('A', [route, route]).reason).toContain('only once')
+    expect(
+        running.evaluate('A', [route, { ...route, trainId: state.trainInventory.trains[1].id }])
+            .reason
+    ).toContain('share track')
+    expect(
+        running.evaluate('A', [{ ...route, paths: [...route.paths, route.paths[1]] }]).reason
+    ).toContain('reuse track')
+    const parallel = fixture([
+        city('yellow', [0], 20, 1),
+        {
+            color: 'green',
+            labels: [],
+            nodes: [
+                {
+                    id: 'city',
+                    kind: 'city',
+                    revenue: { kind: 'fixed', amount: 30 },
+                    stationSlots: 1
+                }
+            ],
+            paths: [
+                {
+                    id: 'a',
+                    endpoints: [
+                        { kind: 'edge', edge: 3 },
+                        { kind: 'node', nodeId: 'city' }
+                    ]
+                },
+                {
+                    id: 'b',
+                    endpoints: [
+                        { kind: 'node', nodeId: 'city' },
+                        { kind: 'edge', edge: 3 }
+                    ]
+                }
+            ]
+        }
+    ])
+    expect(
+        parallel.running.network.trace(parallel.route.start, [
+            { locationId: '0', pathId: 'edge-0' },
+            { locationId: '1', pathId: 'a' },
+            { locationId: '1', pathId: 'b' }
+        ]).reason
+    ).toContain('hex border')
+})
+it('does not connect crossing tracks or bypass impassable borders', () => {
+    const { running, route } = fixture([
+        city('yellow', [0], 20, 1),
+        track('green', [
+            [3, 0],
+            [2, 5]
+        ]),
+        city('yellow', [3], 30, 1)
+    ])
+    expect(
+        running.evaluate('A', [
+            {
+                ...route,
+                paths: [route.paths[0], { locationId: '1', pathId: 'path-1' }, route.paths[2]]
+            }
+        ]).reason
+    ).toContain('disconnected')
+    const blocked = new RailwayMap({
+        ...running.rules.map.definition,
+        locations: running.rules.map.definition.locations.map((location) =>
+            location.id === '0'
+                ? { ...location, borders: [{ edge: 0, kind: 'impassable' }] }
+                : location
+        )
+    })
+    const f = fixture([
+        city('yellow', [0], 20, 1),
+        track('green', [
+            [3, 0],
+            [2, 5]
+        ]),
+        city('yellow', [3], 30, 1)
+    ])
+    expect(
+        new RouteEvaluation(f.state, { ...f.rules, map: blocked }).evaluate('A', [f.route]).reason
+    ).toContain('connected track')
+})
+it('uses explicit revenue stages, treats offboards as terminal and rejects unavailable train ownership', () => {
+    const { running, route, state } = fixture([
+        city('yellow', [0], 20, 1),
+        offboard(
+            [3, 0],
+            staged([
+                ['yellow', 30],
+                ['brown', 60]
+            ])
+        ),
+        city('yellow', [3], 20, 1)
+    ])
+    const short = { ...route, paths: route.paths.slice(0, 2) }
+    expect(running.evaluate('A', [short]).result?.revenue).toBe(50)
+    state.phaseId = 'brown'
+    expect(running.evaluate('A', [short]).result?.revenue).toBe(80)
+    expect(running.evaluate('A', [route]).reason).toContain('offboard')
+    expect(running.evaluate('A', [{ ...short, trainId: 'unknown' }]).reason).toContain(
+        'does not own'
+    )
+})
+it('validates without mutating state and preserves a token in the middle', () => {
+    const { running, state } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3, 0], 30, 1),
+        city('yellow', [3], 20, 1)
+    ])
+    state.stations[0] = {
+        id: 'home',
+        companyId: 'A',
+        status: 'placed',
+        position: { locationId: '1', nodeId: 'city', slot: 0 }
+    }
+    const before = structuredClone(state)
+    const route: TrainRoute = {
+        trainId: state.trainInventory.trains[0].id,
+        start: { locationId: '0', nodeId: 'city' },
+        paths: [
+            { locationId: '0', pathId: 'edge-0' },
+            { locationId: '1', pathId: 'edge-3' },
+            { locationId: '1', pathId: 'edge-0' },
+            { locationId: '2', pathId: 'edge-3' }
+        ]
+    }
+    expect(running.evaluate('A', [route]).result?.revenue).toBe(70)
+    expect(state).toEqual(before)
+})
+it('allows distinct routes to pay the same station using different arms', () => {
+    const { running, state } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3, 0], 30, 1),
+        city('yellow', [3], 20, 1)
+    ])
+    state.stations[0] = {
+        id: 'home',
+        companyId: 'A',
+        status: 'placed',
+        position: { locationId: '1', nodeId: 'city', slot: 0 }
+    }
+    const routes: TrainRoute[] = [
+        {
+            trainId: state.trainInventory.trains[0].id,
+            start: { locationId: '1', nodeId: 'city' },
+            paths: [
+                { locationId: '1', pathId: 'edge-3' },
+                { locationId: '0', pathId: 'edge-0' }
+            ]
+        },
+        {
+            trainId: state.trainInventory.trains[1].id,
+            start: { locationId: '1', nodeId: 'city' },
+            paths: [
+                { locationId: '1', pathId: 'edge-0' },
+                { locationId: '2', pathId: 'edge-3' }
+            ]
+        }
+    ]
+    expect(running.evaluate('A', routes).result?.revenue).toBe(100)
+})
+it('rejects a repeated center even when its track segments are distinct', () => {
+    const { running, state } = fixture([
+        {
+            color: 'green',
+            labels: [],
+            nodes: [
+                {
+                    id: 'city',
+                    kind: 'city',
+                    stationSlots: 1,
+                    revenue: { kind: 'fixed', amount: 20 }
+                },
+                {
+                    id: 'other',
+                    kind: 'city',
+                    stationSlots: 1,
+                    revenue: { kind: 'fixed', amount: 30 }
+                }
+            ],
+            paths: [
+                {
+                    id: 'a',
+                    endpoints: [
+                        { kind: 'node', nodeId: 'city' },
+                        { kind: 'node', nodeId: 'other' }
+                    ]
+                },
+                {
+                    id: 'b',
+                    endpoints: [
+                        { kind: 'node', nodeId: 'other' },
+                        { kind: 'node', nodeId: 'city' }
+                    ]
+                }
+            ]
+        }
+    ])
+    expect(
+        running.evaluate('A', [
+            {
+                trainId: state.trainInventory.trains[0].id,
+                start: { locationId: '0', nodeId: 'city' },
+                paths: [
+                    { locationId: '0', pathId: 'a' },
+                    { locationId: '0', pathId: 'b' }
+                ]
+            }
+        ]).reason
+    ).toContain('revisit')
+})
+it('counts the locations of a stop group as one stop', () => {
+    const faces = [
+        city('yellow', [0], 20, 1),
+        town('yellow', [[3, 0]], 10),
+        town('yellow', [[3]], 10)
+    ]
+    const ungrouped = fixture(faces)
+    expect(ungrouped.running.evaluate('A', [ungrouped.route]).result?.revenue).toBe(40)
+    const grouped = fixture(faces, undefined, { 1: 'Canada', 2: 'Canada' })
+    expect(grouped.running.evaluate('A', [grouped.route]).reason).toBe(
+        'A route may visit Canada only once.'
+    )
+    expect(
+        grouped.running.evaluate('A', [
+            { ...grouped.route, paths: grouped.route.paths.slice(0, 2) }
+        ]).result?.revenue
+    ).toBe(30)
+})
+it('rejects a stop group with a single location', () => {
+    expect(() => fixture([city('yellow', [0], 20, 1)], undefined, { 0: 'Gulf' })).toThrow(
+        'Stop group Gulf needs more than one location'
+    )
+})
+it('rejects a second stop in one hex when a title allows only one', () => {
+    const { rules, state } = fixture([
+        {
+            color: 'green',
+            labels: [],
+            nodes: [
+                {
+                    id: 'city',
+                    kind: 'city',
+                    stationSlots: 1,
+                    revenue: { kind: 'fixed', amount: 20 }
+                },
+                {
+                    id: 'other',
+                    kind: 'city',
+                    stationSlots: 1,
+                    revenue: { kind: 'fixed', amount: 30 }
+                }
+            ],
+            paths: [
+                {
+                    id: 'a',
+                    endpoints: [
+                        { kind: 'node', nodeId: 'city' },
+                        { kind: 'node', nodeId: 'other' }
+                    ]
+                }
+            ]
+        }
+    ])
+    const route: TrainRoute = {
+        trainId: state.trainInventory.trains[0].id,
+        start: { locationId: '0', nodeId: 'city' },
+        paths: [{ locationId: '0', pathId: 'a' }]
+    }
+    expect(new RouteEvaluation(state, rules).evaluate('A', [route]).result?.revenue).toBe(50)
+    expect(
+        new RouteEvaluation(state, { ...rules, oneStopPerHex: true }).evaluate('A', [route]).reason
+    ).toBe('A route may stop only once in each hex.')
+})
+it('adds bonuses for the hexes a route passes through and the stops it makes', () => {
+    const { running, route, rules } = fixture([
+        city('yellow', [0], 20, 1),
+        track('yellow', [[3, 0]]),
+        city('yellow', [3], 30, 1)
+    ])
+    rules.hexBonus = (_state, locationId) => (locationId === '1' ? 10 : 0)
+    rules.stopBonus = (_state, _train, _companyId, center) => (center.locationId === '2' ? 5 : 0)
+    const result = running.evaluate('A', [route]).result!
+    expect(result.revenue).toBe(65)
+    expect(result.routes[0].bonuses).toEqual([
+        { locationId: '2', amount: 5 },
+        { locationId: '1', amount: 10 }
+    ])
+})
+
+it('keeps all visited stops for distance while paying only policy-selected stops and their bonuses', () => {
+    const { state, rules, route } = fixture([
+        city('yellow', [0], 10, 1),
+        city('yellow', [3, 0], 30, 1),
+        city('yellow', [3], 60, 1)
+    ])
+    rules.stopBonus = (_state, _train, _company, stop) => (stop.locationId === '1' ? 20 : 0)
+    rules.revenuePolicy = () => ({ payingStopLimit: 2, requirePayingStation: true })
+    const result = new RouteEvaluation(state, rules).evaluateRoute('A', route).result!
+    expect(result.distance).toBe(3)
+    expect(result.visits).toHaveLength(3)
+    expect(result.payments.map((payment) => payment.locationId)).toEqual(['0', '2'])
+    expect(result.bonuses).toBeUndefined()
+    expect(result.revenue).toBe(70)
+})
+
+it('enforces visited-stop distance independently of the number of paying stops', () => {
+    const faces = Array.from({ length: 6 }, (_, index) =>
+        city('yellow', index === 0 ? [0] : index === 5 ? [3] : [3, 0], 20, 1)
+    )
+    const { state, rules, route } = fixture(faces, { measure: 'revenue-centers', maximum: 5 })
+    rules.revenuePolicy = () => ({ payingStopLimit: 3 })
+    expect(new RouteEvaluation(state, rules).evaluateRoute('A', route).reason).toContain(
+        'distance limit'
+    )
+})
+
+it('uses title running permission for route validation and automatic zero runs', () => {
+    const { state, rules, route } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3], 30, 1)
+    ])
+    const evaluation = new RouteEvaluation(state, { ...rules, canRunTrain: () => false })
+    expect(evaluation.runnableTrains('A')).toEqual([])
+    expect(evaluation.cannotRun('A')).toBe(true)
+    expect(evaluation.evaluate('A', [route]).reason).toBe(
+        'This train cannot run this operating round.'
+    )
+})
+
+it('adds route-level bonuses from counted stops only', () => {
+    const { state, rules, route } = fixture([
+        city('yellow', [0], 20, 1),
+        city('yellow', [3], 30, 1)
+    ])
+    const connectionBonuses = [{ from: { '0': 80 }, to: { '1': 0 } }]
+    expect(
+        new RouteEvaluation(state, {
+            ...rules,
+            revenuePolicy: () => ({ connectionBonuses })
+        }).evaluate('A', [route]).result?.revenue
+    ).toBe(130)
+    expect(
+        new RouteEvaluation(state, {
+            ...rules,
+            revenuePolicy: () => ({
+                connectionBonuses,
+                payingStopLimit: 1,
+                requirePayingStation: true
+            })
+        }).evaluate('A', [route]).result?.revenue
+    ).toBe(20)
+})
+
+it('records what earned each bonus by the ids the title names', () => {
+    const { running, route, rules } = fixture([
+        city('yellow', [0], 20, 1),
+        track('yellow', [[3, 0]]),
+        city('yellow', [3], 30, 1)
+    ])
+    rules.hexBonus = (_state, locationId) => (locationId === '1' ? 10 : 0)
+    rules.hexBonusSourceIds = (_state, locationId) => (locationId === '1' ? ['bridge'] : [])
+    rules.stopBonus = (_state, _train, _companyId, center) => (center.locationId === '2' ? 5 : 0)
+    rules.stopBonusSourceIds = (_state, _train, _companyId, center) =>
+        center.locationId === '2' ? ['port', 'cotton'] : []
+    rules.revenuePolicy = () => ({
+        connectionBonuses: [{ from: { '0': 40 }, to: { '2': 0 }, sourceId: 'east-west' }]
+    })
+    rules.longestRouteBonusPerStop = () => 1
+    rules.longestRouteBonusSourceId = 'mail'
+    const bonuses = running.evaluate('A', [route]).result!.routes[0].bonuses
+    expect(bonuses).toEqual(
+        expect.arrayContaining([
+            { locationId: '2', amount: 5, sourceIds: ['port', 'cotton'] },
+            { locationId: '1', amount: 10, sourceIds: ['bridge'] },
+            { locationId: '0', amount: 40, sourceIds: ['east-west'] },
+            { locationId: '0', amount: 1, sourceIds: ['mail'] },
+            { locationId: '2', amount: 1, sourceIds: ['mail'] }
+        ])
+    )
+    expect(bonuses).toHaveLength(5)
+})

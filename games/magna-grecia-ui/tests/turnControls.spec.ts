@@ -1,0 +1,529 @@
+import { expect, test, type Page } from '@playwright/test'
+import type { MagnaGreciaGameSession } from '../src/lib/model/session.svelte.js'
+
+declare global {
+    interface Window {
+        magnaGreciaSession: MagnaGreciaGameSession
+    }
+}
+
+const pageErrors = new WeakMap<Page, string[]>()
+
+test.beforeEach(({ page }) => {
+    const errors: string[] = []
+    pageErrors.set(page, errors)
+    page.on('pageerror', (error) => errors.push(error.message))
+})
+
+test.afterEach(({ page }) => {
+    expect(pageErrors.get(page)).toEqual([])
+})
+
+async function createGame(page: Page) {
+    await page.route('**/model/sessionContext.svelte.ts*', async (route) => {
+        const response = await route.fetch()
+        const body = await response.text()
+        expect(body).toContain('return getContext();')
+        await route.fulfill({
+            response,
+            body: body.replace(
+                'return getContext();',
+                'return window.magnaGreciaSession = getContext();'
+            )
+        })
+    })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'New game', exact: true }).click()
+    await page.getByPlaceholder('choose a name for your game').fill('Turn controls')
+    await page
+        .getByPlaceholder('optional reproduction seed')
+        .fill('0123456789abcdef0123456789abcdef')
+    const names = page.getByPlaceholder('player name')
+    for (let i = 1; i < (await names.count()); i++) await names.nth(i).fill(`Player ${i + 1}`)
+    await page.getByRole('button', { name: 'Create Game', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => !!window.magnaGreciaSession)).toBe(true)
+}
+
+function picker(page: Page) {
+    return page.locator('[aria-label="Road tile picker"]')
+}
+
+function roadTargets(page: Page) {
+    return page.getByRole('button', { name: 'Build a road here', exact: true })
+}
+
+async function roadCount(page: Page) {
+    return page.evaluate(() => window.magnaGreciaSession.gameState.board.roads.length)
+}
+
+// A placed city tile pours in before the state updates; input waits for it.
+async function citySettled(page: Page) {
+    await expect
+        .poll(() => page.evaluate(() => window.magnaGreciaSession.gameState.board.cities.length))
+        .toBe(1)
+}
+
+async function foundFrontierCity(page: Page) {
+    await createGame(page)
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await page.getByRole('button', { name: 'Place a city tile here', exact: true }).first().click()
+    await expect
+        .poll(() => page.evaluate(() => window.magnaGreciaSession.gameState.board.cities.length))
+        .toBe(1)
+    await page.getByRole('button', { name: /^Roads/ }).click()
+}
+
+async function openRoadPicker(page: Page) {
+    await foundFrontierCity(page)
+    await roadTargets(page).first().click()
+    await expect(picker(page)).toBeVisible()
+}
+
+async function chooseAShape(page: Page) {
+    if (await page.evaluate(() => window.magnaGreciaSession.roadShape === undefined)) {
+        await page
+            .getByRole('button', { name: /^Choose the (straight|curved) road tile$/ })
+            .first()
+            .click()
+    }
+    await expect(page.getByRole('button', { name: 'Place this road tile' })).toBeVisible()
+}
+
+test('starts each turn with no tool selected', async ({ page }) => {
+    await createGame(page)
+    const tool = () => page.evaluate(() => window.magnaGreciaSession.activeTool)
+    await expect(page.getByText('Choose an action', { exact: true })).toBeVisible()
+    await expect.poll(tool).toBeUndefined()
+    await expect(
+        page.getByRole('button', { name: 'Place a city tile here', exact: true })
+    ).toHaveCount(0)
+
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await expect.poll(tool).toBe('City')
+    await page.getByRole('button', { name: 'Place a city tile here', exact: true }).first().click()
+    await citySettled(page)
+    await page.getByRole('button', { name: 'End turn', exact: true }).click()
+    await expect.poll(tool).toBeUndefined()
+    await expect(roadTargets(page)).toHaveCount(0)
+})
+
+test('choosing, rotating and confirming lays the previewed road and closes the widget', async ({
+    page
+}) => {
+    await openRoadPicker(page)
+    await chooseAShape(page)
+    const before = await roadCount(page)
+    const preview = () => page.evaluate(() => window.magnaGreciaSession.roadPreview)
+    const first = await preview()
+    if (await page.evaluate(() => window.magnaGreciaSession.roadPlacements.length > 1)) {
+        await page.getByRole('button', { name: 'Rotate the road tile' }).click()
+        await expect.poll(preview).not.toEqual(first)
+    }
+    const chosen = await preview()
+    await page.getByRole('button', { name: 'Place this road tile' }).click()
+    await expect.poll(() => roadCount(page)).toBe(before + 1)
+    const laid = await page.evaluate(() => window.magnaGreciaSession.gameState.board.roads.at(-1))
+    expect(laid?.ends).toEqual(chosen)
+    await expect(picker(page)).toHaveCount(0)
+})
+
+test('cancelling closes the widget without laying a road', async ({ page }) => {
+    await openRoadPicker(page)
+    await chooseAShape(page)
+    const before = await roadCount(page)
+    await page.getByRole('button', { name: 'Cancel road placement' }).click()
+    await expect(picker(page)).toHaveCount(0)
+    expect(await roadCount(page)).toBe(before)
+    await expect(roadTargets(page).first()).toBeVisible()
+})
+
+test('Undo returns a manual shape to the arc before closing the widget', async ({ page }) => {
+    await openRoadPicker(page)
+    const choices = await page.evaluate(() => window.magnaGreciaSession.roadShapeChoices.length)
+    await chooseAShape(page)
+    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    if (choices > 1) {
+        await expect(picker(page)).toBeVisible()
+        await expect
+            .poll(() => page.evaluate(() => window.magnaGreciaSession.roadShape))
+            .toBeUndefined()
+        await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    }
+    await expect(picker(page)).toHaveCount(0)
+})
+
+test('Undo deselects a chosen tool before undoing any action', async ({ page }) => {
+    await createGame(page)
+    const tool = () => page.evaluate(() => window.magnaGreciaSession.activeTool)
+    const undo = page.getByRole('button', { name: 'UNDO', exact: true })
+    await expect(undo).toHaveCount(0)
+
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await expect.poll(tool).toBe('City')
+    await undo.click()
+    await expect.poll(tool).toBeUndefined()
+    await expect(undo).toHaveCount(0)
+})
+
+test('a tool stays chosen after placing, and Undo then undoes the placement', async ({ page }) => {
+    await createGame(page)
+    const tool = () => page.evaluate(() => window.magnaGreciaSession.activeTool)
+    const cities = () =>
+        page.evaluate(() => window.magnaGreciaSession.gameState.board.cities.length)
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await page.getByRole('button', { name: 'Place a city tile here', exact: true }).first().click()
+    await expect.poll(cities).toBe(1)
+    await expect.poll(tool).toBe('City')
+
+    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    await expect.poll(cities).toBe(0)
+    await expect.poll(tool).toBe('City')
+})
+
+test('a tool chosen then undone does not return when the turn comes round again', async ({
+    page
+}) => {
+    await createGame(page)
+    const tool = () => page.evaluate(() => window.magnaGreciaSession.activeTool)
+    const turnOf = () => page.evaluate(() => window.magnaGreciaSession.gameState.turn?.playerId)
+    const undo = page.getByRole('button', { name: 'UNDO', exact: true })
+    const endTurn = page.getByRole('button', { name: 'End turn', exact: true })
+
+    const first = await turnOf()
+    await endTurn.click()
+    await expect.poll(turnOf).not.toBe(first)
+    const second = await turnOf()
+
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await expect.poll(tool).toBe('City')
+    await undo.click()
+    await expect.poll(tool).toBeUndefined()
+    await expect.poll(turnOf).toBe(second)
+
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await undo.click()
+    await undo.click()
+    await expect.poll(turnOf).toBe(first)
+    await expect.poll(tool).toBeUndefined()
+
+    await endTurn.click()
+    await expect.poll(turnOf).toBe(second)
+    await expect.poll(tool).toBeUndefined()
+})
+
+test('a chosen mode hides the tile actions it rules out until Undo', async ({ page }) => {
+    await createGame(page)
+    const cities = page.getByRole('button', { name: /^Cities/ })
+    const resupply = page.getByRole('button', { name: /^Resupply/ })
+    const undo = page.getByRole('button', { name: 'UNDO', exact: true })
+
+    await resupply.click()
+    await expect(cities).toHaveCount(0)
+    await expect(resupply).toBeVisible()
+    await undo.click()
+    await expect(cities).toBeVisible()
+
+    await page.getByRole('button', { name: 'Build market', exact: true }).click()
+    await expect(cities).toHaveCount(0)
+    await expect(resupply).toHaveCount(0)
+    await undo.click()
+    await expect(cities).toBeVisible()
+    await expect(resupply).toBeVisible()
+})
+
+test('on a phone the turn steps from tile actions to the market and back with Undo', async ({
+    page
+}) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await createGame(page)
+    const cities = page.getByRole('button', { name: /^Cities/ })
+    const skip = page.getByRole('button', { name: /^Skip/ })
+    const buy = page.getByRole('button', { name: 'Build market', exact: true })
+    const endTurn = page.getByRole('button', { name: 'End turn', exact: true })
+
+    await expect(cities).toBeVisible()
+    await expect(skip).toBeVisible()
+    await expect(buy).toBeHidden()
+    await expect(endTurn).toBeHidden()
+
+    await skip.click()
+    await expect(cities).toBeHidden()
+    await expect(buy).toBeVisible()
+    await expect(endTurn).toBeVisible()
+
+    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    await expect(cities).toBeVisible()
+    await expect(buy).toBeHidden()
+})
+
+test('on a phone a skipped tile phase shows a red note above the market step', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await createGame(page)
+    const note = page.getByText('Tile actions skipped', { exact: true })
+    await page.getByRole('button', { name: /^Skip/ }).click()
+    await expect(note).toBeHidden()
+
+    await page.getByRole('button', { name: 'Build market', exact: true }).click()
+    await expect(note).toBeVisible()
+    await expect(note).toHaveCSS('color', 'rgb(192, 38, 26)')
+    await page.getByRole('button', { name: 'Build a market here', exact: true }).first().click()
+    await expect(page.getByRole('button', { name: 'End turn', exact: true })).toHaveClass(/ready/)
+    await expect(note).toBeVisible()
+})
+
+test('another road space moves the widget and another tool closes it', async ({ page }) => {
+    await openRoadPicker(page)
+    const targets = await roadTargets(page).count()
+    const space = () => page.evaluate(() => window.magnaGreciaSession.roadSpace)
+    const first = await space()
+    if (targets > 1) {
+        await roadTargets(page).nth(1).click()
+        await expect.poll(space).not.toEqual(first)
+        await expect(picker(page)).toBeVisible()
+    }
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await expect(picker(page)).toHaveCount(0)
+})
+
+test('closing the resupply picker restores the chosen tool', async ({ page }) => {
+    await foundFrontierCity(page)
+    const tool = () => page.evaluate(() => window.magnaGreciaSession.activeTool)
+    const chosen = await tool()
+    await page.getByRole('button', { name: /^Resupply/ }).click()
+    await expect.poll(tool).toBeUndefined()
+    await expect(roadTargets(page)).toHaveCount(0)
+    await page.getByRole('button', { name: /^Resupply/ }).click()
+    await expect.poll(tool).toBe(chosen)
+    await expect(roadTargets(page).first()).toBeVisible()
+
+    await page.getByRole('button', { name: /^Resupply/ }).click()
+    await expect.poll(tool).toBeUndefined()
+    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    await expect.poll(tool).toBe(chosen)
+    await expect.poll(() => page.evaluate(() => window.magnaGreciaSession.resupplyOpen)).toBe(false)
+})
+
+test('a turn header replays the turn and a round header jumps to its end', async ({ page }) => {
+    await createGame(page)
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await page.getByRole('button', { name: 'Place a city tile here', exact: true }).first().click()
+    await citySettled(page)
+    await page.getByRole('button', { name: 'End turn', exact: true }).click()
+    const markets = () =>
+        page.evaluate(() => window.magnaGreciaSession.gameState.board.markets.length)
+    const marketsBefore = await markets()
+    await page.getByRole('button', { name: 'Build market', exact: true }).click()
+    await page.getByRole('button', { name: 'Build a market here', exact: true }).first().click()
+    await expect.poll(markets).toBe(marketsBefore + 1)
+    await page.getByRole('button', { name: 'End turn', exact: true }).click()
+    await page.getByRole('tab', { name: 'History' }).click()
+
+    const actionIndex = () =>
+        page.evaluate(() =>
+            window.magnaGreciaSession.isViewingHistory
+                ? window.magnaGreciaSession.history.actionIndex
+                : undefined
+        )
+    const settled = () =>
+        expect
+            .poll(() => page.evaluate(() => window.magnaGreciaSession.history.isDisabled()))
+            .toBe(false)
+
+    await settled()
+    const firstTurn = page.getByRole('button', { name: /^Replay .*'s turn$/ }).last()
+    await firstTurn.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Replaying', { exact: true })).toBeVisible()
+    await expect(page.getByText('Replaying', { exact: true })).toHaveCount(0, { timeout: 10_000 })
+    await expect.poll(actionIndex).toBeUndefined()
+
+    await settled()
+    await page.getByRole('button', { name: 'Show the board at the end of round 1' }).click()
+    await expect.poll(actionIndex).toBe(2)
+    await expect(page.getByText('Replaying', { exact: true })).toHaveCount(0)
+})
+
+test('history leaves out ended turns, outlines a hovered row and steps over ended turns', async ({
+    page
+}) => {
+    await createGame(page)
+    const currentType = () =>
+        page.evaluate(() => window.magnaGreciaSession.history.currentAction?.type)
+    for (let turn = 0; turn < 2; turn++) {
+        await page.getByRole('button', { name: 'Build market', exact: true }).click()
+        await page.getByRole('button', { name: 'Build a market here', exact: true }).first().click()
+        await expect
+            .poll(() =>
+                page.evaluate(() => window.magnaGreciaSession.gameState.board.markets.length)
+            )
+            .toBe(turn + 1)
+        await page.getByRole('button', { name: 'End turn', exact: true }).click()
+    }
+
+    await page.getByRole('tab', { name: 'History' }).click()
+    await expect(page.getByText('Built a market', { exact: true })).toHaveCount(2)
+    await expect(page.getByText('ended their turn', { exact: true })).toHaveCount(0)
+
+    const highlighted = () => page.evaluate(() => window.magnaGreciaSession.historyHighlight.length)
+    await page.getByText('Built a market', { exact: true }).first().hover()
+    await expect.poll(highlighted).toBe(1)
+    await page.getByRole('tab', { name: 'History' }).hover()
+    await expect.poll(highlighted).toBe(0)
+
+    // Each step plays its pieces' animation, and the controls wait for it.
+    const step = async (name: 'step backwards' | 'step forwards', toIndex: number) => {
+        await expect
+            .poll(() => page.evaluate(() => window.magnaGreciaSession.history.isDisabled()))
+            .toBe(false)
+        await page.getByRole('button', { name }).click()
+        await expect
+            .poll(() => page.evaluate(() => window.magnaGreciaSession.history.actionIndex))
+            .toBe(toIndex)
+        expect(await currentType()).toBe('BuildMarket')
+    }
+    await step('step backwards', 2)
+    await step('step backwards', 0)
+    await step('step forwards', 2)
+})
+
+test('the map goes full screen with the turn controls docked above it', async ({ page }) => {
+    await createGame(page)
+    await page.getByRole('button', { name: 'Enter full screen' }).click()
+    const fullScreen = page.getByRole('dialog', { name: 'Full screen view' })
+    await expect(fullScreen).toBeVisible()
+    await expect(fullScreen.getByLabel('Magna Grecia board')).toBeVisible()
+
+    await fullScreen.getByRole('button', { name: /^Cities/ }).click()
+    await expect.poll(() => page.evaluate(() => window.magnaGreciaSession.activeTool)).toBe('City')
+    await expect(
+        fullScreen.getByRole('button', { name: 'Place a city tile here', exact: true }).first()
+    ).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(fullScreen).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Enter full screen' })).toBeVisible()
+})
+
+test('marks the enhanced extra apart from the basic allowance', async ({ page }) => {
+    await createGame(page)
+    const cities = page.getByRole('button', { name: /^Cities/ })
+    const split = await page.evaluate(() => window.magnaGreciaSession.cityAllowance)
+    expect(split.bonus).toBe(1)
+    await expect(cities.locator('.count')).toHaveText(String(split.basic))
+    await expect(cities.locator('.bonus')).toHaveText('+1')
+    await expect(page.getByText('Two actions, or one enhanced+n', { exact: true })).toBeVisible()
+    await cities.click()
+    await expect(page.locator('.hint')).toHaveCount(0)
+})
+
+test('the resupply button names the amount and marks an enhanced one with +', async ({ page }) => {
+    await createGame(page)
+    await page.getByRole('button', { name: /^Resupply/ }).click()
+    const split = await page.evaluate(() => window.magnaGreciaSession.resupplySplit)
+    const confirm = page.locator('.picker .confirm')
+    await expect(confirm).toHaveText('Resupply 0')
+    const more = page.getByRole('button', { name: 'More' }).first()
+    for (let step = 1; step <= split.basic; step++) await more.click()
+    await expect(confirm).toHaveText(`Resupply ${split.basic}`)
+    await expect(confirm.locator('sup')).toHaveCount(0)
+    await more.click()
+    await expect(confirm).toHaveText(`Resupply ${split.basic + 1}+`)
+    await expect(confirm.locator('sup')).toHaveText('+')
+})
+
+test('a market action keeps the turn open and highlights End turn', async ({ page }) => {
+    await createGame(page)
+    const turnOf = () => page.evaluate(() => window.magnaGreciaSession.gameState.turn?.playerId)
+    const first = await turnOf()
+    const endTurn = page.getByRole('button', { name: 'End turn', exact: true })
+    await expect(endTurn).not.toHaveClass(/ready/)
+
+    await page.getByRole('button', { name: 'Build market', exact: true }).click()
+    await expect(page.getByText('Skipped', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Build a market here', exact: true }).first().click()
+    await expect
+        .poll(() => page.evaluate(() => window.magnaGreciaSession.gameState.board.markets.length))
+        .toBe(1)
+    expect(await turnOf()).toBe(first)
+    await expect(endTurn).toHaveClass(/ready/)
+    await expect(page.getByText('Skipped', { exact: true })).toBeVisible()
+    await expect(page.getByText('Skipped', { exact: true })).toHaveClass(/skipped/)
+    await expect(page.getByText('Tile actions skipped', { exact: true })).toBeHidden()
+    await expect(
+        page.getByRole('button', { name: /^(Roads|Cities|Resupply|Build market|Sell market)/ })
+    ).toHaveCount(0)
+
+    await endTurn.click()
+    await expect.poll(turnOf).not.toBe(first)
+})
+
+test('the last player of a round confirms End turn, and Cancel or Undo backs out', async ({
+    page
+}) => {
+    await createGame(page)
+    const endTurn = page.getByRole('button', { name: 'End turn', exact: true })
+    const yes = page.getByRole('button', { name: 'Yes, end turn', exact: true })
+    const cancel = page.getByRole('button', { name: 'Cancel', exact: true })
+    const question = page.getByText('End turn and start the next round?', { exact: true })
+    const cannotUndo = page.getByText('This cannot be undone.', { exact: true })
+    const turnIndex = () => page.evaluate(() => window.magnaGreciaSession.gameState.turnIndex)
+    const round = () => page.evaluate(() => window.magnaGreciaSession.gameState.round)
+    const players = await page.evaluate(
+        () => window.magnaGreciaSession.gameState.turnManager.turnOrder.length
+    )
+    for (let turn = 0; turn < players - 1; turn++) {
+        await endTurn.click()
+        await expect(yes).toHaveCount(0)
+        await expect.poll(turnIndex).toBe(turn + 1)
+    }
+    const lastTurn = await turnIndex()
+    const firstRound = await round()
+    await expect(cannotUndo).toHaveCount(0)
+    await expect(page.getByText(/It cannot be undone/)).toHaveCount(0)
+
+    await endTurn.click()
+    await expect(question).toBeVisible()
+    await expect(cannotUndo).toBeVisible()
+    await expect(endTurn).toHaveCount(0)
+    await cancel.click()
+    await expect(question).toHaveCount(0)
+    await expect(endTurn).toBeVisible()
+    expect(await turnIndex()).toBe(lastTurn)
+
+    await endTurn.click()
+    await page.getByRole('button', { name: 'UNDO', exact: true }).click()
+    await expect(question).toHaveCount(0)
+    expect(await turnIndex()).toBe(lastTurn)
+
+    await page.getByRole('button', { name: /^Cities/ }).click()
+    await endTurn.click()
+    await expect(question).toBeVisible()
+    await yes.click()
+    await expect.poll(round).toBe(firstRound + 1)
+    await expect(question).toHaveCount(0)
+})
+
+test('the last action line tells the player who ended the turn that they ended theirs', async ({
+    page
+}) => {
+    await createGame(page)
+    await page.getByRole('button', { name: 'Build market', exact: true }).click()
+    await page.getByRole('button', { name: 'Build a market here', exact: true }).first().click()
+    await expect
+        .poll(() => page.evaluate(() => window.magnaGreciaSession.gameState.board.markets.length))
+        .toBe(1)
+    await page.getByRole('button', { name: 'End turn', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.magnaGreciaSession.actions.length)).toBe(2)
+
+    const ender = await page.evaluate(
+        () => window.magnaGreciaSession.actions.at(-1)?.playerId ?? ''
+    )
+    expect(ender).not.toBe('')
+
+    await page.getByRole('button', { name: 'Options', exact: true }).click()
+    await page.getByText('Protected mode', { exact: true }).click()
+    await page.getByRole('button', { name: 'Options', exact: true }).click()
+    await page.getByLabel('Protected view', { exact: true }).selectOption(ender)
+    await expect(page.getByText('ended your turn', { exact: true })).toBeVisible()
+    await expect(page.getByText('ended their turn', { exact: true })).toHaveCount(0)
+})

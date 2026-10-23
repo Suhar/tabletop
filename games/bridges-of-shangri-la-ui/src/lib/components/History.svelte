@@ -7,15 +7,14 @@
         isBeginJourney
     } from '@tabletop/bridges-of-shangri-la'
     import type { GameAction } from '@tabletop/common'
-    import TimeAgo from 'javascript-time-ago'
     import { fade } from 'svelte/transition'
     import { flip } from 'svelte/animate'
     import { quartIn } from 'svelte/easing'
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { createTimeAgo, PlayerName } from '@tabletop/frontend-components'
     import { getDescriptionForAction } from '$lib/utils/actionDescriptions.js'
     import { getGameSession } from '$lib/model/gameSessionContext.svelte.js'
 
-    const timeAgo = new TimeAgo('en-US')
+    const timeAgo = createTimeAgo()
 
     let gameSession = getGameSession() as BridgesGameSession
     let unhighlightTimeout: ReturnType<typeof setTimeout>
@@ -66,6 +65,7 @@
                     class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -start-1.5 border border-white dark:border-gray-900 dark:bg-gray-700"
                 ></div>
                 <TimelineItem
+                    defaultDivClass="hidden"
                     title=""
                     class="mb-5 text-left"
                     date={timeAgo.format(gameSession.game.finishedAt)}
@@ -91,6 +91,7 @@
                         class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -start-1.5 border border-white dark:border-gray-900 dark:bg-gray-700"
                     ></div>
                     <TimelineItem
+                        defaultDivClass="hidden"
                         title=""
                         class="mb-5 text-left"
                         date={action.createdAt ? timeAgo.format(action.createdAt) : 'sometime'}
@@ -108,6 +109,7 @@
                 class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -start-1.5 border border-white dark:border-gray-900 dark:bg-gray-700"
             ></div>
             <TimelineItem
+                defaultDivClass="hidden"
                 title=""
                 class="mb-5 text-left"
                 date={timeAgo.format(gameSession.game.createdAt)}

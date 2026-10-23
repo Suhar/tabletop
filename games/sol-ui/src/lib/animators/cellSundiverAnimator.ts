@@ -33,12 +33,8 @@ import { fadeIn, fadeOut, move, scale } from '$lib/utils/animations.js'
 import { gsap } from 'gsap'
 import { offsetFromCenter } from '$lib/utils/boardGeometry.js'
 import type { AnimationContext } from '@tabletop/frontend-components'
-import { SundiverAnimator } from './sundiverAnimator.js'
 import { getFlightDuration, getFlightPaths } from '$lib/utils/flight.js'
-import {
-    CHAIN_MOMENTUM_STAGGER,
-    CHAIN_SUNDIVER_RETURN_DELAY
-} from '$lib/utils/animationsUtils.js'
+import { CHAIN_MOMENTUM_STAGGER, CHAIN_SUNDIVER_RETURN_DELAY } from '$lib/utils/animationsUtils.js'
 
 type SetQuantityCallback = (quantity: number) => void
 
@@ -361,10 +357,7 @@ export class CellSundiverAnimator extends StateAnimator<
                     action.playerId,
                     fromCell
                 )
-                const toLocation = this.gameSession.locationForDiverInCell(
-                    action.playerId,
-                    toCell
-                )
+                const toLocation = this.gameSession.locationForDiverInCell(action.playerId, toCell)
 
                 if (fromLocation && toLocation && !samePoint(fromLocation, toLocation)) {
                     const leaveStart = 0.5
@@ -435,17 +428,12 @@ export class CellSundiverAnimator extends StateAnimator<
             return
         }
 
-        const isTargetCell = procreatedCoords.some((coords) =>
-            sameCoordinates(coords, this.coords)
-        )
+        const isTargetCell = procreatedCoords.some((coords) => sameCoordinates(coords, this.coords))
         if (!isTargetCell) {
             return
         }
 
-        const numBefore = fromState.board.sundiversForPlayerAt(
-            action.playerId,
-            this.coords
-        ).length
+        const numBefore = fromState.board.sundiversForPlayerAt(action.playerId, this.coords).length
 
         const scaleUp = 1.4
         const scaleUpDuration = 0.2
@@ -564,7 +552,6 @@ export class CellSundiverAnimator extends StateAnimator<
             return
         }
 
-        const moveDuration = 0.5
         const delayBetween = 0.3
 
         if (isStart && fromState) {
@@ -720,7 +707,7 @@ export class CellSundiverAnimator extends StateAnimator<
         activate: Activate,
         timeline: gsap.core.Timeline,
         toState: HydratedSolGameState,
-        fromState?: HydratedSolGameState
+        _fromState?: HydratedSolGameState
     ) {
         if (this.playerId !== activate.playerId || !sameCoordinates(activate.coords, this.coords)) {
             return
@@ -872,10 +859,7 @@ export class CellSundiverAnimator extends StateAnimator<
             return
         }
 
-        const numBefore = fromState.board.sundiversForPlayerAt(
-            action.playerId,
-            this.coords
-        ).length
+        const numBefore = fromState.board.sundiversForPlayerAt(action.playerId, this.coords).length
         const numAfter = toState.board.sundiversForPlayerAt(action.playerId, this.coords).length
         if (numBefore === numAfter) {
             return

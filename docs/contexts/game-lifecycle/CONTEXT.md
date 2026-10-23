@@ -1,0 +1,152 @@
+# Game Lifecycle
+
+Game Lifecycle governs a Game Instance from creation through participation, play, completion, Fork, and deletion. It owns canonical Action history, distinguishes Local authority from Hosted authority, and defines the stats a User accumulates over Finished games.
+
+## Game instances
+
+**Game Instance**:
+One configured play of exactly one Game Title. Its association with that Game Title never changes.
+_Avoid_: Game
+
+**Local Game**:
+A Game Instance for which the Game Client owns the Canonical Action History.
+_Avoid_: Offline Game
+
+**Hosted Game**:
+A Game Instance for which a host owns the Canonical Action History and authorizes lifecycle operations.
+_Avoid_: Remote Game
+
+**Tournament Game**:
+A Hosted Game assigned to a Table in a Tournament. Enrollment supplies consent for its assigned Joined Players; the Tournament governs its setup and lifecycle. Its completed result is final for Players, while an Administrator may make an explicitly attributed correction.
+
+**Transient Game Instance**:
+A Game Instance that exists only for the current Game Session unless saved.
+
+**Saved Game Instance**:
+A Game Instance that persists beyond the current Game Session.
+
+**Game Owner**:
+The User responsible for managing a Game Instance. A Game Owner need not be a Player and receives no special authority over play history. In a Tournament Game, the organizer retains ownership for attribution while the Tournament governs lifecycle decisions.
+
+**Game Configuration**:
+The pre-play choices that determine how a Game Instance is set up. Configuration is validated against its Game Title, may change while Recruiting or Ready, and is frozen once play begins.
+
+## Participation
+
+**Player**:
+A participant position within one Game Instance. A Player may be associated with a User, but Player and User are distinct concepts.
+
+**Open Player**:
+A Player not associated with a User and available to claim.
+
+**Reserved Player**:
+A Player offered to a specific User who has not accepted.
+
+**Joined Player**:
+A Player accepted by its associated User.
+
+**Declined Player**:
+A Reserved Player whose associated User declined. In a Public Game the position returns to Open; in an Invite-Only Game the declined association remains until the Owner changes it.
+
+**Public Game**:
+A Game Instance with Open Players that eligible Users may claim. It is listed for public discovery unless it is an Unlisted Game.
+
+**Unlisted Game**:
+A Public Game absent from public discovery, whose Open Players any User holding its link may claim. An Administrator or Developer creates one to recruit Players for a Game Title of any catalog visibility.
+_Avoid_: Hidden public game, private game
+
+**Invite-Only Game**:
+A Game Instance absent from public discovery, with Players offered to specific Users. Invite-only governs discovery and participation, not confidentiality.
+_Avoid_: Private Game
+
+**Game Invitation**:
+An offer to a User to occupy a Reserved Player position.
+
+**Invitation Credential**:
+A temporary credential proving that its recipient may inspect and accept a Game Invitation. Its expiration does not release the Reserved Player.
+
+## Lifecycle
+
+**Recruiting**:
+The pre-play state in which at least one configured Player is not Joined.
+
+**Ready**:
+The pre-play state in which every configured Player is Joined. Readiness is derived from Player participation.
+
+**Automatic Start**:
+A Public or Unlisted Game, or a game whose Game Owner is not a Player, starts one minute after it becomes Ready. The countdown is cancelled if the game first stops being Ready or stops qualifying, and restarts in full if it becomes Ready again. The Game Owner may start it sooner. Changing Game Configuration does not affect the countdown.
+
+**In Progress**:
+The lifecycle state of a Game Instance after it starts and before its Game State contains a result.
+
+**Finished**:
+The lifecycle state derived from a Game State containing a result. Authorized Undo may return a Finished Game to In Progress, except that Players cannot reopen a Finished Tournament Game.
+
+**Delete Game**:
+Permanently remove a Game Instance, its Game State, and its Canonical Action History. A Game Owner may delete a Hosted Game only if it has never been Finished; once it has been Finished, even if an Authorized Undo later returns it to In Progress, deleting it requires an Administrator.
+_Avoid_: Archive, soft delete
+
+## Action history and synchronization
+
+**Canonical Action History**:
+The authoritative ordered Processed Actions for a Game Instance. The Game Client owns it for a Local Game; the host owns it for a Hosted Game.
+
+**Action History Checksum**:
+A synchronization fingerprint calculated from the identities and positions of ordered Processed Actions. It verifies Canonical Action History alignment rather than directly verifying Game State.
+_Avoid_: Timeline Checksum, State Checksum
+
+**Synchronized Game Context**:
+A Primary Game Context whose Canonical Action History agrees with the host.
+
+**Out-of-Sync Game Context**:
+A Primary Game Context whose Action history requires repair before it agrees with the host.
+
+**Commutation Proof**:
+A host replay that lets a late User Action be recorded after the Processed Actions it raced when a Sequenced Out-of-Turn Action is involved on either side. It requires every raced Action to belong to another Player and none to reveal information, and each Action's System Action cascade and the final Game State to match in either order, compared by content without regard to Action counts, the Action History Checksum, Action positions, or System Action Identities.
+_Avoid_: Rebase, Merge
+
+## Undo and derivation
+
+**Undo Request**:
+A request to remove an eligible User Action and its resulting Action-history suffix from a Game Instance.
+
+**Authorized Undo**:
+An approved Undo that reverses the affected Processed Actions, reapplies eligible Actions from the same Simultaneous Action Group, and establishes a new Canonical Action History.
+
+A Game Owner has no elevated Undo authority. An administrator may bypass Player ownership and information-revelation restrictions, but still targets a User Action.
+
+**Player Vote**:
+A request by a Joined Player of a Hosted Game that every Player decide a lifecycle question together. It is recorded on the Game Instance, not in Game State. At most one is open at a time, and it stays open until it passes, fails, or the Player who asked withdraws it. Hotseat and Tournament Games have none.
+
+**Undo Vote**:
+A Player Vote for an Authorized Undo that the asking Player's own Undo cannot reach, because it would cross an Action that revealed information or another Player's Action. It passes when every Player with an account agrees and fails when any Player declines. Play continues while it is open; Actions taken meanwhile are undone with the rest. It lifts the same restrictions an administrator may bypass.
+_Avoid_: Undo request vote, rollback vote
+
+**Fork**:
+A new Game Instance derived from a selected position in another Game Instance’s Canonical Action History. It has its own identity, Owner, history, and lifecycle while retaining the source Game Title and Game Configuration. A Fork of a Tournament Game does not inherit its Tournament participation.
+_Avoid_: Exploration
+
+## Stats
+
+**Counted Game**:
+A Finished Hosted Game, other than a Fork or an Abandoned Game, that contributes to the stats of each User with a Player in it. Tournament Games are Counted Games.
+
+**Abandoned Game**:
+A Finished Game Instance whose result records that play was given up, with no winners.
+
+**Outcome**:
+A Player's result in one Counted Game: won as its only winner, tied as one of several winners, or lost.
+_Avoid_: Shared win, Draw
+
+**Win Rate**:
+The share of a User's Counted Games that they won, counting a tied Outcome as an equal fraction of a win among its winners.
+
+**Even Odds**:
+The Win Rate a User would have if every Player in each of their Counted Games were equally likely to win.
+
+**Opponent**:
+Another Player in one of a User's Counted Games. Opponents are told apart across games by their associated User.
+
+**Finish**:
+A Player's position in a Counted Game that recorded final scores: first for every recorded winner, then the remaining Players in order of final score, with equal scores sharing a position.
+_Avoid_: Rank, Placement

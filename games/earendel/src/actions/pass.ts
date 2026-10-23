@@ -5,8 +5,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 
 export type PassMetadata = Type.Static<typeof PassMetadata>
-export const PassMetadata = Type.Object({
-})
+export const PassMetadata = Type.Object({})
 
 export type Pass = Type.Static<typeof Pass>
 export const Pass = Type.Evaluate(
@@ -47,7 +46,7 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
             const playerState = state.getPlayerState(this.playerId)
             playerState.bag.push(...state.heldPieces)
             state.heldPieces = []
-            shuffle(playerState.bag, state.getPrng().random)
+            shuffle(playerState.bag, state.getPublicPrng().random)
         }
 
         this.metadata = {}

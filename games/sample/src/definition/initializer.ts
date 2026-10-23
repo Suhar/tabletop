@@ -18,18 +18,8 @@ export class SampleGameInitializer
     extends BaseGameInitializer<SampleGameState, HydratedSampleGameState>
     implements GameInitializer<SampleGameState, HydratedSampleGameState>
 {
-    // When an exploration state is created, in order to avoid allowing the player to discover
-    // hidden information, this method can be used to modify the game state to hide such information.
-    // Shuffling the remaining cards in a deck would be a reasonable example.
-    initializeExplorationState(state: SampleGameState): SampleGameState {
-        return state
-    }
-
     // Initialize the game state based on things like the number of players and the game config
-    initializeGameState(
-        game: Game,
-        state: UninitializedGameState
-    ): HydratedSampleGameState {
+    initializeGameState(game: Game, state: UninitializedGameState): HydratedSampleGameState {
         // Initialize a pseudo random number generator for the state
         const prng = new Prng(state.prng)
         const players = this.initializePlayers(game, prng)

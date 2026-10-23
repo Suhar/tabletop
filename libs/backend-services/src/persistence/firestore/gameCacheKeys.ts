@@ -1,0 +1,108 @@
+import {
+    GameStatus,
+    GameStatusCategory,
+    gameUserIds,
+    isListedOpenGame,
+    getGameStatusesForCategory,
+    type Game
+} from '@tabletop/common'
+
+export class GameCacheKeys {
+    static game(gameId: string): string {
+        return `game-${gameId}`
+    }
+
+    static state(gameId: string): string {
+        return `state-${gameId}`
+    }
+
+    static checksum(gameId: string): string {
+        return `csum-${gameId}`
+    }
+
+    static revision(gameId: string): string {
+        return `etag-${gameId}`
+    }
+
+    static userList(userId: string, category: GameStatusCategory): string {
+        return `games-${category}-${userId}`
+    }
+
+    static publicList(titleId: string): string {
+        return `games-public-${titleId}`
+    }
+
+    static finishedGamesGeneration(userId: string, older = false): string {
+        return `game-history-${older ? 'older' : 'head'}-${userId}`
+    }
+
+    static historyPage(userId: string, cursor: string): string {
+        return `finished-games-history-${userId}-${cursor}`
+    }
+
+    static stats(userId: string): string {
+        return `finished-games-stats-${userId}`
+    }
+
+    static projectedHistory(
+        gameId: string,
+        perspective: string,
+        logicVersion: string,
+        recordFormat: number
+    ): string {
+        return `projected-history-${gameId}:${perspective}:${logicVersion}:${recordFormat}`
+    }
+
+    static chatRevision(gameId: string): string {
+        return `etag-${gameId}-chat`
+    }
+
+    static chatWrite(gameId: string): string[] {
+        return [`csum-${gameId}-chat`, this.chatRevision(gameId)]
+    }
+
+    static bookmark(gameId: string, playerId: string): string {
+        return `bookmark-${gameId}-${playerId}`
+    }
+
+    static gameWrite(gameId: string): string[] {
+        return [this.game(gameId), ...this.stateWrite(gameId)]
+    }
+
+    static stateWrite(gameId: string): string[] {
+        return [this.state(gameId), this.checksum(gameId), this.revision(gameId)]
+    }
+
+    static changedLists(before: Game | undefined, after: Game | undefined): string[] {
+        const oldLists = this.listsContaining(before)
+        const newLists = this.listsContaining(after)
+        const historyUsers = new Set([
+            ...(before?.status === GameStatus.Finished ? gameUserIds(before) : []),
+            ...(after?.status === GameStatus.Finished ? gameUserIds(after) : [])
+        ])
+        const historyKeys = [...historyUsers].flatMap((userId) => [
+            this.finishedGamesGeneration(userId),
+            ...(before?.status === GameStatus.Finished || before === undefined
+                ? [this.finishedGamesGeneration(userId, true)]
+                : [])
+        ])
+        return [
+            ...historyKeys,
+            ...[...oldLists].filter((key) => !newLists.has(key)),
+            ...[...newLists].filter((key) => !oldLists.has(key))
+        ]
+    }
+
+    private static listsContaining(game: Game | undefined): Set<string> {
+        const keys = new Set<string>()
+        if (!game) return keys
+        for (const category of Object.values(GameStatusCategory)) {
+            if (!getGameStatusesForCategory(category).includes(game.status)) continue
+            for (const userId of gameUserIds(game)) keys.add(this.userList(userId, category))
+        }
+        if (isListedOpenGame(game)) {
+            keys.add(this.publicList(game.typeId))
+        }
+        return keys
+    }
+}

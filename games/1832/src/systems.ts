@@ -1,0 +1,277 @@
+import * as Type from 'typebox'
+import { assert, assertExists } from '@tabletop/common'
+import {
+    PresidencyChange,
+    applyPresidencyChange,
+    evaluatePresidency,
+    placeStockMarker,
+    playersAfterPresident,
+    sharesOwned,
+    type StockMarket,
+    type StockMarketSpace,
+    removeCertificates
+} from '@tabletop/18xx'
+import type { EighteenThirtyTwoState } from './state.js'
+import { isLowerArea, EighteenThirtyTwoMarket } from './stockMarket.js'
+import { Absorption, absorbCompany, discardSharedHome } from './absorption.js'
+
+/** Systems A–E, named for the modern railroads that grew from these lines. */
+export const EighteenThirtyTwoSystems = [
+    { id: 'AMTK', name: 'Amtrak', letter: 'A' },
+    { id: 'BNSF', name: 'BNSF Railway', letter: 'B' },
+    { id: 'IC', name: 'Illinois Central Railroad', letter: 'C' },
+    { id: 'CSX', name: 'CSX Transportation', letter: 'D' },
+    { id: 'NS', name: 'Norfolk Southern Railway', letter: 'E' }
+] as const
+
+export const SystemShareCount = 20
+const PresidentShares = 4
+const MaximumSystemPar = 275
+
+export function isSystem(state: Pick<EighteenThirtyTwoState, 'systems'>, companyId: string) {
+    return companyId in state.systems
+}
+
+/** The 10-share companies a company stands for: a System's two shells, or the company itself. */
+export function shellsOf(state: Pick<EighteenThirtyTwoState, 'systems'>, companyId: string) {
+    return state.systems[companyId] ?? [companyId]
+}
+
+/** The System a component company was merged into. */
+export function systemOf(
+    state: Pick<EighteenThirtyTwoState, 'systems'>,
+    companyId: string
+): string | undefined {
+    return Object.keys(state.systems).find((systemId) =>
+        state.systems[systemId].includes(companyId)
+    )
+}
+
+export function nextSystemId(state: Pick<EighteenThirtyTwoState, 'systems'>): string | undefined {
+    return EighteenThirtyTwoSystems.find((system) => !isSystem(state, system.id))?.id
+}
+
+function combinedShares(
+    state: EighteenThirtyTwoState,
+    companyIds: readonly string[],
+    playerId: string
+) {
+    return companyIds.reduce(
+        (total, companyId) => total + sharesOwned(state, companyId, { kind: 'player', playerId }),
+        0
+    )
+}
+
+/**
+ * The System's president: the initiator, or the first player clockwise from them, holding four
+ * shares of the two companies (§11.6.1).
+ */
+export function systemPresident(
+    state: EighteenThirtyTwoState,
+    companyIds: readonly string[],
+    initiatorPlayerId: string
+): string | undefined {
+    const order = state.turnManager.turnOrder
+    const start = order.indexOf(initiatorPlayerId)
+    assert(start >= 0, 'The initiator is a player')
+    return [...order.slice(start), ...order.slice(0, start)].find(
+        (playerId) => combinedShares(state, companyIds, playerId) >= PresidentShares
+    )
+}
+
+// The nearest price, a tie rounding up.
+function nearestPrice(prices: readonly number[], target: number): number {
+    return prices.reduce((best, price) =>
+        Math.abs(price - target) < Math.abs(best - target) ||
+        (Math.abs(price - target) === Math.abs(best - target) && price > best)
+            ? price
+            : best
+    )
+}
+
+/**
+ * The System's market space: the average of the two prices, rounded to the nearest value on the
+ * market with a tie upward, placed on that price's diagonal in the row of the leftmost component
+ * (the lower when they share a column), then down and right to the soft or hard ledge
+ * (§11.6.3). **Ruling:** when that row has no box at the price, the System starts from the
+ * diagonal's first box on the leftmost component's side of the soft ledge, or its last box when
+ * that side has none. Every price above $0 runs along one diagonal.
+ */
+export function systemMarketSpace(
+    market: StockMarket,
+    companyIds: readonly string[]
+): StockMarketSpace {
+    const [first, second] = companyIds.map((companyId) =>
+        EighteenThirtyTwoMarket.companySpace(market, companyId)
+    )
+    const leftmost =
+        first.column < second.column || (first.column === second.column && first.row > second.row)
+            ? first
+            : second
+    const price = nearestPrice(
+        EighteenThirtyTwoMarket.spaces.map((entry) => entry.price),
+        (first.price + second.price) / 2
+    )
+    const diagonal = EighteenThirtyTwoMarket.spaces
+        .filter((entry) => entry.price === price)
+        .sort((a, b) => a.row - b.row)
+    let index = diagonal.findIndex((entry) => entry.row === leftmost.row)
+    if (index < 0)
+        index = diagonal.findIndex((entry) => isLowerArea(entry) === isLowerArea(leftmost))
+    if (index < 0) index = diagonal.length - 1
+    while (
+        index + 1 < diagonal.length &&
+        isLowerArea(diagonal[index + 1]) === isLowerArea(diagonal[index])
+    )
+        index++
+    return diagonal[index]
+}
+
+export const SystemFormation = Type.Object(
+    {
+        systemId: Type.String(),
+        companyIds: Type.Array(Type.String(), { minItems: 2, maxItems: 2 }),
+        presidentPlayerId: Type.String(),
+        marketSpaceId: Type.String(),
+        parPrice: Type.Integer({ minimum: 1 }),
+        exchangedCertificateIds: Type.Array(Type.String()),
+        absorptions: Type.Array(Absorption),
+        discardedHomeStationId: Type.Optional(Type.String()),
+        presidency: Type.Optional(PresidencyChange)
+    },
+    { additionalProperties: false }
+)
+export type SystemFormation = Type.Static<typeof SystemFormation>
+
+// The president gives up their component president's certificates, then single shares, to four.
+function exchangedCertificates(
+    state: EighteenThirtyTwoState,
+    companyIds: readonly string[],
+    playerId: string
+): string[] {
+    const held = state.certificates.flatMap((certificate) =>
+        certificate.kind === 'share' &&
+        companyIds.includes(certificate.companyId) &&
+        certificate.owner.kind === 'player' &&
+        certificate.owner.playerId === playerId
+            ? [certificate]
+            : []
+    )
+    const ordered = [
+        ...held.filter((certificate) => certificate.president),
+        ...held.filter((certificate) => !certificate.president)
+    ]
+    const chosen: string[] = []
+    let shares = 0
+    for (const certificate of ordered) {
+        if (shares === PresidentShares) break
+        if (shares + certificate.shares > PresidentShares) continue
+        chosen.push(certificate.id)
+        shares += certificate.shares
+    }
+    assert(shares === PresidentShares, 'The System president exchanges four shares')
+    return chosen
+}
+
+/**
+ * Forms a System of two 10-share companies (§11.6): new twenty-share certificates take the
+ * components' places, the System takes their assets and stations, and the components close as
+ * its shells.
+ */
+export function formSystem(
+    state: EighteenThirtyTwoState,
+    companyIds: readonly [string, string],
+    initiatorPlayerId: string
+): SystemFormation {
+    const systemId = nextSystemId(state)
+    assertExists(systemId, 'A System remains available')
+    const system = EighteenThirtyTwoSystems.find((entry) => entry.id === systemId)
+    assertExists(system, 'Systems are defined')
+    const presidentPlayerId = systemPresident(state, companyIds, initiatorPlayerId)
+    assertExists(presidentPlayerId, 'A player holds four shares of the components')
+    const space = systemMarketSpace(state.stockMarket, companyIds)
+    const parPrice = Math.min(space.price, MaximumSystemPar)
+    const exchangedCertificateIds = exchangedCertificates(state, companyIds, presidentPlayerId)
+    const president = { kind: 'player' as const, playerId: presidentPlayerId }
+
+    state.companies.push({
+        id: systemId,
+        kind: 'major',
+        parPrice,
+        started: true,
+        funded: true,
+        floated: true,
+        operated: true,
+        president
+    })
+    state.cash.push({ owner: { kind: 'company', companyId: systemId }, amount: 0 })
+
+    let number = 0
+    const issued: EighteenThirtyTwoState['certificates'] = [
+        {
+            id: `${systemId}:president`,
+            companyId: systemId,
+            kind: 'share',
+            shares: PresidentShares,
+            president: true,
+            owner: president
+        }
+    ]
+    const components = state.certificates.filter(
+        (certificate) => certificate.kind === 'share' && companyIds.includes(certificate.companyId)
+    )
+    for (const certificate of components) {
+        if (certificate.kind !== 'share') continue
+        if (!exchangedCertificateIds.includes(certificate.id)) {
+            const owner =
+                certificate.owner.kind === 'company'
+                    ? { kind: 'company' as const, companyId: systemId }
+                    : certificate.owner
+            number++
+            issued.push({
+                id: `${systemId}:share:${number}`,
+                companyId: systemId,
+                kind: 'share',
+                shares: certificate.shares,
+                owner,
+                ...(certificate.poolId ? { poolId: certificate.poolId } : {})
+            })
+        }
+    }
+    removeCertificates(
+        state,
+        components.map((certificate) => certificate.id)
+    )
+    state.certificates.push(...issued)
+
+    placeStockMarker(state.stockMarket, systemId, space.id)
+    const [first, second] = companyIds
+    const discardedHomeStationId = discardSharedHome(state, first, second)
+    const reissued = companyIds.flatMap((companyId) => state.reissues?.[companyId] ?? [])
+    if (reissued.length) state.reissues = { ...state.reissues, [systemId]: Math.max(...reissued) }
+    const absorptions = companyIds.map((companyId) =>
+        absorbCompany(state, companyId, systemId, 'system')
+    )
+    state.systems = { ...state.systems, [systemId]: [...companyIds] }
+
+    const presidency = evaluatePresidency(
+        state,
+        systemId,
+        playersAfterPresident(state, systemId, state.turnManager.turnOrder),
+        undefined,
+        true
+    )
+    if (presidency.change) applyPresidencyChange(state, presidency.change)
+
+    return {
+        systemId,
+        companyIds: [...companyIds],
+        presidentPlayerId,
+        marketSpaceId: space.id,
+        parPrice,
+        exchangedCertificateIds,
+        absorptions,
+        ...(discardedHomeStationId ? { discardedHomeStationId } : {}),
+        ...(presidency.change ? { presidency: presidency.change } : {})
+    }
+}

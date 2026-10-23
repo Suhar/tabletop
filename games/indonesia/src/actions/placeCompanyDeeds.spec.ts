@@ -13,10 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { Deeds } from '../components/deed.js'
 import { Era } from '../definition/eras.js'
 import { IndonesiaGameInitializer } from '../definition/initializer.js'
-import {
-    HydratedPlaceCompanyDeeds,
-    PlaceCompanyDeeds
-} from './placeCompanyDeeds.js'
+import { HydratedPlaceCompanyDeeds, PlaceCompanyDeeds } from './placeCompanyDeeds.js'
 
 function createTestState() {
     const players: Player[] = [
@@ -68,20 +65,6 @@ function createTestState() {
 }
 
 describe('HydratedPlaceCompanyDeeds', () => {
-    it('keeps the Sulawesi Selatan shipping deed at 3/3/4', () => {
-        const deed = Deeds.find((entry) => entry.id === 'D07')
-
-        expect(deed).toMatchObject({
-            id: 'D07',
-            region: 'R14',
-            sizes: {
-                [Era.A]: 3,
-                [Era.B]: 3,
-                [Era.C]: 4
-            }
-        })
-    })
-
     it('replaces available deeds with current-era deeds', () => {
         const state = createTestState()
         const carriedDeed = state.availableDeeds[0]

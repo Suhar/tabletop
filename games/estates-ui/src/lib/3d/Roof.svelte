@@ -8,8 +8,8 @@ Command: npx @threlte/gltf@2.0.3 public/roof.gltf --types --debug
     import { T } from '@threlte/core'
     import { useGltf } from '@threlte/extras'
     // @ts-ignore
-    import RoofMesh from '$lib/3d/Roof.gltf?no-inline'
-    import RoofBin from '$lib/3d/Roof.bin?url'
+    import RoofMesh from '$lib/3d/roof.gltf?no-inline'
+    import RoofBin from '$lib/3d/roof.bin?url'
 
     export let onloaded: ((ref: Object3D) => void) | undefined
     export const group = new Group()
@@ -39,7 +39,7 @@ Command: npx @threlte/gltf@2.0.3 public/roof.gltf --types --debug
             scale={0.05}
             geometry={gltf.nodes.roof.geometry}
         >
-            <T.MeshPhysicalMaterial color={'#333333'} clearcoat={1} clearcoatRoughness={0.33} />
+            <T.MeshPhysicalMaterial color="#333333" clearcoat={1} clearcoatRoughness={0.33} />
         </T.Mesh>
     {:catch error}
         <slot name="error" {error} />

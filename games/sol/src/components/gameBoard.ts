@@ -214,15 +214,21 @@ export class HydratedSolGameBoard
             return { gates: [], direct: false }
         }
 
-        const directPath = current.row === end.row
-
         const localGates = this.findGatesLocalToRing(current.row)
         const remainingRange =
             effectiveRange !== undefined ? effectiveRange - (path.length - 1) : undefined
+        const directPath = this.pathToDestination({
+            start: current,
+            destination: end,
+            range: remainingRange,
+            requiredGatesOnly: true,
+            illegalCoordinates,
+            portal
+        })
 
         // Check each gate to see if the path from the opposite side of the gate to the destination is valid
         return {
-            direct: directPath,
+            direct: directPath !== undefined,
             gates: localGates.filter((gate) => {
                 if (!gate.innerCoords || !gate.outerCoords) {
                     return false
@@ -314,8 +320,8 @@ export class HydratedSolGameBoard
             path.push(...pathThroughGates.slice(1))
         }
 
-        let remainingRange = range !== undefined ? range - (path.length - 1) : undefined
-        let current = path.at(-1)!
+        const remainingRange = range !== undefined ? range - (path.length - 1) : undefined
+        const current = path.at(-1)!
 
         if (!sameCoordinates(current, destination)) {
             if (portal) {
@@ -520,14 +526,14 @@ export class HydratedSolGameBoard
     }
 
     public addStationAt(station: Station, coords: OffsetCoordinates) {
-        let cell = this.cellAt(coords)
+        const cell = this.cellAt(coords)
         station.coords = coords
         cell.station = station
         this.setCell(cell)
     }
 
     public removeStationAt(coords: OffsetCoordinates): Station | undefined {
-        let cell = this.cellAt(coords)
+        const cell = this.cellAt(coords)
         const station = cell.station
         if (!station) {
             return undefined
@@ -549,7 +555,7 @@ export class HydratedSolGameBoard
             sundiversByPlayer[sundiver.playerId].push(sundiver)
         }
 
-        let cell = this.cellAt(coords)
+        const cell = this.cellAt(coords)
 
         for (const [playerId, sundivers] of Object.entries(sundiversByPlayer)) {
             if (!this.canAddSundiversToCell(playerId, sundivers.length, coords)) {
@@ -644,7 +650,7 @@ export class HydratedSolGameBoard
     }
 
     public findSundiverCoords(sundiverId: string): OffsetCoordinates | undefined {
-        for (const [key, cell] of Object.entries(this.cells)) {
+        for (const cell of Object.values(this.cells)) {
             if (cell.sundivers.find((diver) => diver.id === sundiverId)) {
                 return cell.coords
             }
@@ -664,7 +670,7 @@ export class HydratedSolGameBoard
     }
 
     public findStation(stationId: string): Station | undefined {
-        for (const [key, cell] of Object.entries(this.cells)) {
+        for (const cell of Object.values(this.cells)) {
             if (cell.station?.id === stationId) {
                 return cell.station
             }
@@ -706,7 +712,6 @@ export class HydratedSolGameBoard
     }
 
     public gateConversionDestinations(coords: OffsetCoordinates): OffsetCoordinates[] {
-        const destinations: OffsetCoordinates[] = []
         return this.graph
             .neighborsAt(coords, Direction.In)
             .filter((neighbor) => {
@@ -759,22 +764,36 @@ export class HydratedSolGameBoard
                 return false
             }
 
-            const outwardNeighbors = this.graph.neighborsAt(coords, Direction.Out)
-            for (const neighbor of outwardNeighbors) {
-                if (this.sundiversForPlayerAt(playerId, neighbor.coords).length === 0) {
-                    continue
-                }
-                const thirdOuterNeighbors = this.graph.neighborsAt(neighbor.coords, Direction.Out)
-                for (const thirdNeighbor of thirdOuterNeighbors) {
-                    if (this.sundiversForPlayerAt(playerId, thirdNeighbor.coords).length > 0) {
-                        return true
-                    }
-                }
-            }
-            return false
+            return this.transmitTowerSecondCells(playerId, coords).length > 0
         }
 
         return false
+    }
+
+    public transmitTowerSecondCells(
+        playerId: string,
+        firstCoords: OffsetCoordinates
+    ): OffsetCoordinates[] {
+        return this.outwardCellsWithSundivers(playerId, firstCoords).filter(
+            (secondCoords) => this.transmitTowerThirdCells(playerId, secondCoords).length > 0
+        )
+    }
+
+    public transmitTowerThirdCells(
+        playerId: string,
+        secondCoords: OffsetCoordinates
+    ): OffsetCoordinates[] {
+        return this.outwardCellsWithSundivers(playerId, secondCoords)
+    }
+
+    private outwardCellsWithSundivers(
+        playerId: string,
+        coords: OffsetCoordinates
+    ): OffsetCoordinates[] {
+        return this.graph
+            .neighborsAt(coords, Direction.Out)
+            .map((neighbor) => neighbor.coords)
+            .filter((outward) => this.sundiversForPlayerAt(playerId, outward).length > 0)
     }
 
     hasStationInRing(playerId: string, ring: Ring): boolean {

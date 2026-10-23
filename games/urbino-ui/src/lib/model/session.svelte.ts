@@ -1,4 +1,4 @@
-import { GameSession } from '@tabletop/frontend-components'
+import { GameSession, type TitlePreferences } from '@tabletop/frontend-components'
 import {
     ActionType,
     BuildingType,
@@ -18,23 +18,34 @@ import {
     hasAnyValidPlacement,
     isValidRepositionTarget,
     BOARD_SQUARES,
+    BuildingStyle,
+    UrbinoPreferenceDefinition,
+    type UrbinoPreferences,
     type HydratedUrbinoGameState,
-    type UrbinoGameState,
+    type UrbinoGameState
 } from '@tabletop/urbino'
 
 export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbinoGameState> {
     selectedBuildingType: BuildingType | undefined = $state()
     selectedArchitectIndex: number | undefined = $state()
 
-    isPlacingArchitects = $derived(
-        this.gameState.machineState === MachineState.PlacingArchitects
+    readonly preferences: TitlePreferences<typeof UrbinoPreferences> = this.createPreferences(
+        UrbinoPreferenceDefinition
     )
+
+    buildingStyle: BuildingStyle = $derived(this.preferences.values.buildingStyle)
+
+    isPlacingArchitects = $derived(this.gameState.machineState === MachineState.PlacingArchitects)
 
     isChoosingFirstPlayer = $derived(
         this.gameState.machineState === MachineState.ChoosingFirstPlayer
     )
 
     isTakingTurn = $derived(this.gameState.machineState === MachineState.TakingTurn)
+
+    showsSightlines = $derived(
+        this.isTakingTurn && this.gameState.architects.every((position) => position >= 0)
+    )
 
     canPlaceArchitect = $derived(
         this.isPlacingArchitects &&
@@ -61,9 +72,7 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
             isRepositionArchitect(this.undoableAction)
     )
 
-    canUndoPlacement = $derived(
-        !!this.undoableAction && isPlaceBuilding(this.undoableAction)
-    )
+    canUndoPlacement = $derived(!!this.undoableAction && isPlaceBuilding(this.undoableAction))
 
     canUndoArchitectPlacement = $derived(
         !!this.undoableAction && isPlaceArchitect(this.undoableAction)
@@ -80,9 +89,7 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
     )
 
     canPass = $derived(
-        this.isTakingTurn &&
-            this.validActionTypes.includes(ActionType.Pass) &&
-            !!this.myPlayer?.id
+        this.isTakingTurn && this.validActionTypes.includes(ActionType.Pass) && !!this.myPlayer?.id
     )
 
     canConcede = $derived(
@@ -104,11 +111,40 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
                 this.gameState.monumentsVariant
             )
         }
-        return getValidPlacements(this.gameState.board, this.gameState.architects, this.myPlayer.id, {
-            houses: player.houses,
-            palaces: player.palaces,
-            towers: player.towers,
-        }, this.gameState.monumentsVariant)
+        return getValidPlacements(
+            this.gameState.board,
+            this.gameState.architects,
+            this.myPlayer.id,
+            {
+                houses: player.houses,
+                palaces: player.palaces,
+                towers: player.towers
+            },
+            this.gameState.monumentsVariant
+        )
+    })
+
+    placeableBuildingTypes: Set<BuildingType> = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        const player = this.gameState.players.find((p) => p.playerId === playerId)
+        if (!this.canPlaceBuilding || !playerId || !player) return new Set()
+        const supply: Record<BuildingType, number> = {
+            [BuildingType.House]: player.houses,
+            [BuildingType.Palace]: player.palaces,
+            [BuildingType.Tower]: player.towers
+        }
+        const placeable = Object.values(BuildingType).filter(
+            (type) =>
+                supply[type] > 0 &&
+                getValidPlacementsForType(
+                    this.gameState.board,
+                    this.gameState.architects,
+                    playerId,
+                    type,
+                    this.gameState.monumentsVariant
+                ).length > 0
+        )
+        return new Set(placeable)
     })
 
     architectsWithValidMoves: Set<number> = $derived.by(() => {
@@ -118,16 +154,26 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
         const result = new Set<number>()
         outer: for (let idx = 0; idx < this.gameState.architects.length; idx++) {
             for (let i = 0; i < BOARD_SQUARES; i++) {
-                if (!isValidRepositionTarget(this.gameState.board, this.gameState.architects, idx, i)) continue
+                if (
+                    !isValidRepositionTarget(
+                        this.gameState.board,
+                        this.gameState.architects,
+                        idx,
+                        i
+                    )
+                )
+                    continue
                 const newArchitects = [...this.gameState.architects]
                 newArchitects[idx] = i
-                if (hasAnyValidPlacement(
-                    this.gameState.board,
-                    newArchitects,
-                    this.myPlayer!.id,
-                    { houses: player.houses, palaces: player.palaces, towers: player.towers },
-                    this.gameState.monumentsVariant
-                )) {
+                if (
+                    hasAnyValidPlacement(
+                        this.gameState.board,
+                        newArchitects,
+                        this.myPlayer!.id,
+                        { houses: player.houses, palaces: player.palaces, towers: player.towers },
+                        this.gameState.monumentsVariant
+                    )
+                ) {
                     result.add(idx)
                     continue outer
                 }
@@ -142,21 +188,53 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
         if (!player) return []
         const valid: number[] = []
         for (let i = 0; i < BOARD_SQUARES; i++) {
-            if (!isValidRepositionTarget(this.gameState.board, this.gameState.architects, this.selectedArchitectIndex, i)) continue
+            if (
+                !isValidRepositionTarget(
+                    this.gameState.board,
+                    this.gameState.architects,
+                    this.selectedArchitectIndex,
+                    i
+                )
+            )
+                continue
             const newArchitects = [...this.gameState.architects]
             newArchitects[this.selectedArchitectIndex] = i
-            if (hasAnyValidPlacement(
-                this.gameState.board,
-                newArchitects,
-                this.myPlayer!.id,
-                { houses: player.houses, palaces: player.palaces, towers: player.towers },
-                this.gameState.monumentsVariant
-            )) {
+            if (
+                hasAnyValidPlacement(
+                    this.gameState.board,
+                    newArchitects,
+                    this.myPlayer!.id,
+                    { houses: player.houses, palaces: player.palaces, towers: player.towers },
+                    this.gameState.monumentsVariant
+                )
+            ) {
                 valid.push(i)
             }
         }
         return valid
     })
+
+    repositionPreview(
+        position: number
+    ): { position: number; architects: number[]; placements: Set<number> } | undefined {
+        const architectIndex = this.selectedArchitectIndex
+        if (architectIndex === undefined || !this.validRepositionSquares.includes(position))
+            return undefined
+        const playerId = this.myPlayer?.id
+        const player = this.gameState.players.find((p) => p.playerId === playerId)
+        if (!playerId || !player) return undefined
+        const architects = this.gameState.architects.map((current, index) =>
+            index === architectIndex ? position : current
+        )
+        const placements = getValidPlacements(
+            this.gameState.board,
+            architects,
+            playerId,
+            { houses: player.houses, palaces: player.palaces, towers: player.towers },
+            this.gameState.monumentsVariant
+        )
+        return { position, architects, placements: new Set(placements) }
+    }
 
     validArchitectPlacementSquares: number[] = $derived.by(() => {
         if (!this.canPlaceArchitect) return []
@@ -173,6 +251,10 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
         return valid
     })
 
+    setBuildingStyle(buildingStyle: BuildingStyle) {
+        this.preferences.set({ buildingStyle })
+    }
+
     resetAction() {
         this.selectedBuildingType = undefined
         this.selectedArchitectIndex = undefined
@@ -184,11 +266,13 @@ export class UrbinoGameSession extends GameSession<UrbinoGameState, HydratedUrbi
 
     selectBuildingType(type: BuildingType) {
         if (!this.canPlaceBuilding) return
+        this.selectedArchitectIndex = undefined
         this.selectedBuildingType = this.selectedBuildingType === type ? undefined : type
     }
 
     selectArchitect(index: number) {
         if (!this.canRepositionArchitect) return
+        this.selectedBuildingType = undefined
         this.selectedArchitectIndex = this.selectedArchitectIndex === index ? undefined : index
     }
 

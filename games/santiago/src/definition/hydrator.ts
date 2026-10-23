@@ -1,6 +1,7 @@
 import { GameAction, type GameHydrator, type HydratedAction } from '@tabletop/common'
-import { SantiagoGameState, HydratedSantiagoGameState } from '../model/gameState.js'
+import { SantiagoProjectedState, HydratedSantiagoGameState } from '../model/gameState.js'
 import { HydratedPlaceSpring, isPlaceSpring } from '../actions/placeSpring.js'
+import { HydratedRevealTiles, isRevealTiles } from '../actions/revealTiles.js'
 import { HydratedPlaceBid, isPlaceBid } from '../actions/placeBid.js'
 import { HydratedPlaceField, isPlaceField } from '../actions/placeField.js'
 import { HydratedPlaceNeutralTile, isPlaceNeutralTile } from '../actions/placeNeutralTile.js'
@@ -10,13 +11,16 @@ import { HydratedProposeCanal, isProposeCanal } from '../actions/proposeCanal.js
 import { HydratedOverseerDecision, isOverseerDecision } from '../actions/overseerDecision.js'
 import { HydratedEndRoundEvent, isEndRoundEvent } from '../actions/endRoundEvent.js'
 
-export class SantiagoHydrator
-    implements GameHydrator<SantiagoGameState, HydratedSantiagoGameState>
-{
+export class SantiagoHydrator implements GameHydrator<
+    SantiagoProjectedState,
+    HydratedSantiagoGameState
+> {
     hydrateAction(data: GameAction): HydratedAction {
         switch (true) {
             case isPlaceSpring(data):
                 return new HydratedPlaceSpring(data)
+            case isRevealTiles(data):
+                return new HydratedRevealTiles(data)
             case isPlaceBid(data):
                 return new HydratedPlaceBid(data)
             case isPlaceField(data):
@@ -38,7 +42,7 @@ export class SantiagoHydrator
         }
     }
 
-    hydrateState(state: SantiagoGameState): HydratedSantiagoGameState {
+    hydrateState(state: SantiagoProjectedState): HydratedSantiagoGameState {
         return new HydratedSantiagoGameState(state)
     }
 }

@@ -5,17 +5,26 @@ import { VitestConfig } from '@tabletop/vitest-config'
 import type { ClientRequest, IncomingMessage } from 'node:http'
 
 type ProxyServer = {
-    on: (event: 'proxyReq', listener: (proxyReq: ClientRequest, req: IncomingMessage) => void) => void
+    on: (
+        event: 'proxyReq',
+        listener: (proxyReq: ClientRequest, req: IncomingMessage) => void
+    ) => void
 }
 
 export default defineProject(
     mergeConfig(VitestConfig, {
         server: {
             host: '0.0.0.0',
+            port: Number(process.env.LOCAL_HOSTED_FRONTEND_PORT ?? 5173),
+            strictPort: Boolean(process.env.LOCAL_HOSTED_FRONTEND_PORT),
             fs: { strict: false },
             proxy: {
+                '/api': {
+                    target: 'http://127.0.0.1:3000',
+                    changeOrigin: true
+                },
                 '/games': {
-                    target: 'http://localhost:3000',
+                    target: process.env.PUBLIC_API_HOST ?? 'http://127.0.0.1:3000',
                     changeOrigin: true,
                     configure: (proxy: ProxyServer) => {
                         proxy.on('proxyReq', (proxyReq: ClientRequest, req: IncomingMessage) => {
@@ -34,6 +43,7 @@ export default defineProject(
             }
         },
         plugins: [sveltekit(), devtoolsJson()],
+        test: { exclude: ['**/*.client.spec.ts'] },
         assetsInclude: ['**/*.gltf'],
         build: {
             commonjsOptions: { include: [/node_modules/] },

@@ -1,0 +1,184 @@
+<script lang="ts">
+    import { historyBankBreaks, historyStates } from './historyStates.js'
+    import { ActionSource, assertExists, type GameAction } from '@tabletop/common'
+    import { controllingOwner } from '@tabletop/18xx'
+    import { historyCompanyChanges } from './historyCompanyChanges.js'
+    import { historyCash } from './historyCash.js'
+    import { entryOrderChanges, historyOperatingOrder } from './historyOperatingOrder.js'
+    import { historyRounds } from './historyRounds.js'
+    import { auctionLotName } from './auctionHistory.js'
+    import { historyGroups } from './historyGroups.js'
+    import {
+        companyLabels,
+        historyDescription,
+        type TitleActionDescription
+    } from './historyDescription.js'
+    import HistoryGroup from './HistoryGroup.svelte'
+    import OperatingOrderHistory from './OperatingOrderHistory.svelte'
+    import RoundHistory from './RoundHistory.svelte'
+    import AuctionHistoryCard from './AuctionHistoryCard.svelte'
+    import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
+    let {
+        session,
+        onPreviewMap,
+        trainColors,
+        describeAction
+    }: {
+        onPreviewMap: (action: GameAction) => void
+        session: EighteenXXSessionView
+        trainColors: Readonly<Record<string, string>>
+        describeAction?: TitleActionDescription
+    } = $props()
+    const money = $derived(session.presentation.money)
+    const jumpDisabled = $derived(
+        session.busy || session.updatingVisibleState || session.history.isDisabled()
+    )
+    function jumpToHistory(index: number) {
+        if (!jumpDisabled) void session.history.goToActionIndex(index, { exact: true })
+    }
+    const newestFirst = $derived(session.preferences.values.historyOrder === 'newestFirst')
+    const context = $derived(session.history.visibleContext)
+    const gameState = $derived(context.state)
+    const states = $derived(historyStates(context.actions, gameState, session.endingRules))
+    const orderChanges = $derived(historyOperatingOrder(context.actions, states))
+    const cash = $derived(historyCash(states))
+    const entryOrders = $derived(entryOrderChanges(context.actions, orderChanges))
+    const bankBreaks = $derived(historyBankBreaks(states))
+    const companyChanges = $derived(historyCompanyChanges(context.actions))
+    // A system action the title describes is one of its own events, unless it is routine.
+    const rounds = $derived(
+        historyRounds(context.actions, gameState, states, orderChanges, cash, {
+            isEvent: (action) => {
+                if (action.source !== ActionSource.System) return false
+                const description = describeAction?.(action, companyName, () =>
+                    describeShared(action)
+                )
+                return !!description && !description.routine
+            },
+            rounds: session.presentation.titleRounds
+        })
+    )
+    const currentHeaderId = $derived(session.isViewingHistory ? rounds[0]?.id : undefined)
+    function returnToCurrent() {
+        if (!jumpDisabled) void session.history.goToEnd()
+    }
+    const labels = $derived(
+        companyLabels(
+            gameState.companies,
+            (id) => session.companyInitials(id),
+            (id) => session.companyName(id)
+        )
+    )
+    function companyName(id: string) {
+        return gameState.companies.find((company) => company.id === id)?.kind === 'private'
+            ? session.companyName(id)
+            : session.companyInitials(id)
+    }
+    function describeShared(action: GameAction) {
+        return historyDescription(
+            action,
+            gameState,
+            session.stockMarketChart,
+            companyName,
+            (id) => session.getPlayerName(id),
+            companyChanges.get(action.id),
+            session.presentation.money,
+            (id) => auctionLotName(id, gameState, session.auctionLotsFor(gameState), companyName),
+            (id) => session.names.routeBonus(id)
+        )
+    }
+    function describe(action: GameAction) {
+        const shared = () => describeShared(action)
+        const description = describeAction?.(action, companyName, shared) ?? shared()
+        return entryOrders.has(action.id) ? { ...description, important: true } : description
+    }
+
+    function lot(lotId: string) {
+        const lot = session.offers.model?.lots.find((lot) => lot.id === lotId)
+        assertExists(lot, 'Auction history requires a known offered lot')
+        return lot
+    }
+</script>
+
+<RoundHistory
+    {currentHeaderId}
+    onReturn={returnToCurrent}
+    onJump={jumpToHistory}
+    {jumpDisabled}
+    {rounds}
+    phaseColors={session.presentation.phaseColors}
+    {newestFirst}
+    historyComplete={context.hasCompleteHistory}
+    onOrderChange={(first) =>
+        session.preferences.set({ historyOrder: first ? 'newestFirst' : 'newestLast' }, 'family')}
+>
+    {#snippet orderContent(order)}
+        <OperatingOrderHistory {order} stations={session.mapView.stations} {companyName} />
+    {/snippet}
+    {#snippet children(round)}
+        {@const groups = historyGroups(round.entries, round.label.startsWith('OR '))}
+        <ol aria-label={`${round.label} actions`}>
+            {#each newestFirst ? groups : groups.toReversed() as entry (entry.id)}
+                {#if entry.kind === 'auction'}
+                    {@const offered = lot(entry.offer.lotId)}
+                    <li class="auction">
+                        <AuctionHistoryCard
+                            {money}
+                            card={entry}
+                            lot={offered}
+                            lotName={session.lotName(offered)}
+                            playerName={(id) => session.getPlayerName(id)}
+                            playerColor={(id) => session.colors.getPlayerBgColorValue(id)}
+                        />
+                    </li>
+                {:else}
+                    <li>
+                        <HistoryGroup
+                            {money}
+                            {newestFirst}
+                            group={entry}
+                            onReturn={round.id === currentHeaderId &&
+                            entry.id === groups.find((group) => group.kind === 'operation')?.id
+                                ? returnToCurrent
+                                : undefined}
+                            onJump={jumpToHistory}
+                            {jumpDisabled}
+                            {onPreviewMap}
+                            previewsMap={(action) => session.previewsHistoryMap(action)}
+                            previewActionId={session.historicalMap?.actionId}
+                            appearance={entry.companyId
+                                ? session.mapView.stations[entry.companyId]
+                                : undefined}
+                            playerName={(id) => session.getPlayerName(id)}
+                            playerColor={(id) => session.colors.getPlayerBgColorValue(id)}
+                            currentController={(id) => controllingOwner(gameState, id)?.playerId}
+                            phasePalette={session.phaseChangePalette}
+                            {trainColors}
+                            shareCards={(action) => session.shareCards(action)}
+                            trainName={(id) => session.trainDepot.trainDefinition(id).name}
+                            orderChanges={entryOrders}
+                            {cash}
+                            {bankBreaks}
+                            stations={session.mapView.stations}
+                            {describe}
+                            companyName={(id) => session.companyName(id)}
+                            companyLabels={labels}
+                        />
+                    </li>
+                {/if}
+            {/each}
+        </ol>
+    {/snippet}
+</RoundHistory>
+
+<style>
+    ol {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    li {
+        margin: 0;
+        padding: 0;
+    }
+</style>

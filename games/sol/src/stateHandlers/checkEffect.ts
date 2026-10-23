@@ -1,8 +1,6 @@
 import {
     type HydratedAction,
     type MachineStateHandler,
-    ActionSource,
-    assert,
     assertExists,
     MachineContext
 } from '@tabletop/common'
@@ -13,8 +11,7 @@ import { HydratedPass, isPass } from '../actions/pass.js'
 import { drawCardsOrEndTurn } from './postActionHelper.js'
 import { HydratedActivateEffect, isActivateEffect } from '../actions/activateEffect.js'
 import { EffectType } from '../components/effects.js'
-import { Activate } from '../actions/activate.js'
-import { nanoid } from 'nanoid'
+import { queueMotivatedActivation } from '../utils/automaticActions.js'
 import { ActivatingStateHandler } from './activating.js'
 import { Ring } from '../utils/solGraph.js'
 
@@ -23,15 +20,23 @@ import { Ring } from '../utils/solGraph.js'
 
 type CheckEffectAction = HydratedPass | HydratedActivateEffect
 
-export class CheckEffectStateHandler implements MachineStateHandler<CheckEffectAction, HydratedSolGameState> {
-    isValidAction(action: HydratedAction, context: MachineContext<HydratedSolGameState>): action is CheckEffectAction {
+export class CheckEffectStateHandler implements MachineStateHandler<
+    CheckEffectAction,
+    HydratedSolGameState
+> {
+    isValidAction(
+        action: HydratedAction,
+        _context: MachineContext<HydratedSolGameState>
+    ): action is CheckEffectAction {
         if (!action.playerId) return false
-        const gameState = context.gameState
 
         return isPass(action) || isActivateEffect(action)
     }
 
-    validActionsForPlayer(playerId: string, context: MachineContext<HydratedSolGameState>): ActionType[] {
+    validActionsForPlayer(
+        playerId: string,
+        context: MachineContext<HydratedSolGameState>
+    ): ActionType[] {
         const gameState = context.gameState
 
         const validActions = [ActionType.Pass]
@@ -45,7 +50,10 @@ export class CheckEffectStateHandler implements MachineStateHandler<CheckEffectA
 
     enter(_context: MachineContext<HydratedSolGameState>) {}
 
-    onAction(action: CheckEffectAction, context: MachineContext<HydratedSolGameState>): MachineState {
+    onAction(
+        action: CheckEffectAction,
+        context: MachineContext<HydratedSolGameState>
+    ): MachineState {
         const gameState = context.gameState
 
         switch (true) {
@@ -82,14 +90,7 @@ export class CheckEffectStateHandler implements MachineStateHandler<CheckEffectA
             }
             case isActivateEffect(action): {
                 if (gameState.activeEffect === EffectType.Motivate) {
-                    const station = gameState.effectTracking?.convertedStation
-                    assertExists(station, 'No converted station found for Motivate effect')
-                    assertExists(station.coords, 'No coords found for Motivate effect station')
-                    context.addSystemAction(Activate, {
-                        playerId: action.playerId,
-                        coords: station.coords,
-                        stationId: station.id
-                    })
+                    queueMotivatedActivation(context, action.playerId)
                     return MachineState.Activating
                 } else if (gameState.activeEffect === EffectType.Augment) {
                     return ActivatingStateHandler.handleActivation(
@@ -119,12 +120,16 @@ export class CheckEffectStateHandler implements MachineStateHandler<CheckEffectA
                 } else if (gameState.activeEffect === EffectType.Hatch) {
                     return MachineState.Hatching
                 } else if (action.effect === EffectType.Procreate) {
+                    // Procreate resolves immediately and clears activeEffect, so match on the action
                     return drawCardsOrEndTurn(gameState, context)
                 } else if (gameState.activeEffect === EffectType.Accelerate) {
                     return MachineState.Accelerating
                 } else if (gameState.activeEffect === EffectType.Tribute) {
                     return MachineState.Tributing
                 }
+                throw Error(
+                    `Unhandled effect ${gameState.activeEffect ?? action.effect} in CheckEffect`
+                )
             }
             default: {
                 throw Error('Invalid action type')

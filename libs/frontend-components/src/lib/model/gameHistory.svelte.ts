@@ -1,16 +1,24 @@
-import { GameState, RunMode, type GameAction, type HydratedGameState } from '@tabletop/common'
+import {
+    ExplorationHistory,
+    getActionCascadeEndIndex,
+    GameState,
+    type GameAction,
+    type HydratedGameState
+} from '@tabletop/common'
 import type { GameContext } from './gameContext.svelte.js'
 
 export type StepDirection = 'forward' | 'backward'
+type HistoryStepPredicate = (actionIndex: number) => boolean
 export type HistoryAnimationIntent = 'full-action' | 'state-only' | 'silent-swap'
 
 export type HistoryEnterCallback = () => void
-export type HistoryActionCallback = (
-    action: GameAction | undefined,
-    animationIntent?: HistoryAnimationIntent
-) => void
+export type HistoryActionCallback = (action: GameAction | undefined) => void
 export type HistoryShouldAutoStepCallback = (action: GameAction, next?: GameAction) => boolean
-export type HistoryExitCallback = (animationIntent?: HistoryAnimationIntent) => void
+export type HistoryExitCallback = () => void
+export type HistoryPresentCallback = (
+    animationIntent: HistoryAnimationIntent,
+    write: () => void
+) => void
 export type HistoryWaitForTransitionSettledCallback = () => Promise<void>
 
 export type HistoryCallbacks = {
@@ -18,7 +26,13 @@ export type HistoryCallbacks = {
     onHistoryAction?: HistoryActionCallback
     shouldAutoStepAction?: HistoryShouldAutoStepCallback
     onHistoryExit?: HistoryExitCallback
+    present?: HistoryPresentCallback
     waitForTransitionSettled?: HistoryWaitForTransitionSettledCallback
+}
+
+export interface HistoryPosition<T extends GameState, U extends HydratedGameState<T> & T> {
+    context: GameContext<T, U>
+    actionIndex: number
 }
 
 export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T> {
@@ -51,8 +65,15 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         return this.historyContext.actions[this.actionIndex]
     })
 
+    private earliestActionIndex: number = $derived.by(() =>
+        (this.historyContext ?? this.gameContext).actions.findLastIndex(
+            (action) => action.undoPatch === undefined
+        )
+    )
+
     hasPreviousAction: boolean = $derived.by(() => {
-        return this.inHistory ? this.actionIndex >= 0 : this.gameContext.actions.length > 0
+        const index = this.inHistory ? this.actionIndex : this.gameContext.actions.length - 1
+        return !this.disabled && index > this.earliestActionIndex
     })
 
     hasNextAction: boolean = $derived.by(() => {
@@ -63,7 +84,10 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
     })
 
     playing: boolean = $state(false)
-    private disabled = $state(false)
+    private explicitlyDisabled = $state(false)
+    private disabled = $derived.by(
+        () => this.explicitlyDisabled || !this.gameContext.hasCompleteHistory
+    )
     private stepping: boolean = false
     private playTimer: ReturnType<typeof setTimeout> | null = null
     private playOnEnable: boolean = false
@@ -72,6 +96,7 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
     private onHistoryAction: HistoryActionCallback = () => {}
     private shouldAutoStepAction: HistoryShouldAutoStepCallback = () => false
     private onHistoryExit: HistoryExitCallback = () => {}
+    private present: HistoryPresentCallback = (_animationIntent, write) => write()
     private waitForTransitionSettled: HistoryWaitForTransitionSettledCallback = async () => {}
 
     constructor(gameContext: GameContext<T, U>, callbacks?: HistoryCallbacks) {
@@ -82,22 +107,66 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
             this.onHistoryAction = callbacks.onHistoryAction ?? this.onHistoryAction
             this.shouldAutoStepAction = callbacks.shouldAutoStepAction ?? this.shouldAutoStepAction
             this.onHistoryExit = callbacks.onHistoryExit ?? this.onHistoryExit
+            this.present = callbacks.present ?? this.present
             this.waitForTransitionSettled =
                 callbacks.waitForTransitionSettled ?? this.waitForTransitionSettled
         }
     }
 
+    capturePosition(): HistoryPosition<T, U> | undefined {
+        if (!this.historyContext) return undefined
+        const context = this.visibleContext.clone()
+        context.addActions(
+            this.historyContext.actions
+                .slice(this.actionIndex + 1)
+                .map((action) => structuredClone(action))
+        )
+        return { context, actionIndex: this.actionIndex }
+    }
+
+    restorePosition(gameContext: GameContext<T, U>, position?: HistoryPosition<T, U>): void {
+        this.updateSourceGameContext(gameContext)
+        if (!position) return
+        this.present('silent-swap', () => {
+            this.historyContext = position.context
+            this.actionIndex = position.actionIndex
+        })
+        this.onHistoryEnter()
+        this.onHistoryAction(this.currentAction)
+    }
+
+    createExplorationSource(): GameContext<T, U> {
+        const source = this.visibleContext.clone()
+        if (!this.historyContext) return source
+        const end = getActionCascadeEndIndex(this.historyContext.actions, this.actionIndex)
+        const history = new ExplorationHistory(source.engine)
+        for (const action of this.historyContext.actions.slice(this.actionIndex + 1, end + 1)) {
+            source.updateGameState(
+                history.forward(
+                    source.state,
+                    action,
+                    source.game,
+                    this.gameContext.state.explorationState
+                )
+            )
+            source.addAction(structuredClone(action))
+        }
+        source.verifyFullChecksum()
+        return source
+    }
+
     updateSourceGameContext(gameContext: GameContext<T, U>) {
+        this.stopHistoryPlayback()
         this.exitHistory()
         this.gameContext = gameContext
     }
 
     disable() {
-        this.disabled = true
+        this.explicitlyDisabled = true
     }
 
     enable() {
-        this.disabled = false
+        this.explicitlyDisabled = false
 
         // Resume playing if needed
         if (this.playOnEnable) {
@@ -176,7 +245,16 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         }
     }
 
-    public async goToActionIndex(actionIndex: number) {
+    public async goToActionIndex(
+        actionIndex: number,
+        {
+            exact = false,
+            animationIntent = 'state-only'
+        }: {
+            exact?: boolean
+            animationIntent?: HistoryAnimationIntent
+        } = {}
+    ) {
         if (this.stepping || this.disabled || !Number.isFinite(actionIndex)) {
             return
         }
@@ -184,7 +262,8 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         try {
             await this.gotoAction(Math.trunc(actionIndex), {
                 ensureHistory: true,
-                animationIntent: 'state-only'
+                animationIntent,
+                exact
             })
         } finally {
             setTimeout(() => {
@@ -218,7 +297,7 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         try {
             const actions = this.historyContext?.actions ?? this.gameContext.actions
             const lastAvailableActionIndex = actions.length - 1
-            if (lastAvailableActionIndex < 0) {
+            if (lastAvailableActionIndex <= this.earliestActionIndex) {
                 return
             }
 
@@ -231,7 +310,10 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
                 ]
             }
 
-            normalizedStartIndex = Math.max(0, Math.min(normalizedStartIndex, lastAvailableActionIndex))
+            normalizedStartIndex = Math.max(
+                this.earliestActionIndex + 1,
+                Math.min(normalizedStartIndex, lastAvailableActionIndex)
+            )
             normalizedEndIndex = Math.max(
                 normalizedStartIndex,
                 Math.min(normalizedEndIndex, lastAvailableActionIndex)
@@ -289,13 +371,12 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
     }: {
         toActionIndex?: number
         stopPlayback?: boolean
-        predicate?: () => boolean
+        predicate?: HistoryStepPredicate
         animationIntent?: HistoryAnimationIntent
         exact?: boolean
     } = {}) {
         if (
-            (this.inHistory && this.actionIndex < 0) ||
-            (!this.inHistory && this.gameContext.actions.length === 0) ||
+            !this.hasPreviousAction ||
             (toActionIndex !== undefined && toActionIndex >= this.actionIndex)
         ) {
             return
@@ -303,32 +384,35 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
 
         this.enterHistory()
 
-        if (!this.historyContext) {
+        const historyContext = this.historyContext
+        if (!historyContext) {
             return
         }
 
-        let stateSnapshot = this.historyContext.state as T
+        let actionIndex = this.actionIndex
+        let stateSnapshot = historyContext.state
         let lastAction: GameAction | undefined
         do {
-            lastAction = this.historyContext.actions[this.actionIndex]
-            const updatedState = this.historyContext.engine.undoAction(stateSnapshot, lastAction)
-            this.actionIndex -= 1
+            lastAction = historyContext.actions[actionIndex]
+            const updatedState = new ExplorationHistory(historyContext.engine).backward(
+                stateSnapshot,
+                lastAction,
+                this.gameContext.state.explorationState
+            )
+            actionIndex -= 1
             stateSnapshot = updatedState
         } while (
-            (this.actionIndex >= 0 &&
-                ((toActionIndex !== undefined && (lastAction.index ?? 0) > toActionIndex + 1) ||
-                    (!exact &&
-                        this.shouldAutoStepAction(
-                            this.historyContext.actions[this.actionIndex],
-                            this.historyContext.actions.at(this.actionIndex + 1)
-                        )))) ||
-            (predicate && predicate() === false)
+            actionIndex > this.earliestActionIndex &&
+            ((toActionIndex !== undefined && (lastAction.index ?? 0) > toActionIndex + 1) ||
+                (!exact &&
+                    this.shouldAutoStepAction(
+                        historyContext.actions[actionIndex],
+                        historyContext.actions.at(actionIndex + 1)
+                    )) ||
+                (predicate && predicate(actionIndex) === false))
         )
-        this.onHistoryAction(
-            this.actionIndex >= 0 ? this.historyContext.actions[this.actionIndex] : undefined,
-            animationIntent
-        )
-        this.historyContext.updateGameState(stateSnapshot)
+        this.onHistoryAction(actionIndex >= 0 ? historyContext.actions[actionIndex] : undefined)
+        this.presentStep(animationIntent, historyContext, actionIndex, stateSnapshot)
 
         if (stopPlayback) {
             this.stopHistoryPlayback()
@@ -346,53 +430,56 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         toActionIndex?: number
         stopPlayback?: boolean
         animated?: boolean
-        predicate?: () => boolean
+        predicate?: HistoryStepPredicate
         animationIntent?: HistoryAnimationIntent
         exact?: boolean
     } = {}) {
-        if (!this.historyContext) {
+        const historyContext = this.historyContext
+        if (!historyContext) {
             return
         }
 
-        if (this.actionIndex === this.historyContext.actions.length - 1) {
+        if (this.actionIndex === historyContext.actions.length - 1) {
             this.stopHistoryPlayback()
             this.exitHistory(animationIntent)
             return
         }
 
-        if (this.actionIndex >= this.historyContext.actions.length - 1) {
+        if (this.actionIndex >= historyContext.actions.length - 1) {
             return
         }
 
-        const gameSnapshot = this.historyContext.game
-        let stateSnapshot = this.historyContext.state as T
+        const gameSnapshot = historyContext.game
+        let actionIndex = this.actionIndex
+        let stateSnapshot = historyContext.state
 
         let nextAction: GameAction | undefined
         do {
-            const nextActionIndex = this.actionIndex + 1
-            nextAction = this.historyContext.actions[nextActionIndex] as GameAction
-            const { updatedState } = this.historyContext.engine.run(
-                nextAction,
+            const nextActionIndex = actionIndex + 1
+            nextAction = historyContext.actions[nextActionIndex]
+            stateSnapshot = new ExplorationHistory(historyContext.engine).forward(
                 stateSnapshot,
+                nextAction,
                 gameSnapshot,
-                RunMode.Single
+                this.gameContext.state.explorationState
             )
-            stateSnapshot = updatedState
-            this.actionIndex = nextActionIndex
+            actionIndex = nextActionIndex
         } while (
-            (this.actionIndex < this.historyContext.actions.length - 1 &&
-                ((toActionIndex !== undefined && (nextAction.index ?? 0) < toActionIndex) ||
-                    (!exact &&
-                        this.shouldAutoStepAction(
-                            nextAction,
-                            this.historyContext.actions.at(this.actionIndex + 1)
-                        )))) ||
-            (predicate && predicate() === false)
+            actionIndex < historyContext.actions.length - 1 &&
+            ((toActionIndex !== undefined && (nextAction.index ?? 0) < toActionIndex) ||
+                (!exact &&
+                    this.shouldAutoStepAction(
+                        nextAction,
+                        historyContext.actions.at(actionIndex + 1)
+                    )) ||
+                (predicate && predicate(actionIndex) === false))
         )
-        this.onHistoryAction(this.historyContext.actions[this.actionIndex], animationIntent)
-        this.historyContext.updateGameState(stateSnapshot)
+        this.onHistoryAction(historyContext.actions[actionIndex])
+        this.presentStep(animationIntent, historyContext, actionIndex, stateSnapshot)
 
-        const skippableLastAction = this.shouldAutoStepAction(nextAction)
+        const skippableLastAction =
+            actionIndex === historyContext.actions.length - 1 &&
+            this.shouldAutoStepAction(nextAction)
         if (stopPlayback || skippableLastAction) {
             this.stopHistoryPlayback()
         }
@@ -403,6 +490,18 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
             }
             this.exitHistory(animationIntent)
         }
+    }
+
+    private presentStep(
+        animationIntent: HistoryAnimationIntent,
+        historyContext: GameContext<T, U>,
+        actionIndex: number,
+        state: T
+    ) {
+        this.present(animationIntent, () => {
+            this.actionIndex = actionIndex
+            historyContext.updateGameState(state)
+        })
     }
 
     private async gotoAction(
@@ -417,6 +516,7 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
             exact?: boolean
         } = {}
     ) {
+        actionIndex = Math.max(actionIndex, this.earliestActionIndex)
         if (!this.historyContext) {
             if (this.gameContext.actions.length === 0) {
                 return
@@ -425,10 +525,6 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
                 return
             }
             this.enterHistory()
-        }
-
-        if (actionIndex < -1) {
-            actionIndex = -1
         }
 
         if (this.historyContext && actionIndex > this.historyContext.actions.length - 1) {
@@ -443,7 +539,11 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
     }
 
     public async playHistory() {
-        if (this.disabled || this.playing || this.gameContext.actions.length === 0) {
+        if (
+            this.disabled ||
+            this.playing ||
+            this.gameContext.actions.length - 1 <= this.earliestActionIndex
+        ) {
             return
         }
 
@@ -490,19 +590,14 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
     }
 
     public async goToPlayersPreviousTurn(playerId: string) {
-        if (
-            this.disabled ||
-            this.stepping ||
-            this.gameContext.actions.length === 0 ||
-            this.actionIndex === -1
-        ) {
+        if (this.stepping || !this.hasPreviousAction) {
             return
         }
-        await this.stepUntil('backward', () => {
+        await this.stepUntil('backward', (actionIndex) => {
             return (
-                this.actionIndex === -1 ||
+                actionIndex === -1 ||
                 !this.historyContext ||
-                this.historyContext.actions[this.actionIndex].playerId === playerId
+                this.historyContext.actions[actionIndex].playerId === playerId
             )
         })
     }
@@ -517,10 +612,10 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         }
 
         // Now find my next turn
-        await this.stepUntil('forward', () => {
+        await this.stepUntil('forward', (actionIndex) => {
             return (
                 !this.historyContext ||
-                this.historyContext.actions[this.actionIndex].playerId === playerId
+                this.historyContext.actions[actionIndex].playerId === playerId
             )
         })
     }
@@ -542,7 +637,7 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
             ? this.actionIndex
             : this.gameContext.actions.length - 1
 
-        for (let i = startIndex; i >= 0; i--) {
+        for (let i = startIndex; i > this.earliestActionIndex; i--) {
             const action = contextToSearch.actions[i]
             if (action.playerId === playerId) {
                 return true
@@ -565,7 +660,7 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         return false
     }
 
-    private async stepUntil(direction: StepDirection, predicate: () => boolean) {
+    private async stepUntil(direction: StepDirection, predicate: HistoryStepPredicate) {
         this.stepping = true
         try {
             if (direction === 'backward') {
@@ -590,8 +685,17 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         if (this.inHistory) {
             return
         }
-        this.historyContext = this.gameContext.clone()
-        this.actionIndex = this.historyContext.actions.length - 1
+        const historyContext = this.gameContext.clone()
+        historyContext.updateGameState(
+            new ExplorationHistory(historyContext.engine).recordedState(
+                historyContext.state,
+                this.gameContext.state.explorationState
+            )
+        )
+        this.present('state-only', () => {
+            this.historyContext = historyContext
+            this.actionIndex = historyContext.actions.length - 1
+        })
 
         this.onHistoryEnter()
     }
@@ -600,9 +704,10 @@ export class GameHistory<T extends GameState, U extends HydratedGameState<T> & T
         if (!this.inHistory) {
             return
         }
-        this.historyContext = undefined
-        this.actionIndex = 0
-
-        this.onHistoryExit(animationIntent)
+        this.present(animationIntent, () => {
+            this.historyContext = undefined
+            this.actionIndex = 0
+        })
+        this.onHistoryExit()
     }
 }

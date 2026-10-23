@@ -1,0 +1,139 @@
+import {
+    assertExists,
+    type GameInitializer,
+    type StartingPositionAssignment,
+    BaseGameInitializer,
+    Prng,
+    type UninitializedGameState
+} from '@tabletop/common'
+import { Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
+import {
+    HydratedLowenherzGameState,
+    LowenherzProjectedState,
+    RULEBOOK_CASTLE_MIN_DISTANCE
+} from '../model/gameState.js'
+import { HydratedLowenherzPlayerState } from '../model/playerState.js'
+
+import { MachineState } from './states.js'
+import { LowenherzColors } from './colors.js'
+import { assembleBoard } from '../util/boardAssembly.js'
+import {
+    assembleActionDeck,
+    assembleActionDeckWithConstruction
+} from '../util/actionDeckAssembly.js'
+import { assembleStandardBoard, applyStandardSetup } from '../util/standardSetup.js'
+import { dealPoliticsCardPiles } from '../util/politicsCardAssembly.js'
+
+const STARTING_MONEY = 12
+const STARTING_KNIGHTS = 12
+
+// This class is responsible for initializing a new game, including setting up the initial game state and
+// player states
+export class LowenherzGameInitializer
+    extends BaseGameInitializer<LowenherzProjectedState, HydratedLowenherzGameState>
+    implements GameInitializer<LowenherzProjectedState, HydratedLowenherzGameState>
+{
+    readonly supportsStartingPositions = true
+
+    initializeGameState(
+        game: Game,
+        state: UninitializedGameState,
+        assignment?: StartingPositionAssignment
+    ): HydratedLowenherzGameState {
+        // Initialize a pseudo random number generator for the state
+        const prng = new Prng(state.prng)
+        const players = this.initializePlayers(game, prng)
+
+        // Every game state has a turn manager to track whose turn it is
+        const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
+
+        // Put players array in turn order
+        const orderedPlayers: HydratedLowenherzPlayerState[] = []
+        for (const playerId of turnManager.turnOrder) {
+            const player = players.find((p) => p.playerId === playerId)
+            if (player) {
+                orderedPlayers.push(player)
+            }
+        }
+
+        const config = game.config
+        // The two-player rulebook variant requires player placement, regardless of setup choice.
+        const playerPlacedCastles = players.length === 2 || config.standardSetup !== true
+
+        // 2- and 3-player games use one of the unused colors as a neutral color (an
+        // obstacle-only "prince" in 3p, or the 2-player variant's dedicated neutral
+        // color in 2p). 4-player games use all 4 colors, so there's none left over.
+        const neutralColor =
+            players.length < 4
+                ? LowenherzColors.find((color) => !players.some((p) => p.color === color))
+                : undefined
+
+        const privateInformation = (state.systemVersion ?? 1) >= 3
+        const hiddenPrngState = privateInformation ? state.protectedPrng : state.prng
+        assertExists(hiddenPrngState, 'Protected initialization requires protectedPrng')
+        const hiddenPrng = privateInformation ? new Prng(hiddenPrngState) : prng
+        const lowenherzGameState: LowenherzProjectedState = Object.assign(state, {
+            players: orderedPlayers,
+            machineState: playerPlacedCastles
+                ? MachineState.PlacingCastles
+                : MachineState.StartOfTurn,
+            turnManager: turnManager,
+            board: playerPlacedCastles ? assembleBoard(prng) : assembleStandardBoard(),
+            regions: [],
+            alliances: [],
+            neutralColor,
+            minimumOneDucat: config.allowZeroDucatOffers !== true,
+            ...(privateInformation ? { publicMoney: config.privateMoney !== true } : {}),
+            minimumCastleDistance: RULEBOOK_CASTLE_MIN_DISTANCE,
+            enclosureEndsWallAllotment: true,
+
+            actionDeck: playerPlacedCastles
+                ? assembleActionDeckWithConstruction(hiddenPrng)
+                : assembleActionDeck(hiddenPrng),
+            currentActionCard: undefined,
+            discardedActionCard: undefined,
+            decisions: [],
+
+            resolvedSlots: [],
+            negotiation: undefined,
+            duel: undefined,
+            wallsRemaining: undefined,
+            wallPlacingPlayerId: undefined,
+            knightsRemaining: undefined,
+            knightPlacingPlayerId: undefined,
+
+            ...dealPoliticsCardPiles(hiddenPrng),
+            ...(privateInformation ? { privateInformation: true as const } : {}),
+            politicsTakingPlayerId: undefined,
+            openedPoliticsPile: undefined
+        })
+
+        // I suppose the engine could actually do the hydration with the hydrator, but this is how it
+        // it is done currently.
+        const hydratedState = new HydratedLowenherzGameState(lowenherzGameState)
+        if (!playerPlacedCastles) {
+            applyStandardSetup(hydratedState)
+        }
+        return hydratedState
+    }
+
+    // Initialize player states for all players in the game
+    private initializePlayers(game: Game, prng: Prng): HydratedLowenherzPlayerState[] {
+        // Assign colors randomly to players
+        const colors = structuredClone(LowenherzColors)
+        shuffle(colors, prng.random)
+
+        const players = game.players.map((player: Player, index: number) => {
+            return new HydratedLowenherzPlayerState({
+                playerId: player.id,
+                color: colors[index],
+                money: STARTING_MONEY,
+                powerPoints: 0,
+                knightsInStock: STARTING_KNIGHTS,
+                politicsCards: []
+            })
+        })
+
+        return players
+    }
+}

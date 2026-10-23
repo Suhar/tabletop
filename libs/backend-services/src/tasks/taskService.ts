@@ -5,6 +5,7 @@ export interface CreatePushTaskOptions<T> {
     payload: T
     path: string
     inSeconds?: number
+    uniqueName?: string
 }
 
 export interface TaskService {
@@ -33,18 +34,6 @@ export interface TaskService {
         gameId: string
         token: string
         toEmail: string
-    }): Promise<void>
-
-    sendTurnNotification({
-        userId,
-        gameId,
-        notificationId,
-        inSeconds
-    }: {
-        userId: string
-        gameId: string
-        notificationId: string
-        inSeconds?: number
     }): Promise<void>
 
     sendGameEndEmail({

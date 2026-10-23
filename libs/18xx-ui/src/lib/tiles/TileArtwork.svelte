@@ -1,0 +1,484 @@
+<script lang="ts">
+    import { contrastingTextColor } from '../colors/contrastingTextColor.js'
+    import { assert, assertExists, type Point } from '@tabletop/common'
+    import type { TileFace } from '@tabletop/18xx'
+    import type { Snippet } from 'svelte'
+    import { TileRadius, type TileDrawing } from './tileDrawing.js'
+    import { spikePoints } from './tileTrackGeometry.js'
+    import { ClassicTileAppearance, type TileAppearance } from './tileAppearance.js'
+    import TileSymbol from './TileSymbol.svelte'
+    import { revenueBadgeHalfWidth } from './revenueBadge.js'
+    // Type for the 18xx Maker style; a browser fetches a face only when a tile uses it.
+    import '@fontsource/lato/latin-400.css'
+    import '@fontsource/lato/latin-700.css'
+    import '@fontsource/bitter/latin-700.css'
+    import '@fontsource/inter/latin-700.css'
+
+    let {
+        face,
+        drawing,
+        appearance = ClassicTileAppearance,
+        highlightedPathIds = [],
+        revenueStageColors = {},
+        showZeroRevenue = true,
+        joints = [],
+        trackOverlay,
+        overlays
+    }: {
+        face: TileFace
+        drawing: TileDrawing
+        appearance?: TileAppearance
+        revenueStageColors?: Readonly<Record<string, string>>
+        highlightedPathIds?: readonly string[]
+        showZeroRevenue?: boolean
+        /** Edges shared with another hex of the same printed area, drawn without a seam. */
+        joints?: readonly { start: Point; end: Point }[]
+        trackOverlay?: Snippet<[TileDrawing]>
+        overlays?: Snippet<[TileDrawing]>
+    } = $props()
+    const crossingClipId = $props.id()
+    const fill = $derived.by(() => {
+        const color = appearance.colors[face.color]
+        assertExists(color, `Tile palette requires color ${face.color}`)
+        assert(
+            (face.symbols ?? []).every((symbol) => symbol === 'port'),
+            'Unsupported tile symbol'
+        )
+        return color
+    })
+    const styleId = $derived(
+        `tile-style-${appearance.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+    )
+    const grainId = $derived(`${styleId}-grain`)
+    const nodeInkId = $derived(`${styleId}-node-ink`)
+    const trackInkId = $derived(`${styleId}-track-ink`)
+    // The track's region is the whole tile, in tile space: one taken from the bounding box is
+    // empty for a straight with no width, and browsers then draw nothing.
+    const trackInkReach = $derived(TileRadius + appearance.trackWidth + (appearance.roughness ?? 0))
+    const inkRegions = $derived([
+        {
+            id: trackInkId,
+            filterUnits: 'userSpaceOnUse',
+            x: -trackInkReach,
+            y: -trackInkReach,
+            width: 2 * trackInkReach,
+            height: 2 * trackInkReach
+        },
+        { id: nodeInkId, x: '-10%', y: '-10%', width: '120%', height: '120%' }
+    ])
+    const nodeInkFilter = $derived(appearance.roughness ? `url(#${nodeInkId})` : undefined)
+    const trackInkFilter = $derived(appearance.roughness ? `url(#${trackInkId})` : undefined)
+    const cityRingWidth = $derived(appearance.cityRingWidth ?? 1.1)
+    const revenueCircle = $derived(
+        appearance.revenueCircle ?? { radius: 8.7, ringWidth: 0.55, fontSize: 10 }
+    )
+    const labelFont = $derived(appearance.labelFont ?? { size: 12, weight: 850 })
+    /** The marker colour: the appearance's own per-colour value, else a darker tint of the tile colour. */
+    const tint = $derived.by(() => {
+        const explicit = appearance.markerColors?.[face.color]
+        if (explicit) return explicit
+        const hex = /^#([0-9a-f]{6})$/i.exec(fill)?.[1]
+        if (!hex) return appearance.ink
+        const channel = (offset: number) =>
+            Math.round(parseInt(hex.slice(offset, offset + 2), 16) * 0.82)
+                .toString(16)
+                .padStart(2, '0')
+        return `#${channel(0)}${channel(2)}${channel(4)}`
+    })
+    const markers = $derived(
+        face.labels.flatMap((label) => {
+            const marker = appearance.labelMarkers?.[label]
+            return marker ? [{ label, marker }] : []
+        })
+    )
+    const textLabels = $derived(
+        face.labels.filter(
+            (label) => !appearance.labelMarkers?.[label] && !appearance.labelText?.[label]
+        )
+    )
+    const namedLabels = $derived(
+        face.labels.flatMap((label) => {
+            const text = appearance.labelText?.[label]
+            return text ? [text] : []
+        })
+    )
+    const insetPolygon = $derived(
+        drawing.polygon
+            .split(' ')
+            .map((pair) =>
+                pair
+                    .split(',')
+                    .map((value) => (Number(value) * 0.84).toFixed(2))
+                    .join(',')
+            )
+            .join(' ')
+    )
+</script>
+
+<g class="tile-artwork" data-color={face.color} style:--tile-font-family={appearance.fontFamily}>
+    {#if appearance.grain || appearance.roughness}
+        <defs>
+            {#if appearance.grain}
+                <pattern
+                    id={grainId}
+                    patternUnits="userSpaceOnUse"
+                    width={appearance.grain.size}
+                    height={appearance.grain.size}
+                >
+                    <image
+                        href={appearance.grain.href}
+                        width={appearance.grain.size}
+                        height={appearance.grain.size}
+                        preserveAspectRatio="none"
+                    ></image>
+                </pattern>
+            {/if}
+            {#if appearance.roughness}
+                {#each inkRegions as { id, ...region } (id)}
+                    <filter {id} {...region}>
+                        <!-- Low-frequency noise gives a gentle hand-inked waver rather than a jitter. -->
+                        <feTurbulence
+                            type="fractalNoise"
+                            baseFrequency="0.16"
+                            numOctaves="1"
+                            seed="7"
+                            result="noise"
+                        ></feTurbulence>
+                        <feDisplacementMap
+                            in="SourceGraphic"
+                            in2="noise"
+                            scale={appearance.roughness}
+                            xChannelSelector="R"
+                            yChannelSelector="G"
+                        ></feDisplacementMap>
+                    </filter>
+                {/each}
+            {/if}
+        </defs>
+    {/if}
+    <polygon
+        points={drawing.polygon}
+        {fill}
+        stroke={appearance.edge?.color ?? '#453e32'}
+        stroke-width={appearance.edge?.width ?? 0.65}
+    ></polygon>
+    {#each joints as { start, end }, index (index)}
+        <!-- Covers the antialiased gap where two fills meet. -->
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={fill} stroke-width="1.5"
+        ></line>
+    {/each}
+    {#if appearance.grain}
+        <polygon
+            data-tile-grain
+            points={drawing.polygon}
+            fill={`url(#${grainId})`}
+            opacity={appearance.grain.opacity ?? 1}
+            pointer-events="none"
+        ></polygon>
+    {/if}
+    {#each markers as { label, marker } (label)}
+        {#if marker === 'ring'}
+            {@const city = drawing.nodes.find(({ node }) => node.kind === 'city')}
+            <circle
+                data-tile-marker={label}
+                cx={city?.center.x ?? 0}
+                cy={city?.center.y ?? 0}
+                r="30"
+                fill="none"
+                stroke={tint}
+                stroke-width="2.5"
+            ></circle>
+        {:else}
+            <polygon
+                data-tile-marker={label}
+                points={insetPolygon}
+                fill="none"
+                stroke={tint}
+                stroke-width="2.7"
+                stroke-linejoin="round"
+            ></polygon>
+        {/if}
+    {/each}
+    <g fill="none" stroke-linecap="butt" filter={trackInkFilter}>
+        {#each drawing.paths as path (path.id)}
+            {#if path.spike}
+                <polygon
+                    points={spikePoints(path.spike, appearance.trackWidth)}
+                    fill={appearance.ink}
+                    stroke={appearance.paper}
+                    stroke-width={appearance.trackBorderWidth}
+                    stroke-linejoin="round"
+                    paint-order="stroke"
+                    data-path-id={path.id}
+                    data-offboard-spike
+                ></polygon>
+            {:else}
+                <path
+                    d={path.d}
+                    stroke={appearance.paper}
+                    stroke-width={appearance.trackWidth + appearance.trackBorderWidth}
+                ></path>
+            {/if}
+        {/each}
+        {#each drawing.paths.filter((path) => !path.spike) as path (path.id)}
+            <g data-path-id={path.id}>
+                <path d={path.d} stroke={appearance.ink} stroke-width={appearance.trackWidth}
+                ></path>
+            </g>
+        {/each}
+        {#each drawing.crossings as crossing, index (index)}
+            {@const over = drawing.paths.find((path) => path.id === crossing.overPathId)}
+            {#if over}
+                {@const clipId = `${crossingClipId}-${index}`}
+                <clipPath id={clipId}>
+                    <circle
+                        cx={crossing.point.x}
+                        cy={crossing.point.y}
+                        r={(appearance.trackWidth / 2 + appearance.trackBorderWidth) *
+                            crossing.spread +
+                            appearance.trackBorderWidth}
+                    ></circle>
+                </clipPath>
+                <g clip-path={`url(#${clipId})`} data-track-crossing={over.id}>
+                    <path
+                        d={over.d}
+                        stroke={appearance.paper}
+                        stroke-width={appearance.trackWidth + 2 * appearance.trackBorderWidth}
+                    ></path>
+                    <path d={over.d} stroke={appearance.ink} stroke-width={appearance.trackWidth}
+                    ></path>
+                </g>
+            {/if}
+        {/each}
+    </g>
+    {#each drawing.paths.filter((path) => highlightedPathIds.includes(path.id)) as path (path.id)}
+        <path
+            data-highlight-path={path.id}
+            d={path.d}
+            fill="none"
+            stroke="#b32747"
+            stroke-width="2.8"
+        ></path>
+    {/each}
+    {@render trackOverlay?.(drawing)}
+    {#each drawing.nodes as { node, center, slots, slotRadius: citySlotRadius, townAngle, dotRadius } (node.id)}
+        <g data-node-id={node.id} filter={nodeInkFilter}>
+            {#if node.kind === 'city'}
+                {#if slots.length > 1}
+                    {@const band = `M ${slots.map((point) => `${point.x},${point.y}`).join(' L ')} Z`}
+                    {#if appearance.cityBacking === 'paper'}
+                        <path
+                            d={band}
+                            fill={appearance.ink}
+                            stroke={appearance.ink}
+                            stroke-width={2 * citySlotRadius + 2 * cityRingWidth}
+                            stroke-linejoin="round"
+                        ></path>
+                        <path
+                            d={band}
+                            fill={appearance.paper}
+                            stroke={appearance.paper}
+                            stroke-width={2 * citySlotRadius}
+                            stroke-linejoin="round"
+                        ></path>
+                    {:else}
+                        <path
+                            d={band}
+                            fill={appearance.ink}
+                            stroke={appearance.ink}
+                            stroke-width={2 * citySlotRadius + 3}
+                            stroke-linejoin="round"
+                        ></path>
+                    {/if}
+                {/if}
+                {#each slots as point, index (index)}
+                    <circle
+                        data-station-slot={index}
+                        cx={point.x}
+                        cy={point.y}
+                        r={citySlotRadius}
+                        fill={appearance.paper}
+                        stroke={appearance.ink}
+                        stroke-width={cityRingWidth}
+                    ></circle>
+                {/each}
+                {#if slots.length === 0}<circle
+                        cx={center.x}
+                        cy={center.y}
+                        r={dotRadius}
+                        fill={appearance.ink}
+                    ></circle>{/if}
+            {:else if node.kind === 'town'}
+                {#if appearance.townMarker === 'bar' && townAngle !== undefined}
+                    <rect
+                        data-town-marker="bar"
+                        x="-8.5"
+                        y="-4"
+                        width="17"
+                        height="8"
+                        transform={`translate(${center.x} ${center.y}) rotate(${townAngle})`}
+                        fill={appearance.ink}
+                    ></rect>
+                {:else}
+                    <circle
+                        data-town-marker="dot"
+                        cx={center.x}
+                        cy={center.y}
+                        r={dotRadius}
+                        fill={appearance.ink}
+                    ></circle>
+                {/if}
+            {:else if node.kind === 'offboard'}{:else}
+                <circle cx={center.x} cy={center.y} r="3" fill={appearance.ink}></circle>
+            {/if}
+        </g>
+    {/each}
+    {@render overlays?.(drawing)}
+    <g class="annotations" text-anchor="middle" fill={appearance.ink}>
+        {#if face.upgradeCost !== undefined}
+            <g
+                data-tile-upgrade-cost
+                transform={`translate(${drawing.upgradeCostPosition.x} ${drawing.upgradeCostPosition.y})`}
+            >
+                <rect
+                    x="-9"
+                    y="-5"
+                    width="18"
+                    height="10"
+                    rx="1"
+                    fill={appearance.paper}
+                    stroke={appearance.ink}
+                    stroke-width="0.5"
+                ></rect>
+                <text font-size="6.5" font-weight="650">{face.upgradeCost}</text>
+            </g>
+        {/if}
+        {#if face.symbols?.includes('port')}
+            <g
+                data-tile-symbol="port"
+                transform={`translate(${drawing.symbolPosition.x} ${drawing.symbolPosition.y})`}
+            >
+                <TileSymbol symbol="port" ink={appearance.ink} paper={appearance.paper} />
+            </g>
+        {/if}
+        {#each drawing.nodes as { node, revenuePosition, revenueCells, revenueHidden } (node.id)}
+            {#if node.kind !== 'junction' && !revenueHidden && (showZeroRevenue || node.revenue.kind === 'staged' || node.revenue.amount !== 0)}
+                <g
+                    data-revenue-for={node.id}
+                    transform={`translate(${revenuePosition.x} ${revenuePosition.y})`}
+                >
+                    {#if node.revenue.kind === 'fixed'}
+                        {@const radius = revenueCircle.radius}
+                        {@const halfWidth = revenueBadgeHalfWidth(
+                            node.revenue.amount,
+                            radius,
+                            revenueCircle.fontSize
+                        )}
+                        {#if appearance.revenueBadge === 'plain'}
+                            <rect
+                                x={-halfWidth}
+                                y={-radius}
+                                width={2 * halfWidth}
+                                height={2 * radius}
+                                rx={radius}
+                                fill={appearance.paper}
+                            ></rect>
+                            <text
+                                font-size={revenueCircle.fontSize}
+                                font-family={revenueCircle.fontFamily}
+                                font-weight={revenueCircle.fontWeight ?? 800}
+                                fill="#000">{node.revenue.amount}</text
+                            >
+                        {:else}
+                            <rect
+                                x={-halfWidth}
+                                y={-radius}
+                                width={2 * halfWidth}
+                                height={2 * radius}
+                                rx={radius}
+                                fill={appearance.paper}
+                                stroke={revenueCircle.ringColor ??
+                                    (appearance.revenueCircle ? appearance.ink : '#5d584a')}
+                                stroke-width={revenueCircle.ringWidth}
+                            ></rect>
+                            <text
+                                font-size={revenueCircle.fontSize}
+                                font-family={revenueCircle.fontFamily}
+                                font-weight={revenueCircle.fontWeight ?? 750}
+                                >{node.revenue.amount}</text
+                            >
+                        {/if}
+                    {:else}
+                        {#each revenueCells as cell (cell.stage)}
+                            {@const color =
+                                revenueStageColors[cell.stage] ??
+                                appearance.colors[cell.stage] ??
+                                appearance.paper}
+                            <g
+                                transform={`translate(${cell.x - revenuePosition.x} ${cell.y - revenuePosition.y})`}
+                                data-revenue-stage={cell.stage}
+                            >
+                                <rect
+                                    x={-cell.width / 2}
+                                    y={-cell.height / 2}
+                                    width={cell.width}
+                                    height={cell.height}
+                                    fill={color}
+                                    stroke={appearance.ink}
+                                    stroke-width="0.5"
+                                ></rect>
+                                <text
+                                    fill={contrastingTextColor(color)}
+                                    font-size="9"
+                                    font-weight="650"
+                                    aria-label={`${cell.stage}: ${cell.amount}`}>{cell.text}</text
+                                >
+                            </g>
+                        {/each}
+                    {/if}
+                </g>
+            {/if}
+        {/each}
+        {#if namedLabels.length}
+            <text
+                data-tile-label-text
+                x={drawing.labelPosition.x}
+                y={drawing.labelPosition.y + 4}
+                font-size="6.5"
+                font-weight="600"
+                font-family="Georgia, 'Times New Roman', serif"
+                paint-order="stroke"
+                stroke={fill}
+                stroke-width="1.5">{namedLabels.join(' ')}</text
+            >
+        {/if}
+        {#if textLabels.length}
+            <text
+                data-tile-label
+                x={drawing.labelPosition.x}
+                y={drawing.labelPosition.y}
+                font-size={textLabels.join(' ').length > 2
+                    ? (labelFont.longSize ?? labelFont.size)
+                    : labelFont.size}
+                font-weight={labelFont.weight}
+                font-family={labelFont.family}
+                paint-order="stroke"
+                stroke={fill}
+                stroke-width="2.5">{textLabels.join(' ')}</text
+            >
+        {/if}
+    </g>
+</g>
+
+<style>
+    .tile-artwork {
+        text-rendering: geometricPrecision;
+        font-family: var(--tile-font-family, ui-sans-serif, system-ui, sans-serif);
+    }
+    .annotations {
+        pointer-events: none;
+    }
+    .annotations text {
+        dominant-baseline: central;
+    }
+</style>

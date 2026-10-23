@@ -1,7 +1,9 @@
+import { isObject } from './json.js'
 import { BackendManifest, DeployConfig } from './types.js'
 
 export type BackendManifestResult = {
     manifest?: BackendManifest
+    servedFrontendVersion?: string
     error?: string
 }
 
@@ -10,9 +12,6 @@ type ManifestEnvelope = {
     payload?: unknown
     message?: string
 }
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null
 
 const isBackendManifest = (value: unknown): value is BackendManifest => {
     if (!isObject(value)) return false
@@ -45,7 +44,8 @@ export const fetchBackendManifest = async (
             }
             return { error: 'backend manifest missing frontend/games' }
         }
-        return { manifest }
+        const servedFrontendVersion = response.headers.get('x-tabletop-version') ?? undefined
+        return { manifest, servedFrontendVersion }
     } catch (error) {
         return { error: error instanceof Error ? error.message : 'backend manifest fetch failed' }
     }
@@ -88,9 +88,7 @@ const getSetCookieHeaders = (response: Response): string[] => {
 }
 
 const extractCookieHeader = (setCookieHeaders: string[]): string | null => {
-    const cookies = setCookieHeaders
-        .map((header) => header.split(';')[0]?.trim())
-        .filter(Boolean)
+    const cookies = setCookieHeaders.map((header) => header.split(';')[0]?.trim()).filter(Boolean)
     if (cookies.length === 0) return null
     return cookies.join('; ')
 }
@@ -136,6 +134,12 @@ const loginWithCredentials = async (
     return cookie
 }
 
+const BackendReplacements = ['none', 'activated', 'superseded', 'replacement-failed'] as const
+export type BackendReplacement = (typeof BackendReplacements)[number]
+
+const isBackendReplacement = (value: unknown): value is BackendReplacement =>
+    BackendReplacements.some((replacement) => replacement === value)
+
 export const invalidateBackendManifestCache = async (
     config: DeployConfig,
     options?: { signal?: AbortSignal }
@@ -180,4 +184,19 @@ export const invalidateBackendManifestCache = async (
     if (!response.ok) {
         throw new Error(`manifest invalidate ${response.status} ${response.statusText}`)
     }
+    const body: unknown = await response.json()
+    if (
+        typeof body === 'object' &&
+        body !== null &&
+        'activation' in body &&
+        body.activation === 'complete'
+    ) {
+        return 'activated'
+    }
+    return typeof body === 'object' &&
+        body !== null &&
+        'replacement' in body &&
+        isBackendReplacement(body.replacement)
+        ? body.replacement
+        : undefined
 }

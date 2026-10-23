@@ -4,8 +4,7 @@ import {
     type HydratedIndonesiaGameState,
     type GrowCity,
     isGrowCity,
-    isPlaceCity,
-    type IndonesiaGameState
+    isPlaceCity
 } from '@tabletop/indonesia'
 import { gsap } from 'gsap'
 import { tick, untrack } from 'svelte'
@@ -105,7 +104,9 @@ export class CityPlacementAnimator {
             return
         }
 
-        const fromCityByAreaId = new Map(from.board.cities.map((city) => [city.area, city] as const))
+        const fromCityByAreaId = new Map(
+            from.board.cities.map((city) => [city.area, city] as const)
+        )
         const placementsToAnimate: AnimatedCityMarker[] = to.board.cities
             .filter((city) => !fromCityByAreaId.has(city.area))
             .map((city) => ({
@@ -187,7 +188,9 @@ export class CityPlacementAnimator {
             }
         }
 
-        const fromCityByAreaId = new Map(from.board.cities.map((city) => [city.area, city] as const))
+        const fromCityByAreaId = new Map(
+            from.board.cities.map((city) => [city.area, city] as const)
+        )
         return to.board.cities
             .filter((city) => {
                 const priorCity = fromCityByAreaId.get(city.area)
@@ -203,7 +206,7 @@ export class CityPlacementAnimator {
 export function attachCityPlacementAnimator(
     animator: CityPlacementAnimator
 ): (element: HTMLElement | SVGElement) => () => void {
-    return (element: HTMLElement | SVGElement) => {
+    return (_element: HTMLElement | SVGElement) => {
         untrack(() => {
             animator.register()
         })

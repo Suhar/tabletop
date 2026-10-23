@@ -2,22 +2,27 @@ import * as Type from 'typebox'
 import { HydratedTurnManager, TurnManager } from '../components/turnManager.js'
 import { Hydratable } from '../../util/hydration.js'
 import { calculateActionChecksum } from '../../util/checksum.js'
-import { GameAction } from '../engine/gameAction.js'
+import { GameAction, Patch } from '../engine/gameAction.js'
 import { PlayerState } from './playerState.js'
-import { Prng, PrngState } from '../components/prng.js'
+import { Prng, PrngState, ProtectedPrngState, type RandomState } from '../components/prng.js'
 import { assertExists } from '../../util/assertions.js'
+import { MasterSeed } from '../../util/gameSeeds.js'
+import { protect, Policy } from '../visibility/visibilitySchema.js'
 import { Validator } from 'typebox/compile'
-
-export enum GameResult {
-    Abandoned = 'Abandoned',
-    Draw = 'Draw',
-    Win = 'Win'
-}
+import { GameResult } from './gameResult.js'
 
 export type ExplorationState = Type.Static<typeof ExplorationState>
 export const ExplorationState = Type.Object({
     actionCount: Type.Number(),
-    invocations: Type.Number()
+    invocations: Type.Number(),
+    checkpoint: Type.Optional(
+        Type.Object({
+            source: Patch,
+            hypothetical: Patch,
+            undoLimit: Type.Number(),
+            canonicalSource: Type.Optional(Type.Literal(true))
+        })
+    )
 })
 
 export type GameState = Type.Static<typeof GameState>
@@ -31,6 +36,8 @@ export const GameState = Type.Object({
     actionChecksum: Type.Number(),
     seed: Type.Optional(Type.Number()), // deprecated.. moved to game
     prng: PrngState,
+    protectedPrng: Type.Optional(ProtectedPrngState),
+    masterSeed: Type.Optional(protect(MasterSeed, { policy: Policy.HostOnly })),
     machineState: Type.String(),
     turnManager: TurnManager,
     result: Type.Optional(Type.Enum(GameResult)),
@@ -47,7 +54,8 @@ export interface HydratedGameState<
     players: P[]
     numPlayers: number
     turnManager: HydratedTurnManager
-    getPrng(): Prng
+    getPublicPrng(): Prng
+    getProtectedPrng(): Prng
     getPlayerState(playerId?: string): P
     findPlayerState(playerId?: string): P | undefined
     isActivePlayer(playerId: string): boolean
@@ -68,12 +76,14 @@ export abstract class HydratableGameState<T extends Type.TSchema, P extends Play
     declare actionCount: number
     declare actionChecksum: number
     declare prng: PrngState
+    declare protectedPrng?: RandomState
+    declare masterSeed?: string
     declare machineState: string
     declare turnManager: HydratedTurnManager
     declare result?: GameResult
     declare winningPlayerIds: string[]
 
-    constructor(data: Type.Static<T>, validator: Validator<{}, T>) {
+    constructor(data: Type.Static<T>, validator: Validator<Record<never, never>, T>) {
         super(data, validator)
 
         // Hydrate the turn manager
@@ -84,8 +94,16 @@ export abstract class HydratableGameState<T extends Type.TSchema, P extends Play
         return this.players.length
     }
 
-    getPrng(): Prng {
+    getPublicPrng(): Prng {
         return new Prng(this.prng)
+    }
+
+    getProtectedPrng(): Prng {
+        if (!this.isAtLeastVersion(3)) {
+            return this.getPublicPrng()
+        }
+        assertExists(this.protectedPrng, 'Version 3 protected randomness requires protectedPrng')
+        return new Prng(this.protectedPrng)
     }
 
     getPlayerState(playerId?: string): P {

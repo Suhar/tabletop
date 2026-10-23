@@ -14,19 +14,13 @@ import {
     isPlaceCompanyDeeds,
     PlaceCompanyDeeds
 } from '../actions/placeCompanyDeeds.js'
-import {
-    HydratedRemoveCompanyDeed,
-    isRemoveCompanyDeed
-} from '../actions/removeCompanyDeed.js'
+import { HydratedRemoveCompanyDeed, isRemoveCompanyDeed } from '../actions/removeCompanyDeed.js'
 import { HydratedIndonesiaGameState } from '../model/gameState.js'
 import { PhaseName } from '../definition/phases.js'
 import { Era } from '../definition/eras.js'
 
 type NewEraAction =
-    | HydratedPlaceCompanyDeeds
-    | HydratedPlaceCity
-    | HydratedPass
-    | HydratedRemoveCompanyDeed
+    HydratedPlaceCompanyDeeds | HydratedPlaceCity | HydratedPass | HydratedRemoveCompanyDeed
 
 export class NewEraStateHandler implements MachineStateHandler<
     NewEraAction,
@@ -34,7 +28,7 @@ export class NewEraStateHandler implements MachineStateHandler<
 > {
     isValidAction(
         action: HydratedAction,
-        context: MachineContext<HydratedIndonesiaGameState>
+        _context: MachineContext<HydratedIndonesiaGameState>
     ): action is NewEraAction {
         // Leave this comment if you want the template to generate code for valid actions
         return (
@@ -166,15 +160,21 @@ export class NewEraStateHandler implements MachineStateHandler<
         context: MachineContext<HydratedIndonesiaGameState>,
         playerId: string
     ): boolean {
-        return context.getPendingActions().some(
-            (pendingAction) =>
-                isPass(pendingAction) &&
-                pendingAction.playerId === playerId &&
-                pendingAction.reason === PassReason.CannotPlaceCity
-        )
+        return context
+            .getPendingActions()
+            .some(
+                (pendingAction) =>
+                    isPass(pendingAction) &&
+                    pendingAction.playerId === playerId &&
+                    pendingAction.reason === PassReason.CannotPlaceCity
+            )
     }
 
-    private hasPendingPlaceCompanyDeeds(context: MachineContext<HydratedIndonesiaGameState>): boolean {
-        return context.getPendingActions().some((pendingAction) => isPlaceCompanyDeeds(pendingAction))
+    private hasPendingPlaceCompanyDeeds(
+        context: MachineContext<HydratedIndonesiaGameState>
+    ): boolean {
+        return context
+            .getPendingActions()
+            .some((pendingAction) => isPlaceCompanyDeeds(pendingAction))
     }
 }

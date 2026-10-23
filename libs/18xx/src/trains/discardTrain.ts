@@ -1,0 +1,145 @@
+import * as Type from 'typebox'
+import { Compile } from 'typebox/compile'
+import {
+    ActionSource,
+    PlayerAction,
+    HydratableAction,
+    assert,
+    type GameAction,
+    type HydratedGameState,
+    type HydratedAction,
+    type MachineContext,
+    type MachineStateHandler
+} from '@tabletop/common'
+import { releaseTrains } from './train.js'
+import { trainsCountingForLimit, type TrainRules } from './trainPurchase.js'
+import {
+    continuePhaseChange,
+    phaseDecisionPlayers,
+    type PhaseChangeState,
+    type PhaseRules
+} from '../phases/phaseChange.js'
+import {
+    DeparturePayments,
+    departurePaymentsField,
+    settleTrainDepartures
+} from './trainDepartures.js'
+export function discardableTrains(
+    state: PhaseChangeState,
+    companyId: string,
+    rules: Pick<TrainRules, 'trainLimit' | 'countsForLimit'>
+) {
+    const trains = trainsCountingForLimit(state, rules, companyId)
+    return state.phaseChange?.discardCompanyIds[0] === companyId &&
+        trains.length > rules.trainLimit(state, companyId)
+        ? trains
+        : []
+}
+export const DiscardTrain = Type.Object(
+    {
+        ...PlayerAction.properties,
+        type: Type.Literal('DiscardTrain'),
+        companyId: Type.String(),
+        trainId: Type.String(),
+        metadata: Type.Optional(
+            Type.Object(
+                {
+                    destination: Type.Union([Type.Literal('market'), Type.Literal('removed')]),
+                    nextState: Type.String(),
+                    departurePayments: DeparturePayments
+                },
+                { additionalProperties: false }
+            )
+        )
+    },
+    { additionalProperties: false }
+)
+export type DiscardTrain = Type.Static<typeof DiscardTrain>
+const Validator = Compile(DiscardTrain)
+export function isDiscardTrain(action: GameAction): action is DiscardTrain {
+    return (
+        action instanceof HydratedDiscardTrain ||
+        (action.type === 'DiscardTrain' && Validator.Check(action))
+    )
+}
+export class HydratedDiscardTrain
+    extends HydratableAction<typeof DiscardTrain>
+    implements DiscardTrain
+{
+    declare type: 'DiscardTrain'
+    declare playerId: string
+    declare companyId: string
+    declare trainId: string
+    declare metadata?: DiscardTrain['metadata']
+    readonly #rules: TrainRules
+    readonly #phases: PhaseRules
+    constructor(data: DiscardTrain, rules: TrainRules, phases: PhaseRules) {
+        super(data instanceof HydratedDiscardTrain ? data.dehydrate() : data, Validator)
+        this.#rules = rules
+        this.#phases = phases
+    }
+    apply(state: HydratedGameState & PhaseChangeState): void {
+        assert(
+            this.source === ActionSource.User &&
+                state.activePlayerIds.includes(this.playerId) &&
+                phaseDecisionPlayers(state, this.companyId, this.#phases).includes(this.playerId),
+            'Only a deciding player may discard for this company'
+        )
+        const train = discardableTrains(state, this.companyId, this.#rules).find(
+            (train) => train.id === this.trainId
+        )
+        assert(train, 'This train is not available for compulsory discard')
+        const payments = settleTrainDepartures(state, this.#rules, [
+            {
+                trainId: train.id,
+                definitionId: train.definitionId,
+                cause: 'discard',
+                owner: { kind: 'company', companyId: this.companyId }
+            }
+        ])
+        releaseTrains(state.trainInventory, [train.id], this.#phases.discardDestination)
+        if (
+            trainsCountingForLimit(state, this.#rules, this.companyId).length <=
+            this.#rules.trainLimit(state, this.companyId)
+        )
+            state.phaseChange!.discardCompanyIds.shift()
+        this.metadata = {
+            destination: this.#phases.discardDestination,
+            nextState: continuePhaseChange(state, this.#phases),
+            ...departurePaymentsField(payments)
+        }
+    }
+}
+type State = HydratedGameState & PhaseChangeState
+export class DiscardingTrainsHandler implements MachineStateHandler<HydratedDiscardTrain, State> {
+    constructor(
+        private readonly rules: TrainRules,
+        private readonly phases?: Pick<PhaseRules, 'activePlayers'>
+    ) {}
+    isValidAction(action: HydratedAction, context: MachineContext<State>): boolean {
+        const state = context.gameState
+        return (
+            isDiscardTrain(action) &&
+            action.source === ActionSource.User &&
+            this.validActionsForPlayer(action.playerId, context).length > 0 &&
+            discardableTrains(state, action.companyId, this.rules).some(
+                (train) => train.id === action.trainId
+            )
+        )
+    }
+    validActionsForPlayer(playerId: string, context: MachineContext<State>): string[] {
+        const state = context.gameState,
+            companyId = state.phaseChange?.discardCompanyIds[0]
+        return companyId &&
+            state.activePlayerIds.includes(playerId) &&
+            phaseDecisionPlayers(state, companyId, this.phases).includes(playerId) &&
+            discardableTrains(state, companyId, this.rules).length
+            ? ['DiscardTrain']
+            : []
+    }
+    enter(): void {}
+    onAction(action: HydratedDiscardTrain): string {
+        assert(action.metadata, 'Discard requires an outcome')
+        return action.metadata.nextState
+    }
+}

@@ -1,0 +1,63 @@
+import { expect, it } from 'vitest'
+import type { Train } from '@tabletop/18xx'
+import { TheOldPrincePhaseRules } from './phaseRules.js'
+import { TheOldPrincePhases, TheOldPrinceTrainDepot } from './trains.js'
+import { createTheOldPrinceOpening } from './openingAuction.js'
+import { Prng } from '@tabletop/common'
+
+it('starts each phase with its train and rusts each train on schedule', () => {
+    for (const phase of TheOldPrincePhases.phases.slice(1))
+        expect(TheOldPrincePhases.phaseAfterPurchase('2H', phase.id)).toBe(phase.id)
+    const firstRustedIn = Object.fromEntries(
+        TheOldPrinceTrainDepot.definition.trains.map((train) => [
+            train.id,
+            TheOldPrincePhases.phases.find((phase) =>
+                TheOldPrincePhases.rustTiming(phase.id, train.id)
+            )?.id
+        ])
+    )
+    expect(firstRustedIn).toEqual({
+        '2H': '5H',
+        '3H': '6H',
+        '4H': '2+',
+        '5H': '3+',
+        '6H': '4+',
+        '2+': '7',
+        '3+': 'D',
+        '4+': 'D',
+        '7': undefined,
+        D: undefined
+    })
+})
+
+it('grants a company-owned 4+ diesel grace only before its first operating opportunity', () => {
+    const players = ['a', 'b', 'c'].map((playerId) => ({ playerId, color: 'blue' as const }))
+    const { position } = createTheOldPrinceOpening({
+        players,
+        prng: new Prng({ seed: 1, invocations: 0 }),
+        config: {}
+    })
+    const state = { ...position, phaseId: 'D' }
+    const owner = { kind: 'company', companyId: 'So' } as const
+    const owned: Train = { id: '4+:1', definitionId: '4+', status: 'owned', owner }
+    expect(TheOldPrincePhaseRules.rustTiming(state, owned)).toBe('after-operation')
+    const afterOpportunity = {
+        ...state,
+        fourPlusTrainIdsWithOperatingOpportunity: ['4+:1']
+    }
+    expect(TheOldPrincePhaseRules.rustTiming(afterOpportunity, owned)).toBe('immediate')
+    expect(
+        TheOldPrincePhaseRules.rustTiming(afterOpportunity, {
+            ...owned,
+            status: 'owned',
+            owner: { kind: 'company', companyId: 'ML' }
+        })
+    ).toBe('immediate')
+    expect(
+        TheOldPrincePhaseRules.rustTiming(state, {
+            id: '4+:2',
+            definitionId: '4+',
+            status: 'depot'
+        })
+    ).toBe('immediate')
+})

@@ -1,22 +1,51 @@
 import type Ably from 'ably'
 import type {
+    BugReportRequest,
+    AdminAssignableRole,
     Bookmark,
+    GameCatalogEntry,
+    GameHistoryPage,
+    UserGameStats,
+    CanonicalActionReplay,
     Game,
+    PublicGamePreview,
     GameAction,
     GameChat,
     GameChatMessage,
     GameState,
     GameSyncStatus,
+    ProcessedActionReplay,
     User,
-    UserPreferences
+    UserPreferences,
+    Visibility,
+    Tournament,
+    TournamentDetail,
+    TournamentList,
+    TournamentTitles,
+    TournamentSchedule,
+    UndoVotePreview,
+    League,
+    LeagueAllocationPreview,
+    LeagueList,
+    LeagueSeasonDetail,
+    LeagueState
 } from '@tabletop/common'
-import type { GameVersionProvider } from '$lib/network/tabletopApi.svelte.js'
+import type {
+    GameVersionProvider,
+    GetGameOptions,
+    RealtimeTokenOptions
+} from '$lib/network/tabletopApi.svelte.js'
 import type { Credentials } from '$lib/network/requestTypes.js'
 import type { GameChatMessageResponsePayload } from '$lib/network/responseTypes.js'
 import type { VersionChange } from '$lib/network/versionChecker.js'
 import type { RemoteApiService } from '$lib/services/remoteApiService.js'
 
 export class DummyRemoteApiService implements RemoteApiService {
+    async getPublicGamePreview(_gameId: string): Promise<PublicGamePreview | undefined> {
+        return this.fail('getPublicGamePreview')
+    }
+
+    readonly supportsHostView?: boolean = true
     private fail(method: string): never {
         throw new Error(`DummyRemoteApiService.${method} is not implemented`)
     }
@@ -27,6 +56,110 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     set versionChange(_value: VersionChange | undefined) {
         return
+    }
+
+    async getGameCatalog(): Promise<GameCatalogEntry[]> {
+        return this.fail('getGameCatalog')
+    }
+
+    async getMyGameHistory(): Promise<GameHistoryPage> {
+        return this.fail('getMyGameHistory')
+    }
+
+    async getMyGameStats(): Promise<UserGameStats> {
+        return this.fail('getMyGameStats')
+    }
+
+    async correctTournamentResult(): Promise<Tournament> {
+        return this.fail('correctTournamentResult')
+    }
+
+    async withdrawTournamentEntrant(): Promise<Tournament> {
+        return this.fail('withdrawTournamentEntrant')
+    }
+
+    async substituteTournamentEntrant(): Promise<Tournament> {
+        return this.fail('substituteTournamentEntrant')
+    }
+
+    async rebuildTournamentStandings(): Promise<Tournament> {
+        return this.fail('rebuildTournamentStandings')
+    }
+
+    async listTournaments(): Promise<TournamentList> {
+        return this.fail('listTournaments')
+    }
+
+    async listTournamentTitles(): Promise<TournamentTitles> {
+        return this.fail('listTournamentTitles')
+    }
+
+    async getTournament(): Promise<TournamentDetail> {
+        return this.fail('getTournament')
+    }
+
+    async getTournamentSchedule(): Promise<TournamentSchedule> {
+        return this.fail('getTournamentSchedule')
+    }
+
+    async previewTournamentSchedule(): Promise<TournamentSchedule> {
+        return this.fail('previewTournamentSchedule')
+    }
+
+    async commitTournamentSchedule(): Promise<TournamentSchedule> {
+        return this.fail('commitTournamentSchedule')
+    }
+
+    async createTournament(): Promise<Tournament> {
+        return this.fail('createTournament')
+    }
+
+    async updateTournament(): Promise<Tournament> {
+        return this.fail('updateTournament')
+    }
+
+    async actOnTournament(): Promise<Tournament> {
+        return this.fail('actOnTournament')
+    }
+
+    async joinTournament(): Promise<Tournament> {
+        return this.fail('joinTournament')
+    }
+
+    async listLeagues(): Promise<LeagueList> {
+        return this.fail('listLeagues')
+    }
+
+    async getLeague(): Promise<LeagueSeasonDetail> {
+        return this.fail('getLeague')
+    }
+
+    async previewLeagueAllocation(): Promise<LeagueAllocationPreview> {
+        return this.fail('previewLeagueAllocation')
+    }
+
+    async createLeague(): Promise<League> {
+        return this.fail('createLeague')
+    }
+
+    async updateLeague(): Promise<League> {
+        return this.fail('updateLeague')
+    }
+
+    async scheduleLeagueSignUp(): Promise<LeagueState> {
+        return this.fail('scheduleLeagueSignUp')
+    }
+
+    async updateLeagueSignUpPolicy(): Promise<League> {
+        return this.fail('updateLeagueSignUpPolicy')
+    }
+
+    async cancelLeagueSeason(): Promise<LeagueState> {
+        return this.fail('cancelLeagueSeason')
+    }
+
+    async actOnLeague(): Promise<LeagueState> {
+        return this.fail('actOnLeague')
     }
 
     async getSelf(): Promise<User | undefined> {
@@ -85,6 +218,13 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('updateUserPreferences')
     }
 
+    async updateUserTimeZone(
+        _timeZone: string,
+        _options?: { onlyIfUnset?: boolean }
+    ): Promise<User> {
+        return this.fail('updateUserTimeZone')
+    }
+
     async unlinkExternalAccount(_externalId: string): Promise<User> {
         return this.fail('unlinkExternalAccount')
     }
@@ -127,7 +267,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('getOpenGames')
     }
 
-    async getGame(_gameId: string): Promise<{ game: Game; actions: GameAction[] }> {
+    async getGame(
+        _gameId: string,
+        _options?: GetGameOptions
+    ): Promise<{ game: Game; actions: GameAction[] }> {
         return this.fail('getGame')
     }
 
@@ -145,6 +288,10 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async deleteGame(_gameId: string): Promise<void> {
         return this.fail('deleteGame')
+    }
+
+    async reportBug(_report: BugReportRequest): Promise<void> {
+        return this.fail('reportBug')
     }
 
     async checkInvitation(_token: string): Promise<Game> {
@@ -174,12 +321,33 @@ export class DummyRemoteApiService implements RemoteApiService {
         _game: Game,
         _actionId: string
     ): Promise<{
-        undoneActions: GameAction[]
+        actionReplay?: ProcessedActionReplay
+        canonicalReplay: CanonicalActionReplay
         game: Game
-        redoneActions: GameAction[]
         checksum: number
+        perspective?: Visibility.Perspective
     }> {
         return this.fail('undoAction')
+    }
+
+    async previewUndoVote(_game: Game, _actionIndex: number): Promise<UndoVotePreview> {
+        return this.fail('previewUndoVote')
+    }
+
+    async openUndoVote(_game: Game, _actionIndex: number, _targetActionId: string): Promise<Game> {
+        return this.fail('openUndoVote')
+    }
+
+    async approveVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('approveVote')
+    }
+
+    async declineVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('declineVote')
+    }
+
+    async withdrawVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('withdrawVote')
     }
 
     async checkSync(
@@ -214,6 +382,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('getSseToken')
     }
 
+    async getRealtimeToken(_gameIds: string[], _options?: RealtimeTokenOptions): Promise<string> {
+        return this.fail('getRealtimeToken')
+    }
+
     async getAblyToken(): Promise<Ably.TokenRequest> {
         return this.fail('getAblyToken')
     }
@@ -224,6 +396,18 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async unsubscribeFromPushNotifications(_endpoint: string): Promise<void> {
         return this.fail('unsubscribeFromPushNotifications')
+    }
+
+    async searchUsers(_query: string): Promise<User[]> {
+        return this.fail('searchUsers')
+    }
+
+    async assignUserRoles(_userId: string, _roles: AdminAssignableRole[]): Promise<User> {
+        return this.fail('assignUserRoles')
+    }
+
+    async getActiveGamesForTitle(_titleId: string): Promise<Game[]> {
+        return this.fail('getActiveGamesForTitle')
     }
 
     async setGameState(_state: GameState): Promise<void> {

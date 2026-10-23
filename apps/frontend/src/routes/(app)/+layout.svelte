@@ -1,9 +1,9 @@
 <script lang="ts">
     import '../../app.css'
+    import { nextTurnGame, otherTurnGames } from '$lib/utils/dashboardGames'
     import {
         Navbar,
         NavBrand,
-        Avatar,
         Button,
         Dropdown,
         DropdownHeader,
@@ -19,9 +19,21 @@
         DropdownGroup
     } from 'flowbite-svelte'
     import darkLogo from '$lib/components/images/dark-logo.png'
-    import { goto } from '$app/navigation'
+    import { afterNavigate, goto, onNavigate } from '$app/navigation'
+    import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
+    import AuthModal from '$lib/components/AuthModal.svelte'
+    import BugReportModal from '$lib/components/BugReportModal.svelte'
+    import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
+    import AccountAvatar from '$lib/components/AccountAvatar.svelte'
+    import { setLoginModal } from '$lib/stores/loginModal'
     import { onMount } from 'svelte'
-    import { UserStatus } from '@tabletop/common'
+    import { fromStore } from 'svelte/store'
+    import {
+        UserStatus,
+        GameVisibility,
+        getTitleVisibility,
+        findPlayerForUserId
+    } from '@tabletop/common'
     import {
         VersionChange,
         GameEditForm,
@@ -30,7 +42,12 @@
     } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
     import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
-    import { BellSolid } from 'flowbite-svelte-icons'
+    import { BellSolid, DownloadOutline, RefreshOutline } from 'flowbite-svelte-icons'
+    import {
+        isInstalledApp,
+        pwaInstallPrompt,
+        registerPwaInstallPrompt
+    } from '$lib/stores/pwaInstallPrompt.svelte.js'
 
     let {
         api,
@@ -47,8 +64,93 @@
     let { children } = $props()
 
     let sessionUser = $derived(authorizationService.getSessionUser())
+    let otherTurnCount = $derived(
+        gameService.currentGameSession
+            ? otherTurnGames(
+                  gameService.activeGames,
+                  gameService.currentGameSession.primaryGame.id,
+                  sessionUser?.id
+              ).length
+            : 0
+    )
+    let nextGame = $derived(
+        gameService.currentGameSession
+            ? nextTurnGame(
+                  gameService.activeGames,
+                  gameService.currentGameSession.primaryGame.id,
+                  sessionUser?.id
+              )
+            : undefined
+    )
+    let bugReportSession = $derived(
+        sessionUser &&
+            gameService.currentGameSession &&
+            (authorizationService.isAdmin ||
+                findPlayerForUserId(gameService.currentGameSession.primaryGame, sessionUser.id))
+            ? gameService.currentGameSession
+            : undefined
+    )
+    let accountMenuOpen = $state(false)
+    let showBugReport = $state(false)
+    let showPreferences = $state(false)
     let showCreateGameModel = $state(false)
     let showCancelPrompt = $state(false)
+    let showLoginModal = $state(false)
+    let loginView = $state<LoginView>('signin')
+    let isInstalledPwa = $state(false)
+    let showPwaRefresh = $derived(
+        isInstalledPwa && api.versionChange === VersionChange.MinorUpgrade
+    )
+    let canInstallPwa = $derived(pwaInstallPrompt.available)
+
+    const openLoginModal = setLoginModal(() => {
+        loginView = 'signin'
+        showLoginModal = true
+    })
+
+    afterNavigate(() => {
+        showLoginModal = false
+        showBugReport = false
+        showPreferences = false
+    })
+
+    function selectTransitionCover(titleId: string | undefined) {
+        for (const cover of document.querySelectorAll<HTMLImageElement>('img[data-game-cover]')) {
+            cover.style.viewTransitionName =
+                cover.dataset.gameCover === titleId ? `game-cover-${titleId}` : 'none'
+        }
+    }
+
+    onNavigate((navigation) => {
+        const from = navigation.from?.url.pathname
+        const to = navigation.to?.url.pathname
+        const libraryMove =
+            (from === '/' && to === '/library') ||
+            (from?.startsWith('/library') && to?.startsWith('/library'))
+        if (
+            !libraryMove ||
+            !document.startViewTransition ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        )
+            return
+
+        const titleId = navigation.to?.params?.titleId ?? navigation.from?.params?.titleId
+        selectTransitionCover(titleId)
+        return new Promise<void>((resolve) => {
+            const transition = document.startViewTransition(async () => {
+                resolve()
+                await navigation.complete
+                selectTransitionCover(titleId)
+            })
+            void transition.finished.catch(() => {})
+        })
+    })
+
+    let currentGameState = $derived.by(() => {
+        const state = gameService.currentGameSession?.bridge.gameState
+        return state ? fromStore(state) : undefined
+    })
+    let reproductionSeed = $derived(currentGameState?.current?.masterSeed)
 
     let seed = $derived.by(() => {
         if (!gameService.currentGameSession) {
@@ -57,11 +159,11 @@
 
         const game = gameService.currentGameSession.primaryGame
 
-        if (!authorizationService.isAdmin) {
+        if (!authorizationService.canUseDeveloperTools) {
             return undefined
         }
 
-        return game.seed
+        return reproductionSeed ?? game.seed
     })
 
     let gameLogicVersion = $derived.by(() => {
@@ -90,9 +192,14 @@
         return titlesById[gameService.currentGameSession.primaryGame.typeId]
     })
 
+    let currentVisibility = $derived(
+        currentDefinition
+            ? getTitleVisibility(currentDefinition.info.metadata)
+            : GameVisibility.Public
+    )
+
     async function onLogout() {
         await api.logout()
-        gameService.clear()
         await authorizationService.onLogout()
     }
 
@@ -110,14 +217,19 @@
         await goto('/profile')
     }
 
-    async function gotoPreferences() {
+    function openPreferences() {
         showCancelPrompt = false
-        await goto('/preferences')
+        showPreferences = true
     }
 
     async function gotoNotifications() {
         showCancelPrompt = false
         await goto('/notifications')
+    }
+
+    async function gotoAdmin() {
+        showCancelPrompt = false
+        await goto('/admin')
     }
 
     async function gotoDashboard() {
@@ -126,6 +238,19 @@
 
     async function gotoAbout() {
         await goto('/about')
+    }
+
+    async function installPwa() {
+        await pwaInstallPrompt.prompt()
+    }
+
+    function setAdminCapabilities(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement)) {
+            return
+        }
+
+        gameService.currentGameSession?.bridge.setChosenAdminPlayerId(undefined)
+        authorizationService.adminCapabilitiesEnabled = event.currentTarget.checked
     }
 
     function createGame() {
@@ -169,6 +294,8 @@
     }
 
     onMount(() => {
+        registerPwaInstallPrompt()
+        isInstalledPwa = isInstalledApp()
         notificationService.onMounted()
         visibilityService.setDocument(document)
         if (/mobile/i.test(navigator.userAgent ?? '') && !location.hash) {
@@ -220,43 +347,54 @@
             class="text-nowrap text-center mt-2 sm:mt-0 max-w-[320px] dark:text-gray-200 font-medium tight overflow-clip text-ellipsis"
             style=""
             tag="h4"
-            >{currentDefinition?.info.metadata.beta ? 'BETA: ' : ''}{gameService.currentGameSession
-                .primaryGame.name}</Heading
+            >{currentVisibility === GameVisibility.Public
+                ? ''
+                : `${currentVisibility.toUpperCase()}: `}{gameService.currentGameSession.primaryGame
+                .name}</Heading
         >
     {/if}
 {/snippet}
 
 {#snippet gameSeed()}
-    {#if seed}
-        <div
-            class="text-nowrap text-center mb-2 sm:mb-0 max-w-[320px] dark:text-gray-400 font-mono text-xs overflow-clip text-ellipsis"
-            style=""
-        >
-            Seed: {seed}
+    {#if seed !== undefined}
+        <div class="text-center mb-2 sm:mb-0 max-w-[320px] dark:text-gray-400 text-xs">
+            <div>{reproductionSeed !== undefined ? 'Reproduction seed' : 'Public seed'}</div>
+            <div class="font-mono break-all select-all">{seed}</div>
         </div>
     {/if}
 {/snippet}
 
-<div {@attach attachGlobalCssVarFromRect('--app-navbar-height')}>
+<div
+    class:game-session-header={!!gameService.currentGameSession}
+    class:mobile-game-header={!!gameService.currentGameSession || showPwaRefresh || canInstallPwa}
+    {@attach attachGlobalCssVarFromRect('--app-navbar-height')}
+>
     <Navbar
         fluid={true}
-        class="{currentDefinition?.info.metadata.beta ? 'dark:bg-red-900' : 'dark:bg-gray-800'} "
+        class="site-navbar {currentVisibility !== GameVisibility.Public
+            ? 'dark:bg-red-900'
+            : 'dark:bg-gray-800'} "
     >
         <div class="flex flex-col w-full">
             <div class="flex flex-row justify-between items-center w-full">
-                <div class="flex justify-center items-center">
-                    <NavBrand href="/library" class="shrink-0 cursor-pointer">
-                        <img src={darkLogo} alt="Board Together" class="h-8 w-auto" />
+                <div class="header-brand flex justify-center items-center">
+                    <NavBrand href={sessionUser ? '/library' : '/'} class="shrink-0 cursor-pointer">
+                        <img src={darkLogo} alt="Board Together" class="full-logo h-8 w-auto" />
+                        <img
+                            src="/android-chrome-192x192.png"
+                            alt="Board Together"
+                            class="game-logo"
+                        />
                     </NavBrand>
 
                     <div
-                        class="hidden sm:block rounded-lg py-2 px-2 md:px-4 flex flex-col justify-start items-start ml-4"
+                        class="header-title hidden sm:block rounded-lg py-2 px-2 md:px-4 flex flex-col justify-start items-start ml-4"
                     >
                         {@render gameName()}
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <div class="flex items-center gap-3 mr-4">
+                <div class="header-actions flex items-center">
+                    <div class="header-links flex items-center gap-3 mr-4">
                         <a
                             href="/about"
                             class="hidden md:inline-flex text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
@@ -268,7 +406,7 @@
                                 href="https://github.com/justinkwaugh/tabletop"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="inline-flex items-center leading-none"
+                                class="community-link inline-flex items-center leading-none"
                             >
                                 <span class="sr-only">GitHub</span>
                                 <svg
@@ -287,7 +425,7 @@
                                 href="https://discord.gg/5ggK5VGGvA"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="inline-flex items-center leading-none"
+                                class="community-link inline-flex items-center leading-none"
                             >
                                 <span class="sr-only">Discord</span>
                                 <svg
@@ -302,6 +440,27 @@
                                     ></path>
                                 </svg>
                             </a>
+                            {#if bugReportSession}
+                                <button
+                                    type="button"
+                                    class="bug-report-button inline-flex items-center leading-none cursor-pointer text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                                    title="Report a bug"
+                                    onclick={() => (showBugReport = true)}
+                                >
+                                    <span class="sr-only">Report a bug</span>
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 24 24"
+                                        preserveAspectRatio="xMidYMid meet"
+                                        class="h-5 w-5 block"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            d="M12 4a4 4 0 0 1 3.995 3.8l.005 .2a1 1 0 0 1 .428 .096l3.033 -1.938a1 1 0 1 1 1.078 1.684l-3.015 1.931a7.17 7.17 0 0 1 .476 2.227h3a1 1 0 0 1 0 2h-3v1a6.01 6.01 0 0 1 -.195 1.525l2.708 1.616a1 1 0 1 1 -1.026 1.718l-2.514 -1.501a6.002 6.002 0 0 1 -3.973 2.56v-5.918a1 1 0 0 0 -2 0v5.917a6.002 6.002 0 0 1 -3.973 -2.56l-2.514 1.503a1 1 0 1 1 -1.026 -1.718l2.708 -1.616a6.01 6.01 0 0 1 -.195 -1.526v-1h-3a1 1 0 0 1 0 -2h3.001v-.055a7 7 0 0 1 .474 -2.173l-3.014 -1.93a1 1 0 1 1 1.078 -1.684l3.032 1.939l.024 -.012l.068 -.027l.019 -.005l.016 -.006l.032 -.008l.04 -.013l.034 -.007l.034 -.004l.045 -.008l.015 -.001l.015 -.002l.087 -.004a4 4 0 0 1 4 -4zm0 2a2 2 0 0 0 -2 2h4a2 2 0 0 0 -2 -2z"
+                                        ></path>
+                                    </svg>
+                                </button>
+                            {/if}
                         </div>
                     </div>
                     {#if sessionUser}
@@ -309,36 +468,122 @@
                             <Button
                                 size="xs"
                                 color="blue"
-                                class="me-4 h-[30px]"
-                                onclick={gotoDashboard}>My Games</Button
+                                class="{showPwaRefresh || canInstallPwa ? 'me-1' : 'me-4'} h-[30px]"
+                                onclick={gotoDashboard}
+                                ><span class="my-games-label">My&nbsp;</span>Games</Button
                             >
+                            {#if showPwaRefresh}
+                                <button
+                                    class="pwa-refresh me-1 cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                    aria-label="Refresh to update"
+                                    onclick={() => location.reload()}
+                                >
+                                    <RefreshOutline class="h-6 w-6" aria-hidden="true" />
+                                </button>
+                            {/if}
+                            {#if canInstallPwa}
+                                <button
+                                    class="pwa-install cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                    aria-label="Install BoardTogether"
+                                    onclick={installPwa}
+                                >
+                                    <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                                </button>
+                            {/if}
+                            <a
+                                href="/tournaments"
+                                class="competitions-link me-4 inline-flex items-center cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                title="Tournaments and leagues"
+                            >
+                                <span class="sr-only">Tournaments and leagues</span>
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    class="h-6 w-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M8 21h8M12 17v4M7 4h10M17 4v8a5 5 0 0 1-10 0V4"></path>
+                                    <path
+                                        d="M7 6.5H5a2.5 2.5 0 0 0 0 5h2.4M17 6.5h2a2.5 2.5 0 0 1 0 5h-2.4"
+                                    ></path>
+                                </svg>
+                            </a>
                         {/if}
 
-                        <Avatar id="user-drop" class="cursor-pointer" />
-                        <Dropdown triggeredBy="#user-drop">
+                        <button
+                            id="user-drop"
+                            class="account-menu cursor-pointer text-gray-700 dark:text-gray-300"
+                            aria-label="Open account menu"
+                        >
+                            <span class="account-avatar"><AccountAvatar user={sessionUser} /></span>
+                            <svg
+                                class="game-menu-icon"
+                                width="28"
+                                height="28"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                        <Dropdown
+                            triggeredBy="#user-drop"
+                            bind:isOpen={accountMenuOpen}
+                            onclick={() => (accountMenuOpen = false)}
+                        >
                             <DropdownGroup class="py-1">
                                 <DropdownHeader class="py-2">
                                     <span class="block text-sm"
                                         >{sessionUser.username || 'username not assigned'}</span
                                     >
                                 </DropdownHeader>
-                                <DropdownDivider />
+                                <DropdownDivider class={nextGame ? 'mb-0' : ''} />
+                                {#if nextGame}
+                                    <DropdownItem
+                                        href={`/game/${nextGame.id}`}
+                                        class="w-full bg-blue-50 text-left hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            Next turn
+                                            <span
+                                                class="inline-flex min-w-5 items-center justify-center rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                                >{otherTurnCount}</span
+                                            >
+                                        </span>
+                                    </DropdownItem>
+                                    <DropdownDivider class="mt-0" />
+                                {/if}
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
-                                <DropdownItem class="w-full text-left" onclick={gotoPreferences}
+                                <DropdownItem class="w-full text-left" onclick={openPreferences}
                                     >Preferences</DropdownItem
                                 >
                                 <DropdownItem class="w-full text-left" onclick={gotoNotifications}
                                     >Notifications</DropdownItem
                                 >
+                                {#if authorizationService.isAdmin}
+                                    <DropdownItem class="w-full text-left" onclick={gotoAdmin}
+                                        >Admin</DropdownItem
+                                    >
+                                {/if}
                                 <DropdownDivider />
                                 <DropdownItem onclick={gotoAbout} class="md:hidden w-full text-left"
                                     >About us</DropdownItem
                                 >
 
                                 <DropdownDivider class="md:hidden" />
-                                {#if authorizationService.isAdmin}
+                                {#if authorizationService.canUseDeveloperTools}
                                     <li>
                                         <Toggle
                                             bind:checked={authorizationService.debugViewEnabled}
@@ -346,11 +591,12 @@
                                             >Debug</Toggle
                                         >
                                     </li>
+                                {/if}
+                                {#if authorizationService.isAdmin}
                                     <li>
                                         <Toggle
-                                            bind:checked={
-                                                authorizationService.adminCapabilitiesEnabled
-                                            }
+                                            checked={authorizationService.adminCapabilitiesEnabled}
+                                            onchange={setAdminCapabilities}
                                             class="rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600"
                                             >Admin</Toggle
                                         >
@@ -359,7 +605,7 @@
                                 <DropdownItem class="w-full text-left" onclick={logout}
                                     >Sign out</DropdownItem
                                 >
-                                {#if authorizationService.isAdmin}
+                                {#if authorizationService.canUseDeveloperTools}
                                     <DropdownDivider />
                                     <DropdownItem
                                         class="w-full text-left dark:text-gray-400 font-mono text-xs py-1"
@@ -377,7 +623,7 @@
                                             >UI: v{gameUiVersion ?? 'N/A'}</DropdownItem
                                         >
                                     {/if}
-                                    {#if seed}
+                                    {#if seed !== undefined}
                                         <DropdownItem class="w-full text-left py-1"
                                             >{@render gameSeed()}</DropdownItem
                                         >
@@ -385,15 +631,46 @@
                                 {/if}
                             </DropdownGroup>
                         </Dropdown>
+                    {:else}
+                        {#if canInstallPwa}
+                            <button
+                                class="pwa-install me-1 cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                aria-label="Install BoardTogether"
+                                onclick={installPwa}
+                            >
+                                <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
+                        {/if}
+                        <Button onclick={openLoginModal} size="sm" color="blue">Sign in</Button>
                     {/if}
                 </div>
             </div>
-            <div class="flex justify-center sm:hidden w-full overflow-hidden text-ellipsis">
+            <div
+                class="mobile-game-title flex justify-center sm:hidden w-full overflow-hidden text-ellipsis"
+            >
                 {@render gameName()}
             </div>
         </div>
     </Navbar>
 </div>
+{#if !sessionUser}
+    <AuthModal
+        bind:open={showLoginModal}
+        title={loginViewTitles[loginView]}
+        label={loginView === 'signin' ? 'Sign in' : loginViewTitles[loginView]}
+        variant={loginView === 'signin' ? 'welcome' : 'form'}
+    >
+        <LoginPanel bind:view={loginView} />
+    </AuthModal>
+{/if}
+{#if bugReportSession}
+    <BugReportModal bind:open={showBugReport} session={bugReportSession} />
+{/if}
+{#if sessionUser}
+    <Modal bind:open={showPreferences} title="Preferences" size="sm" outsideclose autoclose={false}>
+        <PreferencesPanel />
+    </Modal>
+{/if}
 <Modal
     bind:open={showCreateGameModel}
     size="xs"
@@ -430,7 +707,7 @@
                 size="xs"
                 color="blue">Got it</Button
             >
-            <Button onclick={() => gotoPreferences()} size="xs" outline color="light"
+            <Button onclick={openPreferences} size="xs" outline color="light"
                 >Go to Preferences</Button
             >
         </div>
@@ -470,3 +747,91 @@
     >
 {/if}
 {@render children()}
+
+<style>
+    .game-logo,
+    .game-menu-icon {
+        display: none;
+    }
+    .account-menu {
+        display: grid;
+        place-items: center;
+        border-radius: 4px;
+    }
+    .account-menu:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 3px;
+    }
+    .pwa-refresh,
+    .pwa-install {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+    }
+    .pwa-refresh:focus-visible,
+    .pwa-install:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+    @media (width < 640px) {
+        .mobile-game-header :global(.site-navbar) {
+            padding-block: 4px;
+        }
+        .mobile-game-header .header-brand {
+            flex: 1;
+            min-width: 0;
+            justify-content: flex-start;
+            padding-left: 8px;
+        }
+        .mobile-game-header .header-actions {
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .mobile-game-header .header-title {
+            display: block;
+            flex: 1;
+            min-width: 0;
+            margin-left: 12px;
+            padding: 0;
+        }
+        .mobile-game-header .header-title :global(h4) {
+            margin: 0;
+            max-width: none;
+            font-size: 14px;
+            line-height: 20px;
+            text-align: left;
+        }
+        .mobile-game-header .mobile-game-title,
+        .mobile-game-header .my-games-label,
+        .mobile-game-header .full-logo,
+        .mobile-game-header .account-avatar {
+            display: none;
+        }
+        .game-session-header .header-links {
+            margin-right: 4px;
+        }
+        .game-session-header .community-link,
+        .game-session-header .competitions-link {
+            display: none;
+        }
+        .mobile-game-header .bug-report-button {
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+        .mobile-game-header .game-logo {
+            display: block;
+            width: 28px;
+            height: 28px;
+        }
+        .mobile-game-header .game-menu-icon {
+            display: block;
+        }
+        .mobile-game-header .account-menu {
+            width: 40px;
+            height: 40px;
+        }
+    }
+</style>

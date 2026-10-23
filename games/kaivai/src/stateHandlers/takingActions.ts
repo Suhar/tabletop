@@ -1,9 +1,4 @@
-import {
-    type HydratedAction,
-    type MachineStateHandler,
-    ActionSource,
-    MachineContext
-} from '@tabletop/common'
+import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedKaivaiGameState } from '../model/gameState.js'
@@ -16,7 +11,6 @@ import { HydratedCelebrate, isCelebrate } from '../actions/celebrate.js'
 import { HydratedIncrease, isIncrease } from '../actions/increase.js'
 import { HydratedMove, isMove } from '../actions/move.js'
 import { LoseValue } from '../actions/loseValue.js'
-import { nanoid } from 'nanoid'
 import { isSacrifice } from '../actions/sacrifice.js'
 
 // Transition from TakingActions(Build) -> Building | TakingActions
@@ -37,8 +31,14 @@ type TakingActionsAction =
     | HydratedMove
     | HydratedPass
 
-export class TakingActionsStateHandler implements MachineStateHandler<TakingActionsAction, HydratedKaivaiGameState> {
-    isValidAction(action: HydratedAction, _context: MachineContext<HydratedKaivaiGameState>): action is TakingActionsAction {
+export class TakingActionsStateHandler implements MachineStateHandler<
+    TakingActionsAction,
+    HydratedKaivaiGameState
+> {
+    isValidAction(
+        action: HydratedAction,
+        _context: MachineContext<HydratedKaivaiGameState>
+    ): action is TakingActionsAction {
         if (!action.playerId) return false
         return (
             action.type === ActionType.Build ||
@@ -52,7 +52,10 @@ export class TakingActionsStateHandler implements MachineStateHandler<TakingActi
         )
     }
 
-    validActionsForPlayer(playerId: string, context: MachineContext<HydratedKaivaiGameState>): ActionType[] {
+    validActionsForPlayer(
+        playerId: string,
+        context: MachineContext<HydratedKaivaiGameState>
+    ): ActionType[] {
         const gameState = context.gameState
         const playerState = gameState.getPlayerState(playerId)
 
@@ -197,7 +200,10 @@ export class TakingActionsStateHandler implements MachineStateHandler<TakingActi
         }
     }
 
-    onAction(action: TakingActionsAction, context: MachineContext<HydratedKaivaiGameState>): MachineState {
+    onAction(
+        action: TakingActionsAction,
+        context: MachineContext<HydratedKaivaiGameState>
+    ): MachineState {
         const gameState = context.gameState
         const playerState = gameState.getPlayerState(action.playerId)
 

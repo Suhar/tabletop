@@ -3,12 +3,13 @@ import {
     GameState,
     HydratableGameState,
     HydratedTurnManager,
-    PrngState
+    PrngState,
+    Visibility
 } from '@tabletop/common'
 import { SantiagoPlayerState, HydratedSantiagoPlayerState } from './playerState.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { SantiagoBoard, CropType, PlantingTile, isFieldSquare, CanalSegment } from './board.js'
+import { SantiagoBoard, PlantingTile, isFieldSquare, CanalSegment } from './board.js'
 
 export type CanalProposal = Type.Static<typeof CanalProposal>
 export const CanalProposal = Type.Object({
@@ -18,7 +19,7 @@ export const CanalProposal = Type.Object({
 })
 import { MachineState } from '../definition/states.js'
 import { isIrrigated, connectedSpringIntersections } from '../util/irrigation.js'
-import { calculateScores } from '../util/scoring.js'
+import { calculateTotalScores } from '../util/scoring.js'
 
 export type SantiagoGameState = Type.Static<typeof SantiagoGameState>
 export const SantiagoGameState = Type.Evaluate(
@@ -29,7 +30,12 @@ export const SantiagoGameState = Type.Evaluate(
             machineState: Type.Enum(MachineState),
             board: SantiagoBoard,
             // Shuffled bag of planting tiles; draw from front
-            tileBag: Type.Array(PlantingTile),
+            tileBag: Visibility.protect(Type.Array(PlantingTile), {
+                policy: Visibility.Policy.HostOnly,
+                redaction: Visibility.redaction.emptyArray()
+            }),
+            remainingTiles: Type.Optional(Type.Number({ minimum: 0 })),
+            publicMoney: Type.Optional(Type.Boolean()),
             // Current round number (1-based)
             round: Type.Number({ default: 0 }),
             // Player IDs in the order they will plant this round
@@ -40,6 +46,10 @@ export const SantiagoGameState = Type.Evaluate(
             // Also set at game start to the randomly chosen initial overseer,
             // which determines round 1 bidding order.
             canalOverseerId: Type.Optional(Type.String()),
+            // Holdover from the previous round, shown as a placeholder Overseer tag while
+            // this round's bidding is in progress and canalOverseerId is genuinely
+            // undetermined (see BiddingStateHandler.enter).
+            previousOverseerId: Type.Optional(Type.String()),
             // Player IDs who have acted during extra irrigation (amount=0 counts as passing)
             extraIrrigationPassed: Type.Array(Type.String()),
             // Sequential order of players for Phase 5 (left of new overseer → overseer last)
@@ -65,11 +75,15 @@ export const SantiagoGameState = Type.Evaluate(
     ])
 )
 
-const SantiagoGameStateValidator = Compile(SantiagoGameState)
+export const SantiagoGameStateValidator = Compile(SantiagoGameState)
+
+export const SantiagoProjectedState = Visibility.createProjectionSchema(SantiagoGameState)
+export type SantiagoProjectedState = Type.Static<typeof SantiagoProjectedState>
+const SantiagoProjectedStateValidator = Compile(SantiagoProjectedState)
 
 export class HydratedSantiagoGameState
-    extends HydratableGameState<typeof SantiagoGameState, HydratedSantiagoPlayerState>
-    implements SantiagoGameState
+    extends HydratableGameState<typeof SantiagoProjectedState, HydratedSantiagoPlayerState>
+    implements SantiagoProjectedState
 {
     declare id: string
     declare gameId: string
@@ -84,10 +98,13 @@ export class HydratedSantiagoGameState
     declare winningPlayerIds: string[]
     declare board: SantiagoBoard
     declare tileBag: PlantingTile[]
+    declare remainingTiles?: number
+    declare publicMoney?: boolean
     declare round: number
     declare plantersOrder: string[]
     declare planterIndex: number
     declare canalOverseerId?: string
+    declare previousOverseerId?: string
     declare extraIrrigationPassed: string[]
     declare extraIrrigationOrder: string[]
     declare extraIrrigationIndex: number
@@ -100,17 +117,24 @@ export class HydratedSantiagoGameState
     declare canalProposalIndex: number
     declare seatOrder: string[]
 
-    constructor(data: SantiagoGameState) {
-        super(data, SantiagoGameStateValidator)
+    constructor(data: SantiagoProjectedState) {
+        super(data, SantiagoProjectedStateValidator)
         this.players = data.players.map((p) => new HydratedSantiagoPlayerState(p))
     }
 
     drawTile(): PlantingTile | undefined {
-        return this.tileBag.shift()
+        const tile = this.tileBag.shift()
+        if (tile && this.remainingTiles !== undefined) this.remainingTiles--
+        return tile
+    }
+
+    getRemainingTileCount(): number {
+        // Legacy saves predate the public count and retain their canonical bag.
+        return this.remainingTiles ?? this.tileBag.length
     }
 
     isBagEmpty(): boolean {
-        return this.tileBag.length === 0
+        return this.getRemainingTileCount() === 0
     }
 
     applyDrought(isLastRound = false) {
@@ -143,9 +167,12 @@ export class HydratedSantiagoGameState
     }
 
     score() {
-        const scores = calculateScores(this.board)
+        const scores = calculateTotalScores(
+            this.board,
+            this.players.map((player) => ({ playerId: player.playerId, money: player.getMoney() }))
+        )
         for (const player of this.players) {
-            player.score = (scores[player.playerId] ?? 0) + player.money
+            player.score = scores[player.playerId]
         }
     }
 }

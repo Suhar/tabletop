@@ -8,9 +8,12 @@ enum GameServiceError {
     GameNotWaitingToStart = 'GameNotWaitingToStartError',
     GameNotInProgress = 'GameNotInProgressError',
     GameAlreadyStarted = 'GameAlreadyStartedError',
+    FinishedGameDeletion = 'FinishedGameDeletionError',
     GameUpdateCollisionError = 'GameUpdateCollisionError',
     PlayersNotFound = 'PlayersNotFoundError',
     PrivateGameNotFull = 'PrivateGameNotFullError',
+    OwnerNotPlaying = 'OwnerNotPlayingError',
+    UnlistedGameNotPublic = 'UnlistedGameNotPublicError',
     InvalidPlayerUser = 'InvalidPlayerUserError',
     InvalidPlayerId = 'InvalidPlayerIdError',
     UserIsNotAllowedPlayer = 'UserIsNotAllowedPlayerError',
@@ -18,7 +21,10 @@ enum GameServiceError {
     UserAlreadyDeclined = 'UserAlreadyDeclinedError',
     DuplicatePlayer = 'DuplicatePlayerError',
     UnauthorizedAccess = 'UnauthorizedAccessError',
-    DisallowedUndo = 'DisallowedUndoError'
+    DisallowedUndo = 'DisallowedUndoError',
+    DisallowedPlayerVote = 'DisallowedPlayerVoteError',
+    DisallowedAction = 'DisallowedActionError',
+    RacedAction = 'RacedActionError'
 }
 
 export class GamePlayerCountInvalidError extends BaseError {
@@ -66,6 +72,16 @@ export class GameNotWaitingToStartError extends BaseError {
         super({
             name: GameServiceError.GameNotWaitingToStart,
             message: `The game with id ${id} was not ready to start`,
+            metadata: { id }
+        })
+    }
+}
+
+export class FinishedGameDeletionError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.FinishedGameDeletion,
+            message: `The game with id ${id} has been finished and can only be deleted by an administrator`,
             metadata: { id }
         })
     }
@@ -126,6 +142,26 @@ export class PrivateGameNotFullError extends BaseError {
         super({
             name: GameServiceError.PrivateGameNotFull,
             message: `The private game with id ${id} does not have enough players defined`,
+            metadata: { id }
+        })
+    }
+}
+
+export class OwnerNotPlayingError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.OwnerNotPlaying,
+            message: `The owner of the game with id ${id} must be one of its players`,
+            metadata: { id }
+        })
+    }
+}
+
+export class UnlistedGameNotPublicError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.UnlistedGameNotPublic,
+            message: `The unlisted game with id ${id} must be public`,
             metadata: { id }
         })
     }
@@ -215,6 +251,52 @@ export class DisallowedUndoError extends BaseError {
             name: GameServiceError.DisallowedUndo,
             message: `Action ${actionId} cannot be undone in game ${gameId} because ${reason}`,
             metadata: { gameId: gameId, actionId: actionId, reason: reason }
+        })
+    }
+}
+
+export class DisallowedPlayerVoteError extends BaseError {
+    constructor({ gameId, reason }: { gameId: string; reason: string }) {
+        super({
+            name: GameServiceError.DisallowedPlayerVote,
+            message: `Player vote not allowed in game ${gameId} because ${reason}`,
+            metadata: { gameId, reason }
+        })
+    }
+}
+
+export class DisallowedActionError extends BaseError {
+    constructor({
+        gameId,
+        actionId,
+        reason
+    }: {
+        gameId: string
+        actionId: string
+        reason: string
+    }) {
+        super({
+            name: GameServiceError.DisallowedAction,
+            message: `Action ${actionId} cannot be applied to game ${gameId} because ${reason}`,
+            metadata: { gameId, actionId, reason }
+        })
+    }
+}
+
+export class RacedActionError extends BaseError {
+    constructor({
+        gameId,
+        actionId,
+        reason
+    }: {
+        gameId: string
+        actionId: string
+        reason: string
+    }) {
+        super({
+            name: GameServiceError.RacedAction,
+            message: `Action ${actionId} cannot be applied to game ${gameId} because it raced Actions it does not commute with: ${reason}`,
+            metadata: { gameId, actionId, reason }
         })
     }
 }

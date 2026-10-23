@@ -1,15 +1,19 @@
+import { isObject } from './json.js'
 import fs from 'node:fs/promises'
 import { DeployConfig } from './types.js'
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-    typeof value === 'object' && value !== null
 
 const coerceDeployConfig = (config: unknown): DeployConfig => {
     if (!isObject(config)) return {}
     const backend = config.backend
     const backendAdmin = config.backendAdmin
+    const hosting = config.hosting
+    const realtime = config.realtime
     return {
         gcsBucket: typeof config.gcsBucket === 'string' ? config.gcsBucket : undefined,
+        gcloudCredentialFile:
+            typeof config.gcloudCredentialFile === 'string'
+                ? config.gcloudCredentialFile
+                : undefined,
         backendManifestUrl:
             typeof config.backendManifestUrl === 'string' ? config.backendManifestUrl : undefined,
         backend: isObject(backend)
@@ -17,9 +21,7 @@ const coerceDeployConfig = (config: unknown): DeployConfig => {
                   image: typeof backend.image === 'string' ? backend.image : undefined,
                   service: typeof backend.service === 'string' ? backend.service : undefined,
                   tasksService:
-                      typeof backend.tasksService === 'string'
-                          ? backend.tasksService
-                          : undefined,
+                      typeof backend.tasksService === 'string' ? backend.tasksService : undefined,
                   region: typeof backend.region === 'string' ? backend.region : undefined,
                   project: typeof backend.project === 'string' ? backend.project : undefined,
                   deployCommand: Array.isArray(backend.deployCommand)
@@ -36,6 +38,16 @@ const coerceDeployConfig = (config: unknown): DeployConfig => {
                   password:
                       typeof backendAdmin.password === 'string' ? backendAdmin.password : undefined,
                   cookie: typeof backendAdmin.cookie === 'string' ? backendAdmin.cookie : undefined
+              }
+            : undefined,
+        hosting: isObject(hosting)
+            ? { channel: typeof hosting.channel === 'string' ? hosting.channel : undefined }
+            : undefined,
+        realtime: isObject(realtime)
+            ? {
+                  instance: typeof realtime.instance === 'string' ? realtime.instance : undefined,
+                  zone: typeof realtime.zone === 'string' ? realtime.zone : undefined,
+                  healthUrl: typeof realtime.healthUrl === 'string' ? realtime.healthUrl : undefined
               }
             : undefined
     }
@@ -73,11 +85,14 @@ export const mergeEnvConfig = (config: DeployConfig): DeployConfig => {
     return {
         ...config,
         gcsBucket: process.env.TABLETOP_GCS_BUCKET ?? config.gcsBucket,
+        gcloudCredentialFile:
+            process.env.TABLETOP_GCLOUD_CREDENTIAL_FILE ?? config.gcloudCredentialFile,
         backendManifestUrl:
             process.env.TABLETOP_BACKEND_MANIFEST_URL ??
             process.env.TABLETOP_MANIFEST_URL ??
             config.backendManifestUrl,
         backend,
-        backendAdmin
+        backendAdmin,
+        hosting: { channel: process.env.TABLETOP_HOSTING_CHANNEL ?? config.hosting?.channel }
     }
 }

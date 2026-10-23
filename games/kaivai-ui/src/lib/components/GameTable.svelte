@@ -15,7 +15,7 @@
     import Phase from '$lib/components/Phase.svelte'
     import BidBoard from '$lib/components/BidBoard.svelte'
     import { ActionType, MachineState } from '@tabletop/kaivai'
-    import type { HydratedKaivaiGameState, KaivaiGameState } from '@tabletop/kaivai'
+    import type { HydratedKaivaiGameState, KaivaiProjectedState } from '@tabletop/kaivai'
     import History from '$lib/components/History.svelte'
     import LastHistoryDescription from '$lib/components/LastHistoryDescription.svelte'
     import WaitingPanel from '$lib/components/WaitingPanel.svelte'
@@ -23,8 +23,9 @@
     import KaivaiFont from '$lib/fonts/stacatto222bt.woff'
     import { setGameSession } from '$lib/model/gameSessionContext.svelte.js'
 
-    let { gameSession }: { gameSession: GameSession<KaivaiGameState, HydratedKaivaiGameState> } =
-        $props()
+    let {
+        gameSession
+    }: { gameSession: GameSession<KaivaiProjectedState, HydratedKaivaiGameState> } = $props()
 
     // svelte-ignore state_referenced_locally
     setGameSession(gameSession as KaivaiGameSession)
@@ -45,7 +46,7 @@
 
 <CustomFont fontFamily="stacatto" url={KaivaiFont} format="woff" />
 
-<div class="bg-[#f5e397]" style="--chat-height-offset: 0px;">
+<div class="bg-[#f5e397]">
     <DefaultTableLayout>
         {#snippet mobileControlsContent()}
             <HistoryControls

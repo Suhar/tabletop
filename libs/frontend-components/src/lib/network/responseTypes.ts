@@ -1,12 +1,16 @@
 import { Type, type Static } from 'typebox'
 import {
     Bookmark,
+    CanonicalActionReplay,
+    ProcessedActionReplay,
     Game,
+    UndoVotePreview,
     GameAction,
     GameChat,
     GameChatMessage,
     GameSyncStatus,
-    User
+    User,
+    Visibility
 } from '@tabletop/common'
 
 export type ApiResponse = Static<typeof ApiResponse>
@@ -36,6 +40,26 @@ export const UsernameSearchResponse = Type.Evaluate(
     ])
 )
 
+export type UsersResponse = Static<typeof UsersResponse>
+export const UsersResponse = Type.Evaluate(
+    Type.Intersect([
+        Type.Omit(ApiResponse, ['payload']),
+        Type.Object({
+            payload: Type.Object({ users: Type.Array(User) })
+        })
+    ])
+)
+
+export type UndoVotePreviewResponse = Static<typeof UndoVotePreviewResponse>
+export const UndoVotePreviewResponse = Type.Evaluate(
+    Type.Intersect([
+        Type.Omit(ApiResponse, ['payload']),
+        Type.Object({
+            payload: Type.Object({ preview: UndoVotePreview })
+        })
+    ])
+)
+
 export type GameResponse = Static<typeof GameResponse>
 export const GameResponse = Type.Evaluate(
     Type.Intersect([
@@ -51,7 +75,12 @@ export const GameWithActionsResponse = Type.Evaluate(
     Type.Intersect([
         Type.Omit(ApiResponse, ['payload']),
         Type.Object({
-            payload: Type.Object({ game: Game, actions: Type.Array(GameAction) })
+            payload: Type.Object({
+                game: Game,
+                actions: Type.Array(GameAction),
+                historyComplete: Type.Optional(Type.Boolean()),
+                perspective: Type.Optional(Visibility.Perspective)
+            })
         })
     ])
 )
@@ -94,7 +123,8 @@ export const ApplyActionResponse = Type.Evaluate(
             payload: Type.Object({
                 actions: Type.Array(GameAction),
                 game: Game,
-                missingActions: Type.Optional(Type.Array(GameAction))
+                missingActions: Type.Optional(Type.Array(GameAction)),
+                perspective: Type.Optional(Visibility.Perspective)
             })
         })
     ])
@@ -179,10 +209,14 @@ export const UndoActionResponse = Type.Evaluate(
         Type.Omit(ApiResponse, ['payload']),
         Type.Object({
             payload: Type.Object({
-                undoneActions: Type.Array(GameAction),
+                // Optional until the post-rollout backend cleanup removes these legacy fields.
+                undoneActions: Type.Optional(Type.Array(GameAction)),
                 game: Game,
-                redoneActions: Type.Array(GameAction),
-                checksum: Type.Number()
+                redoneActions: Type.Optional(Type.Array(GameAction)),
+                actionReplay: Type.Optional(ProcessedActionReplay),
+                canonicalReplay: CanonicalActionReplay,
+                checksum: Type.Number(),
+                perspective: Type.Optional(Visibility.Perspective)
             })
         })
     ])

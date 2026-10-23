@@ -1,0 +1,313 @@
+<script lang="ts">
+    import type { Cash } from '@tabletop/18xx'
+    import type { MoneyFormat } from '../presentation/money.js'
+    import TrainBadge from '../trains/TrainBadge.svelte'
+    import { TileColors } from '../tiles/tilePresentation.js'
+    import type { PhaseChartData, PhaseChartDepotState } from './phaseChart.js'
+    let {
+        money,
+        chart,
+        depotState,
+        depotOnly = false,
+        onBoard = false,
+        currentPhaseId,
+        trainColors,
+        phaseColors,
+        tileColors = TileColors,
+        tileColorNames = {},
+        bank
+    }: {
+        money: MoneyFormat
+        depotState: PhaseChartDepotState
+        depotOnly?: boolean
+        onBoard?: boolean
+        chart: PhaseChartData
+        currentPhaseId: string
+        trainColors: Readonly<Record<string, string>>
+        phaseColors: Readonly<Record<string, string>>
+        tileColors?: Readonly<Record<string, string>>
+        tileColorNames?: Readonly<Record<string, string>>
+        bank?: { cash: Cash['amount']; broken: boolean }
+    } = $props()
+    const currentPhase = $derived(chart.phases.find((phase) => phase.id === currentPhaseId))
+</script>
+
+<div class="phase-chart-content" class:depot={depotOnly} class:on-board={onBoard}>
+    <div class="charts">
+        {#if !depotOnly}
+            <section aria-label="Phases">
+                <table>
+                    <thead
+                        ><tr
+                            ><th>Phase</th><th>Tiles</th><th>ORs</th><th>Train limit</th><th
+                                >Rusts</th
+                            ><th>Notes</th></tr
+                        ></thead
+                    >
+                    <tbody>
+                        {#each chart.phases as phase (phase.id)}
+                            <tr
+                                class:current={phase.id === currentPhaseId}
+                                aria-current={phase.id === currentPhaseId ? 'step' : undefined}
+                            >
+                                <th scope="row"
+                                    ><TrainBadge
+                                        name={phase.id}
+                                        color={phaseColors[phase.id]}
+                                    /></th
+                                >
+                                <td
+                                    ><span
+                                        class="colors"
+                                        aria-label={phase.tileColors
+                                            .map((color) => tileColorNames[color] ?? color)
+                                            .join(', ')}
+                                    >
+                                        {#each phase.tileColors as color (color)}<span
+                                                class="tile-color"
+                                                style:background={tileColors[color]}
+                                                title={tileColorNames[color] ?? color}
+                                            ></span>{/each}
+                                    </span></td
+                                >
+                                <td class="number">{phase.operatingRounds}</td>
+                                <td class="number">{phase.trainLimit}</td>
+                                <td
+                                    ><span class="badges">
+                                        {#each chart.trains.filter((train) => train.rustPhaseId === phase.id) as train (train.id)}
+                                            <TrainBadge
+                                                name={train.id}
+                                                color={trainColors[train.id]}
+                                            />{#if train.rustNote}<span class="rust-mark">*</span
+                                                >{/if}
+                                        {:else}<span class="muted">—</span>{/each}
+                                    </span></td
+                                >
+                                <td class="phase-notes">{phase.notes ?? ''}</td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
+            </section>
+        {/if}
+        {#if onBoard && currentPhase}<div class="phase-summary">
+                <span class="summary-item"
+                    ><span class="summary-label">Phase</span><TrainBadge
+                        name={currentPhase.id}
+                        color={phaseColors[currentPhase.id]}
+                    /></span
+                >
+                <span class="summary-item"
+                    ><span class="summary-label">Train limit</span><span class="summary-value"
+                        >{currentPhase.trainLimit}</span
+                    ></span
+                >
+                {#if bank && (bank.broken || bank.cash !== 'unlimited')}<span class="summary-item"
+                        ><span class="summary-label">Bank</span><span
+                            class="summary-value"
+                            class:broken={bank.broken}
+                            >{bank.broken || bank.cash === 'unlimited'
+                                ? 'Broken'
+                                : money(bank.cash)}</span
+                        ></span
+                    >{/if}
+            </div>{/if}
+        <section aria-label="Train roster">
+            <table>
+                <thead
+                    ><tr
+                        ><th>Train</th><th class="money">Price</th><th class="number">Remaining</th
+                        ><th>Obsoleted / rusted by</th></tr
+                    ></thead
+                >
+                <tbody>
+                    {#each chart.trains as train, index (train.id)}
+                        {@const faces = chart.trains.filter(
+                            (face) => face.supplyId === train.supplyId
+                        )}
+                        {@const remaining = depotState.depot.remaining(
+                            depotState.inventory,
+                            train.id
+                        )}
+                        {@const current =
+                            depotState.availableDefinitionIds.includes(train.id) && remaining !== 0}
+                        <tr
+                            class:current
+                            aria-current={current ? 'step' : undefined}
+                            class:exhausted={remaining === 0}
+                        >
+                            <th scope="row"
+                                ><TrainBadge name={train.name} color={trainColors[train.id]} /></th
+                            >
+                            <td class="money">{money(train.price)}</td>
+                            {#if index === 0 || chart.trains[index - 1].supplyId !== train.supplyId}
+                                <td
+                                    class="number"
+                                    rowspan={faces.length}
+                                    title={faces.length > 1
+                                        ? 'Shared certificates: choose either face'
+                                        : undefined}
+                                    >{remaining === 'unlimited' ? '∞' : remaining}</td
+                                >
+                            {/if}
+                            <td
+                                >{#if train.rustTrainIds.length}<span class="badges"
+                                        >{#each train.rustTrainIds as trainId (trainId)}<TrainBadge
+                                                name={trainId}
+                                                color={trainColors[trainId]}
+                                            />{/each}{#if train.rustNote}<span class="rust-mark"
+                                                >*</span
+                                            >{/if}</span
+                                    >{:else}<span class="muted">Permanent</span>{/if}</td
+                            >
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </section>
+    </div>
+    <div class="notes">
+        {#each [...new Set(chart.trains.flatMap( (train) => (train.rustNote ? [train.rustNote] : []) ))] as note (note)}<p
+            >
+                <span class="rust-mark">*</span>
+                {note}
+            </p>{/each}
+        {#if !depotOnly}{#each chart.notes as note, index (index)}<p>{note}</p>{/each}{/if}
+    </div>
+</div>
+
+<style>
+    .phase-chart-content {
+        container-type: inline-size;
+        color: var(--rail-text, #463e35);
+    }
+    .depot .charts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .on-board {
+        container-type: normal;
+    }
+    .on-board .charts {
+        grid-template-columns: auto auto;
+        align-items: start;
+        padding-top: 0;
+    }
+    .on-board .notes {
+        contain: inline-size;
+    }
+    .phase-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .summary-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        --train-badge-font: 18px;
+    }
+    .summary-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--rail-muted, #817261);
+    }
+    .summary-value {
+        font-size: 24px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+    .summary-value.broken {
+        color: var(--rail-negative, #b33a32);
+    }
+    .exhausted {
+        color: var(--rail-muted, #958878);
+        opacity: var(--rail-phase-opacity, 0.55);
+    }
+    .charts {
+        display: grid;
+        grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+        gap: 18px;
+        padding: 12px 16px 8px;
+    }
+    section {
+        overflow-x: auto;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    th,
+    td {
+        padding: 3px 5px;
+        text-align: left;
+        height: 18px;
+    }
+    thead th {
+        font-size: 10px;
+        color: var(--rail-text, #817261);
+        font-weight: 600;
+        border-bottom: 1px solid var(--rail-border, #cfc1ae);
+    }
+    tbody tr + tr {
+        border-top: 1px solid var(--rail-border, #e9e0d4);
+    }
+    .phase-notes {
+        width: 100%;
+        min-width: 185px;
+        white-space: normal;
+        font-size: 11px;
+        line-height: 1.35;
+        color: var(--rail-text, #766653);
+    }
+    .current {
+        background: var(--rail-surface-raised, #e9dfcc);
+        box-shadow: inset 3px 0 var(--rail-shadow, #786447);
+    }
+    .number {
+        text-align: center;
+    }
+    .money {
+        text-align: right;
+    }
+    .colors,
+    .badges {
+        display: flex;
+        gap: 3px;
+        align-items: center;
+    }
+    /* An asterisk sits at cap height; drop it to the middle of the badges beside it. */
+    .rust-mark {
+        position: relative;
+        top: 0.22em;
+    }
+    .tile-color {
+        width: 14px;
+        height: calc(14px * cos(30deg));
+        flex-shrink: 0;
+        clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    }
+    .muted {
+        color: var(--rail-muted, #958878);
+        font-size: 11px;
+    }
+    .notes {
+        padding: 0 16px 12px;
+        color: var(--rail-text, #766653);
+        font-size: 11px;
+        line-height: 1.5;
+    }
+    p {
+        margin: 5px 0 0;
+    }
+    @container (max-width: 740px) {
+        .charts {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+    }
+</style>

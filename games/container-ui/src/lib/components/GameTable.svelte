@@ -21,7 +21,7 @@
 </script>
 
 <!-- Full Height and Width with 8px padding-->
-<div style="--chat-height-offset: 0px;">
+<div>
     <DefaultTableLayout>
         {#snippet sideContent()}
             <DefaultSideContent>
@@ -29,7 +29,7 @@
                     <PlayersPanel />
                 {/snippet}
                 {#snippet history()}
-                   <History />
+                    <History />
                 {/snippet}
             </DefaultSideContent>
         {/snippet}

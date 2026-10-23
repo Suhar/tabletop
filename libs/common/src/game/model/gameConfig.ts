@@ -1,4 +1,5 @@
 import * as Type from 'typebox'
+import type { GameConfigNormalizer } from '../definition/gameConfigurator.js'
 
 export enum ConfigOptionType {
     Boolean = 'Boolean',
@@ -31,7 +32,8 @@ export const ListConfigOption = Type.Object({
     options: Type.Array(
         Type.Object({
             name: Type.String(),
-            value: Type.String()
+            value: Type.String(),
+            description: Type.Optional(Type.String())
         })
     )
 })
@@ -70,6 +72,17 @@ export function isListConfigOption(option: ConfigOption): option is ListConfigOp
     return option.type === ConfigOptionType.List
 }
 
+export function listOptionDescription(
+    option: ListConfigOption,
+    value: GameConfig[string] | undefined
+): string {
+    const selected = value ?? option.default
+    return (
+        option.options.find((choice) => choice.value === selected)?.description ??
+        option.description
+    )
+}
+
 export function isBooleanConfigOption(option: ConfigOption): option is BooleanConfigOption {
     return option.type === ConfigOptionType.Boolean
 }
@@ -90,3 +103,44 @@ export const GameConfig = Type.Record(
     Type.String(),
     Type.Union([Type.Boolean(), Type.String(), Type.Number(), Type.Null()])
 )
+
+export function defaultGameConfig(options: GameConfigOptions): GameConfig {
+    return Object.fromEntries(options.map((option) => [option.id, option.default ?? null]))
+}
+
+export function normalizeGameConfig<C extends GameConfig>(
+    config: GameConfig,
+    normalizer: GameConfigNormalizer<C>
+): C
+export function normalizeGameConfig(
+    config: GameConfig,
+    normalizer?: Partial<GameConfigNormalizer>
+): GameConfig
+export function normalizeGameConfig(
+    config: GameConfig,
+    normalizer?: Partial<GameConfigNormalizer>
+): GameConfig {
+    const values = Object.fromEntries(Object.entries(config).filter(([, value]) => value !== null))
+    return normalizer?.normalizeConfig?.(values) ?? values
+}
+
+export function normalizeGame<G extends { config?: GameConfig }, C extends GameConfig>(
+    game: G,
+    normalizer: GameConfigNormalizer<C>
+): Omit<G, 'config'> & { config: C }
+export function normalizeGame<G extends { config: GameConfig }>(
+    game: G,
+    normalizer?: Partial<GameConfigNormalizer>
+): Omit<G, 'config'> & { config: GameConfig }
+export function normalizeGame<G extends { config?: GameConfig }>(
+    game: G,
+    normalizer?: Partial<GameConfigNormalizer>
+): Omit<G, 'config'> & { config?: GameConfig }
+export function normalizeGame<G extends { config?: GameConfig }>(
+    game: G,
+    normalizer?: Partial<GameConfigNormalizer>
+): Omit<G, 'config'> & { config?: GameConfig } {
+    if (normalizer?.normalizeConfig === undefined) return game
+    const { config, ...rest } = game
+    return { ...rest, config: normalizeGameConfig(config ?? {}, normalizer) }
+}

@@ -24,11 +24,10 @@
         <span
             class="text-nowrap rounded px-2 font-medium"
             style:background-color={playerBgColor}
-            style:color={playerTextColor}
-            >{playerName}</span
+            style:color={playerTextColor}>{playerName}</span
         >
         <div class="flex flex-col justify-center items-start">
-            {#each textSplit(message.text) as text}
+            {#each textSplit(message.text) as text, i (i)}
                 <p class="leading-[1.1rem]">{text}</p>
             {/each}
         </div>

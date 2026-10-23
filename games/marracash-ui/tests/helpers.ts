@@ -1,0 +1,75 @@
+import { expect, type Locator, type Page } from '@playwright/test'
+
+export async function createGame(page: Page, { concealedCash = false, antiqueCards = true } = {}) {
+    await page.goto('/')
+    // The dev server hydrates slowly, so a click before hydration is ignored
+    const gameName = page.getByPlaceholder('choose a name for your game')
+    await expect(async () => {
+        await page.getByRole('button', { name: 'New game', exact: true }).click()
+        await expect(gameName).toBeVisible({ timeout: 2_000 })
+    }).toPass()
+    await gameName.fill('Market check')
+    await page
+        .getByPlaceholder('optional reproduction seed')
+        .fill('0123456789abcdef0123456789abcdef')
+    const options = page.locator('dialog label:has(input[type=checkbox])')
+    if (concealedCash) {
+        await options.first().click()
+    }
+    // Antique Cards is off by default, and most tests play with them
+    if (antiqueCards) {
+        await options.nth(1).click()
+    }
+    const names = page.locator('input[placeholder="player name"]:not([disabled])')
+    for (const [index, name] of ['Amira', 'Bashir', 'Chadia'].entries()) {
+        await names.nth(index).fill(name)
+    }
+    await page.getByRole('button', { name: 'Create Game' }).click()
+    await expect(board(page)).toBeVisible()
+    // The new-game dialog stays modal while it closes, leaving the table inert and unfocusable
+    await page.waitForFunction(() => document.querySelector('dialog:modal') === null)
+}
+
+export function board(page: Page): Locator {
+    return page.getByRole('img', { name: 'MarraCash market' })
+}
+
+export function actionPanel(page: Page): Locator {
+    return page.getByRole('region', { name: 'Actions' })
+}
+
+export function auctionableShops(page: Page): Locator {
+    return page.locator('g[aria-label^="Auction shop"]')
+}
+
+export function destinationFountains(page: Page): Locator {
+    return page.locator('g[aria-label^="Move visitors"]')
+}
+
+export async function finishBidding(page: Page) {
+    // The bid panel waits for the auction's announcement
+    await expect(actionPanel(page).getByText('Sealed bid')).toBeVisible()
+    while (await actionPanel(page).getByText('Sealed bid').count()) {
+        const place = page.getByRole('button', { name: 'Place bid' })
+        const before = await actionPanel(page).innerText()
+        if (await place.count()) await place.click()
+        else await page.getByRole('button', { name: 'Pass' }).click()
+        await expect(actionPanel(page)).not.toHaveText(before)
+    }
+}
+
+export async function auctionFirstShop(page: Page) {
+    await auctionableShops(page).first().click()
+}
+
+export async function playOpeningRound(page: Page, players = 4) {
+    for (let seat = 0; seat < players; seat++) {
+        await auctionFirstShop(page)
+        await finishBidding(page)
+    }
+    await expect(actionPanel(page)).toContainText(/move a fountain's visitors/i)
+}
+
+export function incomingVisitors(page: Page): Locator {
+    return page.locator('g[aria-label="Visitor queue"] path.candidate-halo')
+}

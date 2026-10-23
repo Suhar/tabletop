@@ -1,4 +1,9 @@
+import { collectibleLogic } from './logic-factory.js'
 import fs from 'node:fs'
+import { moduleWorkers } from './workers.js'
+import { publishCssAssets } from './css-assets.js'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import svelte from 'rollup-plugin-svelte'
@@ -128,6 +133,11 @@ export const createGameUiRollupConfig = ({ packageRootUrl }) => {
         throw new Error('createGameUiRollupConfig requires packageRootUrl')
     }
 
+    // Tailwind attributes its rules to src/app.css, which each game's CSS scoping plugin keys on,
+    // only when it optimizes in production. Otherwise NODE_ENV is set only by Vite config
+    // resolution inside the Svelte preprocessor, which races the app.css transform.
+    process.env.NODE_ENV ??= 'production'
+
     const packageRoot = toPath(packageRootUrl)
     const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'))
     const packageName = packageJson.name ?? ''
@@ -139,8 +149,11 @@ export const createGameUiRollupConfig = ({ packageRootUrl }) => {
     const gameId = packageName.replace(/^@[^/]+\//, '').replace(/-ui$/, '')
     const uiVersion = process.env.ROLLUP_UI_VERSION ?? packageVersion
     const publicAssetsPath = `/games/${gameId}/ui/${uiVersion}/assets/`
+    const assetsDirectory = path.join(packageRoot, 'bundle/assets')
     const analyze = process.env.ROLLUP_ANALYZE === '1'
     const minify = process.env.ROLLUP_TERSER !== '0'
+    const terserWorkers = process.env.ROLLUP_TERSER_WORKERS
+    const terserOptions = terserWorkers ? { maxWorkers: Number(terserWorkers) } : {}
 
     return {
         input: path.join(packageRoot, 'src/lib/index.ts'),
@@ -149,9 +162,16 @@ export const createGameUiRollupConfig = ({ packageRootUrl }) => {
             format: 'es',
             sourcemap: true
         },
+        // The host loads the artifact as plain ES modules, so a bare import Rollup can't resolve
+        // (such as a SvelteKit $app/* module) would stop the game UI from loading at all.
+        onwarn: (warning, handler) => {
+            if (warning.code === 'UNRESOLVED_IMPORT') throw new Error(warning.message)
+            handler(warning)
+        },
         plugins: [
             createResolveJsExtensions(packageRoot),
             createLibAlias(packageRoot),
+            moduleWorkers(),
             typescript({ tsconfig: path.join(packageRoot, 'tsconfig.rollup.json') }),
             commonjs(),
             svelte({
@@ -173,24 +193,41 @@ export const createGameUiRollupConfig = ({ packageRootUrl }) => {
                 exportConditions: ['svelte'],
                 extensions: ['.ts', '.js', '.mjs', '.svelte']
             }),
-            postcss({ inject: true }),
+            postcss({
+                inject: true,
+                // Every stylesheet the title bundles, a dependency's included, goes through the
+                // title's own PostCSS config, as it does under Vite, so its scoping covers them.
+                config: { path: packageRoot },
+                plugins: [
+                    publishCssAssets({ destDir: assetsDirectory, publicPath: publicAssetsPath })
+                ]
+            }),
             url({
                 include: modelAssetExtensions,
-                destDir: path.join(packageRoot, 'bundle/assets'),
+                destDir: assetsDirectory,
                 publicPath: publicAssetsPath,
                 fileName: '[name][extname]',
                 limit: 0
             }),
             url({
                 include: assetExtensions,
-                destDir: path.join(packageRoot, 'bundle/assets'),
+                destDir: assetsDirectory,
                 publicPath: publicAssetsPath,
                 fileName: '[name]-[hash][extname]',
                 limit: 0
             }),
             analyzeBundle(analyze),
-            ...(minify ? [terser()] : []),
-            brotli()
+            ...(minify ? [terser(terserOptions)] : []),
+            brotli(),
+            {
+                name: 'game-catalog',
+                async writeBundle(options) {
+                    await promisify(execFile)(process.execPath, [
+                        fileURLToPath(new URL('./write-game-catalog.mjs', import.meta.url)),
+                        options.dir
+                    ])
+                }
+            }
         ]
     }
 }
@@ -205,12 +242,12 @@ export const createGameLogicRollupConfig = ({ packageRootUrl }) => {
 
     return {
         input: path.join(packageRoot, 'src/index.ts'),
-        output: {
-            file: path.join(outputDir, 'index.js'),
-            format: 'es',
+        output: ['es', 'cjs'].map((format) => ({
+            file: path.join(outputDir, format === 'es' ? 'index.js' : 'index.cjs'),
+            format,
             sourcemap: true,
             inlineDynamicImports: true
-        },
+        })),
         plugins: [
             createResolveJsExtensions(packageRoot),
             typescript({ tsconfig: path.join(packageRoot, 'tsconfig.rollup.json') }),
@@ -219,7 +256,8 @@ export const createGameLogicRollupConfig = ({ packageRootUrl }) => {
                 exportConditions: ['node'],
                 extensions: ['.ts', '.js', '.mjs']
             }),
-            commonjs()
+            commonjs(),
+            collectibleLogic()
         ]
     }
 }

@@ -4,7 +4,7 @@ import { GameAction, HydratableAction, MachineContext, OffsetCoordinates } from 
 import { HydratedSolGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Station, StationType } from '../components/stations.js'
-import { Direction, Ring } from '../utils/solGraph.js'
+import { Direction } from '../utils/solGraph.js'
 import { CARDS_DRAWN_PER_RING } from '../utils/solConstants.js'
 import { SolarGate } from '../components/solarGate.js'
 import { EffectType } from '../components/effects.js'
@@ -89,7 +89,7 @@ export class HydratedConvert extends HydratableAction<typeof Convert> implements
 
         const ring = this.isGate ? this.innerCoords.row : this.coords.row
         state.cardsToDraw += CARDS_DRAWN_PER_RING[ring]
-        state.getEffectTracking().convertedStation = this.metadata?.convertedStation
+        state.ensureEffectTracking().convertedStation = this.metadata?.convertedStation
     }
 
     static canConvert(state: HydratedSolGameState, playerId: string): boolean {
@@ -155,8 +155,6 @@ export class HydratedConvert extends HydratableAction<typeof Convert> implements
     }
 
     static isValidConversion(state: HydratedSolGameState, convert: Convert): boolean {
-        const playerState = state.getPlayerState(convert.playerId)
-
         if (convert.isGate) {
             return HydratedConvert.isValidGateConversion(state, convert)
         } else if (convert.stationType === StationType.EnergyNode) {
@@ -356,14 +354,12 @@ export class HydratedConvert extends HydratableAction<typeof Convert> implements
         }
 
         const thirdDiverId = remainingDiverIds[0]
-        const thirdNeighbors = state.board.neighborsAt(secondCoords, Direction.Out)
-        for (const cell of thirdNeighbors) {
-            const cellDivers = state.board.sundiversForPlayerAt(convert.playerId, cell.coords)
-            if (cellDivers.find((sundiver) => sundiver.id === thirdDiverId)) {
-                return true
-            }
-        }
-
-        return false
+        return state.board
+            .transmitTowerThirdCells(convert.playerId, secondCoords)
+            .some((thirdCoords) =>
+                state.board
+                    .sundiversForPlayerAt(convert.playerId, thirdCoords)
+                    .some((sundiver) => sundiver.id === thirdDiverId)
+            )
     }
 }

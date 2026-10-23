@@ -1,7 +1,9 @@
-import { Ring } from '../utils/solGraph.js'
+import { Direction, Ring } from '../utils/solGraph.js'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { assertExists } from '@tabletop/common'
 import { HydratedSolGameBoard } from '../components/gameBoard.js'
 import { SolarGate } from './solarGate.js'
+import { StationType } from './stations.js'
 
 interface LocalTestContext {
     board: HydratedSolGameBoard
@@ -16,6 +18,67 @@ describe('Sol Game Board Tests', () => {
             cells: {},
             gates: {}
         })
+    })
+
+    it<LocalTestContext>('selects an inner-ring shortcut when the same-ring route exceeds remaining movement', ({
+        board
+    }) => {
+        const start = { row: Ring.Inner, col: 0 }
+        const end = { row: Ring.Convective, col: 7 }
+        const entry: SolarGate = { id: 'entry', playerId: 'p1' }
+        const inward: SolarGate = { id: 'inward', playerId: 'p1' }
+        const outward: SolarGate = { id: 'outward', playerId: 'p2' }
+        board.addGateAt(entry, { row: Ring.Convective, col: 0 }, start)
+        board.addGateAt(inward, { row: Ring.Radiative, col: 7 }, { row: Ring.Convective, col: 0 })
+        board.addGateAt(outward, { row: Ring.Radiative, col: 4 }, end)
+
+        const requiredGates: SolarGate[] = []
+        for (const expectedGate of [entry, inward, outward]) {
+            const choices = board.gateChoicesForDestination({ start, end, range: 6, requiredGates })
+            expect(choices.direct).toBe(false)
+            expect(choices.gates).toEqual([expectedGate])
+            requiredGates.push(expectedGate)
+        }
+
+        expect(
+            board.pathToDestination({
+                start,
+                destination: end,
+                range: 6,
+                requiredGates,
+                requiredGatesOnly: true
+            })
+        ).toEqual([
+            start,
+            { row: Ring.Convective, col: 0 },
+            { row: Ring.Radiative, col: 7 },
+            { row: Ring.Radiative, col: 6 },
+            { row: Ring.Radiative, col: 5 },
+            { row: Ring.Radiative, col: 4 },
+            end
+        ])
+
+        expect(
+            board.gateChoicesForDestination({
+                start,
+                end,
+                range: 7,
+                requiredGates: [entry]
+            }).direct
+        ).toBe(true)
+    })
+
+    it<LocalTestContext>('does not offer a direct route through forbidden coordinates', ({
+        board
+    }) => {
+        const choices = board.gateChoicesForDestination({
+            start: { row: Ring.Convective, col: 0 },
+            end: { row: Ring.Convective, col: 2 },
+            range: 2,
+            illegalCoordinates: [{ row: Ring.Convective, col: 1 }]
+        })
+
+        expect(choices.direct).toBe(false)
     })
 
     it<LocalTestContext>('should find only local gate choices', ({ board }) => {
@@ -47,7 +110,6 @@ describe('Sol Game Board Tests', () => {
         board.addGateAt(gate5, { row: Ring.Core, col: 1 }, { row: Ring.Radiative, col: 2 })
 
         const start = { row: Ring.Radiative, col: 7 }
-        const end = { row: Ring.Outer, col: 4 }
 
         const localGates = board.findGatesLocalToRing(start.row)
 
@@ -202,5 +264,35 @@ describe('Sol Game Board Tests', () => {
 
         expect(finalChoiceData.gates.length).toEqual(1)
         expect(finalChoiceData.gates[0]).toEqual(gate5)
+    })
+
+    it<LocalTestContext>('offers only second tower cells that have a third sundiver further out', ({
+        board
+    }) => {
+        const source = { row: Ring.Radiative, col: 6 }
+        const [deadEnd, complete] = board
+            .neighborsAt(source, Direction.Out)
+            .map((cell) => cell.coords)
+        const third = board
+            .neighborsAt(complete, Direction.Out)
+            .map((cell) => cell.coords)
+            .find(
+                (coords) =>
+                    !board
+                        .neighborsAt(deadEnd, Direction.Out)
+                        .some((cell) => cell.coords.col === coords.col)
+            )
+        assertExists(third, 'Expected an outward cell beyond only the complete second cell')
+
+        let nextId = 0
+        for (const coords of [source, deadEnd, complete, third]) {
+            board.addSundiversToCell(
+                [{ id: `diver${nextId++}`, playerId: 'p1', reserve: false }],
+                coords
+            )
+        }
+
+        expect(board.canConvertStationAt('p1', StationType.TransmitTower, source)).toBe(true)
+        expect(board.transmitTowerSecondCells('p1', source)).toEqual([complete])
     })
 })

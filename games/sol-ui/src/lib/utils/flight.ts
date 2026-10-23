@@ -1,7 +1,6 @@
 import type { SolGameSession } from '$lib/model/SolGameSession.svelte.js'
 import type { OffsetCoordinates, Point } from '@tabletop/common'
 import {
-    EffectType,
     type Fly,
     type Hurl,
     type HydratedSolGameBoard,
@@ -136,7 +135,7 @@ function getFlightLegs(
     board: HydratedSolGameBoard,
     transcend: boolean = false
 ): OffsetCoordinates[][] {
-    let flightLegs: OffsetCoordinates[][] = []
+    const flightLegs: OffsetCoordinates[][] = []
 
     let currentFlightLeg: OffsetCoordinates[] = []
     for (const coord of pathCoords) {

@@ -1,0 +1,72 @@
+import {
+    createCompanyStations,
+    createOrdinaryShareCertificates,
+    treasuryPool,
+    type InitialPosition
+} from '@tabletop/18xx'
+import { EighteenSeventeenCorporations } from './corporations.js'
+import { EighteenSeventeenMap } from './map.js'
+import { EighteenSeventeenPrivateCatalog } from './privates.js'
+import { MarketPoolId } from './roundRules.js'
+import { EighteenSeventeenTileSet } from './tiles.js'
+import { EighteenSeventeenTrainDepot } from './trains.js'
+
+const bank = { kind: 'bank' } as const
+
+/** Every corporation unstarted with one station, the game's privates with the bank. */
+export function createEighteenSeventeenPosition(
+    playerCash: readonly { playerId: string; amount: number }[],
+    privateIds: readonly string[]
+): Omit<InitialPosition, 'stockMarket'> {
+    const privates = privateIds.map((id) => EighteenSeventeenPrivateCatalog.definition(id))
+    return {
+        bank: {},
+        companies: [
+            ...EighteenSeventeenCorporations.map((company) => ({
+                id: company.id,
+                kind: 'major',
+                started: false,
+                floated: false,
+                funded: false,
+                operated: false
+            })),
+            ...privates.map((company) => ({
+                id: company.id,
+                kind: 'private'
+            }))
+        ],
+        cash: [
+            { owner: bank, amount: 'unlimited' },
+            ...playerCash.map(({ playerId, amount }) => ({
+                owner: { kind: 'player' as const, playerId },
+                amount
+            })),
+            ...EighteenSeventeenCorporations.map((company) => ({
+                owner: { kind: 'company' as const, companyId: company.id },
+                amount: 0
+            }))
+        ],
+        certificatePools: [
+            { id: MarketPoolId, owner: bank },
+            ...EighteenSeventeenCorporations.map((company) => treasuryPool(company.id))
+        ],
+        certificates: [
+            ...EighteenSeventeenCorporations.flatMap((company) =>
+                createOrdinaryShareCertificates(company.id, [], { owner: bank })
+            ),
+            ...privates.map((company) => ({
+                id: `${company.id}:charter`,
+                companyId: company.id,
+                kind: 'private' as const,
+                owner: bank
+            }))
+        ],
+        stations: EighteenSeventeenCorporations.flatMap((company) =>
+            createCompanyStations(company.id, 1)
+        ),
+        stationReservations: EighteenSeventeenMap.stationReservations(),
+        tileInventory: EighteenSeventeenTileSet.createInventory(),
+        trainInventory: EighteenSeventeenTrainDepot.createInventory(),
+        phaseId: '2'
+    }
+}

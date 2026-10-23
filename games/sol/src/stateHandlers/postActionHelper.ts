@@ -1,4 +1,4 @@
-import { assert, assertExists, GameAction, MachineContext } from '@tabletop/common'
+import { assertExists, GameAction, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
 import { HydratedSolGameState } from '../model/gameState.js'
 import { DrawingCardsStateHandler } from './drawingCards.js'
@@ -42,7 +42,10 @@ export function drawCardsOrEndTurn(
     }
 }
 
-export function onActivateEffect(action: ActivateEffect, context: MachineContext<HydratedSolGameState>): MachineState {
+export function onActivateEffect(
+    action: ActivateEffect,
+    context: MachineContext<HydratedSolGameState>
+): MachineState {
     if (action.effect === EffectType.Hatch) {
         return MachineState.Hatching
     } else if (action.effect === EffectType.Accelerate) {

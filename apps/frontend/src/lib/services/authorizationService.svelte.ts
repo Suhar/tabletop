@@ -1,7 +1,14 @@
-import { Role, UserStatus, type User } from '@tabletop/common'
-import { goto } from '$app/navigation'
+import { Role, User, UserStatus } from '@tabletop/common'
+import { goto, invalidateAll } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
-import type { TabletopApi } from '@tabletop/frontend-components'
+import { AuthorizationCategory, type TabletopApi } from '@tabletop/frontend-components'
+import {
+    clearLoginContinuation,
+    saveLoginContinuation,
+    takeLoginContinuation
+} from '$lib/utils/loginContinuation'
+import { readStoredValue, removeStoredValue, writeStoredValue } from '$lib/utils/storedValue'
+import { browserTimeZone } from '$lib/utils/timeZones'
 
 /**
  *
@@ -19,30 +26,45 @@ import type { TabletopApi } from '@tabletop/frontend-components'
  * but can also be called directly if desired.
  **/
 
-export enum AuthorizationCategory {
-    ActiveUser = 'activeUser',
-    NoUser = 'noUser',
-    Onboarding = 'onboarding'
-}
+export { AuthorizationCategory }
 
 export class AuthorizationService {
     private sessionUser?: User | undefined = $state(undefined)
     private initialized: boolean = false
     private initializationPromise: Promise<void> | null = null
-
-    private continueUrl: string | undefined
+    private verification: Promise<boolean> = Promise.resolve(false)
+    private static readonly storageKey = 'sessionUser'
 
     isAdmin: boolean = $derived(Boolean(this.sessionUser?.roles.includes(Role.Admin)))
+    isDeveloper: boolean = $derived(Boolean(this.sessionUser?.roles.includes(Role.Developer)))
+    canUseDeveloperTools: boolean = $derived(this.isAdmin || this.isDeveloper)
     debugViewEnabled: boolean = $state(false)
     adminCapabilitiesEnabled: boolean = $state(false)
 
-    showDebug: boolean = $derived(this.isAdmin && this.debugViewEnabled)
+    showDebug: boolean = $derived(this.canUseDeveloperTools && this.debugViewEnabled)
     actAsAdmin: boolean = $derived(this.isAdmin && this.adminCapabilitiesEnabled)
 
-    constructor(private api: TabletopApi) {}
+    constructor(
+        private api: TabletopApi,
+        private readonly onSessionUserSet: () => void,
+        private readonly onSessionUserCleared: () => void
+    ) {}
 
     public async initialize(): Promise<void> {
         if (this.initialized) {
+            return
+        }
+
+        const storedUser = readStoredValue(AuthorizationService.storageKey, User)
+        if (storedUser) {
+            this.setSessionUser(storedUser)
+            this.initialized = true
+            this.verification = this.verifyStoredSessionUser(storedUser)
+            void this.verification.then(async (sessionChanged) => {
+                if (sessionChanged) {
+                    await invalidateAll()
+                }
+            })
             return
         }
 
@@ -85,10 +107,17 @@ export class AuthorizationService {
         }
 
         if (shouldRedirect) {
-            this.redirect({ user, url: intendedUrl })
+            if (category === AuthorizationCategory.ActiveUser) {
+                saveLoginContinuation(`${intendedUrl.pathname}${intendedUrl.search}`)
+            }
+            this.redirect(user)
             return false
         }
         return true
+    }
+
+    public async whenSessionVerified(): Promise<void> {
+        await this.verification
     }
 
     public getSessionUser(): User | undefined {
@@ -97,29 +126,71 @@ export class AuthorizationService {
 
     public setSessionUser(user: User) {
         this.sessionUser = user
+        writeStoredValue(AuthorizationService.storageKey, user)
+        this.onSessionUserSet()
     }
 
     public clearSessionUser() {
         this.sessionUser = undefined
+        removeStoredValue(AuthorizationService.storageKey)
+        this.onSessionUserCleared()
     }
 
     public async onLogin(user: User) {
-        this.setSessionUser(user)
+        this.adoptSessionUser(user)
 
-        if (this.continueUrl) {
-            await goto(this.continueUrl)
-            this.continueUrl = undefined
-        } else {
-            await goto('/activeGamesCheck')
+        if (user.status === UserStatus.Incomplete) {
+            await goto('/onboarding')
+            return
         }
+        await goto(takeLoginContinuation() ?? '/library')
     }
 
     public async onLogout() {
+        clearLoginContinuation()
         this.clearSessionUser()
-        await goto('/login')
+        await goto('/')
     }
 
     private async loadSessionUser() {
+        const sessionUser = await this.fetchSessionUser()
+        if (sessionUser) {
+            this.adoptSessionUser(sessionUser)
+        }
+    }
+
+    private async verifyStoredSessionUser(storedUser: User): Promise<boolean> {
+        const sessionUser = await this.fetchSessionUser()
+        if (sessionUser) {
+            this.adoptSessionUser(sessionUser)
+        } else {
+            this.clearSessionUser()
+        }
+        return sessionUser?.id !== storedUser.id || sessionUser.status !== storedUser.status
+    }
+
+    private adoptSessionUser(user: User) {
+        this.setSessionUser(user)
+        void this.fillMissingTimeZone(user)
+    }
+
+    private async fillMissingTimeZone(user: User) {
+        if (user.timeZone) {
+            return
+        }
+        try {
+            const updatedUser = await this.api.updateUserTimeZone(browserTimeZone(), {
+                onlyIfUnset: true
+            })
+            if (this.sessionUser?.id === updatedUser.id) {
+                this.setSessionUser(updatedUser)
+            }
+        } catch (error) {
+            console.error('Could not save the browser time zone', error)
+        }
+    }
+
+    private async fetchSessionUser(): Promise<User | undefined> {
         try {
             const sessionUser = await this.api.getSelf()
             if (
@@ -127,27 +198,23 @@ export class AuthorizationService {
                 sessionUser.status !== UserStatus.Deleted &&
                 sessionUser.status !== UserStatus.Inactive
             ) {
-                this.setSessionUser(sessionUser)
+                return sessionUser
             }
-        } catch (e) {
+        } catch {
             // do nothing
         }
+        return undefined
     }
 
-    private redirect({ user, url }: { user?: User | null; url: URL }) {
+    private redirect(user?: User) {
         switch (user?.status) {
             case UserStatus.Incomplete:
                 redirect(302, '/onboarding')
                 break
             case UserStatus.Active:
-                redirect(302, '/activeGamesCheck')
+                redirect(302, takeLoginContinuation() ?? '/activeGamesCheck')
                 break
             default:
-                // If we are trying to go somewhere but get sent to login due to the user
-                // not being in the session at all, we store the url for post login
-                if (!user) {
-                    this.continueUrl = `${url.pathname}${url.search}`
-                }
                 redirect(302, '/login')
                 break
         }

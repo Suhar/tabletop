@@ -1,0 +1,378 @@
+import { HydratedOathGameState } from '../model/gameState.js'
+import { PlayerStatus } from '../model/oathEnums.js'
+import { IMPERIAL_WARBANDS, type WarbandOwner } from '../model/warbandCounts.js'
+import type { WarbandGroup, WarbandLocation } from '../model/campaign.js'
+import {
+    totalWarbands,
+    countOf,
+    adjustCount,
+    countedWarbands,
+    describeWarbands,
+    warbandEntries
+} from './warbands.js'
+import { ownWarbandOwner, warbandsAt } from './rule.js'
+import { OathRevision, isAtLeastOathRevision } from './revision.js'
+
+/** R-10.9 — recorded when computed, since R-5.5.6 moves the board afterwards. */
+
+export function forceTotal(force: readonly WarbandGroup[]): number {
+    return force.reduce((sum, group) => sum + group.count, 0)
+}
+
+/** R-10.13 — the owner of every warband in the groups, when they are one owner's. */
+export function soleOwner(groups: readonly WarbandGroup[]): WarbandOwner | undefined {
+    const owners = new Set(groups.filter((group) => group.count > 0).map((group) => group.owner))
+    return owners.size === 1 ? [...owners][0] : undefined
+}
+
+/** R-10.13 — their own warbands first, then the others on the board: the order losses come from. */
+export function boardOwnersOwnFirst(
+    state: HydratedOathGameState,
+    playerId: string
+): WarbandOwner[] {
+    const own = ownWarbandOwner(state, playerId)
+    return [
+        own,
+        ...warbandEntries(state.getPlayerState(playerId).warbandsOnBoard)
+            .map(([owner]) => owner)
+            .filter((owner) => owner !== own)
+    ]
+}
+
+/** R-10.13 — a kill of up to `count` on a board takes one owner's warbands, their own first. */
+export function boardGroupToKill(
+    state: HydratedOathGameState,
+    playerId: string,
+    count: number
+): WarbandGroup | undefined {
+    const board = state.getPlayerState(playerId).warbandsOnBoard
+    const owner = boardOwnersOwnFirst(state, playerId).find((o) => countOf(board, o) > 0)
+    if (!owner) return undefined
+    return { at: { kind: 'board', playerId }, owner, count: Math.min(count, countOf(board, owner)) }
+}
+
+export function boardWarbandGroups(state: HydratedOathGameState, playerId: string): WarbandGroup[] {
+    return warbandEntries(state.getPlayerState(playerId).warbandsOnBoard)
+        .filter(([, count]) => count > 0)
+        .map(([owner, count]): WarbandGroup => ({ at: { kind: 'board', playerId }, owner, count }))
+}
+
+export function warbandGroupsAtSites(
+    state: HydratedOathGameState,
+    siteIds: readonly string[],
+    owners: readonly WarbandOwner[]
+): WarbandGroup[] {
+    const groups: WarbandGroup[] = []
+    for (const siteId of siteIds) {
+        const onSite = warbandsAt(state, siteId)
+        for (const owner of owners) {
+            const count = countOf(onSite, owner)
+            if (count > 0) groups.push({ at: { kind: 'site', siteId }, owner, count })
+        }
+    }
+    return groups
+}
+
+export function warbandsOnBoardOf(state: HydratedOathGameState, playerId: string): number {
+    return totalWarbands(state.getPlayerState(playerId).warbandsOnBoard)
+}
+
+/** R-10.13 — the caller removes the warband. */
+export function killWarbands(state: HydratedOathGameState, owner: WarbandOwner, count: number) {
+    if (count <= 0) return
+
+    const bank = state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank
+    adjustCount(bank, owner, count)
+}
+
+export function removeWarbandsFrom(
+    state: HydratedOathGameState,
+    at: WarbandLocation,
+    owner: WarbandOwner,
+    count: number
+) {
+    if (count <= 0) return
+
+    const counts =
+        at.kind === 'site'
+            ? (state.warbandsBySite[at.siteId] ??= {})
+            : state.getPlayerState(at.playerId).warbandsOnBoard
+
+    const available = countOf(counts, owner)
+    if (available < count) {
+        const where = at.kind === 'site' ? at.siteId : `${at.playerId}'s board`
+        throw Error(
+            `Cannot take ${describeWarbands(count, owner)} from ${where}: only ${available} there`
+        )
+    }
+    counts[owner] = available - count
+}
+
+export function addWarbandsToBoard(
+    state: HydratedOathGameState,
+    playerId: string,
+    owner: WarbandOwner,
+    count: number
+) {
+    if (count <= 0) return
+    const board = state.getPlayerState(playerId).warbandsOnBoard
+    adjustCount(board, owner, count)
+}
+
+export function addWarbandsToSite(
+    state: HydratedOathGameState,
+    siteId: string,
+    owner: WarbandOwner,
+    count: number
+) {
+    if (count <= 0) return
+    const counts = (state.warbandsBySite[siteId] ??= {})
+    adjustCount(counts, owner, count)
+}
+
+export function addWarbandsToCard(
+    state: HydratedOathGameState,
+    cardId: string,
+    owner: WarbandOwner,
+    count: number
+) {
+    if (count <= 0) return
+    const onCards = state.warbandsOnCards
+    const counts = (onCards[cardId] ??= {})
+    adjustCount(counts, owner, count)
+}
+
+export function removeWarbandsFromCard(
+    state: HydratedOathGameState,
+    cardId: string,
+    owner: WarbandOwner,
+    count: number
+) {
+    if (count <= 0) return
+    const counts = state.warbandsOnCard(cardId)
+    const available = countOf(counts, owner)
+    if (available < count) {
+        throw Error(
+            `Cannot take ${describeWarbands(count, owner)} from ${cardId}: only ${available} on it`
+        )
+    }
+    counts[owner] = available - count
+}
+
+/** R-10.13 — a card cannot carry warbands out of play, so they return to their banks as it leaves. */
+export function returnWarbandsOnCardToBanks(state: HydratedOathGameState, cardId: string) {
+    for (const [owner, count] of warbandEntries(state.warbandsOnCard(cardId))) {
+        removeWarbandsFromCard(state, cardId, owner, count)
+        killWarbands(state, owner, count)
+    }
+}
+
+/** R-5.5.6, R-5.5.6.a */
+export function selectionExceedsForce(
+    selection: readonly WarbandGroup[],
+    force: readonly WarbandGroup[]
+): string | undefined {
+    const available = new Map<string, number>()
+    for (const group of force) {
+        const key = groupKey(group)
+        available.set(key, (available.get(key) ?? 0) + group.count)
+    }
+
+    const wanted = new Map<string, number>()
+    for (const group of selection) {
+        const key = groupKey(group)
+        wanted.set(key, (wanted.get(key) ?? 0) + group.count)
+    }
+
+    for (const [key, count] of wanted) {
+        const have = available.get(key)
+        if (have === undefined) {
+            return `${key} is not in the force`
+        }
+        if (count > have) {
+            return `cannot take ${count} from ${key}: the force holds ${have} there`
+        }
+    }
+    return undefined
+}
+
+function groupKey(group: WarbandGroup): string {
+    const where =
+        group.at.kind === 'site' ? `site ${group.at.siteId}` : `${group.at.playerId}'s board`
+    return `${group.owner}'s at ${where}`
+}
+
+/**
+ * R-5.5.6 — the board a defeated force's survivor ends on. One on a board stays there. From revision 7
+ * a defeated attacker takes those at the sites in their force to their own board, whatever their
+ * colour (R-5.5.6-H2); otherwise, and for a defending force, each goes to its owner's board, the
+ * Empire's to the Chancellor's.
+ */
+export function survivorBoardOf(
+    state: HydratedOathGameState,
+    group: WarbandGroup,
+    defeatedAttackerId: string | undefined
+): string {
+    if (group.at.kind === 'board') return group.at.playerId
+    if (
+        defeatedAttackerId !== undefined &&
+        isAtLeastOathRevision(state, OathRevision.EngineFixes3)
+    ) {
+        return defeatedAttackerId
+    }
+    return state.warbandBankHolderOf(group.owner)
+}
+
+/** R-5.5.6 — `defeatedAttackerId` when the force is a defeated attacker's. */
+export function moveForceToBoards(
+    state: HydratedOathGameState,
+    force: readonly WarbandGroup[],
+    defeatedAttackerId?: string
+) {
+    for (const group of force) {
+        if (group.at.kind !== 'site') {
+            continue
+        }
+        removeWarbandsFrom(state, group.at, group.owner, group.count)
+        addWarbandsToBoard(
+            state,
+            survivorBoardOf(state, group, defeatedAttackerId),
+            group.owner,
+            group.count
+        )
+    }
+}
+
+/** R-10.13, R-5.2.2 */
+export function warbandsInBankFor(state: HydratedOathGameState, owner: WarbandOwner): number {
+    return countOf(
+        state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank,
+        owner
+    )
+}
+
+/** R-9.3 — "as many as possible": may return fewer than asked. */
+export function takeWarbandsFromBank(
+    state: HydratedOathGameState,
+    owner: WarbandOwner,
+    count: number
+): number {
+    if (count <= 0) return 0
+
+    const available = warbandsInBankFor(state, owner)
+    const taken = Math.min(count, available)
+    if (taken === 0) return 0
+
+    const bank = state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank
+    adjustCount(bank, owner, -taken)
+    return taken
+}
+
+export function takeFromGroups(groups: readonly WarbandGroup[], limit: number): WarbandGroup[] {
+    const taken: WarbandGroup[] = []
+    let left = limit
+    for (const group of groups) {
+        if (left <= 0) break
+        const count = Math.min(group.count, left)
+        taken.push({ ...group, count })
+        left -= count
+    }
+    return taken
+}
+
+/** R-5.2.2, R-6.6.2 — a Citizen has no colour of their own: they gain the Empire's warbands. */
+export function warbandOwnerGainedBy(state: HydratedOathGameState, playerId: string): WarbandOwner {
+    if (state.getPlayerState(playerId).status === PlayerStatus.Citizen) return IMPERIAL_WARBANDS
+    return ownWarbandOwner(state, playerId)
+}
+
+/** R-6.6.2, R-X.4 — in games created before revision 5 a power gave a Citizen their own colour. */
+export function warbandOwnerGainedByPower(
+    state: HydratedOathGameState,
+    playerId: string
+): WarbandOwner {
+    return isAtLeastOathRevision(state, OathRevision.EngineFixes2)
+        ? warbandOwnerGainedBy(state, playerId)
+        : ownWarbandOwner(state, playerId)
+}
+
+/**
+ * R-10.13 — from revision 5 a gain's words name the Empire's warbands, so the History draws them in
+ * the Chancellor's colour. A player's own stay a bare count, unless the line is read on a row that
+ * counts another's warbands. Before revision 5 (R-X.4) the words recorded then stand: `undefined`.
+ */
+export function gainedWarbandsWords(
+    state: HydratedOathGameState,
+    playerId: string,
+    gained: number,
+    own: 'bare' | 'named' = 'bare'
+): string | undefined {
+    if (!isAtLeastOathRevision(state, OathRevision.EngineFixes2)) return undefined
+    const owner = warbandOwnerGainedByPower(state, playerId)
+    if (owner === IMPERIAL_WARBANDS || own === 'named') return describeWarbands(gained, owner)
+    return countedWarbands(gained)
+}
+
+/**
+ * The Obsidian Cage's Q&A, R-6.6.2 — a caged player who is now a Citizen gets Imperial warbands
+ * back. In games created before revision 5 (R-X.4) they came back in the player's own colour.
+ */
+export function cagedReturnAsImperial(state: HydratedOathGameState, owner: WarbandOwner): boolean {
+    return (
+        isAtLeastOathRevision(state, OathRevision.EngineFixes2) &&
+        owner !== IMPERIAL_WARBANDS &&
+        state.getPlayerState(owner).status === PlayerStatus.Citizen
+    )
+}
+
+/** R-10.10 — capped by R-9.3. */
+export function gainWarbandsToBoard(
+    state: HydratedOathGameState,
+    playerId: string,
+    count: number
+): number {
+    return gainWarbandsWithOwner(state, playerId, count).gained
+}
+
+/** R-10.10 — from the bank that holds `owner`'s warbands (R-10.13), capped by R-9.3. */
+export function gainWarbandsWithOwner(
+    state: HydratedOathGameState,
+    playerId: string,
+    count: number,
+    owner: WarbandOwner = warbandOwnerGainedByPower(state, playerId)
+): { owner?: WarbandOwner; gained: number } {
+    const bank = state.getPlayerState(state.warbandBankHolderOf(owner)).warbandsInPersonalBank
+    const available = countOf(bank, owner)
+    const gained = Math.max(0, Math.min(count, available))
+    bank[owner] = available - gained
+    addWarbandsToBoard(state, playerId, owner, gained)
+    return { owner: gained > 0 ? owner : undefined, gained }
+}
+
+/**
+ * R-5.5.6-H1 — before revision 7 (R-X.4) a defending side was asked whenever part of its force stood
+ * on a board.
+ */
+export function defeatChoiceMatters(force: readonly WarbandGroup[]): boolean {
+    if (new Set(force.map((group) => group.owner)).size > 1) return true
+    return force.some((group) => group.at.kind === 'board')
+}
+
+/**
+ * R-5.5.6, R-10.13 — which of a defeated force's warbands die changes something only when the dead go
+ * to more than one bank (the force mixes owners) or the survivors to more than one board. From
+ * revision 7 a defeated attacker's survivors all end on their board, so for them only a force that
+ * mixes owners, which a game created before revision 5 can hold, makes the pick matter. `heldBy`, when
+ * given, names whose Hospital would hold a group's dead (R-10.28-H2): groups that differ there matter too.
+ */
+export function defeatPickMatters(
+    state: HydratedOathGameState,
+    force: readonly WarbandGroup[],
+    defeatedAttackerId?: string,
+    heldBy?: (group: WarbandGroup) => string | undefined
+): boolean {
+    if (new Set(force.map((group) => group.owner)).size > 1) return true
+    const boards = new Set(force.map((group) => survivorBoardOf(state, group, defeatedAttackerId)))
+    if (boards.size > 1) return true
+    return heldBy !== undefined && new Set(force.map(heldBy)).size > 1
+}

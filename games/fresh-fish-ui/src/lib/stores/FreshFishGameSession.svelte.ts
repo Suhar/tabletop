@@ -1,4 +1,8 @@
-import { AnimationContext, GameSession } from '@tabletop/frontend-components'
+import {
+    AnimationContext,
+    GameSession,
+    type PresentedTransition
+} from '@tabletop/frontend-components'
 import {
     ActionType,
     HydratedFreshFishGameState,
@@ -17,27 +21,76 @@ import {
     isPlaceStall
 } from '@tabletop/fresh-fish'
 import { OffsetTupleCoordinates, type GameAction } from '@tabletop/common'
+import {
+    hasManualFreshFishSelection,
+    isActionType,
+    popFreshFishSelection,
+    setFreshFishSelection,
+    type FreshFishSelection
+} from '../model/stagedSelection.js'
 
 export class FreshFishGameSession extends GameSession<
     FreshFishGameState,
     HydratedFreshFishGameState
 > {
-    chosenAction: string | undefined = $state(undefined)
+    private selection: FreshFishSelection = $state({})
+    private automaticAction = $derived(
+        this.isMyTurn &&
+            this.validActionTypes.length === 1 &&
+            this.validActionTypes[0] !== ActionType.DrawTile
+            ? this.validActionTypes[0]
+            : undefined
+    )
+
+    get chosenAction(): string | undefined {
+        return this.selection.action?.value ?? this.automaticAction
+    }
+
+    set chosenAction(action: string | undefined) {
+        if (action !== undefined && !isActionType(action)) {
+            throw new Error(`Unknown Fresh Fish action type: ${action}`)
+        }
+        this.selection = setFreshFishSelection(this.selection, 'action', action)
+    }
+
+    get hasManualSelection(): boolean {
+        return hasManualFreshFishSelection(this.selection)
+    }
+
+    override async undo() {
+        if (this.hasManualSelection) {
+            this.selection = popFreshFishSelection(this.selection)
+            return
+        }
+        await super.undo()
+    }
     previewExpropriateCoords: OffsetTupleCoordinates[] = $state([])
     highlightedCoords: OffsetTupleCoordinates | undefined = $state()
 
-    override async onGameStateChange({
-        to,
-        from,
-        action,
-        animationContext
-    }: {
+    // While viewing history the board marks the square where the shown action placed a piece,
+    // instead of any history entry being hovered.
+    boardHighlightCoords: OffsetTupleCoordinates | undefined = $derived.by(() => {
+        if (!this.isViewingHistory) {
+            return this.highlightedCoords
+        }
+        const action = this.history.currentAction
+        return action ? coordsPlacedBy(action) : undefined
+    })
+
+    // A player's own disc replaces the preview they clicked, so only it skips the grow-in.
+    newDiscsGrowIn = $state(true)
+
+    override beforeNewState(transition: PresentedTransition) {
+        this.selection = {}
+        this.newDiscsGrowIn = transition.kind !== 'own-action'
+    }
+
+    override async onGameStateChange(_args: {
         to: HydratedFreshFishGameState
         from?: HydratedFreshFishGameState
         action?: GameAction
         animationContext: AnimationContext
     }) {
-        this.chosenAction = undefined
         this.clearExpropriationPreview()
         this.clearHighlightedCoords()
     }
@@ -49,7 +102,7 @@ export class FreshFishGameSession extends GameSession<
             case ActionType.PlaceBid:
                 return 'Place Bid'
             case ActionType.PlaceDisk:
-                return 'Place Disk'
+                return 'Place Disc'
             case ActionType.PlaceMarket:
                 return 'Place Market'
             case ActionType.PlaceStall:
@@ -62,7 +115,9 @@ export class FreshFishGameSession extends GameSession<
     previewExpropriation(coords: OffsetTupleCoordinates) {
         const expropriator = new Expropriator(this.gameState.board)
         const { expropriatedCoords } = expropriator.calculateExpropriation(coords)
-        this.previewExpropriateCoords = expropriatedCoords
+        this.previewExpropriateCoords = expropriatedCoords.filter(
+            ([x, y]) => x !== coords[0] || y !== coords[1]
+        )
     }
 
     clearExpropriationPreview() {
@@ -79,26 +134,12 @@ export class FreshFishGameSession extends GameSession<
     }
 
     setHighlightedCoordsForAction(action: GameAction) {
-        switch (true) {
-            case isPlaceDisk(action) || isPlaceMarket(action) || isPlaceStall(action):
-                this.highlightCoords((action as PlaceDisk).coords)
-                break
-            default:
-                this.clearHighlightedCoords()
-        }
-    }
-
-    // Should change this to just look at last action
-    override onHistoryAction(action?: GameAction) {
-        if (!action) {
+        const coords = coordsPlacedBy(action)
+        if (coords) {
+            this.highlightCoords(coords)
+        } else {
             this.clearHighlightedCoords()
-            return
         }
-        this.setHighlightedCoordsForAction(action)
-    }
-
-    override onHistoryExit() {
-        this.clearHighlightedCoords()
     }
 
     highlightCoords(coords: OffsetTupleCoordinates) {
@@ -139,4 +180,11 @@ export class FreshFishGameSession extends GameSession<
     createPlaceMarketAction(coords: OffsetTupleCoordinates): PlaceMarket {
         return this.createPlayerAction(PlaceMarket, { coords })
     }
+}
+
+function coordsPlacedBy(action: GameAction): OffsetTupleCoordinates | undefined {
+    if (isPlaceDisk(action) || isPlaceMarket(action) || isPlaceStall(action)) {
+        return action.coords
+    }
+    return undefined
 }

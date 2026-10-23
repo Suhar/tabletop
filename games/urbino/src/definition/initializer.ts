@@ -1,5 +1,6 @@
 import {
     type GameInitializer,
+    type StartingPositionAssignment,
     BaseGameInitializer,
     Prng,
     type UninitializedGameState
@@ -16,14 +17,16 @@ export class UrbinoGameInitializer
     extends BaseGameInitializer<UrbinoGameState, HydratedUrbinoGameState>
     implements GameInitializer<UrbinoGameState, HydratedUrbinoGameState>
 {
-    initializeExplorationState(state: UrbinoGameState): UrbinoGameState {
-        return state
-    }
+    readonly supportsStartingPositions = true
 
-    initializeGameState(game: Game, state: UninitializedGameState): HydratedUrbinoGameState {
+    initializeGameState(
+        game: Game,
+        state: UninitializedGameState,
+        assignment?: StartingPositionAssignment
+    ): HydratedUrbinoGameState {
         const prng = new Prng(state.prng)
         const players = this.initializePlayers(game, prng)
-        const turnManager = HydratedTurnManager.generate(players, prng.random)
+        const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
 
         const orderedPlayers: UrbinoPlayerState[] = []
         for (const playerId of turnManager.turnOrder) {
@@ -43,7 +46,7 @@ export class UrbinoGameInitializer
             architectsPlaced: 0,
             consecutivePasses: 0,
             hasRepositionedThisTurn: false,
-            monumentsVariant: config?.monuments ?? false,
+            monumentsVariant: config?.monuments ?? false
         })
 
         return new HydratedUrbinoGameState(urbinoGameState)
@@ -60,7 +63,7 @@ export class UrbinoGameInitializer
                 houses: 18,
                 palaces: 6,
                 towers: 3,
-                score: 0,
+                score: 0
             })
         })
     }

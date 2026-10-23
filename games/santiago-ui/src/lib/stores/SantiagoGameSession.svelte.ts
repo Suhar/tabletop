@@ -1,9 +1,14 @@
-import { AnimationContext, GameSession } from '@tabletop/frontend-components'
+import {
+    AnimationContext,
+    GameSession,
+    type PresentedTransition
+} from '@tabletop/frontend-components'
 import {
     ActionType,
     MachineState,
     HydratedSantiagoGameState,
     PlaceSpring,
+    RevealTiles,
     PlaceBid,
     PlaceField,
     PlaceNeutralTile,
@@ -11,26 +16,66 @@ import {
     Pass,
     ProposeCanal,
     OverseerDecision,
-    isProposeCanal,
-    isOverseerDecision,
     isSameSegment,
     type CanalProposal,
-    type SantiagoGameState,
+    type SantiagoProjectedState,
     type CanalSegment,
     type CropType,
     isValidFieldPlacement,
     isIrrigated,
     connectedSpringIntersections,
-    validCanalPlacements,
     validNeutralTilePlacements,
     validSpringPlacements
 } from '@tabletop/santiago'
 import { type GameAction } from '@tabletop/common'
+import { TileDealAnimator } from '$lib/animators/tileDealAnimator.svelte.js'
+import { ActionBarAnimator } from '$lib/animators/actionBarAnimator.svelte.js'
+import { CanalBuildAnimator } from '$lib/animators/canalBuildAnimator.svelte.js'
+import { BribePopAnimator } from '$lib/animators/bribePopAnimator.svelte.js'
+import { FieldPopAnimator } from '$lib/animators/fieldPopAnimator.svelte.js'
+import { BoardPreview } from '$lib/model/boardPreview.svelte.js'
+import { DroughtDustAnimator } from '$lib/animators/droughtDustAnimator.svelte.js'
+import { LandMoodAnimator } from '$lib/animators/landMoodAnimator.svelte.js'
+import { actionBarView, type ActionBarView } from '$lib/model/actionBarView.js'
+import { landMood, type LandMood } from '$lib/model/landMood.js'
+import {
+    canalProposals,
+    canRevealTiles,
+    isNeutralPlacementTurn,
+    isOverseerDecisionPhase,
+    isSpringPlacementTurn,
+    projectedOverseerId,
+    rejectPenalty,
+    segmentProposals,
+    visibleCanalSegments,
+    type SegmentProposal,
+    type Viewer
+} from '$lib/model/turnRules.js'
+import { BirdDirector } from '$lib/birds/birdDirector.js'
+import { roundScoresFromHistory, type PlayerRoundScores } from '$lib/model/scoreHistory.js'
 
 export class SantiagoGameSession extends GameSession<
-    SantiagoGameState,
+    SantiagoProjectedState,
     HydratedSantiagoGameState
 > {
+    override get canExplore(): boolean {
+        return (
+            this.game.config?.publicMoney !== false &&
+            this.gameState.publicMoney !== false &&
+            super.canExplore
+        )
+    }
+
+    readonly tileDeal = new TileDealAnimator(this)
+    readonly actionBar = new ActionBarAnimator(this)
+    readonly canalBuild = new CanalBuildAnimator(this)
+    readonly bribePop = new BribePopAnimator(this)
+    readonly fieldPop = new FieldPopAnimator(this)
+    readonly boardPreview = new BoardPreview()
+    readonly droughtDust = new DroughtDustAnimator(this)
+    readonly landMoodAnimator = new LandMoodAnimator(this)
+    readonly birds = new BirdDirector(this)
+
     chosenAction: string | undefined = $state(undefined)
     bidValue: number = $state(0)
     proposalAmount: number = $state(1)
@@ -39,6 +84,16 @@ export class SantiagoGameSession extends GameSession<
     // player choose where before dialing in how much, and change their mind by clicking
     // a different location, rather than the click itself submitting the bribe.
     selectedBribeSegment: CanalSegment | undefined = $state(undefined)
+
+    // The state the running transition will publish, so animators can preview where it leads;
+    // otherwise the visible state.
+    override get incomingGameState(): HydratedSantiagoGameState {
+        return super.incomingGameState ?? this.gameState
+    }
+
+    get landMood(): LandMood {
+        return landMood(this.gameState)
+    }
 
     override async onGameStateChange({
         to: _to,
@@ -55,7 +110,44 @@ export class SantiagoGameSession extends GameSession<
         this.bidValue = 0
         this.proposalAmount = 1
         this.selectedTileIndex = -1
+    }
+
+    // The chosen bribe spot lasts until the next state publishes, so the bar and the spot's twine
+    // hold still while the proposal animates.
+    override beforeNewState(transition: PresentedTransition) {
+        super.beforeNewState(transition)
         this.selectedBribeSegment = undefined
+        this.clearAnimationPreviews()
+        this.landMoodAnimator.settle(landMood(this.incomingGameState))
+    }
+
+    private clearAnimationPreviews() {
+        this.boardPreview.clear()
+        this.tileDeal.clearPreview()
+        this.actionBar.clearPreview()
+        this.canalBuild.clearPreview()
+        this.bribePop.clearPreview()
+        this.fieldPop.clearPreview()
+        this.droughtDust.clearPreview()
+    }
+
+    // A chosen field tile or bribe spot is a manual staged selection, which Undo clears before it
+    // undoes any action; see docs/user-interactions.md.
+    get hasManualSelection(): boolean {
+        return this.selectedBribeSegment !== undefined || this.selectedTileIndex >= 0
+    }
+
+    override async undo() {
+        if (this.selectedBribeSegment !== undefined) {
+            this.selectedBribeSegment = undefined
+            this.proposalAmount = 1
+            return
+        }
+        if (this.selectedTileIndex >= 0) {
+            this.selectedTileIndex = -1
+            return
+        }
+        await super.undo()
     }
 
     override willUndo(_action: GameAction) {
@@ -84,50 +176,53 @@ export class SantiagoGameSession extends GameSession<
         return this.bidValue > 0 && this.takenBids.includes(this.bidValue)
     }
 
-    // Who currently holds (or, mid-bidding, is projected to hold) the canal overseer role —
-    // shown as an "Overseer" tag. During bidding, canalOverseerId is cleared until all bids
-    // resolve, so this projects from bids placed so far (lowest bid, ties broken by bidding
-    // order — same rule BiddingStateHandler.resolveBids uses for the real result). Before
-    // anyone has bid, the previous overseer nominally still holds the role until someone
-    // bids lower — biddingOrder starts right after them, so they're always its last entry
-    // (this also covers round 1, where "previous overseer" is the game's randomly-chosen
-    // initial one, seeded into canalOverseerId before bidding ever begins).
+    scoreHistory: PlayerRoundScores[] | undefined = $derived.by(() => {
+        const actions = this.actions
+        if (
+            this.gameState.machineState !== MachineState.EndOfGame ||
+            !this.hasCompleteHistory ||
+            actions.length !== this.gameState.actionCount
+        )
+            return undefined
+        return roundScoresFromHistory(this.gameState.dehydrate(), actions)
+    })
+
+    // Who holds, or is already certain to hold, the canal overseer role; shown as an "Overseer" tag.
+    // See projectedOverseerId in turnRules for why mid-bidding only a bid of 0 settles it.
     get projectedOverseerId(): string | undefined {
+        return projectedOverseerId(this.gameState)
+    }
+
+    // Last round's overseer, shown as a "Previous Overseer" tag while this round's bidding
+    // is still undetermined (see projectedOverseerId above). They no longer hold the role,
+    // but they're why this round's bidding order starts where it does — biddingOrder runs
+    // clockwise from the player to their left (see BiddingStateHandler.enter).
+    get previousOverseerHoldoverId(): string | undefined {
         const state = this.gameState
-        if (state.machineState !== MachineState.Bidding) return state.canalOverseerId
-        const biddedPlayers = state.players.filter((p) => p.bid !== undefined)
-        if (!biddedPlayers.length) {
-            return state.biddingOrder[state.biddingOrder.length - 1]
-        }
-        const minBid = Math.min(...biddedPlayers.map((p) => p.bid!))
-        const candidates = biddedPlayers
-            .filter((p) => p.bid === minBid)
-            .sort((a, b) => state.biddingOrder.indexOf(a.playerId) - state.biddingOrder.indexOf(b.playerId))
-        return candidates[0]?.playerId
+        if (state.machineState !== MachineState.Bidding) return undefined
+        if (this.projectedOverseerId) return undefined
+        return state.previousOverseerId
     }
 
     // True when the local player is the first player and must place the spring
     // (one-time setup step, only reached when the game isn't randomizing the spring).
     get isSpringPlacementTurn(): boolean {
-        return (
-            this.gameState.machineState === MachineState.SpringPlacement &&
-            this.myPlayer?.id === this.gameState.seatOrder[0]
-        )
+        return isSpringPlacementTurn(this.gameState, this.myPlayer?.id)
     }
 
-    // Valid spring locations (all intersections except the four corners). Set of "col,row" keys.
+    // Valid spring locations (every intersection, corners included). Set of "col,row" keys.
     get validSpringSpots(): Set<string> {
         if (this.gameState.machineState !== MachineState.SpringPlacement) return new Set()
         return new Set(validSpringPlacements().map((p) => `${p.col},${p.row}`))
     }
 
+    get canRevealTiles(): boolean {
+        return !this.isViewingHistory && canRevealTiles(this.gameState, this.viewer)
+    }
+
     // True when the local player is the highest bidder who must place the neutral tile (3-player only).
     get isNeutralPlacementTurn(): boolean {
-        const state = this.gameState
-        if (state.machineState !== MachineState.PlantingPhase) return false
-        if (state.planterIndex < state.plantersOrder.length) return false
-        if (state.players.length !== 3 || state.revealedTiles.length === 0) return false
-        return this.myPlayer?.id === state.plantersOrder[0]
+        return isNeutralPlacementTurn(this.gameState, this.myPlayer?.id)
     }
 
     // Valid squares for neutral tile placement. Set of "col,row" keys.
@@ -142,7 +237,8 @@ export class SantiagoGameSession extends GameSession<
     // Map key is "col,row"; value is true if the square is irrigated.
     get validFieldPlacements(): Map<string, boolean> {
         const state = this.gameState
-        const tile = this.selectedTileIndex >= 0 ? state.revealedTiles[this.selectedTileIndex] : undefined
+        const tile =
+            this.selectedTileIndex >= 0 ? state.revealedTiles[this.selectedTileIndex] : undefined
         const myId = this.myPlayer?.id
         if (!tile || !myId) return new Map()
         if (state.machineState !== MachineState.PlantingPhase) return new Map()
@@ -160,18 +256,21 @@ export class SantiagoGameSession extends GameSession<
         return result
     }
 
-    // Valid canal segments to show as clickable
+    // Canal spots to stake out on the board; see visibleCanalSegments for who sees them when.
+    get visibleSegments(): CanalSegment[] {
+        return visibleCanalSegments(this.gameState, this.viewer)
+    }
+
+    visibleSegmentsIn(state: HydratedSantiagoGameState): CanalSegment[] {
+        return visibleCanalSegments(state, this.viewerIn(state))
+    }
+
+    // Canal segments the local player can actually CLICK - the drawn set, but only while
+    // it's their turn to act on one. Separate from visibleSegments so observers can follow
+    // the bribing without the lines inviting a click that would be rejected.
     get validSegments(): CanalSegment[] {
-        const state = this.gameState
-        if (state.machineState === MachineState.ExtraIrrigation) {
-            if (!this.isMyTurn) return []
-            const me = this.mySantiagoPlayer
-            if (!me?.hasPersonalCanal) return []
-            return validCanalPlacements(state.board)
-        }
-        if (state.machineState !== MachineState.CanalBuilding) return []
         if (!this.isMyTurn) return []
-        return validCanalPlacements(state.board)
+        return this.visibleSegments
     }
 
     get currentPlantingCrop(): CropType | undefined {
@@ -190,40 +289,76 @@ export class SantiagoGameSession extends GameSession<
     }
 
     get canalProposals(): CanalProposal[] {
-        if (this.gameState.machineState !== MachineState.CanalBuilding) return []
-        return this.gameState.canalProposals ?? []
+        return canalProposals(this.gameState)
     }
 
-    get segmentProposals(): Array<{
-        segment: CanalSegment
-        total: number
-        contributions: Array<{ playerId: string; amount: number }>
-    }> {
-        const byKey = new Map<string, {
-            segment: CanalSegment
-            total: number
-            contributions: Array<{ playerId: string; amount: number }>
-        }>()
-        for (const p of this.canalProposals) {
-            const key = `${p.segment.orientation},${p.segment.col},${p.segment.row}`
-            if (!byKey.has(key)) byKey.set(key, { segment: p.segment, total: 0, contributions: [] })
-            const entry = byKey.get(key)!
-            entry.total += p.amount
-            entry.contributions.push({ playerId: p.playerId, amount: p.amount })
-        }
-        return [...byKey.values()]
+    get segmentProposals(): SegmentProposal[] {
+        return segmentProposals(this.gameState)
     }
 
     get rejectPenalty(): number {
-        const sp = this.segmentProposals
-        if (sp.length === 0) return 0
-        return Math.max(...sp.map((s) => s.total)) + 1
+        return rejectPenalty(this.gameState)
     }
 
     get isOverseerDecisionPhase(): boolean {
-        const state = this.gameState
-        if (state.machineState !== MachineState.CanalBuilding) return false
-        return state.canalProposalIndex >= state.canalProposalOrder.length
+        return isOverseerDecisionPhase(this.gameState)
+    }
+
+    // What the action bar shows: a preview of the incoming state while an action animates in,
+    // otherwise the visible state from the current perspective.
+    get actionBarView(): ActionBarView {
+        return (
+            this.actionBar.preview ??
+            actionBarView(this.gameState, {
+                ...this.viewer,
+                isViewingHistory: this.isViewingHistory,
+                bribeSpotChosen: this.selectedBribeSegment !== undefined
+            })
+        )
+    }
+
+    // The bar `state` will show once published, from the perspective the session will present then.
+    actionBarViewIn(state: HydratedSantiagoGameState): ActionBarView {
+        return actionBarView(state, {
+            ...this.viewerIn(state),
+            isViewingHistory: this.isViewingHistory,
+            bribeSpotChosen: false
+        })
+    }
+
+    get viewer(): Viewer {
+        return { playerId: this.myPlayer?.id, isMyTurn: this.isMyTurn }
+    }
+
+    // Who the session will present, and whether it will be their turn, once `state` is visible,
+    // following the shared session's rules as far as its public members show them. It cannot see a
+    // host perspective, so a hotseat game shown from one may preview the active player instead, and
+    // the bar settles when the state publishes.
+    viewerIn(state: HydratedSantiagoGameState): Viewer {
+        const players = this.game.players
+        const isActive = (playerId: string | undefined) =>
+            playerId !== undefined && state.activePlayerIds.includes(playerId)
+        const firstActive = players.find((player) => isActive(player.id))?.id
+        if (this.isViewingAsNonActivePlayer) {
+            return { playerId: players.find((player) => !isActive(player.id))?.id, isMyTurn: false }
+        }
+        if (this.isExploring) return { playerId: firstActive, isMyTurn: true }
+        if (this.isActingAdmin) {
+            const adminPlayerId = isActive(this.adminPlayerId)
+                ? this.adminPlayerId
+                : state.activePlayerIds.length === 1
+                  ? state.activePlayerIds[0]
+                  : undefined
+            if (adminPlayerId) return { playerId: adminPlayerId, isMyTurn: true }
+        }
+        const visibleFirstActive = players.find((player) =>
+            this.gameState.activePlayerIds.includes(player.id)
+        )?.id
+        if (this.game.hotseat && this.myPlayer?.id === visibleFirstActive) {
+            return { playerId: firstActive, isMyTurn: true }
+        }
+        const playerId = this.myPlayer?.id
+        return { playerId, isMyTurn: isActive(playerId) }
     }
 
     // Dispatches a board click on a canal segment to the right action for the current phase.
@@ -250,6 +385,8 @@ export class SantiagoGameSession extends GameSession<
 
     nameForActionType(actionType: string): string {
         switch (actionType) {
+            case ActionType.RevealTiles:
+                return 'Reveal Fields'
             case ActionType.PlaceBid:
                 return 'Place Bid'
             case ActionType.PlaceField:
@@ -265,6 +402,14 @@ export class SantiagoGameSession extends GameSession<
 
     async placeSpring(col: number, row: number) {
         const action = this.createPlayerAction(PlaceSpring, { col, row })
+        await this.applyAction(action)
+    }
+
+    // The draw reads the concealed bag, so the host must execute it; revealsInfo skips the
+    // optimistic local attempt and marks the undo barrier.
+    async revealTiles() {
+        if (!this.canRevealTiles) return
+        const action = this.createPlayerAction(RevealTiles, { revealsInfo: true })
         await this.applyAction(action)
     }
 

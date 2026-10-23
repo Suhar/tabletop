@@ -1,9 +1,13 @@
 import * as Type from 'typebox'
+import { TournamentGameReference } from '../../site/tournamentGameReference.js'
 import { DateType } from '../../util/typebox.js'
 import { Player } from './player.js'
-import { GameResult, GameState } from './gameState.js'
+import { GameState } from './gameState.js'
+import { GameResult } from './gameResult.js'
 import { GameConfig } from './gameConfig.js'
+import { PlayerVote } from './playerVote.js'
 import { Compile } from 'typebox/compile'
+import * as Value from 'typebox/value'
 
 export enum GameStatus {
     WaitingForPlayers = 'waitingForPlayers',
@@ -56,14 +60,18 @@ export const Game = Type.Object({
     typeId: Type.String(),
     status: Type.Enum(GameStatus),
     isPublic: Type.Boolean(),
+    unlisted: Type.Optional(Type.Literal(true)),
     deleted: Type.Boolean(),
     deletedAt: Type.Optional(DateType()),
     ownerId: Type.String(),
+    tournament: Type.Optional(TournamentGameReference),
     name: Type.String(),
     players: Type.Array(Player),
     config: GameConfig,
     hotseat: Type.Boolean(),
+    protectedInformation: Type.Optional(Type.Literal(true)),
     state: Type.Optional(GameState),
+    autoStartAt: Type.Optional(DateType()),
     startedAt: Type.Optional(DateType()),
     finishedAt: Type.Optional(DateType()),
     createdAt: DateType(),
@@ -73,10 +81,55 @@ export const Game = Type.Object({
     lastActionAt: Type.Optional(DateType()),
     result: Type.Optional(Type.Enum(GameResult)),
     winningPlayerIds: Type.Array(Type.String()),
+    finalScores: Type.Optional(Type.Record(Type.String(), Type.Number())),
+    everFinished: Type.Optional(Type.Literal(true)),
     seed: Type.Optional(Type.Number()),
     storage: Type.Optional(Type.Enum(GameStorage, { default: GameStorage.Remote })),
     parentId: Type.Optional(Type.String()),
-    category: Type.Optional(Type.String({ default: GameCategory.Standard }))
+    category: Type.Optional(Type.String({ default: GameCategory.Standard })),
+    vote: Type.Optional(PlayerVote)
 })
+
+export type GameWithoutState = Type.Static<typeof GameWithoutState>
+export const GameWithoutState = Type.Omit(Game, ['state'], { additionalProperties: false })
+
+export function omitGameState(game: Game): GameWithoutState {
+    const gameWithoutState = structuredClone(game)
+    delete gameWithoutState.state
+    const cleanedGame = Value.Clean(GameWithoutState, gameWithoutState)
+    Value.Assert(GameWithoutState, cleanedGame)
+    return cleanedGame
+}
+
+export function findPlayerForUserId(
+    game: Pick<Game, 'players'>,
+    userId: string
+): Player | undefined {
+    return game.players.find((player) => player.userId === userId)
+}
+
+export function ownerMayDeleteGame(
+    game: Pick<Game, 'status' | 'storage' | 'everFinished'>
+): boolean {
+    return (
+        game.storage === GameStorage.Local ||
+        (game.status !== GameStatus.Finished && !game.everFinished)
+    )
+}
+
+export function isListedPublicGame(game: Pick<Game, 'isPublic' | 'unlisted'>): boolean {
+    return game.isPublic && game.unlisted !== true
+}
+
+export function isListedOpenGame(game: Pick<Game, 'isPublic' | 'unlisted' | 'status'>): boolean {
+    return isListedPublicGame(game) && game.status === GameStatus.WaitingForPlayers
+}
+
+export function gameUserIds(game: Pick<Game, 'players' | 'ownerId' | 'tournament'>): string[] {
+    const playerUserIds = game.players.flatMap((player) =>
+        player.userId == null ? [] : [player.userId]
+    )
+    return [...new Set(game.tournament ? playerUserIds : [game.ownerId, ...playerUserIds])]
+}
 
 export const GameValidator = Compile(Game)

@@ -1,4 +1,4 @@
-import { HydratedAuction } from '@tabletop/common'
+import { HydratedAuction, type Auction } from '@tabletop/common'
 import {
     Company,
     isProductionCompany,
@@ -14,10 +14,7 @@ import {
     isIndonesiaNodeId,
     type IndonesiaNodeId
 } from '../utils/indonesiaNodes.js'
-import {
-    type HydratedIndonesiaGameState,
-    type MergerCompanySummary
-} from '../model/gameState.js'
+import { type HydratedIndonesiaGameState, type MergerCompanySummary } from '../model/gameState.js'
 
 const SHIPPING_NOMINAL_VALUE_PER_UNIT = 10
 const NOMINAL_VALUE_BY_GOOD: Record<Good, number> = {
@@ -77,7 +74,10 @@ function playerMaxCompanyCount(state: HydratedIndonesiaGameState, playerId: stri
     return 1 + playerState.research.slots
 }
 
-export function playerHasFreeCompanySlot(state: HydratedIndonesiaGameState, playerId: string): boolean {
+export function playerHasFreeCompanySlot(
+    state: HydratedIndonesiaGameState,
+    playerId: string
+): boolean {
     const playerState = state.getPlayerState(playerId)
     return playerState.ownedCompanies.length < playerMaxCompanyCount(state, playerId)
 }
@@ -366,7 +366,7 @@ export function buildMergerBidOrder(
     return bidOrder
 }
 
-export function highestBidderId(auction: HydratedAuction<any>): string | null {
+export function highestBidderId(auction: Auction): string | null {
     const highBid = auction.highBid
     if (highBid === undefined) {
         return null
@@ -380,14 +380,14 @@ export function highestBidderId(auction: HydratedAuction<any>): string | null {
     return participant.playerId
 }
 
-export function activeAuctionParticipantCount(auction: HydratedAuction<any>): number {
+export function activeAuctionParticipantCount(auction: Auction): number {
     return auction.participants.filter((participant) => !participant.passed).length
 }
 
 export function nextMergerBidderId(
     bidOrder: readonly string[],
     currentBidderId: string,
-    auction: HydratedAuction<any>
+    auction: Auction
 ): string | null {
     if (bidOrder.length === 0) {
         return null
@@ -510,7 +510,10 @@ export function isSiapSajiRemovalAreaValid(
         return false
     }
 
-    const componentCountBeforeRemoval = connectedCultivatedComponentCount(state, cultivatedAreaIdSet)
+    const componentCountBeforeRemoval = connectedCultivatedComponentCount(
+        state,
+        cultivatedAreaIdSet
+    )
     const remainingCultivatedAreaIds = new Set(cultivatedAreaIdSet)
     remainingCultivatedAreaIds.delete(areaId)
     const componentCountAfterRemoval = connectedCultivatedComponentCount(

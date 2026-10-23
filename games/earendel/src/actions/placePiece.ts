@@ -117,7 +117,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
                 playerState.bag.push(...state.heldPieces)
                 state.heldPieces = []
                 // Reshuffled, so putting one back tells the player nothing about what is next.
-                shuffle(playerState.bag, state.getPrng().random)
+                shuffle(playerState.bag, state.getPublicPrng().random)
             }
         }
 
@@ -200,7 +200,10 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         // everyone else's probes. Only probes - anything else may be placed there, and doing
         // so breaks the line. This check is possible at all because the draw now happens
         // before the hex is chosen, so the engine knows what is being placed.
-        if (piece.type === PieceType.Probe && probeBlockedBy(state.board, this.coords, this.playerId)) {
+        if (
+            piece.type === PieceType.Probe &&
+            probeBlockedBy(state.board, this.coords, this.playerId)
+        ) {
             return 'Two enemy stations watch that space — no probe of yours can enter it.'
         }
 

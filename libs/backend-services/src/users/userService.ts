@@ -1,17 +1,20 @@
 import { UserStore } from '../persistence/stores/userStore.js'
 import {
+    type AdminAssignableRole,
     ExternalAuthService,
     remove,
     Role,
     User,
     UserPreferences,
-    UserStatus
+    UserStatus,
+    withAssignedRoles
 } from '@tabletop/common'
 import { TokenType, TokenService } from '../tokens/tokenService.js'
 import { TaskService } from '../tasks/taskService.js'
 import {
     EmailVerificationError,
     InvalidPasswordError,
+    InvalidTimeZoneError,
     InvalidTokenError,
     UnauthenticatedUpdateError
 } from './errors.js'
@@ -19,6 +22,7 @@ import { AccountChangeType } from '../email/emailService.js'
 import { nanoid } from 'nanoid'
 import { AuthenticationTokenData, VerificationTokenData } from '../tokens/tokenData.js'
 import { UpdateValidationResult } from '../persistence/stores/validator.js'
+import { NotFoundError } from '../persistence/stores/errors.js'
 import uFuzzy from '@leeoniya/ufuzzy'
 
 export class UserService {
@@ -82,6 +86,10 @@ export class UserService {
         return this.userStore.findById(userId)
     }
 
+    async getUsers(userIds: string[]): Promise<(User | undefined)[]> {
+        return this.userStore.findByIds(userIds)
+    }
+
     async getUserByEmail(userId: string): Promise<User | undefined> {
         return this.userStore.findByEmail(userId)
     }
@@ -127,6 +135,34 @@ export class UserService {
             fields: { preferences }
         })
         return updatedUser
+    }
+
+    async updateUserTimeZone(
+        userId: string,
+        timeZone: string,
+        { onlyIfUnset = false }: { onlyIfUnset?: boolean } = {}
+    ): Promise<User> {
+        if (!this.isKnownTimeZone(timeZone)) {
+            throw new InvalidTimeZoneError(timeZone)
+        }
+        const [updatedUser] = await this.userStore.updateUser({
+            userId,
+            fields: { timeZone },
+            validator: (existingUser) =>
+                onlyIfUnset && existingUser.timeZone
+                    ? UpdateValidationResult.Cancel
+                    : UpdateValidationResult.Proceed
+        })
+        return updatedUser
+    }
+
+    private isKnownTimeZone(timeZone: string): boolean {
+        try {
+            new Intl.DateTimeFormat('en-US', { timeZone })
+            return true
+        } catch {
+            return false
+        }
     }
 
     async updateUser(
@@ -376,6 +412,32 @@ export class UserService {
         })
 
         await this.taskService.sendAuthVerificationEmail({ userId, token })
+    }
+
+    async searchUsers(query: string): Promise<User[]> {
+        const trimmed = query.trim()
+        if (!trimmed) return []
+        if (trimmed.includes('@')) {
+            const user = await this.userStore.findByEmail(trimmed)
+            return user ? [user] : []
+        }
+        const usernames = await this.searchUsernames(trimmed)
+        const users = await Promise.all(
+            usernames.map((username) => this.userStore.findByUsername(username))
+        )
+        return users.filter((user) => user !== undefined)
+    }
+
+    async assignRoles(userId: string, assignedRoles: AdminAssignableRole[]): Promise<User> {
+        const user = await this.userStore.findById(userId)
+        if (!user) {
+            throw new NotFoundError({ type: 'User', id: userId })
+        }
+        const [updatedUser] = await this.userStore.updateUser({
+            userId,
+            fields: { roles: withAssignedRoles(user.roles, assignedRoles) }
+        })
+        return updatedUser
     }
 
     async searchUsernames(query: string): Promise<string[]> {

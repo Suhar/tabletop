@@ -20,9 +20,10 @@ type CanalBuildingAction = HydratedProposeCanal | HydratedOverseerDecision | Hyd
 //   -1 = fresh entry from PlantingPhase (not yet set up)
 //   0..n-1 = proposal phase; player at that index is proposing
 //   n = overseer decision phase
-export class CanalBuildingStateHandler
-    implements MachineStateHandler<CanalBuildingAction, HydratedSantiagoGameState>
-{
+export class CanalBuildingStateHandler implements MachineStateHandler<
+    CanalBuildingAction,
+    HydratedSantiagoGameState
+> {
     isValidAction(
         action: HydratedAction,
         context: MachineContext<HydratedSantiagoGameState>
@@ -43,7 +44,7 @@ export class CanalBuildingStateHandler
                 if (!isConnectedToSpring(state.board, action.segment)) return false
                 if (isCanalPlaced(state.board, action.segment)) return false
                 const player = state.getPlayerState(action.playerId)
-                return action.amount <= player.money
+                return action.amount <= player.getMoney()
             }
 
             return false
@@ -60,10 +61,15 @@ export class CanalBuildingStateHandler
                 // Must have at least one proposal at this segment
                 return state.canalProposals.some((p) => isSameSegment(p.segment, action.segment))
             } else {
-                // Rejecting: overseer pays max(combined segment total) + 1
+                // Rejecting: overseer pays max(combined segment total) + 1 - so 1 escudo
+                // even when nobody bribed at all.
                 const penalty = maxSegmentTotal(state.canalProposals)
                 const overseer = state.getPlayerState(state.canalOverseerId!)
-                return overseer.money >= (penalty > 0 ? penalty + 1 : 0)
+                if (overseer.getMoney() >= penalty + 1) return true
+                // Can't cover it: allowed only when there were no bribes to accept either,
+                // since otherwise this player would have no legal move and the phase would
+                // stall. OverseerDecision.apply caps the payment at what they hold.
+                return state.canalProposals.length === 0
             }
         }
 
@@ -112,7 +118,7 @@ export class CanalBuildingStateHandler
             const currentProposer = state.canalProposalOrder[state.canalProposalIndex]
             state.activePlayerIds = [currentProposer]
             // Auto-pass players who can't afford the minimum 1-escudo bribe
-            if (state.getPlayerState(currentProposer).money === 0) {
+            if (state.getPlayerState(currentProposer).getMoney() === 0) {
                 context.addSystemAction(Pass, { playerId: currentProposer })
             }
         } else {
@@ -139,6 +145,6 @@ export class CanalBuildingStateHandler
             return MachineState.ExtraIrrigation
         }
 
-        throw new Error(`Unexpected action in CanalBuilding: ${(action as CanalBuildingAction).type}`)
+        throw new Error('Unexpected action in CanalBuilding')
     }
 }

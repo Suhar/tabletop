@@ -1,0 +1,81 @@
+<script lang="ts">
+    import type { Point } from '@tabletop/common'
+    import type { MarketColor } from '@tabletop/marracash'
+    import PawnCountChip from '$lib/components/PawnCountChip.svelte'
+    import SignFace from '$lib/components/SignFace.svelte'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { signEdgeColor, signFrameColor } from '$lib/utils/playerColors.js'
+    import {
+        playerStandeeOutline,
+        shopSignLayout,
+        SignShadowOffset,
+        signInitial
+    } from '$lib/utils/shopSign.js'
+    import { centredBaseline, ElMessiriCentralShift } from '$lib/utils/textBaseline.js'
+
+    const InitialSize = 22
+
+    let {
+        ownerId,
+        center,
+        vertical,
+        customers,
+        marketColor,
+        highlighted = false
+    }: {
+        ownerId: string
+        center: Point
+        vertical: boolean
+        customers: number
+        marketColor: MarketColor
+        highlighted?: boolean
+    } = $props()
+
+    const gameSession = getGameSession()
+
+    let ownerName = $derived(gameSession.getPlayerName(ownerId))
+    let fill = $derived(gameSession.colors.getPlayerBgColorValue(ownerId))
+    let edge = $derived(signEdgeColor(gameSession.colors.getPlayerColor(ownerId)))
+    let frame = $derived(signFrameColor(gameSession.colors.getPlayerColor(ownerId)))
+    let ink = $derived(gameSession.colors.getPlayerTextColorValue(ownerId))
+    let layout = $derived(shopSignLayout(center, vertical, customers))
+    let outline = $derived(playerStandeeOutline(gameSession.gameState.players, ownerId))
+</script>
+
+<g transform="translate({layout.ground.x} {layout.ground.y})" aria-label="Owned by {ownerName}">
+    <path
+        d={outline}
+        transform="translate({SignShadowOffset.x} {SignShadowOffset.y})"
+        fill="#000000"
+        stroke="#000000"
+        stroke-width="3"
+        stroke-opacity="0.45"
+        stroke-linejoin="round"
+        opacity="0.35"
+    ></path>
+    <SignFace {outline} {fill} {edge} {frame}>
+        <text
+            x="0"
+            y={centredBaseline(-27, InitialSize, ElMessiriCentralShift)}
+            font-size={InitialSize}
+            class="sign-initial marracash-initial"
+            fill={ink}>{signInitial(ownerName)}</text
+        >
+    </SignFace>
+</g>
+{#if customers > 0}
+    <PawnCountChip
+        color={marketColor}
+        count={customers}
+        x={layout.chip.x}
+        y={layout.chip.y}
+        label="{customers} customers"
+        {highlighted}
+    />
+{/if}
+
+<style>
+    .sign-initial {
+        text-anchor: middle;
+    }
+</style>

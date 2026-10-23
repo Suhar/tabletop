@@ -1,0 +1,203 @@
+import { assertExists } from '@tabletop/common'
+import { bannerHolder } from '../util/oathkeeper.js'
+import { Banner, Suit } from '../model/oathEnums.js'
+import { BattlePlanSide, PowerTiming, powerIndexOf, type CardPower } from '../data/cardPowers.js'
+import { PowerQuestionKind } from '../model/question.js'
+import { one, PowerChoiceKind, type ChoiceDomain } from '../util/powerChoice.js'
+import { askQuestion } from '../util/questions.js'
+import { giveFavor, usableFavor } from '../util/favor.js'
+import { attackingSiteOf } from '../util/campaignSite.js'
+import {
+    registerBattlePlan,
+    registerEffect,
+    registerPersistent,
+    chosen,
+    type CampaignContext
+} from './registry.js'
+import { siteHolding } from '../util/access.js'
+import { faceupSitesWithCardOfSuit, pawnSiteId, regionOfPawn } from './vocabulary.js'
+import { nextActionIndex } from '../util/freeActions.js'
+import { siteChoicesYouRule } from './choiceDomains.js'
+import { opposingLeadId } from '../util/battlePlans.js'
+import { HydratedOathGameState } from '../model/gameState.js'
+import { collectDefensePool, defendersOpenToAt } from '../util/campaign.js'
+import {
+    addCosts,
+    favorNeeded,
+    reasonCannotPayPowerCost,
+    secretsNeeded
+} from '../util/powerCost.js'
+import { extraBattlePlanCost, reasonPersistentForbidsCampaign } from '../util/persistent.js'
+import { OathRevision, isAtLeastOathRevision } from '../util/revision.js'
+
+// "As defender, you're victorious now. At end, discard Hearts and Minds unless you hold the People's Favor." Defender. Cost: place 3 favor.
+const HEARTS_AND_MINDS = 'denizen.hearth.hearts-and-minds'
+registerBattlePlan(HEARTS_AND_MINDS, powerIndexOf(HEARTS_AND_MINDS, PowerTiming.BattlePlan), {
+    hooks: {
+        decidesVictor: true,
+        onOutcome: (ctx) => {
+            if (bannerHolder(ctx.state, Banner.PeoplesFavor) === ctx.playerId)
+                return "Hearts and Minds: kept, its user holds the People's Favor"
+            const campaign = ctx.state.campaign
+            assertExists(campaign, 'an outcome hook runs inside a Campaign')
+            campaign.discardAtEnd = [...campaign.discardAtEnd, HEARTS_AND_MINDS]
+            return "Hearts and Minds: discarded at the end, its user not holding the People's Favor"
+        }
+    }
+})
+
+// "You cannot use other battle plans. If your enemy's pawn is at your site, give them one [favor] per
+//  [defenseDie] in the pool. You're victorious now. Ignore killing warbands." Either side. Cost: place 1 favor.
+const PEACE_ENVOY = 'denizen.order.peace-envoy'
+function envoyPaysEnemy(
+    state: HydratedOathGameState,
+    playerId: string,
+    campaign: CampaignContext
+): string | undefined {
+    const enemyId = opposingLeadId(campaign.parties, campaign.side)
+    if (!enemyId) return undefined
+    const mySite =
+        playerId === campaign.parties.attackerPlayerId
+            ? attackingSiteOf(state, playerId)
+            : pawnSiteId(state, playerId)
+    return pawnSiteId(state, enemyId) === mySite ? enemyId : undefined
+}
+registerBattlePlan(PEACE_ENVOY, powerIndexOf(PEACE_ENVOY, PowerTiming.BattlePlan), {
+    hooks: {
+        exclusive: true,
+        decidesVictor: true,
+        ignoreKills: true,
+        // Its victory is bought with the whole payment: one favor per defense die, beyond its cost.
+        // Its Q&A: "Consider the favor you're giving them as part of the cost", so the check counts
+        // the pool it pays from: the attacker's as Step 2 leaves it (R-11.4-H1). R-X.4: before
+        // revision 13 the attacker's check counted the targets and titles alone.
+        reasonCannotUse: (ctx) => {
+            if (!envoyPaysEnemy(ctx.state, ctx.playerId, ctx.campaign)) return undefined
+            const pool =
+                ctx.campaign.side === BattlePlanSide.Defender && ctx.state.campaign
+                    ? ctx.state.campaign.defensePool
+                    : isAtLeastOathRevision(ctx.state, OathRevision.EngineFixes9)
+                      ? ctx.campaign.pools.defensePool
+                      : collectDefensePool(ctx.state, ctx.campaign.parties)
+            const cost = favorNeeded(
+                addCosts(
+                    ctx.power.cost,
+                    extraBattlePlanCost(
+                        ctx.state,
+                        ctx.playerId,
+                        ctx.campaign.parties,
+                        ctx.campaign.side
+                    )
+                )
+            )
+            const left = usableFavor(ctx.state, ctx.playerId) - cost
+            return left < pool
+                ? `Peace Envoy: one favor per defense die is ${pool} favor beyond its cost, and you would have ${left}`
+                : undefined
+        },
+        onUse: (ctx) => {
+            const { campaign, playerId } = ctx
+            assertExists(playerId, 'Peace Envoy has a cost, so the bandits never use it')
+            if (!opposingLeadId(campaign.parties, campaign.side))
+                return 'Peace Envoy: the bandits have no pawn to pay'
+            const enemyId = envoyPaysEnemy(ctx.state, playerId, campaign)
+            if (!enemyId) return 'Peace Envoy: the enemy pawn is elsewhere, so nothing is given'
+            const given = Math.min(usableFavor(ctx.state, playerId), campaign.pools.defensePool)
+            giveFavor(ctx.state, playerId, enemyId, given)
+            return `Peace Envoy: ${playerId} gave ${enemyId} ${given} favor, one per defense die`
+        }
+    }
+})
+
+/**
+ * R-5.5.1 — the site named is "your site", so a Campaign from it needs a defender there: another
+ * player who rules it or whose pawn is there, or the bandits where no player rules. R-X.4: from
+ * revision 8 a site without one, or any site while a power forbids the Campaign, is not offered;
+ * before it, every site was, and the free Campaign from one without a defender could only be given up.
+ * The Campaign is declared after the power's cost is paid (R-7.1.2), so it is judged from there:
+ * Wild Allies' secret can be the one The Hidden Place asks its attacker to flip.
+ *
+ * Of what the cost changes, only the faceup secrets bear on a defender, so the board is judged as it
+ * stands, less the secrets the cost takes, never on a copy: the table judges these choices on a
+ * player's own view, where host-only values cannot be read, so the whole state cannot be copied.
+ */
+function withDefender(domain: ChoiceDomain): ChoiceDomain {
+    return (state, playerId, power) => {
+        const sites = domain(state, playerId, power)
+        if (!isAtLeastOathRevision(state, OathRevision.EngineFixes4)) return sites
+        if (reasonPersistentForbidsCampaign(state, playerId)) return []
+        const secretsPaid = secretsTakenByCost(state, playerId, power)
+        return sites.filter(
+            (choice) =>
+                choice.kind === PowerChoiceKind.Site &&
+                defendersOpenToAt(state, playerId, choice.siteId, secretsPaid).length > 0
+        )
+    }
+}
+
+/** A cost that cannot be paid refuses the power before its choice, so it takes nothing here. */
+function secretsTakenByCost(
+    state: HydratedOathGameState,
+    playerId: string,
+    power: CardPower
+): number {
+    return reasonCannotPayPowerCost(state, playerId, power) ? 0 : secretsNeeded(power.cost)
+}
+
+/** "Action: Campaign at <site>. Act as if your pawn is there. Spend no Supply and add your warbands there to your force." */
+function campaignFrom(cardId: string, what: string, domain: ChoiceDomain) {
+    registerEffect(cardId, powerIndexOf(cardId, PowerTiming.Action), {
+        choices: [one(PowerChoiceKind.Site, { what, domain: withDefender(domain) })],
+        resolve: (ctx) => {
+            const [site] = chosen(ctx, PowerChoiceKind.Site)
+            const me = ctx.state.getPlayerState(ctx.playerId)
+            const next = nextActionIndex(ctx.state)
+            me.campaignAsIf = { siteId: site.siteId, atAction: next }
+            me.freeCampaignAtAction = next
+            return {
+                summary: `${cardId}: the next action is a Campaign at ${site.siteId}, as if the pawn were there, for no Supply`
+            }
+        }
+    })
+}
+
+// Wild Allies — "any site with a [suit:beast] card". Cost: place 1 secret.
+campaignFrom('denizen.beast.wild-allies', 'a site with a beast card', (state) =>
+    faceupSitesWithCardOfSuit(state, Suit.Beast).map((siteId) => ({
+        kind: PowerChoiceKind.Site,
+        siteId
+    }))
+)
+
+// Captains — "any site you rule". Site card. Cost: place 1 favor.
+campaignFrom('denizen.order.captains', 'a site you rule', siteChoicesYouRule)
+
+// "If any of your warbands would be killed, place them on Hospital's site instead if you still rule it." Either side. Site card.
+const HOSPITAL = 'denizen.hearth.hospital'
+registerBattlePlan(HOSPITAL, powerIndexOf(HOSPITAL, PowerTiming.BattlePlan), {
+    hooks: { redirectKillsTo: (ctx) => siteHolding(ctx.state, ctx.power.cardId) }
+})
+
+// "After a player takes any relics and their pawn is in your region, you may use this power to roll one
+//  [defenseDie] per relic taken. If you roll no [shield]/[shield][shield], take the relics." Adviser. Cost: place 1 favor, place 1 secret.
+const RELIC_THIEF = 'denizen.discord.relic-thief'
+registerPersistent(RELIC_THIEF, powerIndexOf(RELIC_THIEF, PowerTiming.Persistent), {
+    afterRelicsTaken: (ctx, takerId, relicCardIds) => {
+        const takerRegion = regionOfPawn(ctx.state, takerId)
+        const notes: string[] = []
+        for (const owner of ctx.ownerIds) {
+            if (owner === takerId) continue
+            if (regionOfPawn(ctx.state, owner) !== takerRegion) continue
+            const note = askQuestion(ctx.state, takerId, {
+                kind: PowerQuestionKind.RelicThiefRoll,
+                cardId: RELIC_THIEF,
+                askedPlayerId: owner,
+                powerIndex: ctx.power.powerIndex,
+                takerPlayerId: takerId,
+                relicCardIds: [...relicCardIds]
+            })
+            notes.push(note ?? `${owner} may roll for ${relicCardIds.join(', ')}`)
+        }
+        return notes.length ? `Relic Thief: ${notes.join('; ')}` : undefined
+    }
+})

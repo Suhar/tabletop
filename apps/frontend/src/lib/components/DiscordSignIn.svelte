@@ -4,8 +4,6 @@
 </script>
 
 <script lang="ts">
-    import { Button } from 'flowbite-svelte'
-
     let { mode = 'login' }: { mode: 'link' | 'login' | 'bot' } = $props()
 
     function discordLogin() {
@@ -17,7 +15,7 @@
         const encodedHost = encodeURIComponent(FRONTEND_HOST ?? '')
         let url = ''
         if (mode === 'bot') {
-            url = `https://discord.com/oauth2/authorize?client_id=1260059992589865133`
+            url = `https://discord.com/oauth2/authorize?client_id=1260059992589865133&integration_type=1&scope=applications.commands`
         } else {
             url = `https://discord.com/oauth2/authorize?client_id=1260059992589865133&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord${mode === 'login' ? '' : '%2Flink'}&scope=identify+email`
         }
@@ -29,17 +27,17 @@
     }
 </script>
 
-<Button
-    class="flex items-center dark:bg-[#5865F2] dark:hover:bg-[#5865F2] shadow-md {mode === 'login'
-        ? 'px-6'
-        : 'px-2'} py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 {mode ===
+<button
+    type="button"
+    class="flex items-center justify-center rounded-full bg-[#5865F2] hover:bg-[#4752C4] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#99AAFF] {mode ===
     'login'
+        ? 'px-6'
+        : 'px-2'} py-2 text-sm font-medium text-white {mode === 'login'
         ? 'w-full'
         : mode === 'link'
           ? 'w-[100px]'
           : 'w-[110px]'} {mode === 'link' || mode === 'bot' ? 'h-[30px]' : ''}"
     onclick={discordLogin}
-    pill
 >
     <svg
         class="h-6 w-6 mr-2"
@@ -61,4 +59,4 @@
         </g>
     </svg>
     <span>{mode === 'login' ? 'Login with Discord' : mode === 'link' ? 'Link' : 'Add Bot'}</span>
-</Button>
+</button>

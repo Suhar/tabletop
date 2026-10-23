@@ -1,9 +1,7 @@
-import { goto } from '$app/navigation'
-import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
+import { error, isHttpError } from '@sveltejs/kit'
 import { AuthorizationCategory } from '@tabletop/frontend-components'
 import { getAppContext } from '$lib/stores/appContext.svelte.js'
 import { BridgedContext } from '@tabletop/frontend-components'
-import { toast } from 'svelte-sonner'
 import type { PageLoad } from './$types.js'
 
 export const load: PageLoad = async ({ params, url }) => {
@@ -13,38 +11,39 @@ export const load: PageLoad = async ({ params, url }) => {
         intendedUrl: url
     })
 
+    void appContext.gameService.loadGames().catch((error) => {
+        console.error('Error loading games for turn navigation', error)
+    })
+
     const { id } = params
 
     try {
-        const { game, actions } = await appContext.gameService.loadGame(id)
+        let { game, actions, historyComplete } = await appContext.gameService.loadGame(id, {
+            includeActions: false
+        })
         if (!game) {
-            onceMounted(() => {
-                toast.error('The specified game was not found')
-            })
-            await goto('/dashboard')
-            return
+            error(404, 'The specified game was not found')
         }
 
         if (!game.state) {
-            onceMounted(() => {
-                toast.error('The specified game has not been started')
-            })
-            await goto('/dashboard')
-            return
+            error(409, 'The specified game has not been started')
         }
 
         await appContext.libraryService.whenReady()
         const definition = appContext.libraryService.getTitle(game.typeId)
         if (!definition) {
-            onceMounted(() => {
-                toast.error('The specified game is not supported')
-            })
-            await goto('/dashboard')
-            return
+            error(404, 'The specified game is not supported')
         }
 
         const runtime = await definition.runtime()
         const sessionClass = runtime.sessionClass
+        if (historyComplete === false && !sessionClass.supportsDeferredHistory) {
+            const complete = await appContext.gameService.loadGame(id)
+            game = complete.game
+            actions = complete.actions
+            historyComplete = complete.historyComplete
+            if (!game?.state) error(409, 'The specified game is no longer available')
+        }
 
         const bridgedContext = new BridgedContext({
             authorizationService: appContext.authorizationService,
@@ -53,6 +52,7 @@ export const load: PageLoad = async ({ params, url }) => {
             gameId: game.id
         })
         return {
+            game,
             gameSession: new sessionClass({
                 gameService: appContext.gameService,
                 bridgedContext: bridgedContext,
@@ -62,14 +62,15 @@ export const load: PageLoad = async ({ params, url }) => {
                 runtime: runtime,
                 game,
                 state: game.state,
-                actions
+                actions,
+                historyComplete
             })
         }
     } catch (e) {
-        console.log(e)
-        onceMounted(() => {
-            toast.error('Unable to load the game')
-        })
-        await goto('/dashboard')
+        if (isHttpError(e)) {
+            throw e
+        }
+        console.error(e)
+        error(500, 'Unable to load the game')
     }
 }

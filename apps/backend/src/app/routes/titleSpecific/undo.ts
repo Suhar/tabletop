@@ -1,6 +1,6 @@
+import type { TitleResolver } from '../../lib/titleDefinition.js'
 import { FastifyInstance } from 'fastify'
 import { Type, type Static } from 'typebox'
-import { GameDefinition } from '@tabletop/common'
 
 type UndoRequest = Static<typeof UndoRequest>
 const UndoRequest = Type.Object({
@@ -8,35 +8,31 @@ const UndoRequest = Type.Object({
     actionId: Type.String()
 })
 
-export default async function (definition: GameDefinition, fastify: FastifyInstance) {
+export default async function (title: TitleResolver, fastify: FastifyInstance) {
     fastify.post<{ Body: UndoRequest }>(
         '/undo',
         {
+            config: { requestTiming: true },
             schema: { body: UndoRequest },
             onRequest: fastify.auth([fastify.verifyUser], { relation: 'and' })
         },
         async function (request, _reply) {
+            const definition = title(request)
             if (!request.user) {
                 throw Error('No user found for create request')
             }
 
             const { gameId, actionId } = request.body
-            const { undoneActions, updatedGame, redoneActions, checksum } =
-                await fastify.gameService.undoAction({
-                    user: request.user,
-                    definition,
-                    gameId,
-                    actionId
-                })
+            const representation = await fastify.gameService.undoAction({
+                user: request.user,
+                definition,
+                gameId,
+                actionId
+            })
 
             return {
                 status: 'ok',
-                payload: {
-                    undoneActions,
-                    game: updatedGame,
-                    redoneActions,
-                    checksum
-                }
+                payload: representation
             }
         }
     )

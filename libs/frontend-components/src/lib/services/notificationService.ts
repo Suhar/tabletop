@@ -3,7 +3,8 @@ import { Notification } from '@tabletop/common'
 export enum NotificationChannel {
     GameInstance = 'gameInstance',
     User = 'user',
-    Global = 'global'
+    Global = 'global',
+    RelayStats = 'relayStats'
 }
 
 export enum NotificationEventType {
@@ -35,6 +36,8 @@ export function isDiscontinuityEvent(event: NotificationEvent): event is Discont
 export type NotificationListener = (event: NotificationEvent) => Promise<void>
 
 export type NotificationService = {
+    readonly synchronizesOnSubscribe?: boolean
+    isUserChannelReady?(): boolean
     listenToGame(gameId: string): void
     stopListeningToGame(gameId: string): void
     addListener(listener: NotificationListener): void

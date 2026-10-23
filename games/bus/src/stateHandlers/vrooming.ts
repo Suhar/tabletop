@@ -20,7 +20,7 @@ export class VroomingStateHandler implements MachineStateHandler<
 > {
     isValidAction(
         action: HydratedAction,
-        context: MachineContext<HydratedBusGameState>
+        _context: MachineContext<HydratedBusGameState>
     ): action is VroomingAction {
         // Leave this comment if you want the template to generate code for valid actions
         return isVroom(action) || isPass(action)
@@ -63,7 +63,6 @@ export class VroomingStateHandler implements MachineStateHandler<
         }
 
         if (!context.gameState.actionsTaken) {
-            console.log('Starting vroom turn for player', activePlayerId)
             context.gameState.turnManager.startTurn(activePlayerId, context.gameState.actionCount)
             context.gameState.activePlayerIds = [activePlayerId]
         }

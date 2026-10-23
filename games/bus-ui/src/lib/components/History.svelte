@@ -1,19 +1,18 @@
 <script lang="ts">
     import { tick } from 'svelte'
     import { Timeline, TimelineItem } from 'flowbite-svelte'
-    import TimeAgo from 'javascript-time-ago'
     import { fade } from 'svelte/transition'
     import { flip } from 'svelte/animate'
     import { quartIn } from 'svelte/easing'
     import { ActionSource, type GameAction } from '@tabletop/common'
     import { ClockSolid } from 'flowbite-svelte-icons'
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { createTimeAgo, PlayerName } from '@tabletop/frontend-components'
     import ActionDescription from './ActionDescription.svelte'
     import { isAggregatedBusAction } from '$lib/aggregates/aggregatedBusAction.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { aggregateActions } from '$lib/utils/actionAggregator.js'
 
-    const timeAgo = new TimeAgo('en-US')
+    const timeAgo = createTimeAgo()
 
     let gameSession = getGameSession()
     let scrollContainer: HTMLDivElement | undefined = $state()
@@ -50,7 +49,9 @@
         return action.source !== ActionSource.System && typeof action.index === 'number'
     }
 
-    function replayRangeForAction(action: GameAction): { startIndex: number; endIndex: number } | null {
+    function replayRangeForAction(
+        action: GameAction
+    ): { startIndex: number; endIndex: number } | null {
         if (!canJumpToHistoryAction(action)) {
             return null
         }
@@ -110,7 +111,10 @@
 <div
     class="relative rounded-lg border border-gray-500 text-center p-2 h-full flex flex-col justify-start items-start overflow-hidden min-h-[300px] bg-black"
 >
-    <div class={`${replayUiState ? 'overflow-hidden' : 'overflow-auto'} h-full w-full`} bind:this={scrollContainer}>
+    <div
+        class={`${replayUiState ? 'overflow-hidden' : 'overflow-auto'} h-full w-full`}
+        bind:this={scrollContainer}
+    >
         <Timeline class="ms-2 dark:border-gray-500">
             {#if showFinishedMarker}
                 <div
@@ -170,7 +174,9 @@
                         class="timeline-item text-left mb-5"
                         date=""
                     >
-                        <span class="group mb-1 inline-flex items-center gap-1 text-xs text-gray-400">
+                        <span
+                            class="group mb-1 inline-flex items-center gap-1 text-xs text-gray-400"
+                        >
                             <span>{actionTimeLabel(action)}</span>
                             {#if canJumpToHistoryAction(action)}
                                 <button

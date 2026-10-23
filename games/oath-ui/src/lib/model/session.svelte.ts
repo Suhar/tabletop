@@ -1,0 +1,1798 @@
+import { GameSession } from '@tabletop/frontend-components'
+import { assert, assertExists, type Color, type GameAction } from '@tabletop/common'
+import {
+    ActionType,
+    AnswerConsent,
+    AnswerQuestion,
+    Campaign,
+    CampaignDefeatKills,
+    CampaignSkullLosses,
+    CampaignAttackPlans,
+    CampaignDefend,
+    CampaignResolveVictory,
+    CampaignSacrifice,
+    CompleteRest,
+    ConsentRequestKind,
+    EndActPhase,
+    ForgoFreeAction,
+    ExileCitizen,
+    HydratedAnswerConsent,
+    HydratedResolveWake,
+    HydratedMuster,
+    HydratedPlayFacedownAdviser,
+    HydratedTravel,
+    MachineState,
+    MoveWarbands,
+    WarbandMoveKind,
+    Muster,
+    OfferCitizenship,
+    Peek,
+    PeekTargetKind,
+    HydratedLetPeek,
+    LetPeek,
+    PlayFacedownAdviser,
+    Recover,
+    RecoverTargetKind,
+    ResolveCitizenshipOffer,
+    ResolveOathkeeper,
+    ResolveWake,
+    RollEndDie,
+    HydratedRollEndDie,
+    Search,
+    SearchPlay,
+    woodChooserForTravel,
+    isFreeTravelNow,
+    woodPicksBeforeTravel,
+    woodTravelPaysAtPick,
+    SearchResolve,
+    SelfExile,
+    SetupChoice,
+    Suit,
+    Trade,
+    TradeOption,
+    Travel,
+    UseActionPower,
+    UseRestPower,
+    Banner,
+    defaultTolls,
+    sneakAttackOfferedTo,
+    type BattlePlanUse,
+    type CampaignPlacement,
+    type CitizenshipTerms,
+    type HydratedOathGameState,
+    type OathProjectedState,
+    type PendingConsent,
+    type OpportunityTake,
+    type PeekTarget,
+    type LetPeekSubject,
+    type ConspiracyPlay,
+    type CardPower,
+    type LegalChoice,
+    type ModifierUse,
+    type PlayMapChanges,
+    type PowerChoice,
+    type PowerUseKey,
+    type QuestionAnswer,
+    type Region,
+    type SearchResolveChoice,
+    type SearchSource,
+    type WakeFavorStep,
+    type WarbandGroup,
+    type WarbandMoveOption,
+    type WarbandOwner,
+    IMPERIAL_WARBANDS,
+    ownWarbandOwner
+} from '@tabletop/oath'
+import { warbandOwnerName } from './names.js'
+import { OathSelection } from './oathSelection.svelte.js'
+import { SearchDraft } from './searchDraft.js'
+import { QuestionDraft } from './questionDraft.js'
+import { woodRegions, woodTravelCards, type WoodRegion } from './woodTravel.js'
+import { refusalWords, woodTravelRefusal } from './actionAvailability.js'
+import {
+    AttackPlansDraft,
+    AttackerLossesDraft,
+    DefeatDraft,
+    DefenceDraft,
+    SkullLossesDraft,
+    VictoryDraft
+} from './battleDrafts.js'
+import {
+    ActionPowersDraft,
+    CitizenshipDraft,
+    ConsentDraft,
+    RestDraft,
+    SeatCardPeekDraft,
+    WakeDraft
+} from './phaseDrafts.js'
+import type { PanelDraft } from './stagedFlow.svelte.js'
+import { SeatDetail } from './seatDetail.svelte.js'
+import { GoalsView } from './goalsView.svelte.js'
+import { TurnNotice } from './turnNotice.svelte.js'
+import { humanizeReason, reasonParts, siteName, type ReasonPart } from './names.js'
+import { phraseWarbandOwner, type HistoryNames } from './actionDescription.js'
+import type { WarbandWhose } from './tokenText.js'
+import {
+    endingRule,
+    gameEndEvent,
+    historyRows,
+    type HistoryRow,
+    type MajorEvent,
+    type MajorEventContext
+} from './majorEvents.js'
+import { peekedRelicAt, unseenPeekSlots } from './relicKnowledge.js'
+import { letPeekKey } from './letPeekChoices.js'
+import { exileCitizenOffers, selfExileOffer } from './exileOffers.js'
+import {
+    NO_PLAY_CARDS,
+    adviserDiscardFirstOptions,
+    adviserOtherSites,
+    adviserPlacements,
+    pileCardRegions,
+    pilePlaceUses,
+    rowsAtStart,
+    sitePlayUses,
+    type AdviserPlacement,
+    type FacedownPlayCards,
+    type PilePlace
+} from './adviserPlacements.js'
+import { powerUseKey, samePowerUse } from './powerUse.js'
+import { CampaignDraft, type CampaignDeclaration } from './campaignDraft.js'
+import {
+    dimsTheMap,
+    reasonCannotRecoverBanner,
+    travelCost,
+    type SiteFavor,
+    type MapPick,
+    type SiteOffer
+} from './actionOffers.js'
+import { tollLabel } from './offerText.js'
+import { musterModifiers, musterRows, type MusterRow } from './musterRows.js'
+import {
+    recoverModifiers,
+    recoverRows,
+    type RecoverBannerRow,
+    type RecoverRelicRow
+} from './recoverRows.js'
+import { searchRows, type SearchRow } from './searchRows.js'
+import { tradeModifiers, tradeRows, type TradeRow } from './tradeRows.js'
+import { samePayment, travelRows, type TravelChoice, type TravelRow } from './travelRows.js'
+import { SetupDraft } from './setupDraft.js'
+import { actionCardUses, actionCards, type ActionCard } from './actionCards.js'
+import { ModifierDeclarations } from './modifierDeclarations.js'
+import { WarbandMoveDraft } from './warbandMoveDraft.js'
+import {
+    emptyPicks,
+    picksComplete,
+    powerChoicesFrom,
+    type PowerChoicePicks
+} from './powerChoices.js'
+import { whenPlayedBanks, whenPlayedChoices } from './whenPlayed.js'
+import { toggledDiscard, type AdviserRoom } from './adviserDiscards.js'
+import {
+    NO_CONSPIRACY_PICK,
+    conspiracyNoTake,
+    conspiracyPlayOf,
+    conspiracyPrizes,
+    conspiracyTargets,
+    type ConspiracyNoTakeLine,
+    type ConspiracyPick,
+    type TakePrizeOption
+} from './conspiracyTake.js'
+
+export class OathGameSession extends GameSession<OathProjectedState, HydratedOathGameState> {
+    selection = new OathSelection()
+    readonly search = new SearchDraft(this)
+    readonly question = new QuestionDraft(this)
+    readonly victory = new VictoryDraft(this)
+    readonly defence = new DefenceDraft(this)
+    readonly attackPlans = new AttackPlansDraft(this)
+    readonly defeat = new DefeatDraft(this)
+    readonly skullLosses = new SkullLossesDraft(this)
+    readonly attackerLosses = new AttackerLossesDraft(this)
+    readonly wake = new WakeDraft(this)
+    readonly rest = new RestDraft(this)
+    readonly actionPowers = new ActionPowersDraft(this)
+    readonly citizenship = new CitizenshipDraft(this)
+    readonly consent = new ConsentDraft(this)
+    readonly seatCardPeek = new SeatCardPeekDraft()
+    readonly seatDetail = new SeatDetail(this)
+    readonly goalsView = new GoalsView()
+    readonly turnNotice = new TurnNotice(this)
+
+    readonly campaign = new CampaignDraft(this)
+    readonly setup = new SetupDraft(this)
+    readonly modifiers = new ModifierDeclarations(this)
+    readonly warbandMoves = new WarbandMoveDraft(this)
+
+    // docs/ui-interaction-visual-contract.md — every draft reads as empty while a send or a new state is under way.
+    get liveSeatId(): string | undefined {
+        const settled = !this.processingActions && !this.updatingVisibleState
+        return this.isPlayable && !this.isViewingHistory && settled ? this.myPlayer?.id : undefined
+    }
+
+    get liveTurnSeatId(): string | undefined {
+        return this.isMyTurn ? this.liveSeatId : undefined
+    }
+
+    // The seat card's picker opens over any panel, so Undo closes it first; at most one panel holds picks.
+    private get panelDrafts(): PanelDraft[] {
+        return [
+            this.seatCardPeek,
+            this.search,
+            this.question,
+            this.victory,
+            this.skullLosses,
+            this.attackerLosses,
+            this.attackPlans,
+            this.defence,
+            this.defeat,
+            this.wake,
+            this.rest,
+            this.actionPowers,
+            this.citizenship,
+            this.consent,
+            this.campaign,
+            this.setup
+        ]
+    }
+
+    get hasManualDraft(): boolean {
+        return (
+            this.selection.hasManualSelection() ||
+            this.panelDrafts.some((draft) => draft.hasManualSelection())
+        )
+    }
+
+    resetAction(): void {
+        this.selection.reset()
+        this.clearActionDrafts()
+        for (const draft of this.panelDrafts) draft.reset()
+    }
+
+    override beforeNewState(): void {
+        this.resetAction()
+    }
+
+    // docs/user-interactions.md — a manual pick absorbs the press; an auto pick never does.
+    override async undo(): Promise<void> {
+        if (this.busy) return
+        if (this.hasManualDraft) {
+            this.popHighestManualSelection()
+            return
+        }
+        await super.undo()
+    }
+
+    private popHighestManualSelection(): void {
+        if (this.panelDrafts.some((draft) => draft.back())) return
+        const action = this.selection.action
+        if (this.selection.back() === undefined) return
+        if (this.selection.action !== action) this.clearActionDrafts()
+    }
+
+    private clearActionDrafts(): void {
+        this.actionPowers.reset()
+        this.citizenship.reset()
+        this.campaign.reset()
+    }
+
+    async resolveSetup(
+        siteId: string,
+        adviserCardId: string,
+        discardOrder: string[],
+        siteFavor?: SiteFavor[]
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(SetupChoice, {
+                type: ActionType.SetupChoice,
+                siteId,
+                adviserCardId,
+                discardOrder,
+                ...(siteFavor ? { siteFavor } : {})
+            })
+        )
+    }
+
+    async resolveWake(favorSteps: WakeFavorStep[], sitePowerTake?: OpportunityTake): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(ResolveWake, {
+                type: ActionType.ResolveWake,
+                favorSteps,
+                ...(sitePowerTake ? { sitePowerTake } : {})
+            })
+        )
+    }
+
+    async endActPhase(): Promise<void> {
+        await this.commit(this.createPlayerAction(EndActPhase, { type: ActionType.EndActPhase }))
+    }
+
+    get historyNames(): HistoryNames {
+        return {
+            player: (playerId) => this.getPlayerName(playerId),
+            site: (slotId) => siteName(this.gameState, slotId),
+            seats: this.gameState.players.map((player) => player.playerId)
+        }
+    }
+
+    /** An engine refusal as this viewer reads it: rules unquoted, ids named, the viewer "you". */
+    humanizeReason(reason: string | undefined): string | undefined {
+        return humanizeReason(reason, this.historyNames, this.myPlayer?.id)
+    }
+
+    /** An engine refusal for a panel: as `humanizeReason`, with every other seat as its chip. */
+    reasonParts(reason: string): ReasonPart[] {
+        return reasonParts(reason, this.historyNames.seats, this.myPlayer?.id)
+    }
+
+    async forgoFreeAction(): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(ForgoFreeAction, { type: ActionType.ForgoFreeAction })
+        )
+    }
+
+    async completeRest(): Promise<void> {
+        await this.commit(this.createPlayerAction(CompleteRest, { type: ActionType.CompleteRest }))
+    }
+
+    /** R-3.3 — the Chancellor's roll between rounds; it draws on the protected stream, so it is final. */
+    async rollEndDie(): Promise<void> {
+        const playerId = this.myPlayer?.id
+        assert(
+            playerId !== undefined && HydratedRollEndDie.canDoRollEndDie(this.gameState, playerId),
+            'Only the Chancellor rolls the end die, between rounds'
+        )
+        await this.commit(this.createPlayerAction(RollEndDie, { type: ActionType.RollEndDie }))
+    }
+
+    async useRestPower(cardId: string, powerIndex: number, choices: PowerChoice[]): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(UseRestPower, {
+                type: ActionType.UseRestPower,
+                cardId,
+                powerIndex,
+                choices
+            })
+        )
+    }
+
+    // R-X.1 — a Wake with nothing to decide is resolved by the engine.
+    get wakeNeedsDecision(): boolean {
+        const playerId = this.myPlayer?.id
+        return (
+            this.gameState.machineState === MachineState.WakePhase &&
+            playerId !== undefined &&
+            !HydratedResolveWake.nothingToDecide(this.gameState, playerId)
+        )
+    }
+
+    async resolveOathkeeper(chosenPlayerId: string): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(ResolveOathkeeper, {
+                type: ActionType.ResolveOathkeeper,
+                chosenPlayerId
+            })
+        )
+    }
+
+    async answerCitizenshipOffer(
+        granted: boolean,
+        replacementChoice?: WarbandGroup[]
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(ResolveCitizenshipOffer, {
+                type: ActionType.ResolveCitizenshipOffer,
+                granted,
+                ...(replacementChoice ? { replacementChoice } : {})
+            })
+        )
+    }
+
+    /** R-6.5.a, R-6.5.b, R-5.5.2.a — the request this seat is asked to answer, if any. */
+    get consentAsked(): PendingConsent | undefined {
+        const pending = this.gameState.pendingConsent
+        return pending !== undefined &&
+            pending.request.kind !== ConsentRequestKind.CitizenshipOffer &&
+            pending.askedPlayerId === this.liveSeatId
+            ? pending
+            : undefined
+    }
+
+    get consentGrantBlockedBecause(): string | undefined {
+        const playerId = this.liveSeatId
+        if (!playerId || !this.consentAsked) return undefined
+        return HydratedAnswerConsent.reasonCannotAnswer(this.gameState, playerId, true)
+    }
+
+    async answerConsent(granted: boolean): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(AnswerConsent, { type: ActionType.AnswerConsent, granted })
+        )
+    }
+
+    async answerQuestion(answer: QuestionAnswer): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(AnswerQuestion, { type: ActionType.AnswerQuestion, answer })
+        )
+    }
+
+    // Sneak Attack — the defender is the one the card names.
+    get sneakAttackDefenderId(): string | undefined {
+        const playerId = this.liveSeatId
+        if (!playerId) return undefined
+        return sneakAttackOfferedTo(this.gameState, playerId)?.defenderPlayerId
+    }
+
+    /** Second Wind out of turn — the asked holder chose to take the free Travel now. */
+    get travelOutOfTurnOpen(): boolean {
+        return (
+            this.liveSeatId !== undefined &&
+            this.gameState.machineState === MachineState.PowerQuestion &&
+            this.selection.action === ActionType.Travel &&
+            this.validActionTypes.includes(ActionType.Travel)
+        )
+    }
+
+    startSneakAttack(): void {
+        if (this.sneakAttackDefenderId === undefined) return
+        this.chooseAction(ActionType.Campaign)
+    }
+
+    async declareCampaign(declaration: CampaignDeclaration): Promise<void> {
+        const { defender, targets, attackDice, plans, flipSecret, skullLossOrder } = declaration
+        await this.commit(
+            this.createPlayerAction(Campaign, {
+                type: ActionType.Campaign,
+                defender,
+                targets,
+                attackDice,
+                ...(plans.length > 0 ? { plans } : {}),
+                ...(flipSecret ? { flipSecret: true } : {}),
+                ...(skullLossOrder ? { skullLossOrder } : {})
+            })
+        )
+    }
+
+    async declareAttackPlans(plans: BattlePlanUse[]): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignAttackPlans, {
+                type: ActionType.CampaignAttackPlans,
+                plans
+            })
+        )
+    }
+
+    async defendCampaign(plans: BattlePlanUse[]): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignDefend, { type: ActionType.CampaignDefend, plans })
+        )
+    }
+
+    // R-5.5.5, R-5.5.6 — the attacker's own losses; the defending side picks its own.
+    async resolveCampaignSacrifice(
+        sacrifice: number,
+        sacrificeKills: WarbandGroup[] | undefined,
+        defeatKills: WarbandGroup[]
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignSacrifice, {
+                type: ActionType.CampaignSacrifice,
+                sacrifice,
+                ...(sacrificeKills ? { sacrificeKills } : {}),
+                defeatKills
+            })
+        )
+    }
+
+    async chooseSkullLosses(kills: WarbandGroup[]): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignSkullLosses, {
+                type: ActionType.CampaignSkullLosses,
+                kills
+            })
+        )
+    }
+
+    async chooseDefeatKills(kills: WarbandGroup[]): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignDefeatKills, {
+                type: ActionType.CampaignDefeatKills,
+                kills
+            })
+        )
+    }
+
+    async resolveCampaignVictory(
+        placements: CampaignPlacement[],
+        burnFavor: boolean,
+        bottomRelicSlotIds: string[],
+        banishToSiteId?: string,
+        banish?: boolean
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(CampaignResolveVictory, {
+                type: ActionType.CampaignResolveVictory,
+                placements,
+                burnFavor,
+                ...(banishToSiteId ? { banishToSiteId } : {}),
+                ...(banish ? { banish } : {}),
+                ...(bottomRelicSlotIds.length > 0 ? { bottomRelicSlotIds } : {})
+            })
+        )
+    }
+
+    private get legalAdvisers(): string[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        if (this.selection.action !== ActionType.PlayFacedownAdviser) return []
+        return HydratedPlayFacedownAdviser.legalCards(this.gameState, playerId)
+    }
+
+    // R-6.1 — the adviser tapped on the seat card, or the only legal one.
+    get adviserCardId(): string | undefined {
+        const legal = this.legalAdvisers
+        const manual =
+            this.selection.action === ActionType.PlayFacedownAdviser
+                ? this.selection.value('card')
+                : undefined
+        if (manual !== undefined && legal.includes(manual)) return manual
+        return legal.length === 1 ? legal[0] : undefined
+    }
+
+    get selectableAdvisers(): string[] {
+        return this.adviserCardId === undefined ? this.legalAdvisers : []
+    }
+
+    // R-6.1, R-7.4 — each legal adviser's plays, with the cards each may declare: judged once per
+    // state, since every later step reads them.
+    private readonly adviserOptions = $derived.by(
+        (): { cardId: string; placements: AdviserPlacement[] }[] => {
+            const playerId = this.liveTurnSeatId
+            if (!playerId) return []
+            return this.legalAdvisers.map((cardId) => ({
+                cardId,
+                placements: adviserPlacements(this.gameState, playerId, cardId)
+            }))
+        }
+    )
+
+    get facedownAdviserOptions(): { cardId: string; placements: AdviserPlacement[] }[] {
+        return this.adviserOptions
+    }
+
+    // R-6.3 — the relics a Peek can show that this player has not already seen.
+    get peekSlots(): string[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Peek) return []
+        return unseenPeekSlots(this.gameState, playerId)
+    }
+
+    // Visual contract, "Coexistence": one let-peek picker; in this seat's Act Phase it is the staged action.
+    get letPeekIsStaged(): boolean {
+        return (
+            this.liveTurnSeatId !== undefined &&
+            this.gameState.machineState === MachineState.ActPhase
+        )
+    }
+
+    get letPeekOpen(): boolean {
+        return this.letPeekIsStaged
+            ? this.selection.action === ActionType.LetPeek
+            : this.seatCardPeek.open
+    }
+
+    get canLetPeek(): boolean {
+        return this.liveSeatId !== undefined && this.validActionTypes.includes(ActionType.LetPeek)
+    }
+
+    get letPeekShows(): { subject: LetPeekSubject; toPlayerIds: string[] }[] {
+        const playerId = this.liveSeatId
+        if (!playerId || !this.canLetPeek) return []
+        return HydratedLetPeek.legalShows(this.gameState, playerId)
+    }
+
+    /** R-6.1, R-9.4 — the card the Show menu shows: the one tapped, or the only one (`letPeekKey`). */
+    get letPeekPicked(): string | undefined {
+        if (!this.letPeekOpen) return undefined
+        const keys = this.letPeekShows.map((show) => letPeekKey(show.subject))
+        const manual = this.letPeekIsStaged
+            ? this.selection.value('option')
+            : this.seatCardPeek.subject
+        if (manual !== undefined && keys.includes(manual)) return manual
+        return keys.length === 1 ? keys[0] : undefined
+    }
+
+    pickLetPeekSubject(key: string): void {
+        if (!this.letPeekOpen) return
+        if (this.letPeekIsStaged) this.selection.set('option', key)
+        else this.seatCardPeek.pick(key)
+    }
+
+    toggleLetPeek(): void {
+        if (!this.canLetPeek) return
+        if (!this.letPeekIsStaged) {
+            this.seatCardPeek.toggle()
+        } else if (this.letPeekOpen) {
+            this.resetAction()
+        } else {
+            this.chooseAction(ActionType.LetPeek)
+        }
+    }
+
+    /** R-6.7 — each Citizen this seat may exile, priced. */
+    get exileOffers(): { citizenPlayerId: string; favor: number }[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.ExileCitizen) return []
+        return exileCitizenOffers(this.gameState, playerId)
+    }
+
+    /** R-6.8 — the staged self-exile's price and payee. */
+    get selfExileOffer(): { favor: number; holderId: string } | undefined {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.SelfExile) return undefined
+        return selfExileOffer(this.gameState, playerId)
+    }
+
+    chooseAdviser(cardId: string): void {
+        if (this.selectableAdvisers.includes(cardId)) this.selection.set('card', cardId)
+    }
+
+    // R-6.1, R-7.3.3 — a play whose When Played text asks for choices waits for them.
+    async chooseAdviserPlay(cardId: string, play: SearchPlay): Promise<void> {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.adviserCardId !== cardId) return
+        const placement = this.facedownAdviserOptions
+            .find((adviser) => adviser.cardId === cardId)
+            ?.placements.find((p) => p.play === play)
+        const cards = placement?.cards ?? NO_PLAY_CARDS
+        const carried = rowsAtStart(cards)
+        const asks =
+            (placement?.room.needed ?? 0) > 0 ||
+            (play === SearchPlay.Site &&
+                (adviserOtherSites(this.gameState, playerId, cardId, cards.placing, carried)
+                    .length > 0 ||
+                    adviserDiscardFirstOptions(
+                        this.gameState,
+                        playerId,
+                        cardId,
+                        undefined,
+                        cards.placing,
+                        carried
+                    ).length > 0)) ||
+            // R-7.3.3 — with what the play gains first, as the engine plans it (Bewitch's yes).
+            whenPlayedChoices(
+                this.gameState,
+                playerId,
+                cardId,
+                play,
+                true,
+                HydratedPlayFacedownAdviser.playMapChanges(this.gameState, playerId, {
+                    cardId,
+                    play,
+                    modifiers: carried
+                })
+            ).length > 0 ||
+            // R-5.1.4.IV — the take, or why there is none to make.
+            play === SearchPlay.Conspiracy ||
+            // R-6.1, R-7.4 — a card the play may use is shown in the step it changes.
+            cards.rows.length > 0 ||
+            cards.places.length > 0 ||
+            cards.pile !== undefined
+        if (!asks) {
+            await this.playFacedownAdviser(cardId, play)
+            return
+        }
+        this.selection.set('option', play)
+    }
+
+    /** R-5.1.4.IV — the players an R-6.1 Conspiracy play may take from. */
+    get adviserConspiracyTargets(): string[] {
+        const playerId = this.liveTurnSeatId
+        return playerId && this.adviserPlay === SearchPlay.Conspiracy
+            ? conspiracyTargets(this.gameState, playerId)
+            : []
+    }
+
+    /** When no one here can be taken from, why: one line per player here. */
+    get adviserConspiracyNoTake(): ConspiracyNoTakeLine[] {
+        const playerId = this.liveTurnSeatId
+        return playerId && this.adviserPlay === SearchPlay.Conspiracy
+            ? conspiracyNoTake(this.gameState, playerId)
+            : []
+    }
+
+    adviserConspiracyPrizesOf(targetPlayerId: string): TakePrizeOption[] {
+        const playerId = this.liveTurnSeatId
+        return playerId ? conspiracyPrizes(this.gameState, playerId, targetPlayerId) : []
+    }
+
+    get adviserConspiracyPick(): ConspiracyPick {
+        return this.selection.value('conspiracy') ?? NO_CONSPIRACY_PICK
+    }
+
+    setAdviserConspiracyPick(pick: Omit<ConspiracyPick, 'confirmed'>): void {
+        if (this.adviserConspiracyTargets.length > 0) {
+            this.selection.set('conspiracy', { ...pick, confirmed: false })
+        }
+    }
+
+    private get adviserConspiracy() {
+        const playerId = this.liveTurnSeatId
+        return playerId && this.adviserConspiracyTargets.length > 0
+            ? conspiracyPlayOf(this.gameState, playerId, this.adviserConspiracyPick)
+            : undefined
+    }
+
+    private get stagedAdviserPlacement(): AdviserPlacement | undefined {
+        const option = this.selection.value('option')
+        return this.facedownAdviserOptions
+            .find((adviser) => adviser.cardId === this.adviserCardId)
+            ?.placements.find((p) => p.play === option)
+    }
+
+    /** The placement waiting on its picks: discards over the limit, When Played choices, a take. */
+    get adviserPlay(): SearchPlay | undefined {
+        return this.stagedAdviserPlacement?.play
+    }
+
+    /** R-6.1, R-7.6.4 — the advisers a limiter turned faceup must discard. */
+    get adviserPlayRoom(): AdviserRoom {
+        return this.stagedAdviserPlacement?.room ?? { needed: 0, discardable: [] }
+    }
+
+    get adviserPlayDiscards(): string[] {
+        const room = this.adviserPlayRoom
+        return (this.selection.value('adviserDiscards') ?? []).filter((id) =>
+            room.discardable.includes(id)
+        )
+    }
+
+    toggleAdviserPlayDiscard(cardId: string): void {
+        const room = this.adviserPlayRoom
+        if (room.needed === 0) return
+        this.selection.set(
+            'adviserDiscards',
+            toggledDiscard(this.adviserPlayDiscards, room, cardId)
+        )
+    }
+
+    /** R-6.1, R-7.4 — the cards the staged play may use, each in the step it changes. */
+    private get adviserPlayCards(): FacedownPlayCards {
+        return this.stagedAdviserPlacement?.cards ?? NO_PLAY_CARDS
+    }
+
+    /** R-7.4 — a card that adds to the play once made (Wild Cry): a row above the confirm. */
+    get adviserCardRows(): CardPower[] {
+        return this.adviserPlayCards.rows
+    }
+
+    /** The rows in use: the free gains from the start, until a tap puts one down. */
+    get adviserRowsInUse(): ModifierUse[] {
+        const tapped = this.selection.value('playCards')
+        if (tapped === undefined) return rowsAtStart(this.adviserPlayCards)
+        return this.adviserCardRows
+            .filter((row) => tapped.some((use) => samePowerUse(use, row)))
+            .map(powerUseKey)
+    }
+
+    toggleAdviserCardRow(use: PowerUseKey): void {
+        if (!this.adviserCardRows.some((row) => samePowerUse(row, use))) return
+        const inUse = this.adviserRowsInUse
+        this.selection.set(
+            'playCards',
+            inUse.some((row) => samePowerUse(row, use))
+                ? inUse.filter((row) => !samePowerUse(row, use))
+                : [...inUse, powerUseKey(use)]
+        )
+    }
+
+    /** R-6.1 — where a discarded adviser may go besides the discard pile (the Cracked Horn). */
+    get adviserDiscardPlaces(): CardPower[] {
+        return this.adviserPlay === SearchPlay.Discard ? this.adviserPlayCards.places : []
+    }
+
+    /** R-6.1, Bracken — the card that names the pile, and the side, a discarded adviser goes to. */
+    get adviserDiscardPileCard(): CardPower | undefined {
+        return this.adviserPlay === SearchPlay.Discard ? this.adviserPlayCards.pile : undefined
+    }
+
+    /** Its piles, each a place under "To" ("even your region's"). */
+    get adviserDiscardPiles(): Region[] {
+        const playerId = this.liveTurnSeatId
+        const card = this.adviserDiscardPileCard
+        return playerId && card ? pileCardRegions(this.gameState, playerId, card) : []
+    }
+
+    /**
+     * The place picked. With a pile card, nothing until a pile and its side, or another card's
+     * place, is picked (a required pick starts empty); without one, the discard pile until a
+     * card's place is.
+     */
+    get adviserDiscardPlace(): PowerUseKey | 'pile' | PilePlace {
+        const place = this.selection.value('discardPlace')
+        const piles = this.adviserDiscardPiles
+        if (
+            place !== undefined &&
+            place !== 'pile' &&
+            'cardId' in place &&
+            this.adviserDiscardPlaces.some((card) => samePowerUse(card, place))
+        ) {
+            return place
+        }
+        if (piles.length === 0) return 'pile'
+        return place !== undefined &&
+            place !== 'pile' &&
+            !('cardId' in place) &&
+            (place.region === undefined || piles.includes(place.region))
+            ? place
+            : {}
+    }
+
+    setAdviserDiscardPlace(place: PowerUseKey | 'pile'): void {
+        if (place === 'pile') this.selection.set('discardPlace', place)
+        else if (this.adviserDiscardPlaces.some((card) => samePowerUse(card, place))) {
+            this.selection.set('discardPlace', powerUseKey(place))
+        }
+    }
+
+    /** A pile picked under "To", the side kept; another card's place gives way to it. */
+    setAdviserDiscardPile(region: Region): void {
+        if (!this.adviserDiscardPiles.includes(region)) return
+        this.selection.set('discardPlace', { ...this.pilePicked, region })
+    }
+
+    /** Top or bottom of the pile picked, or of the one still to pick. */
+    setAdviserDiscardSide(bottom: boolean): void {
+        if (this.adviserDiscardPiles.length === 0) return
+        this.selection.set('discardPlace', { ...this.pilePicked, bottom })
+    }
+
+    private get pilePicked(): PilePlace {
+        const place = this.adviserDiscardPlace
+        return place !== 'pile' && !('cardId' in place) ? place : {}
+    }
+
+    /** "Discard" waits while a pile card's place is half picked: a pile without its side, or neither. */
+    private get adviserDiscardPending(): boolean {
+        const place = this.adviserDiscardPlace
+        return (
+            place !== 'pile' &&
+            !('cardId' in place) &&
+            (place.region === undefined || place.bottom === undefined)
+        )
+    }
+
+    /** The card the place picked is sent with: a card's place, or the pile card when it moves the discard. */
+    private get adviserPlaceUses(): ModifierUse[] {
+        const playerId = this.liveTurnSeatId
+        const place = this.adviserDiscardPlace
+        if (place === 'pile' || !playerId) return []
+        if ('cardId' in place) return [place]
+        return pilePlaceUses(this.gameState, playerId, this.adviserDiscardPileCard, place)
+    }
+
+    /** R-6.1, R-7.4 — the placing cards the picked site, and the card picked to go first, need. */
+    private get adviserSiteUses(): ModifierUse[] {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        if (!playerId || !cardId || this.adviserPlay !== SearchPlay.Site) return []
+        return (
+            sitePlayUses(
+                this.gameState,
+                playerId,
+                cardId,
+                { toSiteId: this.adviserToSite, discardFirstCardId: this.adviserDiscardFirst },
+                this.adviserPlayCards.placing,
+                this.adviserRowsInUse
+            ) ?? []
+        )
+    }
+
+    /**
+     * R-6.1, R-7.4 — the cards the play is judged and sent with: the rows in use, the cards the
+     * site picks need, and the place picked for a discard.
+     */
+    get adviserModifiers(): ModifierUse[] {
+        return [...this.adviserRowsInUse, ...this.adviserSiteUses, ...this.adviserPlaceUses]
+    }
+
+    /** R-5.1.4.I the People's Favor, New Growth — the other sites a staged site play may go to. */
+    get adviserOtherSites(): string[] {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        if (!playerId || !cardId || this.adviserPlay !== SearchPlay.Site) return []
+        return adviserOtherSites(
+            this.gameState,
+            playerId,
+            cardId,
+            this.adviserPlayCards.placing,
+            this.adviserRowsInUse
+        )
+    }
+
+    get adviserToSite(): string | undefined {
+        const siteId = this.selection.value('toSite')
+        return siteId !== undefined && this.adviserOtherSites.includes(siteId) ? siteId : undefined
+    }
+
+    setAdviserToSite(siteId: string | undefined): void {
+        if (siteId === undefined) this.selection.clearFrom('toSite')
+        else if (this.adviserOtherSites.includes(siteId)) this.selection.set('toSite', siteId)
+    }
+
+    /**
+     * R-11.10 the Great Slum, R-5.1.4.I the People's Favor, Crop Rotation — a denizen discarded
+     * before the site play.
+     */
+    get adviserDiscardFirstOptions(): string[] {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        if (!playerId || !cardId || this.adviserPlay !== SearchPlay.Site) return []
+        return adviserDiscardFirstOptions(
+            this.gameState,
+            playerId,
+            cardId,
+            this.adviserToSite,
+            this.adviserPlayCards.placing,
+            this.adviserRowsInUse
+        )
+    }
+
+    get adviserDiscardFirst(): string | undefined {
+        const cardId = this.selection.value('discardFirst')
+        return cardId !== undefined && this.adviserDiscardFirstOptions.includes(cardId)
+            ? cardId
+            : undefined
+    }
+
+    setAdviserDiscardFirst(cardId: string | undefined): void {
+        if (cardId === undefined) this.selection.clearFrom('discardFirst')
+        else if (this.adviserDiscardFirstOptions.includes(cardId))
+            this.selection.set('discardFirst', cardId)
+    }
+
+    // R-5.1.4.I, R-11.10 — the card picked to discard before the site play goes first; R-7.3.3 — the
+    // play's gains come before the power, as the engine plans them for this play (R-6.1).
+    private get adviserPlayChanges(): PlayMapChanges | undefined {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        const play = this.adviserPlay
+        if (!playerId || !cardId || play === undefined) return undefined
+        return HydratedPlayFacedownAdviser.playMapChanges(this.gameState, playerId, {
+            cardId,
+            play,
+            discardedAdviserCardIds: this.adviserPlayDiscards,
+            toSiteId: this.adviserToSite,
+            discardFirstCardId: this.adviserDiscardFirst,
+            modifiers: this.adviserModifiers
+        })
+    }
+
+    get adviserPlayChoices(): LegalChoice[] {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        const play = this.adviserPlay
+        if (!playerId || !cardId || play === undefined) return []
+        return whenPlayedChoices(
+            this.gameState,
+            playerId,
+            cardId,
+            play,
+            true,
+            this.adviserPlayChanges
+        )
+    }
+
+    /** R-7.3.3 — the favor banks the When Played picks are judged on (Salad Days'). */
+    get adviserPlayBanks(): Readonly<Record<Suit, number>> {
+        return whenPlayedBanks(this.gameState, this.adviserPlayChanges)
+    }
+
+    get adviserPlayPicks(): PowerChoicePicks {
+        return this.selection.value('whenPlayed') ?? emptyPicks()
+    }
+
+    /** "Play" waits until every When Played choice has its picks, and a card to go first that the site needs. */
+    get adviserPlayComplete(): boolean {
+        return (
+            picksComplete(this.adviserPlayChoices, this.adviserPlayPicks) &&
+            !this.adviserFirstPending &&
+            !this.adviserDiscardPending
+        )
+    }
+
+    /** R-5.1.4.I, R-11.10, Crop Rotation — a site play that only a card discarded first opens. */
+    private get adviserFirstPending(): boolean {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        if (!playerId || !cardId || this.adviserPlay !== SearchPlay.Site) return false
+        if (this.adviserDiscardFirst !== undefined) return false
+        return (
+            this.adviserDiscardFirstOptions.length > 0 &&
+            sitePlayUses(
+                this.gameState,
+                playerId,
+                cardId,
+                { toSiteId: this.adviserToSite },
+                this.adviserPlayCards.placing,
+                this.adviserRowsInUse
+            ) === undefined
+        )
+    }
+
+    setAdviserPlayPicks(picks: PowerChoicePicks): void {
+        if (this.adviserPlayChoices.length > 0) this.selection.set('whenPlayed', picks)
+    }
+
+    private get adviserPlayPicked(): PowerChoice[] {
+        return powerChoicesFrom(this.adviserPlayChoices, this.adviserPlayPicks)
+    }
+
+    get adviserPlayReason(): string | undefined {
+        const playerId = this.liveTurnSeatId
+        const cardId = this.adviserCardId
+        const play = this.adviserPlay
+        if (!playerId || !cardId || play === undefined) return undefined
+        return HydratedPlayFacedownAdviser.reasonCannotPlay(this.gameState, playerId, {
+            cardId,
+            play,
+            choices: this.adviserPlayPicked,
+            conspiracy: this.adviserConspiracy,
+            discardedAdviserCardIds: this.adviserPlayDiscards,
+            toSiteId: this.adviserToSite,
+            discardFirstCardId: this.adviserDiscardFirst,
+            modifiers: this.adviserModifiers,
+            tolls: HydratedPlayFacedownAdviser.tolls(this.gameState, playerId)
+        })
+    }
+
+    async confirmAdviserPlay(): Promise<void> {
+        const cardId = this.adviserCardId
+        const play = this.adviserPlay
+        if (!cardId || play === undefined || this.adviserPlayReason !== undefined) return
+        await this.playFacedownAdviser(
+            cardId,
+            play,
+            this.adviserPlayPicked,
+            this.adviserConspiracy,
+            this.adviserPlayDiscards,
+            this.adviserToSite,
+            this.adviserDiscardFirst,
+            this.adviserModifiers
+        )
+    }
+
+    private async playFacedownAdviser(
+        cardId: string,
+        play: SearchPlay,
+        choices?: PowerChoice[],
+        conspiracy?: ConspiracyPlay,
+        discardedAdviserCardIds: string[] = [],
+        toSiteId?: string,
+        discardFirstCardId?: string,
+        modifiers: ModifierUse[] = []
+    ): Promise<void> {
+        const playerId = this.liveTurnSeatId
+        assertExists(playerId, 'A facedown adviser is played only by the live seat')
+        const tolls = HydratedPlayFacedownAdviser.tolls(this.gameState, playerId)
+        await this.commit(
+            this.createPlayerAction(PlayFacedownAdviser, {
+                type: ActionType.PlayFacedownAdviser,
+                cardId,
+                play,
+                ...(choices && choices.length > 0 ? { choices } : {}),
+                ...(conspiracy ? { conspiracy } : {}),
+                ...(discardedAdviserCardIds.length > 0 ? { discardedAdviserCardIds } : {}),
+                ...(toSiteId ? { toSiteId } : {}),
+                ...(discardFirstCardId ? { discardFirstCardId } : {}),
+                ...(modifiers.length > 0 ? { modifiers } : {}),
+                ...(tolls.length > 0 ? { tolls } : {})
+            })
+        )
+    }
+
+    async useActionPower(
+        cardId: string,
+        powerIndex: number,
+        choices: PowerChoice[]
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(UseActionPower, {
+                type: ActionType.UseActionPower,
+                cardId,
+                powerIndex,
+                choices
+            })
+        )
+    }
+
+    // R-6.1, R-9.4, R-6.6.1
+    async letPeek(subject: LetPeekSubject, toPlayerId: string): Promise<void> {
+        if (!this.canLetPeek) return
+        await this.commit(
+            this.createPlayerAction(LetPeek, {
+                type: ActionType.LetPeek,
+                outOfTurn: true,
+                sequenced: true,
+                toPlayerId,
+                subject
+            })
+        )
+    }
+
+    async exileCitizen(citizenPlayerId: string): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(ExileCitizen, {
+                type: ActionType.ExileCitizen,
+                citizenPlayerId
+            })
+        )
+    }
+
+    async selfExile(): Promise<void> {
+        await this.commit(this.createPlayerAction(SelfExile, { type: ActionType.SelfExile }))
+    }
+
+    async offerCitizenship(
+        exilePlayerId: string,
+        reliquarySlotId: string,
+        terms: CitizenshipTerms | undefined
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(OfferCitizenship, {
+                type: ActionType.OfferCitizenship,
+                exilePlayerId,
+                reliquarySlotId,
+                ...(terms ? { terms } : {})
+            })
+        )
+    }
+
+    async moveWarbands(option: WarbandMoveOption, count: number): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(MoveWarbands, {
+                type: ActionType.MoveWarbands,
+                move: option.move,
+                owner: option.owner,
+                count
+            })
+        )
+    }
+
+    // R-6.3 — a Peek, by tapping the relic where it sits.
+    async choosePeek(target: PeekTarget): Promise<void> {
+        if (this.selection.action !== ActionType.Peek) return
+        await this.commit(this.createPlayerAction(Peek, { type: ActionType.Peek, target }))
+    }
+
+    get selectableSites(): string[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        const pick = this.setup.boardPick
+        if (pick) return pick.sites
+        if (this.selection.action === ActionType.Campaign) return this.campaign.targetableSites
+        if (this.selection.action === ActionType.MoveWarbands) {
+            const siteId = this.gameState.getPlayerState(playerId).siteId
+            const ontoSite = this.warbandMoves.options.some(
+                (option) => option.move.kind === WarbandMoveKind.BoardToSite
+            )
+            return ontoSite && siteId ? [siteId] : []
+        }
+        if (this.selection.action !== ActionType.Travel) return []
+        // A destination whose ways are open stays lit with the rest: a tap on another moves the pick.
+        return this.travelRows.map((row) => row.slotId)
+    }
+
+    get siteOffers(): SiteOffer[] {
+        // R-5.5.7.III — the spoils' pawn step, which a Sneak Attack may open off the seat's turn.
+        const banish = this.victory.mapSites
+        if (banish.length > 0) return banish.map((slotId) => ({ slotId, intent: 'banish' }))
+        // R-11.7, R-11.13-H1 — a Travel question's pick (the Shrouded Wood ruler's, asked off their
+        // turn, or the Brass Horse user's own), made on the map at every width.
+        const question = this.question.travelPick
+        if (question && question.sites.length > 0) {
+            return question.sites.map(({ siteId, ...site }) => ({
+                slotId: siteId,
+                intent: 'question',
+                ...site
+            }))
+        }
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        const sites = this.selectableSites
+        const pick = this.setup.boardPick
+        if (pick) {
+            return sites.map((slotId) => ({
+                slotId,
+                intent: 'start',
+                label: pick.label,
+                picked: slotId === pick.picked,
+                pickable: pick.pickable && slotId !== pick.picked
+            }))
+        }
+        switch (this.selection.action) {
+            case ActionType.Campaign:
+                return sites.map((slotId) => ({
+                    slotId,
+                    intent: 'target',
+                    targeted: this.campaign.isTargetedSite(slotId)
+                }))
+            case ActionType.MoveWarbands:
+                return sites.map((slotId) => ({ slotId, intent: 'moveWarbands' }))
+            case ActionType.Travel: {
+                const open = this.selection.value('site')
+                const rows = this.travelRows
+                return sites.map((slotId) => {
+                    const ways = rows.find((row) => row.slotId === slotId)?.ways ?? []
+                    return {
+                        slotId,
+                        intent: 'travel',
+                        cost: travelCost(ways),
+                        toll: tollLabel(
+                            this.gameState,
+                            playerId,
+                            { kind: 'travel', toSiteId: slotId },
+                            (id) => this.getPlayerName(id),
+                            ways
+                        ),
+                        ways,
+                        picked: slotId === open
+                    }
+                })
+            }
+            // R-7.1.3 — one map pick for the panel: every site a listed power can take.
+            case ActionType.UseActionPower:
+                return this.actionPowers.mapSites.map(({ siteId, words, picked }) => ({
+                    slotId: siteId,
+                    intent: 'power',
+                    rows: words,
+                    picked
+                }))
+            default:
+                return []
+        }
+    }
+
+    // Setup dims the map only while the start site is open to a pick, not for the pick alone.
+    get mapDimmed(): boolean {
+        return dimsTheMap(this.siteOffers)
+    }
+
+    /**
+     * A choice made by tapping the map, which a phone frames while its step is open: Setup's start
+     * sites, all of them until the send, so the frame and its chips hold while the discards are
+     * ordered; Travel's destinations; where the spoils banish the defeated pawn; a Travel
+     * question's sites (the Shrouded Wood ruler's pick, the Brass Horse user's own); or the sites
+     * the powers in Use a power can take. Each names the pawn it moves, whose region it opens on.
+     */
+    get mapPick(): MapPick | undefined {
+        const moverId = this.liveTurnSeatId
+        if (this.setup.boardPick) {
+            const sites = this.setup.sites
+            return { kind: 'start', sites, choosing: sites.length > 1, moverId }
+        }
+        const banish = this.victory.mapSites
+        if (banish.length > 0) {
+            // R-5.5.7.III — the banished pawn is the defender's.
+            const defenderId = this.gameState.campaign?.defenderPlayerId
+            return {
+                kind: 'banish',
+                sites: banish,
+                choosing: banish.length > 1,
+                moverId: defenderId
+            }
+        }
+        const question = this.question.travelPick
+        if (question && question.sites.length > 0) {
+            return {
+                kind: question.ruler ? 'ruler' : 'travel',
+                sites: question.sites.map(({ siteId }) => siteId),
+                choosing: true,
+                moverId: question.moverId
+            }
+        }
+        const destinations = this.siteOffers.flatMap((offer) =>
+            offer.intent === 'travel' ? [offer.slotId] : []
+        )
+        if (destinations.length > 0) {
+            return { kind: 'travel', sites: destinations, choosing: true, moverId }
+        }
+        const powerSites = this.siteOffers.flatMap((offer) =>
+            offer.intent === 'power' ? [offer.slotId] : []
+        )
+        return powerSites.length > 0
+            ? { kind: 'power', sites: powerSites, choosing: true, moverId }
+            : undefined
+    }
+
+    // R-5.3.2 — Trade's legality is per option, so a card is offered if either is legal;
+    // a tap only marks its row in the Trade menu, so every card stays offered.
+    get selectableCards(): string[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        if (this.selection.action === ActionType.Trade) {
+            return this.tradeRows.map((row) => row.cardId)
+        }
+        if (this.selection.value('card') !== undefined) return []
+        if (this.selection.action === ActionType.Muster) {
+            return this.musterRows.map((row) => row.cardId)
+        }
+        return []
+    }
+
+    // R-5.3.2, R-7.4 — every trade at the site, each priced with the cards in use that fit it.
+    get tradeRows(): TradeRow[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Trade) return []
+        if (this.modifiers.picksPending) return []
+        return tradeRows(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    // R-5.2, R-7.4 — every Muster at the site, each with the cards in use that fit it.
+    get musterRows(): MusterRow[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Muster) return []
+        if (this.modifiers.picksPending) return []
+        return musterRows(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    /** R-5.2.2 — a Citizen musters the Empire's warbands. */
+    get musterWarbandOwner(): WarbandOwner | undefined {
+        const playerId = this.liveTurnSeatId
+        return playerId ? HydratedMuster.warbandOwnerFor(this.gameState, playerId) : undefined
+    }
+
+    // R-5.4, R-6.3 — relic slots, never card ids: a facedown relic's identity
+    // is in the vault.
+    get selectableRelicSlots(): string[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        if (this.selection.value('relicSlot') !== undefined) return []
+        if (this.selection.action === ActionType.Peek) return this.peekSlots
+        if (this.selection.action !== ActionType.Recover) return []
+        return this.recoverTargets.relics.map((row) => row.slotId)
+    }
+
+    get recoverableBanners(): RecoverBannerRow[] {
+        return this.recoverTargets.banners
+    }
+
+    // R-5.4, R-7.4 — every relic and banner to recover, each with the cards in use that fit it.
+    private get recoverTargets(): { relics: RecoverRelicRow[]; banners: RecoverBannerRow[] } {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Recover) {
+            return { relics: [], banners: [] }
+        }
+        if (this.modifiers.picksPending) return { relics: [], banners: [] }
+        return recoverRows(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    // R-5.4 — every relic and banner to recover, until a banner is picked and its price asked.
+    get recoverRows(): { relics: RecoverRelicRow[]; banners: RecoverBannerRow[] } {
+        if (this.stagedBanner) return { relics: [], banners: [] }
+        return this.recoverTargets
+    }
+
+    /** R-7.4 — the cards in use a Recover of this banner, or of a relic, is sent with. */
+    private recoverModifiersFor(banner: Banner | undefined): ModifierUse[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        return recoverModifiers(this.gameState, playerId, banner, this.modifiers.declared)
+    }
+
+    /** The lowest bid a Recover may pay for this banner, while it is one the seat may take. */
+    bannerBid(banner: Banner): number | undefined {
+        return this.bidsFor(banner)[0]
+    }
+
+    private bidsFor(banner: Banner | undefined): number[] {
+        return this.recoverableBanners.find((bid) => bid.banner === banner)?.amounts ?? []
+    }
+
+    // R-5.4.2 — tapping a lit banner stages it; the bid and, for the People's Favor, the start bank follow.
+    pickBanner(banner: Banner): void {
+        if (this.bannerBid(banner) !== undefined) this.selection.set('banner', banner)
+    }
+
+    get stagedBanner(): Banner | undefined {
+        const banner = this.selection.value('banner')
+        return this.bidsFor(banner).length > 0 ? banner : undefined
+    }
+
+    get bannerAmounts(): number[] {
+        return this.bidsFor(this.stagedBanner)
+    }
+
+    // The lowest bid is shown until the player changes it.
+    get bannerAmount(): number | undefined {
+        const amounts = this.bannerAmounts
+        const picked = this.selection.value('amount')
+        return picked !== undefined && amounts.includes(picked) ? picked : amounts[0]
+    }
+
+    setBannerAmount(amount: number): void {
+        if (this.bannerAmounts.includes(amount)) this.selection.set('amount', amount)
+    }
+
+    /** R-5.4.4 — asked only for the People's Favor, whose old favor returns to the banks. */
+    get needsFavorStart(): boolean {
+        return this.stagedBanner === Banner.PeoplesFavor
+    }
+
+    get favorStart(): Suit | undefined {
+        return this.needsFavorStart ? this.selection.value('favorStart') : undefined
+    }
+
+    setFavorStart(suit: Suit): void {
+        if (this.needsFavorStart) this.selection.set('favorStart', suit)
+    }
+
+    /** The bid and, for the People's Favor, the bank its old favor starts returning to. */
+    get bannerPicksComplete(): boolean {
+        return (
+            this.bannerAmount !== undefined &&
+            (!this.needsFavorStart || this.favorStart !== undefined)
+        )
+    }
+
+    get bannerRecoverReason(): string | undefined {
+        const playerId = this.liveTurnSeatId
+        const banner = this.stagedBanner
+        const amount = this.bannerAmount
+        if (!playerId || !banner || amount === undefined) return 'choose a banner'
+        return reasonCannotRecoverBanner(
+            this.gameState,
+            playerId,
+            this.recoverModifiersFor(banner),
+            banner,
+            amount,
+            this.favorStart
+        )
+    }
+
+    // R-5.1.1, R-7.4 — every source with its price, each pile a declared modifier may name.
+    get searchRows(): SearchRow[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Search) return []
+        if (this.modifiers.picksPending) return []
+        return searchRows(
+            this.gameState,
+            playerId,
+            this.modifiers.declared,
+            this.modifiers.regionVariants
+        )
+    }
+
+    /**
+     * R-7.4 — a row is sent with the cards it was judged with: the seat's own pile without the card
+     * that names another pile, and a pile that card names with it.
+     */
+    async searchFrom(row: SearchRow): Promise<void> {
+        if (row.variant !== undefined) {
+            const variant = this.modifiers.regionVariants[row.variant]
+            assertExists(variant, 'A Search row names a pile its modifier offers')
+            this.modifiers.setPicks(variant.use, variant.picks)
+        }
+        await this.chooseSearchSource(row.source, row.modifiers)
+    }
+
+    knownRelicAt(slotId: string | undefined): string | undefined {
+        return peekedRelicAt(this.gameState, this.myPlayer?.id, slotId)
+    }
+
+    /** R-10.13 — warbands show their owner's seat colour; the Empire's show the Chancellor's. */
+    warbandColor(owner: WarbandOwner): Color {
+        return this.colors.getPlayerColor(this.gameState.warbandBankHolderOf(owner))
+    }
+
+    get historyRows(): HistoryRow[] {
+        return historyRows(this.actions, this.majorEventContext)
+    }
+
+    /** R-3 — the finished game's top row: its winner, its ending, its title or Vision. */
+    get gameEndRow(): (MajorEvent & { sentence: string }) | undefined {
+        const state = this.gameState
+        const [winnerId] = state.winningPlayerIds
+        const rule = endingRule(this.actions)
+        if (winnerId === undefined || rule === undefined) return undefined
+        return gameEndEvent(state, winnerId, rule, this.majorEventContext)
+    }
+
+    private get majorEventContext(): Omit<MajorEventContext, 'campaign'> {
+        return {
+            viewerId: this.myPlayer?.id,
+            nameOf: (playerId) => this.getPlayerName(playerId),
+            oathType: this.gameState.oathType,
+            // The framed rows draw every seat they name as its chip.
+            seatsById: true
+        }
+    }
+
+    /** R-10.13 — each of a History row's warbands in its owner's colour, the Empire's in the Chancellor's. */
+    historyWarbandColor(action: GameAction): (whose: WarbandWhose) => Color {
+        const reader = { names: this.historyNames, viewerId: this.myPlayer?.id }
+        return (whose) => {
+            const owner = phraseWarbandOwner(whose, action, reader, (playerId) =>
+                ownWarbandOwner(this.gameState, playerId)
+            )
+            return this.warbandColor(owner ?? IMPERIAL_WARBANDS)
+        }
+    }
+
+    warbandOwnerName(owner: WarbandOwner): string {
+        return warbandOwnerName(owner, (playerId) => this.getPlayerName(playerId))
+    }
+
+    chooseAction(type: ActionType): void {
+        if (this.selection.action !== type) this.clearActionDrafts()
+        this.selection.set('action', type)
+        if (type === ActionType.Campaign) this.campaign.begin()
+        // R-7.4 — the action's free gains start in use; a tap puts one down.
+        this.modifiers.seed()
+    }
+
+    /** R-7.4 — the cards behind "Use a power" that change an action's menu, or make it possible. */
+    get actionCards(): ActionCard[] {
+        const playerId = this.liveTurnSeatId
+        return playerId ? actionCards(this.gameState, playerId) : []
+    }
+
+    /** Opens the card's action with the card, or a pair's two cards, in use; nothing is sent. */
+    openActionWithCard(card: ActionCard): void {
+        this.chooseAction(card.action)
+        this.modifiers.open(actionCardUses(card))
+    }
+
+    async chooseCard(cardId: string): Promise<void> {
+        this.selection.set('card', cardId)
+        if (this.selection.action === ActionType.Muster) {
+            await this.muster(cardId)
+            return
+        }
+    }
+
+    async chooseRelicSlot(slotId: string): Promise<void> {
+        if (this.selection.action === ActionType.Peek) {
+            await this.choosePeek({ kind: PeekTargetKind.SiteRelic, slotId })
+            return
+        }
+        this.selection.set('relicSlot', slotId)
+        await this.commit(
+            this.createPlayerAction(Recover, {
+                type: ActionType.Recover,
+                target: { kind: RecoverTargetKind.Relic, slotId },
+                modifiers: this.recoverModifiersFor(undefined)
+            })
+        )
+    }
+
+    async recoverBanner(): Promise<void> {
+        const banner = this.stagedBanner
+        const amount = this.bannerAmount
+        if (!banner || amount === undefined || this.bannerRecoverReason !== undefined) return
+        await this.commit(
+            this.createPlayerAction(Recover, {
+                type: ActionType.Recover,
+                target: { kind: RecoverTargetKind.Banner, banner },
+                amountPaid: amount,
+                ...(this.favorStart ? { redistributeFrom: this.favorStart } : {}),
+                modifiers: this.recoverModifiersFor(banner)
+            })
+        )
+    }
+
+    private async chooseSearchSource(
+        source: SearchSource,
+        modifiers: readonly ModifierUse[]
+    ): Promise<void> {
+        const playerId = this.liveTurnSeatId
+        assertExists(playerId, 'A Search source is offered only to the live seat')
+        this.selection.set('option', source)
+        const tolls = defaultTolls(this.gameState, playerId, { kind: 'search' })
+        await this.commit(
+            this.createPlayerAction(Search, {
+                type: ActionType.Search,
+                drawFrom: source,
+                revealsInfo: true,
+                modifiers: [...modifiers],
+                ...(tolls.length > 0 ? { tolls } : {})
+            })
+        )
+    }
+
+    async chooseTrade(cardId: string, option: TradeOption): Promise<void> {
+        this.selection.set('card', cardId)
+        this.selection.set('option', option)
+        await this.trade(cardId, option)
+    }
+
+    async resolveSearch(resolution: SearchResolveChoice): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(SearchResolve, {
+                type: ActionType.SearchResolve,
+                ...resolution
+            })
+        )
+    }
+
+    /** Each way to Travel to this site, once per bank Hospitality could gain from there. */
+    private travelWaysTo(siteId: string): TravelChoice[] {
+        return this.travelRows.find((row) => row.slotId === siteId)?.ways ?? []
+    }
+
+    /**
+     * R-11.7 — who chooses where this seat's Travel goes, when an enemy rules its Shrouded Wood:
+     * nobody once Portal is declared at its own site there (R-11.7-H4).
+     */
+    get shroudedWoodChooser(): string | undefined {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Travel) return undefined
+        return woodChooserForTravel(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    /** R-11.7-H2 — the cards in use that this seat's Travel out of an enemy's Wood declares. */
+    get woodTravelCards(): ModifierUse[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return []
+        return woodTravelCards(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    /**
+     * R-11.7 — what each region the ruler may pick would cost, once the Travel pays at the pick;
+     * R-11.7-H2 — with the cards in use counted, as the ruler will then be offered them.
+     */
+    get woodRegions(): WoodRegion[] | undefined {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || !this.shroudedWoodChooser || !woodTravelPaysAtPick(this.gameState)) {
+            return undefined
+        }
+        const picks = woodPicksBeforeTravel(this.gameState, playerId, this.woodTravelCards)
+        return woodRegions(
+            this.gameState,
+            picks.map(({ pick }) => pick)
+        )
+    }
+
+    /** Second Wind, Brass Horse */
+    get woodTravelIsFree(): boolean {
+        const playerId = this.liveTurnSeatId
+        return playerId !== undefined && isFreeTravelNow(this.gameState, playerId)
+    }
+
+    get woodTravelReason(): string | undefined {
+        const playerId = this.liveTurnSeatId
+        if (!playerId) return undefined
+        return HydratedTravel.reasonCannotLeaveShroudedWood(this.gameState, playerId, {
+            modifiers: this.woodTravelCards
+        })
+    }
+
+    /**
+     * The red line under a Wood Travel nobody can pay with the cards in use, in the grid's words
+     * ("Needs 2 Supply; you have 1."). The tile may be open on a card not yet in use (R-11.7-H2).
+     */
+    get woodTravelRefusal(): string | undefined {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.woodTravelReason === undefined) return undefined
+        const refusal = woodTravelRefusal(this.gameState, playerId, this.woodTravelCards)
+        if (!refusal) return undefined
+        return refusal.cause === 'engine'
+            ? this.humanizeReason(refusal.reason)
+            : refusalWords(refusal)
+    }
+
+    async travelFromShroudedWood(): Promise<void> {
+        if (!this.shroudedWoodChooser || this.woodTravelReason !== undefined) return
+        await this.commit(
+            this.createPlayerAction(Travel, {
+                type: ActionType.Travel,
+                modifiers: this.woodTravelCards
+            })
+        )
+    }
+
+    // R-5.6, R-7.1.4 — every destination with its ways to pay.
+    get travelRows(): TravelRow[] {
+        const playerId = this.liveTurnSeatId
+        if (!playerId || this.selection.action !== ActionType.Travel) return []
+        if (this.shroudedWoodChooser || this.modifiers.picksPending) return []
+        return travelRows(this.gameState, playerId, this.modifiers.declared)
+    }
+
+    /** R-11.12 — the destination a map pick opened, with its ways to pay, while it is still offered. */
+    get travelWaysOpen(): TravelRow | undefined {
+        const siteId = this.selection.value('site')
+        if (siteId === undefined) return undefined
+        return this.travelRows.find((row) => row.slotId === siteId)
+    }
+
+    /**
+     * A lit site tapped on the map, where Travel is picked: with one way to pay, no toll and at
+     * most one bank for Hospitality it travels at once; with more ways or banks, or a toll, its
+     * ways open in the panel, so a toll's payee and each bank are on a button before anything is
+     * paid (R-7.1.4). Undo unwinds the open ways.
+     */
+    async pickTravelSite(siteId: string): Promise<void> {
+        if (!this.selectableSites.includes(siteId)) return
+        const ways = this.travelWaysTo(siteId)
+        const [only] = ways
+        if (ways.length === 1 && only && only.tolls.length === 0) await this.travelTo(siteId, only)
+        else if (ways.length > 0) this.selection.set('site', siteId)
+    }
+
+    /** Sends the Travel by a way still offered: its payment, and Hospitality's bank or none. */
+    async travelTo(siteId: string, way: TravelChoice): Promise<void> {
+        if (this.selection.action !== ActionType.Travel) return
+        const offered = this.travelWaysTo(siteId).find(
+            (w) => samePayment(w, way) && w.hospitality === way.hospitality
+        )
+        if (!offered) return
+        this.selection.set('site', siteId)
+        await this.travelBy(siteId, offered)
+    }
+
+    private async travelBy(
+        siteId: string,
+        { tolls, flipSecret, modifiers }: TravelChoice
+    ): Promise<void> {
+        await this.commit(
+            this.createPlayerAction(Travel, {
+                type: ActionType.Travel,
+                siteId,
+                modifiers,
+                ...(tolls.length > 0 ? { tolls } : {}),
+                ...(flipSecret ? { flipSecret } : {})
+            })
+        )
+    }
+
+    private async muster(cardId: string): Promise<void> {
+        const playerId = this.liveTurnSeatId
+        assertExists(playerId, 'A Muster is offered only to the live seat')
+        await this.commit(
+            this.createPlayerAction(Muster, {
+                type: ActionType.Muster,
+                cardId,
+                modifiers: musterModifiers(
+                    this.gameState,
+                    playerId,
+                    cardId,
+                    this.modifiers.declared
+                )
+            })
+        )
+    }
+
+    private async trade(cardId: string, option: TradeOption): Promise<void> {
+        const playerId = this.liveTurnSeatId
+        assertExists(playerId, 'A Trade is offered only to the live seat')
+        const tolls = defaultTolls(this.gameState, playerId, { kind: 'trade', cardId })
+        await this.commit(
+            this.createPlayerAction(Trade, {
+                type: ActionType.Trade,
+                cardId,
+                option,
+                modifiers: tradeModifiers(
+                    this.gameState,
+                    playerId,
+                    cardId,
+                    option,
+                    this.modifiers.declared
+                ),
+                ...(tolls.length > 0 ? { tolls } : {})
+            })
+        )
+    }
+
+    // Sending ends the flow whatever the outcome: a rejected action must leave
+    // the player where they were, not mid-flow against a moved board.
+    private async commit(action: GameAction): Promise<void> {
+        assert(!this.isViewingHistory, 'An action is sent from the live game, never from history')
+        try {
+            await this.applyAction(action)
+        } finally {
+            this.resetAction()
+        }
+    }
+}

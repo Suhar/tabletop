@@ -1,0 +1,295 @@
+import type { FastifyInstance } from 'fastify'
+import { Type, type Static } from 'typebox'
+import {
+    assertExists,
+    CreateTournamentRequest,
+    UpdateTournamentRequest,
+    JoinTournamentRequest,
+    TournamentListQuery,
+    TournamentScheduleRequest,
+    CommitTournamentScheduleRequest,
+    CorrectTournamentResultRequest,
+    SubstituteTournamentEntrantRequest,
+    TournamentParams,
+    WithdrawTournamentEntrantRequest
+} from '@tabletop/common'
+import {
+    competitionRequestValidator,
+    prepareCompetitionRoutes
+} from '../../../lib/competitionRoutes.js'
+
+const validateTournamentSettings = competitionRequestValidator('Invalid tournament request')
+
+export default async function (fastify: FastifyInstance) {
+    prepareCompetitionRoutes(fastify, 'TournamentError')
+
+    fastify.get<{ Querystring: Static<typeof TournamentListQuery> }>(
+        '/',
+        { schema: { querystring: TournamentListQuery } },
+        async (request) => {
+            assertExists(request.user, 'Authenticated user required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.list(request.user, request.query)
+            }
+        }
+    )
+    fastify.get('/titles', { preHandler: fastify.verifyRoleAdmin }, async () => ({
+        status: 'ok',
+        payload: { titleIds: fastify.tournamentService.tournamentTitleIds() }
+    }))
+    fastify.post<{ Body: Static<typeof CreateTournamentRequest> }>(
+        '/',
+        {
+            schema: { body: CreateTournamentRequest },
+            validatorCompiler: validateTournamentSettings,
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.create(
+                    request.body.id,
+                    request.body.draft,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.get<{ Params: Static<typeof TournamentParams> }>(
+        '/:id',
+        { schema: { params: TournamentParams } },
+        async (request) => {
+            assertExists(request.user, 'Authenticated user required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.get(request.params.id, request.user)
+            }
+        }
+    )
+    fastify.get<{ Params: Static<typeof TournamentParams> }>(
+        '/:id/schedule',
+        { schema: { params: TournamentParams } },
+        async (request) => {
+            assertExists(request.user, 'Authenticated user required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.getSchedule(
+                    request.params.id,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{ Params: Static<typeof TournamentParams>; Body: CorrectTournamentResultRequest }>(
+        '/:id/results/correct',
+        {
+            schema: { params: TournamentParams, body: CorrectTournamentResultRequest },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.correctResult(
+                    request.params.id,
+                    request.body,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof WithdrawTournamentEntrantRequest>
+    }>(
+        '/:id/entrants/withdraw',
+        {
+            schema: { params: TournamentParams, body: WithdrawTournamentEntrantRequest },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.withdrawEntrant(
+                    request.params.id,
+                    request.body,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof SubstituteTournamentEntrantRequest>
+    }>(
+        '/:id/entrants/substitute',
+        {
+            schema: { params: TournamentParams, body: SubstituteTournamentEntrantRequest },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.substituteEntrant(
+                    request.params.id,
+                    request.body,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Pick<Static<typeof UpdateTournamentRequest>, 'revision'>
+    }>(
+        '/:id/standings/rebuild',
+        {
+            schema: {
+                params: TournamentParams,
+                body: Type.Object(
+                    { revision: Type.Integer({ minimum: 1 }) },
+                    { additionalProperties: false }
+                )
+            },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.rebuildStandings(
+                    request.params.id,
+                    request.body.revision,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof TournamentScheduleRequest>
+    }>(
+        '/:id/schedule/preview',
+        {
+            schema: { params: TournamentParams, body: TournamentScheduleRequest },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.previewSchedule(
+                    request.params.id,
+                    request.body,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof CommitTournamentScheduleRequest>
+    }>(
+        '/:id/schedule',
+        {
+            schema: { params: TournamentParams, body: CommitTournamentScheduleRequest },
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.commitSchedule(
+                    request.params.id,
+                    request.body,
+                    request.user
+                )
+            }
+        }
+    )
+    fastify.put<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof UpdateTournamentRequest>
+    }>(
+        '/:id',
+        {
+            schema: { params: TournamentParams, body: UpdateTournamentRequest },
+            validatorCompiler: validateTournamentSettings,
+            preHandler: fastify.verifyRoleAdmin
+        },
+        async (request) => {
+            assertExists(request.user, 'Authenticated administrator required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.update(
+                    request.params.id,
+                    request.body.draft,
+                    request.body.revision,
+                    request.user
+                )
+            }
+        }
+    )
+    for (const operation of ['pause', 'resume', 'retry'] as const) {
+        fastify.post<{ Params: Static<typeof TournamentParams> }>(
+            `/:id/${operation}`,
+            { schema: { params: TournamentParams }, preHandler: fastify.verifyRoleAdmin },
+            async (request) => {
+                assertExists(request.user, 'Authenticated administrator required')
+                return {
+                    status: 'ok',
+                    payload: await fastify.tournamentService.control(
+                        request.params.id,
+                        operation,
+                        request.user
+                    )
+                }
+            }
+        )
+    }
+    for (const operation of ['publish', 'cancel', 'lock'] as const) {
+        fastify.post<{ Params: Static<typeof TournamentParams> }>(
+            `/:id/${operation}`,
+            { schema: { params: TournamentParams }, preHandler: fastify.verifyRoleAdmin },
+            async (request) => {
+                assertExists(request.user, 'Authenticated administrator required')
+                return {
+                    status: 'ok',
+                    payload: await fastify.tournamentService[operation](
+                        request.params.id,
+                        request.user
+                    )
+                }
+            }
+        )
+    }
+    fastify.post<{
+        Params: Static<typeof TournamentParams>
+        Body: Static<typeof JoinTournamentRequest>
+    }>(
+        '/:id/join',
+        { schema: { params: TournamentParams, body: JoinTournamentRequest } },
+        async (request) => {
+            assertExists(request.user, 'Authenticated user required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.join(request.params.id, request.user)
+            }
+        }
+    )
+    fastify.post<{ Params: Static<typeof TournamentParams> }>(
+        '/:id/leave',
+        { schema: { params: TournamentParams } },
+        async (request) => {
+            assertExists(request.user, 'Authenticated user required')
+            return {
+                status: 'ok',
+                payload: await fastify.tournamentService.leave(request.params.id, request.user)
+            }
+        }
+    )
+}

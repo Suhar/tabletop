@@ -1,0 +1,481 @@
+#!/usr/bin/env node
+import { parseArgs } from 'node:util'
+import { readCatalogue } from './lib/manifest.js'
+import { fetchBucketManifest } from './lib/remoteManifest.js'
+import { mergeEnvConfig, readDeployConfig } from './lib/config.js'
+import { applyCloudSdkCredentialFile } from './lib/cloudSdkPython.js'
+import {
+    buildBackendCommand,
+    buildFrontendCommand,
+    buildGameLogicCommand,
+    buildGameUiCommand,
+    runCommand
+} from './lib/commands.js'
+import {
+    deployBackend,
+    promoteBackend,
+    releaseBackend,
+    type BackendService
+} from './lib/backendPublish.js'
+import { listBackendHistory, switchBackend } from './lib/backendHistory.js'
+import { deployFrontend, releaseFrontend } from './lib/frontendPublish.js'
+import { syncHostingToManifest } from './lib/hostingPublish.js'
+import { deployGame, deployGameArtifacts, releaseGame } from './lib/gamePublish.js'
+import { migrateLogicArtifacts } from './lib/logicArtifacts.js'
+import { listHistory, rollback, switchFrontend, switchGame } from './lib/publicationHistory.js'
+import { DEFAULT_GRACE_DAYS, prune, pruneAfterDeploy, type PruneScope } from './lib/prune.js'
+import { type PublishContext } from './lib/publishCore.js'
+import { deployRealtime, releaseRealtime, rollbackRealtime } from './lib/realtimePublish.js'
+import { getCataloguePath, getDeployConfigPath, getRepoRoot } from './lib/paths.js'
+import {
+    formatPreflightReport,
+    runBackendPreflight,
+    runFrontendPreflight,
+    runGamePreflight,
+    runRealtimePreflight
+} from './lib/releasePreflight.js'
+import { type BumpType } from './lib/versions.js'
+
+const repoRoot = getRepoRoot()
+const cataloguePath = getCataloguePath(repoRoot)
+const deployConfigPath = getDeployConfigPath(repoRoot)
+
+const usage = `tabletop-deploy <command>
+
+Commands:
+  status                       Print the manifest the bucket currently serves
+  list (--game=<id> | --frontend | --backend)
+                               Print the publication history, newest first, marking the current
+  rollback (--game=<id> | --frontend | --backend)
+                               Select the previous publication (or earlier ready backend revision).
+                               Frontend/games update the manifest; backend switches traffic.
+  switch --game=<id> --ui-version=<v> [--logic-version=<v>]
+  switch --backend --version=<v> [--service=backend|tasks]
+  switch --frontend --version=<v>
+                               Select specific published versions. Logic needs its UI too.
+  prune (--game=<id> | --frontend | --all) [--apply] [--grace-days=<n>]
+                               Delete artifact versions the manifest no longer references:
+                               keeps the current selection, the rollback history, and anything
+                               uploaded in the last ${DEFAULT_GRACE_DAYS} days. Prints the plan only unless
+                               --apply. Game and frontend deploys prune their own target
+                               afterwards unless --no-prune.
+  preflight (--game=<id> | --frontend | --backend | --realtime) [--json]
+                               Report the serving and local versions, the last release
+                               baseline per artifact, and which files and commits changed
+                               since it, ending with whether a release is needed. Read-only.
+  release-game --game=<id> [--logic] (--major | --minor | --patch) [--no-deploy] [--no-prune]
+                               Bump the game's package versions, sync the manifest, commit,
+                               tag, push, then deploy (unless --no-deploy). Requires a clean
+                               working tree on a branch. <id> is the manifest gameId or
+                               packageId. Without --logic only the UI is released; with
+                               --logic both logic and UI are released.
+  deploy-game --game=<id> [--logic] [--no-prune]
+                               Build and deploy the game at HEAD, publish the manifest, and
+                               invalidate the backend cache. Requires a clean tree, a release
+                               tag on HEAD for each artifact, and an unpublished version.
+                               Running with --game and no command is the same as deploy-game.
+  build-ui <gameId>            Build a game UI bundle (rollup)
+  deploy-ui <gameId>           deploy-game for the UI only, with the same guards
+  build-logic <gameId>         Build a game logic bundle (rollup)
+  deploy-logic <gameId>        Build + bundle game logic and deploy to GCS, with the same guards
+  migrate-logic-artifacts [--game=<id>] [--apply]
+                               Add the collectible factory (index.cjs) beside each title's
+                               current logic artifact if it was published without one. Prints
+                               the plan only unless --apply.
+  release-frontend (--major | --minor | --patch) [--no-deploy] [--no-prune]
+                               Bump the frontend package version, sync the manifest, commit,
+                               tag frontend-v<version>, push, then deploy (unless --no-deploy).
+  build-frontend               Build the frontend
+  sync-hosting                 Put the manifest's frontend version on the Firebase Hosting channel
+                               (hosting.channel): stage it from the bucket, copy it to the channel,
+                               and check the channel serves it. For going live and for recovery.
+  deploy-frontend [--no-prune]  Build and deploy the frontend at HEAD, publish the manifest, and
+                               invalidate the backend cache. Same guards as deploy-game.
+  release-backend (--major | --minor | --patch) [--no-deploy] [--no-traffic] [--service=backend|tasks]
+                               Bump the backend package version, commit, tag backend-v<version>,
+                               push, then deploy (unless --no-deploy).
+  build-backend                Build the backend
+  deploy-backend [--no-traffic] [--service=backend|tasks]
+                               Build the backend, build its image with Cloud Build tagged with
+                               the release version, and deploy it to the backend and tasks
+                               services with traffic. Same guards as deploy-game.
+  promote-backend [--service=backend|tasks]
+                               Shift traffic to the latest revision of the backend and tasks
+                               services (after a --no-traffic deploy)
+  rollback-backend [revision] [--service=backend|tasks]  Restore prior revision or select one
+  release-realtime (--major | --minor | --patch) [--no-deploy]
+                               Bump the realtime relay version, commit, tag realtime-v<version>,
+                               push, then deploy (unless --no-deploy).
+  deploy-realtime              Build the relay at HEAD for linux/amd64 with its version stamped
+                               in, copy it and apps/realtime/deploy to the VM over IAP, install
+                               them with setup-vm.sh keeping the previous binary, restart, and
+                               check the relay reports the version with Redis connected and the
+                               public health URL answers 200. A relay that does not come up is
+                               replaced by the previous binary. Same guards as deploy-game.
+  rollback-realtime            Swap the previous relay binary back in and restart it
+
+Release tags:
+  <packageId>-v<version>       Logic artifact
+  <packageId>-ui-v<version>    UI artifact
+  frontend-v<version>          Site frontend
+  backend-v<version>           Backend image (also the image tag)
+  realtime-v<version>          Realtime relay binary
+
+Environment:
+  TABLETOP_GCS_BUCKET           GCS bucket name
+  TABLETOP_GCLOUD_CREDENTIAL_FILE Service account key used for all gcloud calls
+  TABLETOP_BACKEND_SERVICE      Cloud Run service name
+  TABLETOP_BACKEND_REGION       Cloud Run region
+  GCLOUD_PROJECT                GCP project
+  TABLETOP_BACKEND_MANIFEST_URL Backend /manifest URL
+  TABLETOP_HOSTING_CHANNEL      Firebase Hosting channel the frontend is published to (live);
+                                unset leaves the site files to the backend
+  TABLETOP_BACKEND_ADMIN_URL    Backend admin invalidate URL
+  TABLETOP_BACKEND_ADMIN_USER   Backend admin username
+  TABLETOP_BACKEND_ADMIN_PASSWORD Backend admin password
+  TABLETOP_BACKEND_ADMIN_TOKEN  Backend admin auth token
+  TABLETOP_BACKEND_ADMIN_COOKIE Backend admin session cookie
+  CLOUDSDK_PYTHON               Python runtime for Cloud SDK commands
+  TABLETOP_GCS_ACCESS_TOKEN     Access token used for GCS placeholder creation
+`
+
+const runAndReport = async (
+    spec: { label: string; logPath: string },
+    action: () => Promise<void>
+) => {
+    console.log(`${spec.label}: running (log: ${spec.logPath})`)
+    await action()
+    console.log(`${spec.label}: complete`)
+}
+
+type SemverFlags = { major?: boolean; minor?: boolean; patch?: boolean }
+
+const requestedBumps = (values: SemverFlags): BumpType[] => {
+    const requested: BumpType[] = []
+    if (values.major) requested.push('major')
+    if (values.minor) requested.push('minor')
+    if (values.patch) requested.push('patch')
+    return requested
+}
+
+const resolveBumpType = (command: string, values: SemverFlags): BumpType => {
+    const requested = requestedBumps(values)
+    if (requested.length !== 1) {
+        throw new Error(`${command} requires exactly one of --major, --minor, or --patch`)
+    }
+    return requested[0]
+}
+
+const rejectBumpFlags = (command: string, values: SemverFlags, releaseCommand: string) => {
+    if (requestedBumps(values).length > 0) {
+        throw new Error(
+            `${command} does not bump versions; use ${releaseCommand} with --major, --minor, or --patch`
+        )
+    }
+}
+
+const resolveBackendServices = (service: string | undefined): BackendService[] => {
+    if (service === undefined) return ['backend', 'tasks']
+    if (service === 'backend' || service === 'tasks') return [service]
+    throw new Error('--service must be backend or tasks')
+}
+
+const requireGame = (command: string, game: string | undefined): string => {
+    if (!game) throw new Error(`${command} requires --game=<gameId|packageId>`)
+    return game
+}
+
+const requirePositionalGame = (command: string, game: string | undefined): string => {
+    if (!game) throw new Error(`${command} requires a gameId`)
+    return game
+}
+
+const main = async () => {
+    const { values, positionals } = parseArgs({
+        allowPositionals: true,
+        options: {
+            help: { type: 'boolean', short: 'h' },
+            'no-traffic': { type: 'boolean' },
+            service: { type: 'string' },
+            game: { type: 'string' },
+            frontend: { type: 'boolean' },
+            backend: { type: 'boolean' },
+            realtime: { type: 'boolean' },
+            logic: { type: 'boolean' },
+            major: { type: 'boolean' },
+            minor: { type: 'boolean' },
+            patch: { type: 'boolean' },
+            'no-deploy': { type: 'boolean' },
+            version: { type: 'string' },
+            'logic-version': { type: 'string' },
+            'ui-version': { type: 'string' },
+            json: { type: 'boolean' },
+            all: { type: 'boolean' },
+            apply: { type: 'boolean' },
+            'grace-days': { type: 'string' },
+            'no-prune': { type: 'boolean' }
+        }
+    })
+
+    if (values.help) {
+        console.log(usage)
+        return
+    }
+
+    const command = positionals[0] ?? (values.game !== undefined ? 'deploy-game' : 'status')
+    const deployConfig = mergeEnvConfig(await readDeployConfig(deployConfigPath))
+    applyCloudSdkCredentialFile(repoRoot, deployConfig.gcloudCredentialFile)
+
+    if (command === 'status') {
+        console.log(JSON.stringify(await fetchBucketManifest(deployConfig), null, 2))
+        return
+    }
+
+    const context: PublishContext = {
+        repoRoot,
+        catalogue: await readCatalogue(cataloguePath),
+        deployConfig,
+        log: (message) => console.log(message)
+    }
+    const includeLogic = values.logic === true
+
+    const deployByDefault = values['no-deploy'] !== true
+    const pruneAfter = async (scope: PruneScope) => {
+        if (values['no-prune'] !== true) await pruneAfterDeploy(context, scope)
+    }
+    const historyTarget = () => {
+        if (values.frontend === true && values.game === undefined)
+            return { frontend: true as const }
+        if (values.frontend !== true && values.game !== undefined) return { game: values.game }
+        throw new Error(`${command} takes exactly one of --game=<id> or --frontend`)
+    }
+
+    if (values.backend && ['list', 'switch', 'rollback'].includes(command)) {
+        if (values.frontend || values.game) throw new Error('Choose exactly one target')
+        const services = resolveBackendServices(values.service)
+        if (command === 'list') await listBackendHistory(context, services)
+        else {
+            if (command === 'switch' && !values.version)
+                throw new Error('switch --backend requires --version=<v>')
+            await switchBackend(
+                context,
+                services,
+                command === 'switch' ? { version: values.version } : {}
+            )
+        }
+        return
+    }
+
+    if (command === 'list') {
+        await listHistory(context, historyTarget())
+        return
+    }
+
+    if (command === 'rollback') {
+        await rollback(context, historyTarget())
+        return
+    }
+
+    if (command === 'switch') {
+        const target = historyTarget()
+        if ('frontend' in target) {
+            if (!values.version) throw new Error('switch --frontend requires --version=<v>')
+            await switchFrontend(context, values.version)
+        } else {
+            await switchGame(context, target.game, {
+                logicVersion: values['logic-version'],
+                uiVersion: values['ui-version']
+            })
+        }
+        return
+    }
+
+    if (command === 'prune') {
+        const targets = [
+            values.game !== undefined,
+            values.frontend === true,
+            values.all === true
+        ].filter(Boolean).length
+        if (targets !== 1) {
+            throw new Error('prune takes exactly one of --game=<id>, --frontend, or --all')
+        }
+        const scope: PruneScope = values.all === true ? { all: true } : historyTarget()
+        const graceDays = Number(values['grace-days'] ?? DEFAULT_GRACE_DAYS)
+        if (!Number.isInteger(graceDays) || graceDays < 0) {
+            throw new Error('--grace-days must be a whole number of days')
+        }
+        await prune(context, scope, { apply: values.apply === true, graceDays })
+        return
+    }
+
+    if (command === 'migrate-logic-artifacts') {
+        await migrateLogicArtifacts(context, { apply: values.apply === true, game: values.game })
+        return
+    }
+
+    if (command === 'preflight') {
+        const targets = [
+            values.game !== undefined,
+            values.frontend === true,
+            values.backend === true,
+            values.realtime === true
+        ].filter(Boolean).length
+        if (targets !== 1) {
+            throw new Error(
+                'preflight takes exactly one of --game=<id>, --frontend, --backend, or --realtime'
+            )
+        }
+        const report =
+            values.frontend === true
+                ? await runFrontendPreflight(context)
+                : values.backend === true
+                  ? await runBackendPreflight(context)
+                  : values.realtime === true
+                    ? await runRealtimePreflight(context)
+                    : await runGamePreflight(context, requireGame(command, values.game))
+        console.log(values.json ? JSON.stringify(report, null, 2) : formatPreflightReport(report))
+        return
+    }
+
+    if (command === 'release-game') {
+        await releaseGame(context, {
+            game: requireGame(command, values.game),
+            includeLogic,
+            bump: resolveBumpType(command, values),
+            deploy: deployByDefault
+        })
+        if (deployByDefault) await pruneAfter({ game: requireGame(command, values.game) })
+        return
+    }
+
+    if (command === 'deploy-game') {
+        rejectBumpFlags(command, values, 'release-game')
+        const game = requireGame(command, values.game)
+        await deployGame(context, { game, includeLogic })
+        await pruneAfter({ game })
+        return
+    }
+
+    if (command === 'release-frontend') {
+        await releaseFrontend(context, {
+            bump: resolveBumpType(command, values),
+            deploy: deployByDefault
+        })
+        if (deployByDefault) await pruneAfter({ frontend: true })
+        return
+    }
+
+    if (command === 'deploy-frontend') {
+        rejectBumpFlags(command, values, 'release-frontend')
+        await deployFrontend(context)
+        await pruneAfter({ frontend: true })
+        return
+    }
+
+    const backendOptions = {
+        services: resolveBackendServices(values.service),
+        serveTraffic: values['no-traffic'] !== true
+    }
+
+    if (command === 'release-backend') {
+        await releaseBackend(context, {
+            ...backendOptions,
+            bump: resolveBumpType(command, values),
+            deploy: deployByDefault
+        })
+        return
+    }
+
+    if (command === 'deploy-backend') {
+        rejectBumpFlags(command, values, 'release-backend')
+        await deployBackend(context, backendOptions)
+        return
+    }
+
+    if (command === 'promote-backend') {
+        await promoteBackend(context, backendOptions.services)
+        return
+    }
+
+    if (command === 'release-realtime') {
+        await releaseRealtime(context, {
+            bump: resolveBumpType(command, values),
+            deploy: deployByDefault
+        })
+        return
+    }
+
+    if (command === 'deploy-realtime') {
+        rejectBumpFlags(command, values, 'release-realtime')
+        await deployRealtime(context)
+        return
+    }
+
+    if (command === 'rollback-realtime') {
+        await rollbackRealtime(context)
+        return
+    }
+
+    if (command === 'build-ui') {
+        const gameId = requirePositionalGame(command, positionals[1])
+        const spec = buildGameUiCommand(repoRoot, gameId)
+        await runAndReport(spec, () => runCommand(spec))
+        return
+    }
+
+    if (command === 'deploy-ui') {
+        const gameId = requirePositionalGame(command, positionals[1])
+        await deployGameArtifacts(context, gameId, ['ui'])
+        await pruneAfter({ game: gameId })
+        return
+    }
+
+    if (command === 'build-logic') {
+        const gameId = requirePositionalGame(command, positionals[1])
+        const spec = buildGameLogicCommand(repoRoot, gameId)
+        await runAndReport(spec, () => runCommand(spec))
+        return
+    }
+
+    if (command === 'deploy-logic') {
+        const gameId = requirePositionalGame(command, positionals[1])
+        await deployGameArtifacts(context, gameId, ['logic'])
+        await pruneAfter({ game: gameId })
+        return
+    }
+
+    if (command === 'sync-hosting') {
+        await syncHostingToManifest(context)
+        return
+    }
+
+    if (command === 'build-frontend') {
+        const spec = buildFrontendCommand(repoRoot)
+        await runAndReport(spec, () => runCommand(spec))
+        return
+    }
+
+    if (command === 'build-backend') {
+        const spec = buildBackendCommand(repoRoot)
+        await runAndReport(spec, () => runCommand(spec))
+        return
+    }
+
+    if (command === 'rollback-backend') {
+        const revision = positionals[1]
+        const services = resolveBackendServices(
+            values.service ?? (revision ? 'backend' : undefined)
+        )
+        await switchBackend(context, services, revision ? { revision } : {})
+        return
+    }
+
+    console.error(`Unknown command: ${command}`)
+    console.log(usage)
+    process.exitCode = 1
+}
+
+main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = 1
+})

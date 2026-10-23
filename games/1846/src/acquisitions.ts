@@ -1,0 +1,139 @@
+import { Charters1846 } from './charters.js'
+import { releasePrivateReservations } from './stations.js'
+import { inReceivership } from '@tabletop/18xx'
+import * as Type from 'typebox'
+import { assert, assertExists } from '@tabletop/common'
+import {
+    addCompanyStations,
+    replaceStation,
+    transferCompanyAssets,
+    getCompany,
+    nextOperatingCompany,
+    privateOwner,
+    trainsCountingForLimit,
+    trainsOwnedBy,
+    type CompanyDecisionState,
+    type TransferRules,
+    type StationTransfer,
+    type TrainRunningState,
+    type Train,
+    removeCertificates
+} from '@tabletop/18xx'
+import { draftCompany } from './catalog.js'
+import { TrainRules1846, finalDepotEmpty } from './trains.js'
+import type { SteamboatState } from './steamboat.js'
+import { isRevenuePrivate, type RevenueMarkerState } from './revenueMarkers.js'
+
+export const AcquisitionFields = {
+    // §6.93: an independent's train cannot run in the round the corporation buys it.
+    acquiredTrainIds: Type.Optional(Type.Array(Type.String(), { uniqueItems: true }))
+}
+export type AcquisitionState = Type.Static<Type.TObject<typeof AcquisitionFields>>
+export const AcquisitionSteps = [
+    'LayingTrack',
+    'RunningTrains',
+    'DistributingEarnings',
+    'BuyingTrains'
+] as const
+
+export const TransferRules1846: TransferRules = {
+    charters: Charters1846,
+    companyAcquisitions: true,
+    operatingCompany(state) {
+        return AcquisitionSteps.some((step) => step === state.machineState)
+            ? nextOperatingCompany(state)
+            : undefined
+    },
+    canPurchase(state: CompanyDecisionState & RevenueMarkerState, companyId, asset) {
+        if (state.pendingRevenueMarker) return false
+        if (getCompany(state, companyId).kind !== 'major') return false
+        if (asset.kind === 'train') {
+            const train = state.trainInventory.trains.find((train) => train.id === asset.trainId)
+            return (
+                state.machineState === 'BuyingTrains' &&
+                train?.status === 'owned' &&
+                train.owner.kind === 'company' &&
+                getCompany(state, train.owner.companyId).kind === 'major' &&
+                !inReceivership(state, train.owner.companyId) &&
+                (!finalDepotEmpty(state) || trainsOwnedBy(state, train.owner).length > 1)
+            )
+        }
+        if (!['I', 'II'].includes(state.phaseId)) return false
+        if (asset.kind === 'private')
+            return privateOwner(state, asset.privateCompanyId)?.kind === 'player'
+        return (
+            asset.kind === 'company' &&
+            ['MS', 'BIG4'].includes(asset.companyId) &&
+            trainsCountingForLimit(state, TrainRules1846, companyId).length <
+                TrainRules1846.trainLimit(state, companyId)
+        )
+    },
+    priceRange(_state, _companyId, asset) {
+        if (asset.kind === 'train') return { minimum: 1 }
+        const id = asset.kind === 'private' ? asset.privateCompanyId : asset.companyId
+        if (asset.kind === 'company' && !['MS', 'BIG4'].includes(id)) return undefined
+        return { minimum: 1, maximum: draftCompany(id).price }
+    },
+    afterPurchase(
+        state: CompanyDecisionState & AcquisitionState & SteamboatState & RevenueMarkerState,
+        offer
+    ) {
+        if (offer.asset.kind === 'train') return
+        if (offer.asset.kind === 'private') {
+            releasePrivateReservations(state, [offer.asset.privateCompanyId])
+            if (offer.asset.privateCompanyId === 'SC') delete state.steamboat
+            if (isRevenuePrivate(offer.asset.privateCompanyId))
+                state.pendingRevenueMarker = {
+                    privateCompanyId: offer.asset.privateCompanyId,
+                    companyId: offer.buyer.companyId
+                }
+            return
+        }
+        assert(offer.asset.kind === 'company', '1846 purchases private or independent companies')
+        const id = offer.asset.companyId
+        assertExists(state.operatingSet, 'An independent is acquired during operations')
+        const assets = transferCompanyAssets(state, id, offer.buyer.companyId, { loans: false })
+        assert(assets.trainIds.length === 1, 'An independent brings its single 2-train')
+        state.acquiredTrainIds = [...(state.acquiredTrainIds ?? []), assets.trainIds[0]]
+        const station = state.stations.find(
+            (station) => station.companyId === id && station.status === 'placed'
+        )
+        assert(station?.status === 'placed', 'An independent has its home station')
+        const stations: StationTransfer = { placedIds: [], unplacedIds: [] }
+        if (
+            !state.stations.some(
+                (own) =>
+                    own.companyId === offer.buyer.companyId &&
+                    own.status === 'placed' &&
+                    own.position.locationId === station.position.locationId
+            )
+        ) {
+            addCompanyStations(state, offer.buyer.companyId, 1)
+            const extra = state.stations.at(-1)
+            assertExists(extra, 'Absorption provides an extra station')
+            replaceStation(state, station.id, extra.id)
+            stations.placedIds.push(extra.id)
+        } else
+            state.stations = state.stations.map((own) =>
+                own.id === station.id ? { id: own.id, companyId: id, status: 'removed' } : own
+            )
+        const company = getCompany(state, id)
+        company.closed = true
+        delete company.president
+        removeCertificates(
+            state,
+            state.certificates
+                .filter((certificate) => certificate.companyId === id)
+                .map((certificate) => certificate.id)
+        )
+        if (state.steamboat?.companyId === id) delete state.steamboat
+        return { assets, stations }
+    }
+}
+
+export function canRunAcquiredTrain(
+    state: TrainRunningState & AcquisitionState,
+    train: Train
+): boolean {
+    return !state.acquiredTrainIds?.includes(train.id)
+}

@@ -19,7 +19,7 @@ export class LineExpansionStateHandler implements MachineStateHandler<
 > {
     isValidAction(
         action: HydratedAction,
-        context: MachineContext<HydratedBusGameState>
+        _context: MachineContext<HydratedBusGameState>
     ): action is LineExpansionAction {
         // Leave this comment if you want the template to generate code for valid actions
         return isPlaceBusLine(action) || isPass(action)
@@ -48,13 +48,11 @@ export class LineExpansionStateHandler implements MachineStateHandler<
         assert(activePlayerId, 'No active player for line expansion')
 
         if (!context.gameState.actionsTaken) {
-            console.log('Starting line expansion turn for player', activePlayerId)
             context.gameState.turnManager.startTurn(activePlayerId, context.gameState.actionCount)
             context.gameState.activePlayerIds = [activePlayerId]
         }
 
         const numActions = context.gameState.numAllowedActions()
-        console.log('calculated num actions for line expansion:', numActions)
         if (
             numActions === 0 ||
             !HydratedPlaceBusLine.canPlaceBusLine(context.gameState, activePlayerId)

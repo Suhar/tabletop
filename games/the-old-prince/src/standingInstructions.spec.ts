@@ -1,0 +1,255 @@
+import { expect, it } from 'vitest'
+import { ActionSource, ExplorationHistory, assertExists, type GameAction } from '@tabletop/common'
+import {
+    isBuyShares,
+    isFinishStockTurn,
+    isStopStockInstruction,
+    privateOwner,
+    sharesOwned,
+    type EighteenXXState,
+    type SetPrivatePowerRequest
+} from '@tabletop/18xx'
+import { exampleGame } from '@tabletop/18xx/scenarios'
+import { finishTurn, setInstruction } from '@tabletop/18xx/testing'
+import { TheOldPrinceStockRules } from './stockRules.js'
+import { TheOldPrinceScenarios } from './scenarios/index.js'
+
+type Example = ReturnType<typeof exampleGame>
+
+function explore({ game, engine }: Example, source: EighteenXXState) {
+    assertExists(engine.runtime.exploration, 'The Old Prince supports exploration')
+    const history = new ExplorationHistory(engine)
+    const start = engine.runtime.exploration.createFromCanonicalState(history.prepareState(source))
+    start.explorationState = history.checkpoint(source, start, [], game, 'canonical')
+    return { history, start }
+}
+
+function undoInExploration(
+    { game, engine }: Example,
+    history: ReturnType<typeof explore>['history'],
+    current: EighteenXXState,
+    undone: readonly GameAction[]
+) {
+    const undo = history.undoThrough(current, undone)
+    let state = undo.state
+    for (const original of undo.redo) {
+        const action = structuredClone(original)
+        action.index = state.actionCount
+        delete action.undoPatch
+        delete action.forwardPatch
+        state = engine.executeCanonicalAction({ game, state, action }).updatedState
+    }
+    return state
+}
+
+function passTurns({ game, engine }: Example, from: EighteenXXState, playerIds: string[]) {
+    let state = from
+    const automaticPasses: GameAction[] = []
+    for (const playerId of playerIds) {
+        const result = engine.executeCanonicalAction({
+            game,
+            state,
+            action: finishTurn(game.id, playerId)
+        })
+        automaticPasses.push(
+            ...result.processedActions.filter(
+                (action) => action.source === ActionSource.System && isFinishStockTurn(action)
+            )
+        )
+        state = result.updatedState
+    }
+    return { state, automaticPasses }
+}
+
+it('buys as the player and never on behalf of the Union Bank', () => {
+    const { game, engine, state } = exampleGame(TheOldPrinceScenarios, 'trading')
+    const alex = { kind: 'player', playerId: 'alex' } as const
+    expect(privateOwner(state, 'UB')).toEqual(alex)
+    expect(TheOldPrinceStockRules.buyers(state, 'alex')).toContainEqual({
+        kind: 'company',
+        companyId: 'UB'
+    })
+    const declaration = setInstruction(game.id, 'alex', {
+        kind: 'buy',
+        companyId: 'ML',
+        preferredPoolId: 'market',
+        until: { kind: 'shares', count: sharesOwned(state, 'ML', alex) + 1 },
+        thenPass: false
+    })
+    const result = engine.executeCanonicalAction({ game, state, action: declaration })
+    const purchase = result.processedActions[1]
+    expect(isBuyShares(purchase) && purchase.source).toBe(ActionSource.System)
+    expect(isBuyShares(purchase) && purchase.buyer).toEqual(alex)
+    expect(sharesOwned(result.updatedState, 'ML', alex)).toBe(sharesOwned(state, 'ML', alex) + 1)
+    expect(sharesOwned(result.updatedState, 'ML', { kind: 'company', companyId: 'UB' })).toBe(
+        sharesOwned(state, 'ML', { kind: 'company', companyId: 'UB' })
+    )
+    expect(result.updatedState.stockRound.companyPurchases).not.toContain('UB')
+})
+
+it('falls back from an emptied market to the treasury and stops when the share is unaffordable', () => {
+    const { game, engine, state } = exampleGame(TheOldPrinceScenarios, 'trading')
+    const alex = { kind: 'player', playerId: 'alex' } as const
+    const declaration = setInstruction(game.id, 'alex', {
+        kind: 'buy',
+        companyId: 'ML',
+        preferredPoolId: 'market',
+        until: { kind: 'shares', count: 6 },
+        thenPass: true
+    })
+    let current = engine.executeCanonicalAction({ game, state, action: declaration })
+    const purchases: string[] = []
+    const stops: unknown[] = []
+    const record = (actions: readonly GameAction[]) => {
+        for (const action of actions) {
+            if (isBuyShares(action) && action.source === ActionSource.System)
+                purchases.push(action.certificateId)
+            if (isStopStockInstruction(action)) stops.push(action.reason)
+        }
+    }
+    record(current.processedActions)
+    for (const playerId of ['blair', 'casey', 'blair', 'casey']) {
+        current = engine.executeCanonicalAction({
+            game,
+            state: current.updatedState,
+            action: finishTurn(game.id, playerId)
+        })
+        record(current.processedActions)
+    }
+    expect(purchases).toEqual(['ML:share:5', 'ML:share:6'])
+    expect(stops).toEqual([{ code: 'cannot-afford', companyId: 'ML' }])
+    expect(sharesOwned(current.updatedState, 'ML', alex)).toBe(5)
+})
+
+it('does not carry standing instructions into an exploration', () => {
+    const example = exampleGame(TheOldPrinceScenarios, 'trading')
+    const { game, engine, state } = example
+    const declared = engine.executeCanonicalAction({
+        game,
+        state,
+        action: setInstruction(game.id, 'casey', { kind: 'pass' })
+    })
+    const { start } = explore(example, declared.updatedState)
+    const explored = passTurns(example, start, ['alex', 'blair'])
+    expect(explored.automaticPasses).toEqual([])
+    expect(explored.state.stockRound.instructions).toBeUndefined()
+    expect(explored.state.activePlayerIds).toEqual(['casey'])
+    expect(declared.updatedState.stockRound.instructions).toHaveLength(1)
+})
+
+it('keeps standing instructions out when undo reaches back before the exploration', () => {
+    const example = exampleGame(TheOldPrinceScenarios, 'trading')
+    const { game, engine, state } = example
+    const declared = engine.executeCanonicalAction({
+        game,
+        state,
+        action: setInstruction(game.id, 'casey', { kind: 'pass' })
+    })
+    const passed = engine.executeCanonicalAction({
+        game,
+        state: declared.updatedState,
+        action: finishTurn(game.id, 'alex')
+    })
+    const { history, start } = explore(example, passed.updatedState)
+    let undone = start
+    for (const action of passed.processedActions.toReversed())
+        undone = history.undo(undone, action, start.explorationState)
+    const rebuilt = history.afterUndo(start, undone, passed.processedActions)
+    expect(rebuilt.stockRound.instructions).toBeUndefined()
+    const explored = passTurns(example, rebuilt, ['alex', 'blair'])
+    expect(explored.automaticPasses).toEqual([])
+    expect(explored.state.activePlayerIds).toEqual(['casey'])
+})
+
+it('does not redo a live standing instruction when undo reaches back before it', () => {
+    const example = exampleGame(TheOldPrinceScenarios, 'trading')
+    const { game, engine, state } = example
+    const recorded: GameAction[] = []
+    let live = state
+    for (const action of [
+        finishTurn(game.id, 'alex'),
+        setInstruction(game.id, 'casey', { kind: 'pass' }),
+        finishTurn(game.id, 'blair')
+    ]) {
+        const result = engine.executeCanonicalAction({ game, state: live, action })
+        recorded.push(...result.processedActions)
+        live = result.updatedState
+    }
+    const { history, start } = explore(example, live)
+    const rebuilt = undoInExploration(example, history, start, recorded)
+    expect(rebuilt.stockRound.instructions).toBeUndefined()
+    const explored = passTurns(example, rebuilt, ['alex', 'blair'])
+    expect(explored.automaticPasses).toEqual([])
+    expect(explored.state.activePlayerIds).toEqual(['casey'])
+})
+
+function playExploration({ game, engine }: Example, start: EighteenXXState, actions: GameAction[]) {
+    const recorded: GameAction[] = []
+    let state = start
+    for (const action of actions) {
+        const result = engine.executeCanonicalAction({ game, state, action })
+        recorded.push(...result.processedActions)
+        state = result.updatedState
+    }
+    state.explorationState = start.explorationState
+    return { state, recorded }
+}
+
+it('redoes a standing instruction declared inside the exploration', () => {
+    const example = exampleGame(TheOldPrinceScenarios, 'trading')
+    const { game } = example
+    const { history, start } = explore(example, example.state)
+    const explored = playExploration(example, start, [
+        finishTurn(game.id, 'alex'),
+        setInstruction(game.id, 'casey', { kind: 'pass' }),
+        finishTurn(game.id, 'blair')
+    ])
+    const rebuilt = undoInExploration(example, history, explored.state, explored.recorded)
+    expect(rebuilt.stockRound.instructions).toHaveLength(1)
+    const passed = passTurns(example, rebuilt, ['alex', 'blair'])
+    expect(passed.automaticPasses.map((action) => action.playerId)).toEqual(['casey'])
+})
+
+it('redoes an explored standing instruction when undo reaches back before the exploration', () => {
+    const example = exampleGame(TheOldPrinceScenarios, 'trading')
+    const { game, engine, state } = example
+    const live = engine.executeCanonicalAction({
+        game,
+        state,
+        action: finishTurn(game.id, 'alex')
+    })
+    const { history, start } = explore(example, live.updatedState)
+    const explored = playExploration(example, start, [
+        setInstruction(game.id, 'casey', { kind: 'pass' }),
+        finishTurn(game.id, 'blair')
+    ])
+    const rebuilt = undoInExploration(example, history, explored.state, [
+        ...live.processedActions,
+        ...explored.recorded
+    ])
+    expect(rebuilt.actionCount).toBe(state.actionCount + 1)
+    expect(rebuilt.stockRound.instructions).toHaveLength(1)
+    const passed = passTurns(example, rebuilt, ['alex', 'blair'])
+    expect(passed.automaticPasses.map((action) => action.playerId)).toEqual(['casey'])
+})
+
+it('keeps other live out-of-turn declarations when undo reaches back before the exploration', () => {
+    const { engine, game } = exampleGame(TheOldPrinceScenarios, 'trading')
+    assertExists(engine.runtime.exploration?.keepsSourceDeclaration)
+    const request: SetPrivatePowerRequest = {
+        id: 'request-alex',
+        gameId: game.id,
+        source: ActionSource.User,
+        type: 'SetPrivatePowerRequest',
+        playerId: 'alex',
+        outOfTurn: true,
+        supersedable: true,
+        requested: true
+    }
+    expect(engine.runtime.exploration.keepsSourceDeclaration(request)).toBe(true)
+    expect(
+        engine.runtime.exploration.keepsSourceDeclaration(
+            setInstruction(game.id, 'alex', { kind: 'pass' })
+        )
+    ).toBe(false)
+})

@@ -2,6 +2,7 @@
     "$schema": "https://turbo.build/schema.json",
     "globalDependencies": [".env"],
     "ui": "tui",
+    "agentGuidance": false,
     "tasks": {
         "build": {
             "dependsOn": ["^build"],
@@ -10,20 +11,25 @@
             "env": [
                 "DISCORD_CLIENT_ID",
                 "DISCORD_BOT_TOKEN",
+                "DISCORD_BUG_REPORT_CHANNEL_ID",
                 "FRONTEND_HOST",
                 "K_SERVICE",
                 "GOOGLE_CLIENT_ID",
                 "HOST",
                 "PORT",
                 "TASKS_HOST",
+                "TOURNAMENT_SCHEDULER_EMAIL",
+                "TOURNAMENT_SCHEDULER_AUDIENCE",
                 "REDIS_HOST",
                 "REDIS_PORT",
                 "GCLOUD_PROJECT",
                 "VAPID_PUBLIC_KEY",
                 "DISCORD_PUBLIC_KEY",
                 "ABLY_API_KEY",
+                "REALTIME_SIGNING_KEY",
                 "SESSION_SECRET",
                 "SESSION_SALT",
+                "SESSION_KEY",
                 "TEST_DISCORD_USER_ID",
                 "STATIC_ROOT"
             ]
@@ -32,12 +38,44 @@
         "dev": {
             "dependsOn": ["^build"],
             "cache": false,
-            "persistent": true
+            "persistent": true,
+            "passThroughEnv": [
+                "BACKEND_HEALTH_PORT",
+                "BACKEND_VERSION",
+                "BUILD_TIME",
+                "BUILD_TIMESTAMP",
+                "COMMIT_SHA",
+                "FRONTEND_VERSION",
+                "GAME_ASSET_BASE_URL",
+                "GAME_LOGIC_ROOT",
+                "GIT_SHA",
+                "K_REVISION",
+                "LOCAL_GAME_HISTORY_DELAY_MS",
+                "REQUEST_TIMINGS_ENABLED",
+                "SITE_MANIFEST_PATH",
+                "VAPID_ADMIN_EMAIL"
+            ]
         },
         "start": {
             "dependsOn": ["^build"],
             "cache": false,
-            "persistent": true
+            "persistent": true,
+            "passThroughEnv": [
+                "BACKEND_HEALTH_PORT",
+                "BACKEND_VERSION",
+                "BUILD_TIME",
+                "BUILD_TIMESTAMP",
+                "COMMIT_SHA",
+                "FRONTEND_VERSION",
+                "GAME_ASSET_BASE_URL",
+                "GAME_LOGIC_ROOT",
+                "GIT_SHA",
+                "K_REVISION",
+                "LOCAL_GAME_HISTORY_DELAY_MS",
+                "REQUEST_TIMINGS_ENABLED",
+                "SITE_MANIFEST_PATH",
+                "VAPID_ADMIN_EMAIL"
+            ]
         },
         "clean": {
             "dependsOn": ["^clean"],
@@ -49,6 +87,7 @@
         },
         "test": {
             "dependsOn": ["^test"],
+            "env": ["FIRESTORE_EMULATOR_HOST", "CACHE_TEST_REDIS_HOST", "CACHE_TEST_REDIS_PORT"],
             "cache": false
         },
         "docker-build": {
@@ -58,7 +97,7 @@
         "bundle": {
             "dependsOn": ["^build"],
             "outputs": ["bundle/**/*"],
-            "env": ["ROLLUP_TERSER"]
+            "env": ["ROLLUP_TERSER", "ROLLUP_TERSER_WORKERS"]
         },
         "stage-ui": {
             "dependsOn": ["bundle"],

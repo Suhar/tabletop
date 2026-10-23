@@ -25,11 +25,11 @@ The project is setup as a monorepo using [pnpm workspaces](https://pnpm.io/works
 |--/email - React Email project for email editing / previewing
 |--/frontend-components - Shared frontend components
 /tools
-|--/deploy - A TUI for deployment to GCP
+|--/deploy - Release and deployment CLI for GCP
 |--/scripts - Some useful scripts
 ```
 
-The frontend is run as a separate Vite process during development but for deployment is compiled into a static SPA and served by the backend. Game implementations are modular and could even be imported from external repositories.
+The frontend is run as a separate Vite process during development but for deployment is compiled into a static SPA and served by Firebase Hosting. Game implementations are modular and could even be imported from external repositories.
 
 ### Prerequisites
 
@@ -38,8 +38,18 @@ The frontend is run as a separate Vite process during development but for deploy
 
 ### Setup For Dev Containers
 
-1. Clone the repository
+1. Clone the repository to a local folder. On Windows, cloning inside WSL is optional but gives faster file access and more reliable file watching. Do not use VSCode's "Clone Repository in Container Volume": the dev container bind-mounts your cloned folder into the container.
 1. Open the repository in VSCode and then choose "Reopen in container" when prompted.
+
+#### Coding agents in the dev container
+
+The container comes with Claude Code, Codex, and T3 Code installed. Sign in once from a terminal inside the container; the sign-ins are kept in Docker volumes, so they survive rebuilds.
+
+- Claude Code: run `claude` and follow the login prompt.
+- Codex: run `codex login --device-auth`.
+- GitHub CLI and HTTPS git: see [GitHub access](docs/runbooks/devcontainer-github-access.md).
+- T3 Code: the container starts a T3 server automatically. The desktop app connects to it over SSH; the mobile app uses T3 Connect. See [T3 Code in the devcontainer](docs/runbooks/devcontainer-t3.md).
+- SSH access, which the T3 Code and ChatGPT desktop apps both use: see [SSH access](docs/runbooks/devcontainer-ssh-access.md).
 
 ### Setup Without Dev Containers
 
@@ -58,9 +68,11 @@ The frontend is run as a separate Vite process during development but for deploy
 1. (If not using dev containers) Open a terminal in VSCode
 1. (If not using dev containers) Run `docker compose up` to start redis and the firestore emulator
 1. Open a terminal in VSCode
-1. Run `pnpm turbo stage-ui`
-1. Run `pnpm turbo watch dev`
-1. If all has gone well, you can now go to http://localhost:5173 to view the site. The backend API will be running at http://localhost:3000 and the email preview site will be running at http://localhost:3001.
+1. To work on one hosted game, run `tools/scripts/local-hosted-game.mjs <game>` (for example, `tools/scripts/local-hosted-game.mjs fresh-fish`). This builds and stages the game selected by the local manifest, checks Firestore and Redis, and starts the frontend and backend.
+1. To stage every game instead, run `pnpm turbo stage-ui`, then run `pnpm watch` to start the frontend and backend. (Avoid an unfiltered `turbo watch dev`: it starts every game's dev server too and exceeds turbo's default concurrency.)
+1. If all has gone well, you can now go to http://localhost:5173 to view the site. The backend API will be running at http://localhost:3000. Run `pnpm turbo watch dev --filter=@tabletop/email` separately if you need the email preview site at http://localhost:3001.
+
+The focused hosted-game command intentionally does not watch game source. Stop and rerun it after changing the game logic, game UI, or shared client code so the logic and staged UI are rebuilt together.
 
 ### First Time Running Notes
 

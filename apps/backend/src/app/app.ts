@@ -1,22 +1,27 @@
+import { installTitleScope } from '../runtime/titleScope.js'
+import { installManifestRefresh } from '../runtime/manifestRefresh.js'
+import RequestTimingsPlugin from './plugins/requestTimings.js'
+import { STATIC_ROOT, type LibraryServiceOptions } from '@tabletop/backend-services'
+import { assertExists } from '@tabletop/common'
 import * as path from 'path'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import AutoLoad from '@fastify/autoload'
 import SecureSession from '@fastify/secure-session'
 import Auth from '@fastify/auth'
-import FastifyFirebase from '@now-ims/fastify-firebase'
-import { deleteApp } from 'firebase-admin/app'
 import cors from '@fastify/cors'
 import FastifyFormbody from '@fastify/formbody'
 import fastifyPrintRoutes from 'fastify-print-routes'
 import fastifyStatic from '@fastify/static'
 import fastifyRateLimit from '@fastify/rate-limit'
-import { BaseError, ErrorCategory } from '@tabletop/common'
+import { errorStatusCode } from './lib/errorStatusCode.js'
 import { FastifySSEPlugin } from 'fastify-sse-v2'
 import AuthorizationPlugin from './plugins/authorization.js'
 import FirestorePlugin from './plugins/firestore.js'
 import SensiblePlugin from './plugins/sensible.js'
 import ServicesPlugin from './plugins/services.js'
 import GamesPlugin from './plugins/games.js'
+import GameAssetRedirectPlugin from './plugins/gameAssetRedirect.js'
+import { routeAutoloadOptions } from './lib/routeAutoload.js'
 
 const __dirname = import.meta.dirname
 
@@ -28,22 +33,24 @@ const TASKS_PREFIX = '/tasks'
 const service: string = process.env['K_SERVICE'] ?? 'local'
 const FRONTEND_HOST = process.env['FRONTEND_HOST'] ?? ''
 const GCLOUD_PROJECT = process.env['GCLOUD_PROJECT'] ?? ''
-const STATIC_ROOT = process.env['STATIC_ROOT'] ?? path.join(__dirname, '../../../../.local-static')
 const FRONTEND_VERSION_OVERRIDE = process.env['FRONTEND_VERSION'] ?? null
-const MIN_RESTART_INTERVAL_MS = 30_000
-let firebaseAppIndex = 0
+const SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60
 
-const SESSION_SECRET = process.env['SESSION_SECRET']
-    ? process.env['SESSION_SECRET']
-    : 'youneedtosetthevalueintheenv.localfiletosomethingelse'
-const SESSION_SALT = process.env['SESSION_SALT'] ?? ''
+const SESSION_KEY = process.env['SESSION_KEY']
 
-/* eslint-disable-next-line */
-export interface AppOptions {
+export interface AppOptions extends Pick<LibraryServiceOptions, 'whileLoadingTitle'> {
     prefix?: string
 }
 
+async function frontendVersion(fastify: FastifyInstance): Promise<string> {
+    return (
+        FRONTEND_VERSION_OVERRIDE ??
+        (await fastify.libraryService.getServedManifest()).frontend.version
+    )
+}
+
 export async function app(fastify: FastifyInstance, opts: AppOptions) {
+    await fastify.register(RequestTimingsPlugin)
     await fastify.register(fastifyPrintRoutes)
     fastify.addHook('onSend', async (request, reply, payload) => {
         if (typeof payload !== 'string' && !(payload instanceof String)) {
@@ -54,7 +61,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
     })
 
     await fastify.register(fastifyRateLimit, {
-        global: true,
+        global: service !== 'local',
         max: (request: FastifyRequest, key: string) => {
             if (key.startsWith('user:')) {
                 return 500
@@ -77,38 +84,29 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
 
     fastify.setErrorHandler(async function (error, req, rep) {
         if (!rep.statusCode || rep.statusCode < 400) {
-            if (error instanceof BaseError && error.category === ErrorCategory.Application) {
-                void rep.code(400)
-            } else {
-                console.log('setting 500 due to error', error)
-                void rep.code(500)
-            }
+            void rep.code(errorStatusCode(error))
+        }
+
+        if (rep.statusCode >= 500) {
+            req.log.error({ err: error }, 'Request failed')
         }
 
         if (!rep.sent) {
-            const anyError = error as any
+            // Fastify passes whatever was thrown; it is almost always an Error
+            const thrown = error as Partial<Error> & Record<string, unknown>
             const outError = {
                 // Pull all enumerable properties, supporting properties on custom Errors
-                ...anyError,
+                ...thrown,
                 // Explicitly pull Error's non-enumerable properties
-                name: anyError.name,
-                message: anyError.message
+                name: thrown.name,
+                message: thrown.message
             }
             await rep.send({ status: 'error', error: outError })
         }
     })
 
-    fastify.addHook('onSend', async (request, reply, payload) => {
-        let frontendVersion = FRONTEND_VERSION_OVERRIDE
-        if (!frontendVersion) {
-            try {
-                const manifest = await fastify.libraryService.getManifest()
-                frontendVersion = manifest.frontend?.version ?? null
-            } catch (error) {
-                console.warn('Unable to resolve frontend version for response header', error)
-            }
-        }
-        void reply.header('X-Tabletop-Version', frontendVersion ?? '0.0.0')
+    fastify.addHook('onSend', async (_request, reply, payload) => {
+        void reply.header('X-Tabletop-Version', await frontendVersion(fastify))
         return payload
     })
 
@@ -118,37 +116,25 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
         origin: [FRONTEND_HOST],
         credentials: true,
         methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-        exposedHeaders: ['X-Tabletop-Version']
+        exposedHeaders: ['X-Tabletop-Version', 'ETag']
     })
 
+    assertExists(SESSION_KEY, 'The backend supervisor provides SESSION_KEY')
     await fastify.register(SecureSession, {
         sessionName: 'session',
         cookieName: '__session',
-        secret: SESSION_SECRET,
-        salt: SESSION_SALT,
-        expiry: 24 * 60 * 60 * 7,
+        key: SESSION_KEY,
+        expiry: SESSION_EXPIRY_SECONDS,
         cookie: {
             path: '/',
             httpOnly: true,
             secure: service === 'local' ? false : true,
             sameSite: service === 'local' ? false : true,
-            maxAge: 24 * 60 * 60 * 7
+            maxAge: SESSION_EXPIRY_SECONDS
         }
     })
 
     await fastify.register(Auth)
-    const firebaseAppName = `tabletop-${process.pid}-${firebaseAppIndex++}`
-    await fastify.register(FastifyFirebase, <FastifyFirebase.FirebaseOptions>{
-        projectId: GCLOUD_PROJECT,
-        name: firebaseAppName
-    })
-    fastify.addHook('onClose', async () => {
-        try {
-            await deleteApp(fastify.firebase)
-        } catch (error) {
-            fastify.log.warn({ err: error }, `Failed to delete firebase app "${firebaseAppName}"`)
-        }
-    })
     await fastify.register(FastifySSEPlugin)
 
     // This loads support plugins
@@ -160,46 +146,21 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
 
     await fastify.register(AuthorizationPlugin)
     await fastify.register(SensiblePlugin)
-    await fastify.register(FirestorePlugin)
-    await fastify.register(ServicesPlugin)
+    await fastify.register(FirestorePlugin, { projectId: GCLOUD_PROJECT })
+    await fastify.register(ServicesPlugin, { whileLoadingTitle: opts.whileLoadingTitle })
+    installTitleScope(fastify)
 
-    if (service !== 'local') {
-        fastify.addHook('onRequest', async (request, _reply) => {
-            const path = request.url.split('?')[0]
-            if (!path.startsWith(API_PREFIX) && !path.startsWith(TASKS_PREFIX)) {
-                return
-            }
-            try {
-                await fastify.libraryService.refreshManifest()
-            } catch (error) {
-                console.warn('Unable to refresh manifest', error)
-            }
-        })
-    }
-
-    let lastRestartAt = 0
-    fastify.libraryService.onManifestMismatch(() => {
-        const now = Date.now()
-        if (now - lastRestartAt < MIN_RESTART_INTERVAL_MS) {
-            return
-        }
-        lastRestartAt = now
-        console.log('Manifest mismatch detected, restarting server...')
-        void fastify.restart()
-    })
+    if (service !== 'local') installManifestRefresh(fastify, [API_PREFIX, TASKS_PREFIX])
 
     await fastify.register(GamesPlugin, { prefix: API_PREFIX })
 
-    // This sets up the service to handle the API and frontend
     if (service === 'local' || service === 'backend') {
         console.log('Registering API routes')
-        // This loads all API routes
         await fastify.register(AutoLoad, {
+            ...routeAutoloadOptions,
             dir: path.join(__dirname, 'routes/api'),
             options: { ...opts, prefix: API_PREFIX }
         })
-
-        let frontendStaticReady = false
 
         const setNoCacheHeaders = (reply: FastifyReply) => {
             reply.header('Cache-Control', 'no-store, max-age=0')
@@ -207,131 +168,43 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             reply.header('Expires', '0')
         }
 
-        const isHtmlAsset = (pathName: string) =>
-            pathName.endsWith('.html') ||
-            pathName.endsWith('.html.br') ||
-            pathName.endsWith('.html.gz')
-
-        const isServiceWorkerAsset = (pathName: string) =>
-            pathName.endsWith('service-worker.js') ||
-            pathName.endsWith('service-worker.js.br') ||
-            pathName.endsWith('service-worker.js.gz')
-
-        const setFrontendCacheHeaders = (
-            res: { setHeader: (name: string, value: string) => void },
-            pathName: string,
-            maxAgeSeconds: number
-        ) => {
-            if (isHtmlAsset(pathName) || isServiceWorkerAsset(pathName)) {
-                res.setHeader('Cache-Control', 'no-store, max-age=0')
-                res.setHeader('Pragma', 'no-cache')
-                res.setHeader('Expires', '0')
-                return
+        const setPrecompressedHeaders = (reply: FastifyReply, pathName: string) => {
+            if (pathName.endsWith('.br')) {
+                reply.header('Content-Encoding', 'br')
+                if (pathName.endsWith('.js.br')) {
+                    reply.header('Content-Type', 'text/javascript')
+                }
             }
 
-            res.setHeader('Cache-Control', `public, max-age=${maxAgeSeconds}, immutable`)
+            if (pathName.endsWith('.gz')) {
+                reply.header('Content-Encoding', 'gzip')
+                if (pathName.endsWith('.js.gz')) {
+                    reply.header('Content-Type', 'text/javascript')
+                }
+            }
         }
 
         if (service === 'local') {
-            // Serve the frontend as static files
+            const isUncachedFrontendFile = (pathName: string) =>
+                ['.html', 'service-worker.js', '.webmanifest'].some((suffix) =>
+                    [suffix, `${suffix}.br`, `${suffix}.gz`].some((name) => pathName.endsWith(name))
+                )
+
             console.log('Registering local static handlers')
             await fastify.register(fastifyStatic, {
                 root: path.join(__dirname, 'static'),
                 preCompressed: true,
                 cacheControl: false,
-                setHeaders: (res, pathName) => {
-                    setFrontendCacheHeaders(res, pathName, 60 * 60 * 24)
-
-                    if (pathName.endsWith('.br')) {
-                        res.setHeader('Content-Encoding', 'br')
-                        if (pathName.endsWith('.js.br')) {
-                            res.setHeader('Content-Type', 'text/javascript')
-                        }
+                setHeaders: (reply, pathName) => {
+                    if (isUncachedFrontendFile(pathName)) {
+                        setNoCacheHeaders(reply)
+                    } else {
+                        reply.header('Cache-Control', 'public, max-age=86400, immutable')
                     }
-
-                    if (pathName.endsWith('.gz')) {
-                        res.setHeader('Content-Encoding', 'gzip')
-                        if (pathName.endsWith('.js.gz')) {
-                            res.setHeader('Content-Type', 'text/javascript')
-                        }
-                    }
+                    setPrecompressedHeaders(reply, pathName)
                 }
             })
-            frontendStaticReady = true
-        }
 
-        // Serve assets from GCS as static files
-        await fastify.register(fastifyStatic, {
-            root: path.join(STATIC_ROOT, 'games'),
-            prefix: '/games/',
-            decorateReply: false, // avoid reply.sendFile collisions
-            preCompressed: true,
-            immutable: true,
-            maxAge: '365d',
-            setHeaders: (res, pathName) => {
-                if (pathName.endsWith('.br')) {
-                    res.setHeader('Content-Encoding', 'br')
-                    if (pathName.endsWith('.js.br')) {
-                        res.setHeader('Content-Type', 'text/javascript')
-                    }
-                }
-
-                if (pathName.endsWith('.gz')) {
-                    res.setHeader('Content-Encoding', 'gzip')
-                    if (pathName.endsWith('.js.gz')) {
-                        res.setHeader('Content-Type', 'text/javascript')
-                    }
-                }
-            }
-        })
-
-        if (service === 'backend') {
-            let frontendVersion = FRONTEND_VERSION_OVERRIDE
-
-            if (!frontendVersion) {
-                try {
-                    const manifest = await fastify.libraryService.getManifest()
-                    frontendVersion = manifest.frontend?.version ?? null
-                } catch (error) {
-                    console.warn('Unable to resolve frontend version from manifest', error)
-                }
-            }
-
-            if (frontendVersion) {
-                console.log(
-                    'Serving static content for root from: ' +
-                        path.join(STATIC_ROOT, 'frontend', frontendVersion)
-                )
-                await fastify.register(fastifyStatic, {
-                    root: path.join(STATIC_ROOT, 'frontend', frontendVersion),
-                    preCompressed: true,
-                    cacheControl: false,
-                    setHeaders: (res, pathName) => {
-                        setFrontendCacheHeaders(res, pathName, 60 * 60 * 24 * 365)
-
-                        if (pathName.endsWith('.br')) {
-                            res.setHeader('Content-Encoding', 'br')
-                            if (pathName.endsWith('.js.br')) {
-                                res.setHeader('Content-Type', 'text/javascript')
-                            }
-                        }
-
-                        if (pathName.endsWith('.gz')) {
-                            res.setHeader('Content-Encoding', 'gzip')
-                            if (pathName.endsWith('.js.gz')) {
-                                res.setHeader('Content-Type', 'text/javascript')
-                            }
-                        }
-                    }
-                })
-                frontendStaticReady = true
-            } else {
-                console.warn('Frontend static handlers skipped (version unavailable)')
-            }
-        }
-
-        if (frontendStaticReady) {
-            // Override root path to serve index.html with no caching
             fastify.get('/', async function (req, reply) {
                 setNoCacheHeaders(reply)
                 await reply.sendFile('index.html', { cacheControl: false })
@@ -343,12 +216,32 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             })
         }
 
-        // Handle 404 differently for API and frontend
+        await fastify.register(GameAssetRedirectPlugin)
+
+        const gameAssetsAreImmutable = service !== 'local'
+
+        await fastify.register(fastifyStatic, {
+            root: path.join(STATIC_ROOT, 'games'),
+            prefix: '/games/',
+            decorateReply: false, // avoid reply.sendFile collisions
+            preCompressed: true,
+            cacheControl: gameAssetsAreImmutable,
+            immutable: gameAssetsAreImmutable,
+            maxAge: gameAssetsAreImmutable ? '365d' : 0,
+            setHeaders: (reply, pathName) => {
+                if (!gameAssetsAreImmutable) {
+                    setNoCacheHeaders(reply)
+                }
+
+                setPrecompressedHeaders(reply, pathName)
+            }
+        })
+
         console.log('Registering 404 handlers')
         fastify.setNotFoundHandler(async (request, reply) => {
             if (request.url.startsWith(API_PREFIX) || request.url.startsWith(TASKS_PREFIX)) {
                 await reply.code(404).send({ message: 'Not Found' })
-            } else if (frontendStaticReady) {
+            } else if (service === 'local') {
                 console.log('Serving index.html for unknown frontend path:', request.url)
                 setNoCacheHeaders(reply)
                 await reply.sendFile('index.html', { cacheControl: false })
@@ -362,6 +255,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
     if (service === 'local' || service === 'tasks') {
         console.log('Registering Task routes')
         await fastify.register(AutoLoad, {
+            ...routeAutoloadOptions,
             dir: path.join(__dirname, 'routes/tasks'),
             options: { ...opts, prefix: TASKS_PREFIX }
         })

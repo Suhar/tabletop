@@ -1,12 +1,12 @@
 import {
-    assert,
     assertExists,
     GameResult,
     GameState,
     HydratableGameState,
     HydratedTurnManager,
     OffsetCoordinates,
-    PrngState
+    PrngState,
+    Visibility
 } from '@tabletop/common'
 import { SolPlayerState, HydratedSolPlayerState } from './playerState.js'
 import * as Type from 'typebox'
@@ -65,11 +65,14 @@ export const SolGameState = Type.Evaluate(
     ])
 )
 
-const SolGameStateValidator = Compile(SolGameState)
+export const SolGameStateValidator = Compile(SolGameState)
+export const SolProjectedState = Visibility.createProjectionSchema(SolGameState)
+export type SolProjectedState = Type.Static<typeof SolProjectedState>
+export const SolProjectedStateValidator = Compile(SolProjectedState)
 
 export class HydratedSolGameState
-    extends HydratableGameState<typeof SolGameState, HydratedSolPlayerState>
-    implements SolGameState
+    extends HydratableGameState<typeof SolProjectedState, HydratedSolPlayerState>
+    implements SolProjectedState
 {
     declare id: string
     declare gameId: string
@@ -114,8 +117,8 @@ export class HydratedSolGameState
         passageGates: number[]
     }
 
-    constructor(data: SolGameState) {
-        super(data, SolGameStateValidator)
+    constructor(data: SolProjectedState) {
+        super(data, SolProjectedStateValidator)
 
         this.players = data.players.map((player) => new HydratedSolPlayerState(player))
         this.board = new HydratedSolGameBoard(data.board)
@@ -123,8 +126,8 @@ export class HydratedSolGameState
     }
 
     getEffectTracking() {
-        if (!this.effectTracking) {
-            this.effectTracking = {
+        return (
+            this.effectTracking ?? {
                 outerRingLaunches: 0,
                 clustersRemaining: 0,
                 squeezed: false,
@@ -133,7 +136,11 @@ export class HydratedSolGameState
                 fuelRemaining: 0,
                 passageGates: []
             }
-        }
+        )
+    }
+
+    ensureEffectTracking() {
+        this.effectTracking ??= this.getEffectTracking()
         return this.effectTracking
     }
 
@@ -185,7 +192,7 @@ export class HydratedSolGameState
     }
 
     getActivatingStation(playerId: string): Station {
-        let activation = this.getActivationForPlayer(playerId)
+        const activation = this.getActivationForPlayer(playerId)
         assertExists(activation, 'No activation for player')
         assertExists(activation.currentStationId, 'No activating station')
 
@@ -195,7 +202,7 @@ export class HydratedSolGameState
     }
 
     hasActivatedStation(playerId: string, stationId: string): boolean {
-        let activation = this.getActivationForPlayer(playerId)
+        const activation = this.getActivationForPlayer(playerId)
         return activation?.activatedIds.includes(stationId) ?? false
     }
 

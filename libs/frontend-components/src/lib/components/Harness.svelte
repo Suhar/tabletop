@@ -1,37 +1,62 @@
-<script module lang="ts">
-    import TimeAgo from 'javascript-time-ago'
-    import en from 'javascript-time-ago/locale/en'
-
-    TimeAgo.addDefaultLocale(en)
-</script>
-
 <script lang="ts">
     import 'es-iterator-helpers/auto'
-    import { onMount } from 'svelte'
-    import type { Game } from '@tabletop/common'
-    import { Button, Dropdown, DropdownItem, Modal, Navbar, Toggle } from 'flowbite-svelte'
+    import { onMount, onDestroy, untrack, type Snippet } from 'svelte'
+    import {
+        assertExists,
+        scenarioJson,
+        type Game,
+        type ScenarioData,
+        type GameState,
+        type HydratedGameState
+    } from '@tabletop/common'
+    import {
+        Button,
+        Dropdown,
+        DropdownDivider,
+        DropdownGroup,
+        DropdownItem,
+        Modal,
+        Navbar,
+        Toggle
+    } from 'flowbite-svelte'
     import { ChevronDownOutline, TrashBinSolid } from 'flowbite-svelte-icons'
     import HarnessGame from './HarnessGame.svelte'
-    import type { GameSession } from '$lib/model/gameSession.svelte.js'
     import GameEditForm from './GameEditForm.svelte'
     import DeleteModal from './DeleteModal.svelte'
     import { type GameUiDefinition } from '$lib/definition/gameUiDefinition.js'
     import { setAppContext } from '$lib/model/appContext.js'
     import { createHarnessAppContext } from '$lib/harness/harnessContext.js'
-    import type { GameState, HydratedGameState } from '@tabletop/common'
-    import { BridgedContext } from '$lib/services/bridges/bridgedContext.svelte.js'
+    import { HarnessSessions } from '$lib/harness/harnessSessions.svelte.js'
     import { attachGlobalCssVarFromRect } from '$lib/utils/publishCssVarFromRect.js'
+    import {
+        gameScenarios,
+        scenarioFileName,
+        scenarioFromJson,
+        type Scenario
+    } from '$lib/harness/harnessScenarios.js'
+    import { saveToDevice } from '$lib/utils/saveToDevice.js'
 
     let { definition }: { definition: GameUiDefinition<GameState, HydratedGameState> } = $props()
     const appContext = createHarnessAppContext(definition)
     setAppContext(appContext)
 
-    let { gameService, authorizationService, notificationService, chatService, api } = appContext
+    let { gameService, authorizationService } = appContext
+    const sessions = untrack(() => new HarnessSessions(appContext, definition))
+    onDestroy(() => sessions.dispose())
 
     let showCreateModal = $state(false)
     let gameToDelete: string | undefined = $state(undefined)
     let deleteModalOpen = $derived(gameToDelete !== undefined)
-    let gameSession: GameSession<GameState, HydratedGameState> | undefined = $state(undefined)
+    let gameSession = $derived(sessions.session)
+    let availableGames = $derived([...gameService.activeGames, ...gameService.finishedGames])
+    let preferredColorsEnabled = $state(false)
+    let colorBlindPalette = $state(false)
+    let optionsOpen = $state(false)
+    let scenariosOpen = $state(false)
+    let scenarioFileInput: HTMLInputElement | undefined = $state()
+    let scenarioError: string | undefined = $state()
+
+    const scenarios = gameScenarios()
 
     onMount(() => {
         gameService.loadGames().catch(console.error)
@@ -65,41 +90,133 @@
         gameToDelete = gameId
     }
 
-    async function loadGame(gameId: string) {
-        if (!definition) {
+    function setNonActivePlayerView(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement) || !gameSession) {
             return
         }
 
-        const { game, actions } = await gameService.loadGame(gameId)
-        if (!game) {
+        if (event.currentTarget.checked) {
+            gameSession.bridge.setChosenAdminPlayerId(undefined)
+            authorizationService.adminCapabilitiesEnabled = false
+        }
+        gameSession.setViewingAsNonActivePlayer(event.currentTarget.checked)
+    }
+
+    function setAdminCapabilities(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement)) {
             return
         }
 
-        if (!game.state) {
-            return
+        const enabled = event.currentTarget.checked
+        gameSession?.bridge.setChosenAdminPlayerId(undefined)
+        authorizationService.adminCapabilitiesEnabled = enabled
+        if (enabled) {
+            gameSession?.setViewingAsNonActivePlayer(false)
         }
+    }
 
-        const runtime = await definition.runtime()
-        const sessionClass = runtime.sessionClass
-        const bridgedContext = new BridgedContext({
-            authorizationService,
-            gameService,
-            chatService,
-            gameId: game.id
-        })
-        gameSession = new sessionClass({
-            gameService: gameService,
-            bridgedContext: bridgedContext,
-            notificationService: notificationService,
-            chatService: chatService,
-            api: api,
-            runtime: runtime,
-            game,
-            state: game.state,
-            actions
+    function updateColorPreferencePreview() {
+        gameSession?.colors.setPreferencePreview({
+            preferredColorsEnabled,
+            colorBlindPalette
         })
     }
+
+    function setPreferredColors(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement)) {
+            return
+        }
+
+        preferredColorsEnabled = event.currentTarget.checked
+        updateColorPreferencePreview()
+    }
+
+    function setColorBlindPalette(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement)) {
+            return
+        }
+
+        colorBlindPalette = event.currentTarget.checked
+        updateColorPreferencePreview()
+    }
+
+    function closeOptionsOnWindowBlur() {
+        optionsOpen = false
+        const optionsButton = document.getElementById('harness-options')
+        if (optionsButton instanceof HTMLButtonElement) {
+            optionsButton.blur()
+        }
+    }
+
+    async function attemptScenario(failure: string, work: () => Promise<void>) {
+        scenariosOpen = false
+        scenarioError = undefined
+        try {
+            await work()
+        } catch (error) {
+            scenarioError = `${failure}: ${error instanceof Error ? error.message : String(error)}`
+        }
+    }
+
+    async function saveAsScenario() {
+        const session = gameSession
+        assertExists(session, 'Save as scenario is offered with a game open')
+        await attemptScenario('The game could not be saved as a scenario', async () => {
+            const scenario = await gameService.scenarioOf(session.primaryGame.id)
+            saveToDevice(
+                new Blob([scenarioJson(scenario)], { type: 'application/json' }),
+                scenarioFileName(scenario.game.name)
+            )
+        })
+    }
+
+    function chooseScenarioFile() {
+        scenariosOpen = false
+        assertExists(scenarioFileInput, 'The scenario file picker is on the page')
+        scenarioFileInput.click()
+    }
+
+    async function loadScenarioFile(event: Event & { currentTarget: HTMLInputElement }) {
+        const input = event.currentTarget
+        const [file] = input.files ?? []
+        input.value = ''
+        if (!file) return
+        await attemptScenario(`${file.name} is not a scenario this game can open`, async () =>
+            openScenario(scenarioFromJson(await file.text()))
+        )
+    }
+
+    async function loadScenario(scenario: Scenario) {
+        await attemptScenario(`The scenario ${scenario.name} could not be opened`, async () =>
+            openScenario(await scenario.load())
+        )
+    }
+
+    async function openScenario(scenario: ScenarioData) {
+        const game = await gameService.loadScenario(scenario)
+        await loadGame(game.id)
+    }
+
+    async function loadGame(gameId: string) {
+        scenarioError = undefined
+        await sessions.load(gameId)
+        updateColorPreferencePreview()
+    }
+
+    async function setProtectedMode(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement) || !gameSession) return
+        await sessions.load(gameSession.primaryGame.id, event.currentTarget.checked)
+        updateColorPreferencePreview()
+    }
+
+    async function setProtectedView(event: Event) {
+        if (!(event.currentTarget instanceof HTMLSelectElement) || !gameSession) return
+        await sessions.load(gameSession.primaryGame.id, true, event.currentTarget.value)
+        updateColorPreferencePreview()
+    }
 </script>
+
+<svelte:window onblur={closeOptionsOnWindowBlur} />
 
 {#snippet gameDropdownItem(game: Game)}
     <DropdownItem class="w-full px-2" onclick={() => loadGame(game.id)}
@@ -115,6 +232,46 @@
     >
 {/snippet}
 
+{#snippet nonActivePlayerToggle(className: string)}
+    <Toggle
+        checked={gameSession?.isViewingAsNonActivePlayer ?? false}
+        disabled={!gameSession?.canViewAsNonActivePlayer}
+        onchange={setNonActivePlayerView}
+        class={className}>Non-active view</Toggle
+    >
+{/snippet}
+
+{#snippet debugToggle(className: string)}
+    <Toggle bind:checked={authorizationService.debugViewEnabled} class={className}>Debug</Toggle>
+{/snippet}
+
+{#snippet adminToggle(className: string)}
+    <Toggle
+        checked={authorizationService.adminCapabilitiesEnabled}
+        onchange={setAdminCapabilities}
+        disabled={sessions.protectedMode && sessions.selectedView !== 'host'}
+        class={className}>Admin</Toggle
+    >
+{/snippet}
+
+{#snippet preferredColorsToggle(className: string)}
+    <Toggle
+        checked={preferredColorsEnabled}
+        disabled={!gameSession}
+        onchange={setPreferredColors}
+        class={className}>Preferred colors</Toggle
+    >
+{/snippet}
+
+{#snippet colorBlindPaletteToggle(className: string)}
+    <Toggle
+        checked={colorBlindPalette}
+        disabled={!gameSession}
+        onchange={setColorBlindPalette}
+        class={className}>Colorblind palette</Toggle
+    >
+{/snippet}
+
 <div
     {@attach attachGlobalCssVarFromRect('--app-navbar-height')}
     style="padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);"
@@ -122,54 +279,174 @@
     <Navbar fluid={true} class="dark:bg-gray-800">
         <div class="flex flex-col w-full">
             <div class="flex flex-row justify-between items-center w-full">
-                <div class="flex justify-center items-center space-x-4">
+                <div class="flex justify-center items-center gap-1">
                     <Button size="xs"
-                        >Active<ChevronDownOutline
+                        >Games<ChevronDownOutline
                             class="
                             ms-2 text-white dark:text-white"
                         /></Button
                     ><Dropdown simple={true} class="min-w-[100px]">
-                        {#each gameService.activeGames as game}
+                        {#each availableGames as game (game.id)}
                             {@render gameDropdownItem(game)}
                         {/each}
                     </Dropdown>
-
-                    <Button size="xs"
-                        >Finished<ChevronDownOutline
+                    <Button
+                        size="xs"
+                        color="green"
+                        class="shrink-0"
+                        style="width: 2.25rem; height: 2.25rem; padding: 0;"
+                        aria-label="New game"
+                        title="New game"
+                        onclick={() => (showCreateModal = true)}
+                    >
+                        <span
+                            aria-hidden="true"
+                            class="text-lg leading-none"
+                            style="transform: translateY(-2px) scale(1.5);">+</span
+                        >
+                    </Button>
+                    <Button size="xs" color="purple" class="ms-3"
+                        >Scenarios<ChevronDownOutline
                             class="ms-2 text-white dark:text-white"
                         /></Button
-                    ><Dropdown simple={true} class="min-w-[100px]">
-                        {#each gameService.finishedGames as game}
-                            {@render gameDropdownItem(game)}
+                    ><Dropdown simple={true} class="min-w-[160px]" bind:isOpen={scenariosOpen}>
+                        {#if gameSession && !gameSession.isExploring}
+                            <DropdownItem class="w-full px-2" onclick={saveAsScenario}
+                                ><div class="ms-2">Save as scenario</div></DropdownItem
+                            >
+                        {/if}
+                        <DropdownItem class="w-full px-2" onclick={chooseScenarioFile}
+                            ><div class="ms-2">Load from file…</div></DropdownItem
+                        >
+                        {#if scenarios.length > 0}
+                            <DropdownDivider />
+                        {/if}
+                        {#each scenarios as scenario (scenario.name)}
+                            <DropdownItem class="w-full px-2" onclick={() => loadScenario(scenario)}
+                                ><div class="ms-2">{scenario.name}</div></DropdownItem
+                            >
                         {/each}
                     </Dropdown>
+                    <input
+                        type="file"
+                        accept=".json,application/json"
+                        class="hidden"
+                        aria-label="Scenario file"
+                        bind:this={scenarioFileInput}
+                        onchange={loadScenarioFile}
+                    />
                 </div>
-                <div>
-                    <div class="text-2xl text-white">{gameSession?.game.name}</div>
+                <div class="min-w-0 px-2">
+                    <div class="truncate text-2xl text-white">{gameSession?.game.name}</div>
                 </div>
-                <div class="flex flex-row justify-center items-center">
-                    <Toggle bind:checked={authorizationService.debugViewEnabled} class="rounded p-2"
-                        >Debug</Toggle
+                <div class="flex flex-row justify-center items-center shrink-0">
+                    <div class="max-md:hidden flex flex-row justify-center items-center">
+                        {@render debugToggle('rounded p-2')}
+                        {@render adminToggle('rounded p-2')}
+                    </div>
+                    <Button id="harness-options" size="xs" class="ms-2"
+                        >Options<ChevronDownOutline
+                            class="ms-2 text-white dark:text-white"
+                        /></Button
                     >
-
-                    <Toggle
-                        bind:checked={authorizationService.adminCapabilitiesEnabled}
-                        class="rounded p-2">Admin</Toggle
-                    >
-
-                    <Button class="ms-2" size="xs" onclick={() => (showCreateModal = true)}
-                        >New Game</Button
-                    >
+                    <Dropdown placement="bottom-end" bind:isOpen={optionsOpen}>
+                        <DropdownGroup class="py-1 min-w-[190px]">
+                            <li>
+                                <Toggle
+                                    checked={sessions.protectedMode}
+                                    disabled={!gameSession?.runtime.visibility ||
+                                        gameSession.busy ||
+                                        gameSession.isExploring ||
+                                        sessions.loading}
+                                    onchange={setProtectedMode}
+                                    class="w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                    >Protected mode</Toggle
+                                >
+                            </li>
+                            <li>
+                                {@render nonActivePlayerToggle(
+                                    'w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                )}
+                            </li>
+                            <li>
+                                {@render preferredColorsToggle(
+                                    'w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                )}
+                            </li>
+                            <li>
+                                {@render colorBlindPaletteToggle(
+                                    'w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                )}
+                            </li>
+                            <li class="md:hidden">
+                                {@render debugToggle(
+                                    'w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                )}
+                            </li>
+                            <li class="md:hidden">
+                                {@render adminToggle(
+                                    'w-full rounded p-2 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                )}
+                            </li>
+                        </DropdownGroup>
+                    </Dropdown>
                 </div>
             </div>
+            {#if sessions.protectedMode && gameSession}
+                <label class="flex items-center justify-center gap-2 p-2 text-sm text-white">
+                    Protected view
+                    <select
+                        aria-label="Protected view"
+                        class="rounded bg-gray-700 text-white text-sm"
+                        value={sessions.selectedView}
+                        disabled={gameSession.busy || gameSession.isExploring || sessions.loading}
+                        onchange={setProtectedView}
+                    >
+                        {#each gameSession.primaryGame.players as player, i (i)}
+                            <option value={player.id}>{player.name}</option>
+                        {/each}
+                        <option value="spectator">Spectator</option>
+                        <option value="host">Host View</option>
+                    </select>
+                </label>
+            {/if}
         </div>
     </Navbar>
 </div>
 
+{#snippet harnessAlert(message: string, action?: Snippet)}
+    <div role="alert" class="p-3 text-red-500">
+        <p>{message}</p>
+        {@render action?.()}
+    </div>
+{/snippet}
+
+{#snippet openInOrdinaryHotseat()}
+    {#if sessions.failedGameId}
+        <Button
+            size="xs"
+            onclick={async () => {
+                if (sessions.failedGameId) await sessions.load(sessions.failedGameId, false)
+                updateColorPreferencePreview()
+            }}>Open in ordinary hotseat</Button
+        >
+    {/if}
+{/snippet}
+
+{#if scenarioError}
+    {@render harnessAlert(scenarioError)}
+{/if}
+{#if sessions.error}
+    {@render harnessAlert(sessions.error, openInOrdinaryHotseat)}
+{/if}
+{#if sessions.loading}
+    <p role="status" class="p-3">Loading game…</p>
+{/if}
+
 <div class="flex flex-col w-full overflow-auto">
-    {#if gameSession}
+    {#if gameSession && !sessions.loading}
         {#key gameSession}
-            <HarnessGame {gameSession} />
+            <HarnessGame {gameSession} protectedMode={sessions.protectedMode} />
         {/key}
     {/if}
 </div>

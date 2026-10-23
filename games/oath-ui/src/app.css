@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+@plugin 'flowbite/plugin';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-primary-50: #fff5f2;
+    --color-primary-100: #fff1ee;
+    --color-primary-200: #ffe4de;
+    --color-primary-300: #ffd5cc;
+    --color-primary-400: #ffbcad;
+    --color-primary-500: #fe795d;
+    --color-primary-600: #ef562f;
+    --color-primary-700: #eb4f27;
+    --color-primary-800: #cc4522;
+    --color-primary-900: #a5371b;
+
+    --color-secondary-50: #f0f9ff;
+    --color-secondary-100: #e0f2fe;
+    --color-secondary-200: #bae6fd;
+    --color-secondary-300: #7dd3fc;
+    --color-secondary-400: #38bdf8;
+    --color-secondary-500: #0ea5e9;
+    --color-secondary-600: #0284c7;
+    --color-secondary-700: #0369a1;
+    --color-secondary-800: #075985;
+    --color-secondary-900: #0c4a6e;
+}
+
+/* Oath's palette: the contract's "Palette" section. Components name these, never a raw colour.
+   The scope plugin in postcss.config.js rewrites `:root` to the title root, `[data-game-ui="oath"]`. */
+:root {
+    --oath-surface: --alpha(var(--color-stone-900) / 70%);
+    --oath-surface-raised: var(--color-stone-800);
+    --oath-frame: --alpha(var(--color-amber-500) / 40%);
+    --oath-text: var(--color-stone-100);
+    --oath-text-muted: var(--color-stone-400);
+    --oath-heading: --alpha(var(--color-amber-200) / 80%);
+    --oath-accent: var(--color-amber-300);
+    --oath-accent-soft: --alpha(var(--color-amber-950) / 60%);
+    --oath-control: var(--color-stone-700);
+    --oath-control-hover: var(--color-stone-600);
+    --oath-primary: var(--color-stone-800);
+    --oath-primary-hover: var(--color-stone-700);
+    --oath-primary-text: var(--color-amber-300);
+    --oath-primary-border: var(--color-amber-300);
+    --oath-danger: var(--color-rose-400);
+    --oath-danger-soft: --alpha(var(--color-rose-900) / 70%);
+    --oath-divider: --alpha(var(--color-stone-700) / 60%);
+    /* The goal symbols' colours: the Oath, a Vision, the Successor (the goal tile's purple). */
+    --oath-goal-oath: var(--color-amber-500);
+    --oath-goal-vision: var(--color-stone-100);
+    --oath-goal-successor: #913f78;
+}
+
+@theme inline {
+    --color-oath-surface: var(--oath-surface);
+    --color-oath-surface-raised: var(--oath-surface-raised);
+    --color-oath-frame: var(--oath-frame);
+    --color-oath-text: var(--oath-text);
+    --color-oath-text-muted: var(--oath-text-muted);
+    --color-oath-heading: var(--oath-heading);
+    --color-oath-accent: var(--oath-accent);
+    --color-oath-accent-soft: var(--oath-accent-soft);
+    --color-oath-control: var(--oath-control);
+    --color-oath-control-hover: var(--oath-control-hover);
+    --color-oath-primary: var(--oath-primary);
+    --color-oath-primary-hover: var(--oath-primary-hover);
+    --color-oath-primary-text: var(--oath-primary-text);
+    --color-oath-primary-border: var(--oath-primary-border);
+    --color-oath-danger: var(--oath-danger);
+    --color-oath-danger-soft: var(--oath-danger-soft);
+    --color-oath-divider: var(--oath-divider);
+    --color-oath-goal-oath: var(--oath-goal-oath);
+    --color-oath-goal-vision: var(--oath-goal-vision);
+    --color-oath-goal-successor: var(--oath-goal-successor);
+}
+
+@source "../node_modules/flowbite-svelte/dist";
+@source "../node_modules/flowbite-svelte-icons/dist";
+@source "../../../libs/frontend-components/src/**/*.{html,js,svelte,ts}";
+@source "./**/*.{html,js,svelte,ts}";
+
+@layer base {
+    /* disable chrome cancel button */
+    input[type='search']::-webkit-search-cancel-button {
+        display: none;
+    }
+}

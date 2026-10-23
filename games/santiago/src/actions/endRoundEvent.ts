@@ -54,6 +54,6 @@ export class HydratedEndRoundEvent
     }
 
     apply(_state: HydratedSantiagoGameState) {
-        // Pure history marker — no game state change
+        // No state change — ExtraIrrigationStateHandler.onAction applies the drought and income
     }
 }

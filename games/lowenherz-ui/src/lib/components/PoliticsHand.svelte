@@ -1,0 +1,183 @@
+<script lang="ts">
+    import { gsap } from 'gsap'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import type { PoliticsCard as PoliticsCardData } from '@tabletop/lowenherz'
+    import CardMagnifier from './CardMagnifier.svelte'
+
+    const gameSession = getGameSession()
+
+    // A read-only peek at cards you already hold. PlayerState's own splay is legible on its own
+    // now (an applicable card carries its own APPLY button directly), so this is only reachable
+    // one way: StatusMessages' duel panel, when a duelist holds more than one Treasure card and
+    // needs to pick which one to arm (see its "+ Treasure?" button, showMyPoliticsCards). The
+    // pile-choosing/draw flow used to share this same floating-overlay chrome and deal-in
+    // animation, but has its own presentation now (SummaryStrip's highlighted count pills to
+    // choose, PoliticsPileReveal to deal the cards in the space that opens up beside them) - this
+    // dismissible, full-screen overlay is purely for the peek.
+    const isOpen = $derived(gameSession.viewingMyPoliticsCards)
+    const cards = $derived(gameSession.myPoliticsCards)
+
+    function close() {
+        gameSession.hideMyPoliticsCards()
+    }
+
+    // Desktop width. On a phone, min() takes over: 42vw keeps two cards plus the gap inside a 320px
+    // viewport with margin to spare, where a fixed 150px pair came to 316px and sat flush against
+    // both edges. A style rather than a Tailwind class because dealIn measures the rendered node,
+    // and every card below shares it.
+    const CARD_WIDTH = 150
+    const CARD_WIDTH_CSS = `min(${CARD_WIDTH}px, 42vw)`
+    const cardWidthStyle = `width: ${CARD_WIDTH_CSS};`
+
+    // Tiled "deal" animation: each card flies in from wherever the clicked pile button actually
+    // sits on screen (see PlayerState.svelte's peek()/politicsHandOrigin), landing at its normal
+    // tiled position, staggered slightly per card like a quick riffle deal. Done with direct DOM
+    // writes (rather than a Svelte transition) because the "from" point is external and only known
+    // at click time, and the "to" point is wherever flex-wrap happens to lay each card out.
+
+    const DEAL_DURATION = 380 // ms
+    const DEAL_STAGGER = 45 // ms between each successive card starting its flight
+
+    // An attachment on each card rather than an effect watching isOpen. The deal plays when the
+    // cards APPEAR, and an attachment runs exactly then - per card, with the node in hand, so
+    // there is no cardEls lookup, no requestAnimationFrame to wait for layout (the node is already
+    // in the document and measurable), and nothing to cancel if the hand closes mid-flight because
+    // the attachment's own cleanup runs when the card goes.
+    //
+    // The stagger index comes from the card's position in the hand, which is what the loop was
+    // using anyway.
+    //
+    // A GSAP timeline rather than a raw CSS transition + settle timeout: the timeout only ever
+    // GUESSED when the transition had finished (delay + duration + a fudge factor), which can
+    // diverge from the actual visual completion if the tween is interrupted, throttled, or its
+    // element removed mid-flight. GSAP's own onComplete fires exactly when the tween actually
+    // finishes, and clearProps hands the element straight back to Tailwind afterward, same as the
+    // old settle timeout did.
+    function dealIn(index: number) {
+        return (el: HTMLElement) => {
+            const origin = gameSession.politicsHandOrigin
+            if (!origin) return
+
+            const rect = el.getBoundingClientRect()
+            const dx = origin.x - (rect.left + rect.width / 2)
+            const dy = origin.y - (rect.top + rect.height / 2)
+
+            gsap.set(el, {
+                x: dx,
+                y: dy,
+                scale: 0.35,
+                opacity: 0,
+                rotate: index % 2 === 0 ? -6 : 6
+            })
+
+            const tl = gsap.timeline({
+                delay: (index * DEAL_STAGGER) / 1000,
+                onComplete: () => {
+                    // 'all' clears the WHOLE inline style attribute, not just the properties
+                    // this tween touched - that included the width Svelte's style={cardWidthStyle}
+                    // had set, collapsing every card down to its unstyled intrinsic size right as
+                    // the deal finished. Naming only the tweened properties leaves that alone.
+                    gsap.set(el, { clearProps: 'x,y,scale,rotate,opacity' })
+                }
+            })
+            // Opacity finishes well before the flight does, same split the old CSS transition
+            // had (200ms fade against a 380ms move) - a snappy fade-in reads better than one
+            // that's still creeping up as the card settles into place.
+            tl.to(el, { opacity: 1, duration: 0.2, ease: 'power1.out' }, 0)
+            tl.to(
+                el,
+                {
+                    x: 0,
+                    y: 0,
+                    scale: 1,
+                    rotate: 0,
+                    duration: DEAL_DURATION / 1000,
+                    ease: 'power3.out'
+                },
+                0
+            )
+
+            return () => tl.kill()
+        }
+    }
+
+    // canApplyPoliticsCard/applyPoliticsCard live on the session now - shared with the always-
+    // visible APPLY button PlayerState's own splay puts on an applicable card, the other entry
+    // point into the same handful of session methods.
+    function applyCard(card: PoliticsCardData) {
+        gameSession.applyPoliticsCard(card)
+        // The remaining steps (picking regions/squares, or entering a bid) happen on
+        // the board/sidebar behind this overlay, so get out of the way immediately.
+        close()
+    }
+
+    // Same pop-in shape as PlayerState's own APPLY button (see that file's bounceIn for why this
+    // is a plain mount attachment rather than a StateAnimator) - kept as its own local copy here
+    // rather than shared, same as this component's dealIn mirrors PoliticsPileReveal's.
+    const BOUNCE_INITIAL_SCALE = 0.2
+    const BOUNCE_OVERSHOOT_SCALE = 1.16
+    const BOUNCE_POP = 0.18
+    const BOUNCE_SETTLE = 0.16
+
+    function bounceIn(el: HTMLElement) {
+        gsap.set(el, { scale: BOUNCE_INITIAL_SCALE, opacity: 0 })
+        const tl = gsap.timeline()
+        tl.to(
+            el,
+            {
+                scale: BOUNCE_OVERSHOOT_SCALE,
+                opacity: 1,
+                duration: BOUNCE_POP,
+                ease: 'back.out(2.2)'
+            },
+            0
+        )
+        tl.to(
+            el,
+            { scale: 1, duration: BOUNCE_SETTLE, ease: 'power2.out', clearProps: 'scale' },
+            BOUNCE_POP
+        )
+        return () => tl.kill()
+    }
+</script>
+
+{#if isOpen}
+    <!-- A floating overlay above everything else - doesn't affect the board or sidebar's size at
+         all. Dismisses on a click or Escape - unlike the draw-pile flow this replaced part of,
+         there is nothing here that has to be finished before backing out; it is just a look. -->
+    <div
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/50 p-3"
+        role="button"
+        tabindex="0"
+        onclick={() => close()}
+        onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') close()
+        }}
+    >
+        <span class="text-white text-2xl font-semibold drop-shadow">Your politics cards</span>
+        <div
+            class="flex flex-wrap items-start justify-center gap-4 w-full max-w-4xl max-h-[calc(100dvh-7rem)] overflow-y-auto px-2 py-1"
+            role="presentation"
+            onclick={(e) => e.stopPropagation()}
+        >
+            {#each cards as card, dealIndex (dealIndex)}
+                <div {@attach dealIn(dealIndex)} class="relative opacity-90" style={cardWidthStyle}>
+                    <CardMagnifier {card} />
+                    {#if gameSession.canApplyPoliticsCard(card)}
+                        <!-- Border/background/text match the board's own village-name pill (see
+                             RealBoard.svelte) rather than a plain UI button - same "labeled thing
+                             sitting on parchment" look PlayerState's own APPLY button now uses. -->
+                        <button
+                            type="button"
+                            {@attach bounceIn}
+                            class="absolute top-[15%] left-1/2 -translate-x-1/2 cursor-pointer rounded-full text-[#f6e8c8] text-xs tracking-widest px-3 py-1 border border-[rgba(217,180,74,0.75)] bg-[rgba(43,26,10,0.92)] shadow-[0_2px_5px_rgba(0,0,0,0.45)] hover:border-[rgba(217,180,74,1)]"
+                            onclick={() => applyCard(card)}
+                        >
+                            APPLY
+                        </button>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    </div>
+{/if}

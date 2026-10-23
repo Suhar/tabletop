@@ -1,5 +1,16 @@
-import { GameAction, Game, GameState, User, GameStatusCategory } from '@tabletop/common'
+import {
+    GameCreationOptions,
+    GameAction,
+    Game,
+    GameState,
+    User,
+    GameStatusCategory,
+    GameHistoryPage,
+    GameHistoryCursor,
+    UserGameStats
+} from '@tabletop/common'
 import { UpdateValidationResult, UpdateValidator } from './validator.js'
+import type { TournamentSeatHandover, TournamentTableRelease } from '../../games/tournamentGames.js'
 
 export type ActionUpdateValidator = (
     existingGame: Game,
@@ -19,8 +30,29 @@ export type ActionUndoValidator = (
     gameUpdates: Partial<Game>
 ) => Promise<UpdateValidationResult>
 
+export type UndoActionWindow = {
+    targetAction: GameAction
+    startIndex: number
+    actions: GameAction[]
+}
+
+export type GameData = { game: Game; actions: GameAction[] }
+
+export interface GameDataReader {
+    readonly game: Game
+    actions(): Promise<GameAction[]>
+    actionRange(startIndex: number, endIndex: number): Promise<GameAction[]>
+    undoWindow(actionId: string): Promise<UndoActionWindow | undefined>
+}
+
 export interface GameStore {
-    createGame(game: Game): Promise<Game>
+    loadGameData(gameId: string): Promise<GameData | undefined>
+    readGameData<T>(
+        gameId: string,
+        read: (reader: GameDataReader) => Promise<T>
+    ): Promise<T | undefined>
+    createGame(game: Game, options?: GameCreationOptions): Promise<Game>
+    getMasterSeed(gameId: string): Promise<string | undefined>
     writeFullGameData(
         game: Game,
         state: GameState,
@@ -33,9 +65,31 @@ export interface GameStore {
     getGameEtag(gameId: string): Promise<string | undefined>
     hasCachedActiveGames(user: User): Promise<boolean>
     findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]>
+    findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage>
+    findGameStats(user: User): Promise<UserGameStats>
     findOpenGamesForTitle(titleId: string): Promise<Game[]>
+    findActiveGamesForTitle(titleId: string): Promise<Game[]>
+    findFinishedGames(afterGameId: string | undefined, limit: number): Promise<Game[]>
+    readStateFromStorage(gameId: string): Promise<GameState | undefined>
+    recordFinalScores({
+        gameId,
+        finishedAt,
+        finalScores
+    }: {
+        gameId: string
+        finishedAt: Date
+        finalScores: Record<string, number>
+    }): Promise<boolean>
     findGameById(gameId: string, includeState: boolean): Promise<Game | undefined>
-    findActionById(game: Game, actionId: string): Promise<GameAction | undefined>
+    findUndoActionWindow({
+        game,
+        actionId,
+        endIndex
+    }: {
+        game: Game
+        actionId: string
+        endIndex: number
+    }): Promise<UndoActionWindow | undefined>
     findActionsForGame(game: Game): Promise<GameAction[]>
     findActionRangeForGame({
         game,
@@ -63,6 +117,10 @@ export interface GameStore {
         relatedActions: GameAction[]
         priorState: GameState
     }>
+
+    voidTournamentGame(gameId: string, outcome: TournamentTableRelease): Promise<Game>
+
+    replaceTournamentSeat(handover: TournamentSeatHandover): Promise<Game>
 
     undoActionsFromGame({
         gameId,
@@ -93,7 +151,7 @@ export interface GameStore {
         validator?: UpdateValidator<Game>
     }): Promise<[Game, string[], Game]>
 
-    deleteGame(game: Game): Promise<void>
+    deleteGame(game: Game, authorize?: (existingGame: Game) => void): Promise<void>
 
     getActionChecksum(gameId: string): Promise<number | undefined>
     setGameState({ gameId, state }: { gameId: string; state: GameState }): Promise<void>

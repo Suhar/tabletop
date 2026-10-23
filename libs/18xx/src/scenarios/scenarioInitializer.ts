@@ -1,0 +1,161 @@
+import {
+    assert,
+    assertExists,
+    type Game,
+    type GameConfig,
+    type PlayerState,
+    type StartingPositionAssignment,
+    type UninitializedGameState
+} from '@tabletop/common'
+import { Compile } from 'typebox/compile'
+import { settleCashPayments } from '../finance/cashPayments.js'
+import { controllingOwner } from '../finance/finance.js'
+import { EighteenXXInitializer } from '../game/eighteenXXInitializer.js'
+import type {
+    EighteenXXRuntimeSchema,
+    HydratedEighteenXXState,
+    TitleStateSchema
+} from '../game/eighteenXXState.js'
+import type { EighteenXXTitleRules } from '../game/eighteenXXTitleRules.js'
+import type { InitialPosition, Opening } from '../game/opening.js'
+import { privateIncomePayments } from '../operating/startOperatingRound.js'
+import { StationPlacement, applyStationPlacement } from '../stations/stationPlacement.js'
+import type { StockMarket } from '../stock/stockMarket.js'
+import { ScenarioPosition } from './scenarioPosition.js'
+
+export type PreparedPosition = Exclude<ScenarioPosition, 'opening' | 'optional-opening' | 'ending'>
+export type ScenarioFixtures<
+    Schema extends TitleStateSchema = EighteenXXRuntimeSchema,
+    State extends HydratedEighteenXXState<Schema> & HydratedEighteenXXState =
+        HydratedEighteenXXState<Schema> & HydratedEighteenXXState
+> = {
+    createMarket(position: PreparedPosition): StockMarket
+    createFinances(
+        players: readonly PlayerState[],
+        position: PreparedPosition
+    ): Omit<InitialPosition, 'stockMarket'>
+    prepareEnding(state: State): void
+    /** The optional rules the title's optional opening is set up with. */
+    optionalOpening?: GameConfig
+} & Pick<Opening<Schema, State>, 'titleState'>
+
+const PositionValidator = Compile(ScenarioPosition)
+const OperatingPositions: readonly ScenarioPosition[] = [
+    'construction',
+    'stations',
+    'trains',
+    'routes',
+    'operations',
+    'phases',
+    'diesel',
+    'private-events',
+    'transfers',
+    'powers',
+    'company-powers',
+    'funding',
+    'funding-chain',
+    'bankruptcy'
+]
+const TrainBuyingPositions: readonly ScenarioPosition[] = [
+    'trains',
+    'phases',
+    'diesel',
+    'private-events',
+    'transfers',
+    'funding',
+    'funding-chain',
+    'bankruptcy'
+]
+
+export class ScenarioInitializer<
+    Schema extends TitleStateSchema = EighteenXXRuntimeSchema,
+    State extends HydratedEighteenXXState<Schema> & HydratedEighteenXXState =
+        HydratedEighteenXXState<Schema> & HydratedEighteenXXState
+> extends EighteenXXInitializer<Schema, State> {
+    constructor(
+        private readonly titleRules: EighteenXXTitleRules<Schema, State>,
+        private readonly fixtures: ScenarioFixtures<Schema, State>
+    ) {
+        super(titleRules)
+    }
+    override initializeGameState(
+        game: Game,
+        state: UninitializedGameState,
+        startingPositions?: StartingPositionAssignment
+    ): State {
+        const requested = game.config?.examplePosition ?? 'opening'
+        assert(PositionValidator.Check(requested), 'Unknown scenario position')
+        if (requested === 'opening')
+            return super.initializeGameState(game, state, startingPositions)
+        if (requested === 'optional-opening') {
+            assertExists(this.fixtures.optionalOpening, 'The title has no optional opening')
+            const config = { ...game.config, ...this.fixtures.optionalOpening }
+            return super.initializeGameState({ ...game, config }, state, startingPositions)
+        }
+        assert(
+            startingPositions === undefined,
+            'Prepared scenarios do not support assigned starting positions'
+        )
+        const position: PreparedPosition = requested === 'ending' ? 'trains' : requested
+        assert(
+            game.players.length === 3 || game.players.length === 4,
+            'Prepared scenarios support three or four players'
+        )
+        const initialized = this.createInitialState(game, state, {
+            stockRoundNumber: 2,
+            titleState: this.fixtures.titleState,
+            position: {
+                ...this.fixtures.createFinances(this.playerStates(game), position),
+                stockMarket: this.fixtures.createMarket(position)
+            }
+        })
+        this.applyPhaseEffects(initialized)
+        if (OperatingPositions.includes(position)) this.enterOperatingStep(initialized, position)
+        if (requested === 'ending') {
+            this.fixtures.prepareEnding(initialized)
+            this.applyPhaseEffects(initialized)
+        }
+        return initialized
+    }
+    private enterOperatingStep(state: HydratedEighteenXXState, position: PreparedPosition): void {
+        const { operatingRules, stationRules } = this.titleRules
+        const companyOrder = operatingRules.companyOrder(state)
+        const companyId = companyOrder[0]
+        const owner = controllingOwner(state, companyId)
+        assert(owner, 'Operating scenarios require a controlling owner')
+        state.stockRound.completed = true
+        state.operatingSet = {
+            number: 1,
+            roundNumber: 1,
+            roundCount: operatingRules.roundCount(state),
+            companyOrder,
+            completedCompanyIds: [],
+            privateIncomePaid: true,
+            completed: false
+        }
+        if (this.titleRules.loanRules) state.interestRate = this.titleRules.loanRules.rate(state)
+        state.trackStep = { companyId, lays: [], completed: false }
+        state.machineState = 'LayingTrack'
+        for (const home of new StationPlacement(state, stationRules).homePlacements())
+            applyStationPlacement(state, home)
+        if (position === 'stations') {
+            state.trackStep.completed = true
+            state.stationStep = { companyId, placedStationIds: [], completed: false }
+            state.machineState = 'PlacingStation'
+        }
+        if (TrainBuyingPositions.includes(position)) {
+            delete state.trackStep
+            state.trainPurchaseStep = { companyId, purchasedTrainIds: [] }
+            state.machineState = 'BuyingTrains'
+        }
+        if (position === 'routes') {
+            delete state.trackStep
+            state.routeStep = { companyId }
+            state.machineState = 'RunningTrains'
+        }
+        if (position === 'operations')
+            settleCashPayments(state, privateIncomePayments(state, this.titleRules.operatingRules))
+        state.activePlayerIds = [owner.playerId]
+        state.turnManager.series = [{ type: 'turn', playerId: owner.playerId, start: 0 }]
+    }
+}

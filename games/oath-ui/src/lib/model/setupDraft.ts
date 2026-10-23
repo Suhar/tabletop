@@ -1,0 +1,225 @@
+import { assertExists } from '@tabletop/common'
+import { ActionType, MachineState, PlayerStatus } from '@tabletop/oath'
+import { setupSites, type BoardPick, type SiteFavor } from './actionOffers.js'
+import { START_HERE } from './offerText.js'
+import type { OathGameSession } from './session.svelte.js'
+import type { PanelDraft } from './stagedFlow.svelte.js'
+
+/**
+ * R-1.19 to R-1.23.3 — the pawn's site and the adviser kept, in either order (R-1.20 deals the
+ * hand before R-1.23 places the pawn), then the order of the discards, which waits for the site
+ * because R-10.5 sends them one region along from it, and for a short bank's whole split
+ * (R-1.16); the last tap sends.
+ *
+ * The picks are the session's staged selection, whose stage order puts the site before the card;
+ * as a panel draft it only makes Undo take back the last of the two tapped.
+ */
+export class SetupDraft implements PanelDraft {
+    // Which of the site and the card was tapped last; Undo reads it, nothing renders it.
+    private lastTap: 'site' | 'card' | undefined
+
+    constructor(private readonly session: OathGameSession) {}
+
+    private get playerId(): string | undefined {
+        const session = this.session
+        return session.gameState.machineState === MachineState.Setup &&
+            session.validActionTypes.includes(ActionType.SetupChoice)
+            ? session.liveTurnSeatId
+            : undefined
+    }
+
+    get hand(): string[] {
+        const playerId = this.playerId
+        if (!playerId) return []
+        const hand = this.session.gameState.getPlayerState(playerId).handIds
+        assertExists(hand, 'A seat is shown its own hand')
+        return hand
+    }
+
+    private value<S extends 'siteFavor' | 'site' | 'card' | 'discardOrder'>(stage: S) {
+        const selection = this.session.selection
+        return selection.action === ActionType.SetupChoice ? selection.value(stage) : undefined
+    }
+
+    /** R-1.16 — the sites whose favor the bank cannot cover, when the Chancellor must split it. */
+    get pendingSiteFavor(): { siteCardId: string; wanted: number }[] {
+        const playerId = this.playerId
+        const state = this.session.gameState
+        return playerId && state.getPlayerState(playerId).status === PlayerStatus.Chancellor
+            ? (state.pendingSiteFavor ?? [])
+            : []
+    }
+
+    // Map order fills first until the player moves favor between sites; the fill is the whole bank.
+    private get mapOrderFill(): SiteFavor[] | undefined {
+        const pending = this.pendingSiteFavor
+        if (pending.length === 0) return undefined
+        let left = this.session.gameState.favorSupply
+        return pending.map(({ siteCardId, wanted }) => {
+            const favor = Math.min(wanted, left)
+            left -= favor
+            return { siteCardId, favor }
+        })
+    }
+
+    get siteFavor(): SiteFavor[] | undefined {
+        const stored = this.value('siteFavor')
+        return this.mapOrderFill?.map(({ siteCardId, favor }) => ({
+            siteCardId,
+            favor: stored?.[siteCardId] ?? favor
+        }))
+    }
+
+    get siteFavorPlaced(): number {
+        return (this.siteFavor ?? []).reduce((n, s) => n + s.favor, 0)
+    }
+
+    /** R-1.16 — every favor the bank holds is placed, or no split is asked for. */
+    get splitWhole(): boolean {
+        return (
+            this.siteFavor === undefined ||
+            this.siteFavorPlaced === this.session.gameState.favorSupply
+        )
+    }
+
+    /**
+     * R-1.16, R-2.8.2 — the most a site may take with the other sites as they are: what it prints,
+     * and what the bank leaves them.
+     */
+    siteFavorCeiling(siteCardId: string): number {
+        const site = this.pendingSiteFavor.find((p) => p.siteCardId === siteCardId)
+        if (!site) return 0
+        const elsewhere = (this.siteFavor ?? [])
+            .filter((s) => s.siteCardId !== siteCardId)
+            .reduce((n, s) => n + s.favor, 0)
+        return Math.max(0, Math.min(site.wanted, this.session.gameState.favorSupply - elsewhere))
+    }
+
+    // The split comes before the card in the flow, so a card kept while it was short is set again.
+    setSiteFavor(siteCardId: string, favor: number): void {
+        const split = this.siteFavor
+        if (!split || !this.pendingSiteFavor.some((p) => p.siteCardId === siteCardId)) return
+        const kept = this.adviserCardId
+        const ceiling = this.siteFavorCeiling(siteCardId)
+        this.session.selection.autoSelect('action', ActionType.SetupChoice)
+        this.session.selection.set('siteFavor', {
+            ...Object.fromEntries(split.map((s) => [s.siteCardId, s.favor])),
+            [siteCardId]: Math.max(0, Math.min(favor, ceiling))
+        })
+        if (kept !== undefined) this.session.selection.set('card', kept)
+    }
+
+    // R-1.23.1 — the site is checked against a whole bank, so a split being made never moves it.
+    get sites(): string[] {
+        const playerId = this.playerId
+        return playerId
+            ? setupSites(this.session.gameState, playerId, this.hand, this.mapOrderFill)
+            : []
+    }
+
+    get siteId(): string | undefined {
+        const sites = this.sites
+        const manual = this.value('site')
+        if (manual !== undefined && sites.includes(manual)) return manual
+        return sites.length === 1 ? sites[0] : undefined
+    }
+
+    get adviserCardId(): string | undefined {
+        const manual = this.value('card')
+        return manual !== undefined && this.hand.includes(manual) ? manual : undefined
+    }
+
+    get others(): string[] {
+        const adviserCardId = this.adviserCardId
+        return adviserCardId === undefined ? [] : this.hand.filter((id) => id !== adviserCardId)
+    }
+
+    get ordering(): boolean {
+        return this.siteId !== undefined && this.adviserCardId !== undefined && this.splitWhole
+    }
+
+    get tapped(): string[] {
+        return this.ordering ? (this.value('discardOrder') ?? []) : []
+    }
+
+    /**
+     * The map's start sites: every one stays lit while the pick is open, a tap on another moving
+     * it; once the discards are asked, or when the one legal site is taken for the player (the
+     * Chancellor's, R-1.23.1), the pick alone, which is shown and not picked.
+     */
+    get boardPick(): BoardPick | undefined {
+        const sites = this.sites
+        const siteId = this.siteId
+        if (sites.length === 0) return undefined
+        if (siteId !== undefined && (sites.length === 1 || this.ordering)) {
+            return { sites: [siteId], label: START_HERE, picked: siteId, pickable: false }
+        }
+        return { sites, label: START_HERE, picked: siteId, pickable: true }
+    }
+
+    // The site stage comes before the card in the flow, so a card kept first is set again.
+    chooseSite(siteId: string): void {
+        if (!this.sites.includes(siteId)) return
+        const kept = this.adviserCardId
+        this.session.selection.autoSelect('action', ActionType.SetupChoice)
+        this.session.selection.set('site', siteId)
+        if (kept !== undefined) this.session.selection.set('card', kept)
+        this.lastTap = 'site'
+    }
+
+    async chooseAdviser(cardId: string): Promise<void> {
+        if (!this.hand.includes(cardId)) return
+        this.session.selection.autoSelect('action', ActionType.SetupChoice)
+        this.session.selection.set('card', cardId)
+        this.lastTap = 'card'
+        if (this.ordering && this.others.length <= 1) await this.send(this.others)
+    }
+
+    // Its picks are counted where they are staged, in the session's selection.
+    hasManualSelection(): boolean {
+        return false
+    }
+
+    /**
+     * Undo takes back the last tap. The selection pops by stage, the card before the site, so a
+     * site tapped after the card is taken here and the card set again; anything else is left to
+     * the selection.
+     */
+    back(): boolean {
+        const selection = this.session.selection
+        const kept = this.adviserCardId
+        const siteTappedLast =
+            this.lastTap === 'site' &&
+            selection.action === ActionType.SetupChoice &&
+            selection.highestManualStage() === 'card' &&
+            selection.sourceOf('site') === 'manual'
+        if (!siteTappedLast || kept === undefined) return false
+        selection.clearFrom('site')
+        selection.set('card', kept)
+        this.lastTap = undefined
+        return true
+    }
+
+    reset(): void {
+        this.lastTap = undefined
+    }
+
+    async tapDiscard(cardId: string): Promise<void> {
+        const others = this.others
+        const tapped = this.tapped
+        if (!this.ordering || !others.includes(cardId) || tapped.includes(cardId)) return
+        const next = [...tapped, cardId]
+        this.session.selection.set('discardOrder', next)
+        if (next.length >= others.length - 1) {
+            await this.send([...next, ...others.filter((id) => !next.includes(id))])
+        }
+    }
+
+    private async send(discardOrder: string[]): Promise<void> {
+        const siteId = this.siteId
+        const adviserCardId = this.adviserCardId
+        assertExists(siteId, 'The discards are ordered after the site is chosen')
+        assertExists(adviserCardId, 'The discards are ordered after the adviser is kept')
+        await this.session.resolveSetup(siteId, adviserCardId, discardOrder, this.siteFavor)
+    }
+}

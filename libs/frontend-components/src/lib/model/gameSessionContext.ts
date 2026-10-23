@@ -1,13 +1,14 @@
-import type { GameSession } from '$lib/model/gameSession.svelte.js'
+import type { GameSessionView } from './gameSessionView.js'
+
 import { createContext } from 'svelte'
 
-const [getGameSessionContext, setGameSessionContext] = createContext<GameSession<any, any>>()
+const [getGameSessionContext, setGameSessionContext] = createContext<GameSessionView>()
 
 export const setGameSession = setGameSessionContext
 export const getGameSession = getGameSessionContext
 
 // This can be used to make typesafe game session context setters and getters
-export function createGameSessionContext<TSession extends GameSession<any, any>>(): [
+export function createGameSessionContext<TSession extends GameSessionView>(): [
     getGameSession: () => TSession,
     setGameSession: (session: TSession) => void
 ] {

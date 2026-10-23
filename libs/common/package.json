@@ -3,28 +3,47 @@
     "version": "0.0.1",
     "type": "module",
     "exports": {
-        "import": "./esm/index.js",
-        "types": "./src/index.ts"
+        ".": {
+            "import": "./esm/index.js",
+            "types": "./src/index.ts"
+        },
+        "./testing": {
+            "types": "./src/testing/index.ts",
+            "import": "./esm/testing/index.js"
+        },
+        "./test-fixtures/private-hand": {
+            "types": "./src/game/visibility/tests/privateHandGame.ts",
+            "import": "./esm/game/visibility/tests/privateHandGame.js"
+        },
+        "./node/collectible-factory": {
+            "types": "./src/node/collectibleFactory.ts",
+            "import": "./esm/node/collectibleFactory.js"
+        }
     },
     "sideEffects": false,
     "private": true,
     "scripts": {
         "clean": "rimraf esm",
         "build": "tsgo",
-        "test": "vitest"
+        "test": "vitest",
+        "lint": "eslint ."
     },
     "dependencies": {
+        "@noble/ciphers": "2.4.0",
+        "@noble/hashes": "2.4.0",
         "fast-json-patch": "https://github.com/justinkwaugh/fast-json-patch.git",
         "fnv-plus": "^1.3.1",
+        "nanoid": "5.1.6",
         "typebox": "^1.0.79"
     },
     "devDependencies": {
-        "@tabletop/vitest-config": "workspace:*",
         "@tabletop/eslint-config": "workspace:*",
+        "@tabletop/vitest-config": "workspace:*",
         "@types/fnv-plus": "^1.3.2",
         "@typescript/native-preview": "7.0.0-dev.20260203.1",
         "rimraf": "^6.1.0",
         "typescript": "5.9.3",
-        "vitest": "^4.0.12"
+        "vitest": "^4.0.12",
+        "@types/node": "^25.0.9"
     }
 }

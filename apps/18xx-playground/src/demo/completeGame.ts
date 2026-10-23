@@ -1,0 +1,464 @@
+import type { ScenarioPosition } from '@tabletop/18xx/scenarios'
+import {
+    ActionSource,
+    assert,
+    assertExists,
+    type GameAction,
+    type GameEngine
+} from '@tabletop/common'
+import {
+    Definition as Top,
+    TheOldPrinceAuctionRules,
+    TheOldPrinceStockRules,
+    TheOldPrinceCompanyRules,
+    TheOldPrinceTrackRules,
+    TheOldPrinceTrainRules,
+    TheOldPrinceRouteRules,
+    TheOldPrinceTrainFundingRules
+} from '@tabletop/the-old-prince'
+import {
+    Definition as Shikoku,
+    Shikoku1889AuctionRules,
+    Shikoku1889StockRules,
+    Shikoku1889CompanyRules,
+    Shikoku1889TrackRules,
+    Shikoku1889TrainRules,
+    Shikoku1889RouteRules,
+    Shikoku1889TrainFundingRules
+} from '@tabletop/shikoku-1889'
+import {
+    Definition as EighteenThirtyTwo,
+    EighteenThirtyTwoAuctionRules,
+    EighteenThirtyTwoStockRules,
+    EighteenThirtyTwoCompanyRules,
+    EighteenThirtyTwoTrackRules,
+    EighteenThirtyTwoTrainRules,
+    EighteenThirtyTwoRouteRules,
+    EighteenThirtyTwoTrainFundingRules,
+    mergerOptions,
+    protectionDecision,
+    requireEighteenThirtyTwoState
+} from '@tabletop/1832'
+import {
+    OfferAuction,
+    ReserveBidAuction,
+    evaluateCompanyStart,
+    evaluateSharePurchase,
+    evaluateShareSale,
+    exceedsStockLimits,
+    TrackConstruction,
+    RouteEvaluation,
+    TrainPurchase,
+    EmergencyTrainFunding,
+    discardableTrains,
+    trainsOwnedBy,
+    type EighteenXXState,
+    type HydratedEighteenXXState,
+    type TrainRoute
+} from '@tabletop/18xx'
+import { example } from './stockTestUtils.js'
+import { enumerateRouteCandidates } from './routeCandidates.js'
+export const FullGameTitles = [
+    {
+        definition: Top,
+        ending: 'First D',
+        finalPhaseId: undefined,
+        waterfall: undefined,
+        policy: {
+            floatedTarget: (state: EighteenXXState) => state.companies.length,
+            laysEveryTurn: false,
+            dividend: (state: EighteenXXState, companyId: string) =>
+                trainsOwnedBy(state, { kind: 'company', companyId }).length >=
+                TheOldPrinceTrainRules.trainLimit(state, companyId)
+                    ? ('pay' as const)
+                    : ('withhold' as const)
+        },
+        stocks: TheOldPrinceStockRules,
+        companies: TheOldPrinceCompanyRules,
+        track: TheOldPrinceTrackRules,
+        trains: TheOldPrinceTrainRules,
+        routes: TheOldPrinceRouteRules,
+        funding: TheOldPrinceTrainFundingRules
+    },
+    {
+        definition: Shikoku,
+        stocks: Shikoku1889StockRules,
+        companies: Shikoku1889CompanyRules,
+        track: Shikoku1889TrackRules,
+        trains: Shikoku1889TrainRules,
+        routes: Shikoku1889RouteRules,
+        funding: Shikoku1889TrainFundingRules,
+        waterfall: Shikoku1889AuctionRules,
+        ending: 'Bank broken',
+        finalPhaseId: undefined,
+        policy: {
+            floatedTarget: () => 2,
+            laysEveryTurn: false,
+            dividend: () => 'withhold' as const
+        }
+    },
+    {
+        definition: EighteenThirtyTwo,
+        stocks: EighteenThirtyTwoStockRules,
+        companies: EighteenThirtyTwoCompanyRules,
+        track: EighteenThirtyTwoTrackRules,
+        trains: EighteenThirtyTwoTrainRules,
+        routes: EighteenThirtyTwoRouteRules,
+        funding: EighteenThirtyTwoTrainFundingRules,
+        waterfall: EighteenThirtyTwoAuctionRules,
+        ending: 'Bank broken',
+        finalPhaseId: '12',
+        // 1832's companies must keep building and buying trains, and only withhold to afford
+        // one, to stay out of the black area while the game advances.
+        policy: {
+            floatedTarget: () => 5,
+            laysEveryTurn: true,
+            dividend: (state: EighteenXXState, companyId: string) => {
+                const trains = trainsOwnedBy(state, { kind: 'company', companyId }).length
+                const next = EighteenThirtyTwoTrainRules.availableDefinitions(state)[0]
+                const price = next
+                    ? EighteenThirtyTwoTrainRules.depot.trainDefinition(next).price
+                    : Infinity
+                const cash = state.cash.find(
+                    (entry) => entry.owner.kind === 'company' && entry.owner.companyId === companyId
+                )?.amount
+                return trains < EighteenThirtyTwoTrainRules.trainLimit(state, companyId) &&
+                    typeof cash === 'number' &&
+                    cash < price
+                    ? ('withhold' as const)
+                    : ('pay' as const)
+            }
+        }
+    }
+]
+export class CompleteGameRun {
+    readonly game
+    readonly engine: GameEngine<EighteenXXState, HydratedEighteenXXState>
+    readonly initial: EighteenXXState
+    state: EighteenXXState
+    readonly history: GameAction[] = []
+    constructor(
+        readonly title: (typeof FullGameTitles)[number],
+        count: number,
+        seed = 5,
+        position: ScenarioPosition = 'opening'
+    ) {
+        const run = example(title.definition, position, count, seed)
+        this.game = run.game
+        this.engine = run.engine
+        this.initial = run.state
+        this.state = run.state
+    }
+    act(type: string, fields: object = {}) {
+        const action = {
+            id: `full:${this.state.actionCount}`,
+            gameId: this.game.id,
+            source: ActionSource.User,
+            type,
+            playerId: this.state.activePlayerIds[0],
+            ...fields
+        }
+        const result = this.engine.executeCanonicalAction({
+            game: this.game,
+            state: this.state,
+            action
+        })
+        this.state = result.updatedState
+        this.history.push(...result.processedActions)
+        this.title.definition.runtime.hydrator.hydrateState(JSON.parse(JSON.stringify(this.state)))
+    }
+    step(): void {
+        const state = this.state,
+            playerId = state.activePlayerIds[0]
+        const available = this.engine.getValidActionTypesForPlayer(this.game, state, playerId)
+        if (available.includes('RespondToTrackConsent')) {
+            this.act('RespondToTrackConsent', { requestId: state.trackConsent!.id, accept: true })
+            return
+        }
+        if (available.includes('DeclinePrivateTile')) {
+            this.act('DeclinePrivateTile', {
+                privateCompanyId: state.privateTrackLay!.privateCompanyId
+            })
+            return
+        }
+        if (state.machineState === 'OfferingLot') {
+            const auction = new OfferAuction(state, TheOldPrinceAuctionRules)
+            this.act('OfferAuctionLot', { lotId: auction.offerIds[0] })
+            return
+        }
+        if (state.machineState === 'OfferBidding') {
+            this.act('PassAuction')
+            return
+        }
+        if (available.includes('ParCompany')) {
+            const pending = state.pendingPar
+            assertExists(pending, 'A par choice names its company')
+            const companyId = pending.companyId
+            this.act('ParCompany', {
+                companyId,
+                marketSpaceId: this.title.companies.startMarketSpaces(state, companyId)[0]
+            })
+            return
+        }
+        if (available.includes('DeclineProtection')) {
+            const decision = protectionDecision(requireEighteenThirtyTwoState(state))
+            assertExists(decision, 'A protection decision is open')
+            this.act('DeclineProtection', { companyId: decision.sale.companyId })
+            return
+        }
+        if (available.includes('AnswerRedemption')) {
+            this.act('AnswerRedemption', { accept: false })
+            return
+        }
+        if (available.includes('AnswerMerger')) {
+            this.act('AnswerMerger', { accept: true })
+            return
+        }
+        if (available.includes('ProposeMerger')) {
+            const system = mergerOptions(requireEighteenThirtyTwoState(state), playerId).find(
+                (option) => option.kind === 'system'
+            )
+            if (system) this.act('ProposeMerger', system)
+            else this.act('PassMerger')
+            return
+        }
+        if (state.machineState === 'WaterfallAuction') {
+            assertExists(this.title.waterfall, 'A waterfall opening has its rules')
+            const auction = new ReserveBidAuction(state, this.title.waterfall)
+            const lotId = auction.auction.remainingLotIds[0]
+            if (auction.canPurchase(playerId, lotId))
+                this.act('BuyAuctionLot', { lotId, expectedPrice: auction.price(lotId) })
+            else this.act('PassAuction')
+            return
+        }
+        if (state.machineState === 'StockRound') {
+            this.stockTurn()
+            return
+        }
+        if (state.machineState === 'LayingTrack') {
+            const construction = new TrackConstruction(state, this.title.track)
+            const companyId = state.trackStep!.companyId
+            if (
+                !state.trackStep!.lays.length &&
+                (state.stockRound.number < 5 || this.title.policy.laysEveryTurn)
+            ) {
+                for (const location of this.title.track.map.definition.locations) {
+                    const choice = construction.choices(location.id)[0]
+                    if (choice) {
+                        const {
+                            companyId,
+                            locationId,
+                            definitionId,
+                            rotation,
+                            nodeMapping,
+                            cost,
+                            consentPlayerId
+                        } = choice
+                        this.act(
+                            consentPlayerId && consentPlayerId !== playerId
+                                ? 'RequestTrackConsent'
+                                : 'LayTile',
+                            {
+                                companyId,
+                                locationId,
+                                definitionId,
+                                rotation,
+                                nodeMapping,
+                                expectedCost: cost
+                            }
+                        )
+                        return
+                    }
+                }
+            }
+            this.act('FinishTrack', { companyId })
+            return
+        }
+        if (state.machineState === 'PlacingStation') {
+            this.act('FinishStations', { companyId: state.stationStep!.companyId })
+            return
+        }
+        if (state.machineState === 'RunningTrains') {
+            const companyId = state.routeStep!.companyId
+            this.act('RunTrains', { companyId, routes: this.routes(companyId) })
+            return
+        }
+        if (state.machineState === 'DistributingEarnings') {
+            const companyId = state.routeStep!.companyId
+            this.act('DistributeEarnings', {
+                companyId,
+                choice: this.title.policy.dividend(state, companyId)
+            })
+            return
+        }
+        if (state.machineState === 'BuyingTrains') {
+            const companyId = state.trainPurchaseStep!.companyId
+            const trains = new TrainPurchase(state, this.title.trains)
+            const purchase =
+                trains.offers().find((offer) => offer.evaluation.details)?.evaluation.details ??
+                trains.marketOffers().find((offer) => offer.details)?.details
+            // Once the end is due it buys only a train the company must have.
+            if (purchase && (!state.gameEnding || !available.includes('FinishOperatingTurn'))) {
+                this.act('BuyTrain', {
+                    companyId,
+                    trainId: purchase.trainId,
+                    definitionId: purchase.definitionId,
+                    expectedPrice: purchase.price
+                })
+                return
+            }
+            if (available.includes('FinishOperatingTurn')) {
+                this.act('FinishOperatingTurn', { companyId })
+                return
+            }
+            const funding = new EmergencyTrainFunding(
+                state,
+                this.title.funding,
+                this.title.stocks,
+                this.title.trains
+            )
+            const request = funding.purchases()[0]
+            assert(request, `No purchase or completion: ${companyId}`)
+            this.act('FundTrain', {
+                companyId,
+                trainId: request.trainId,
+                definitionId: request.definitionId,
+                expectedPrice: request.price
+            })
+            return
+        }
+        if (state.machineState === 'FundingTrain') {
+            const funding = new EmergencyTrainFunding(
+                state,
+                this.title.funding,
+                this.title.stocks,
+                this.title.trains
+            )
+            const choice = funding.next()
+            if (choice.kind === 'issue')
+                this.act('IssueTreasuryShares', { expectedProceeds: choice.details.proceeds })
+            else if (choice.kind === 'contribute')
+                this.act('ContributeTrainFunds', { owner: choice.owner, amount: choice.amount })
+            else if (choice.kind === 'sell') {
+                const sale = choice.sales.at(-1)!
+                this.act('SellFundingShares', {
+                    seller: choice.owner,
+                    companyId: sale.sales[0].companyId,
+                    shares: sale.sales[0].shares,
+                    expectedProceeds: sale.proceeds
+                })
+            } else if (choice.kind === 'buy')
+                this.act('BuyTrain', {
+                    companyId: choice.purchase.companyId,
+                    trainId: choice.purchase.trainId,
+                    definitionId: choice.purchase.definitionId,
+                    expectedPrice: choice.purchase.price
+                })
+            else throw Error(`Unexpected funding: ${choice.kind}`)
+            return
+        }
+        if (state.machineState === 'DiscardingTrains') {
+            const companyId = state.phaseChange!.discardCompanyIds[0]
+            this.act('DiscardTrain', {
+                companyId,
+                trainId: discardableTrains(state, companyId, this.title.trains)[0].id
+            })
+            return
+        }
+        if (available.includes('ContinueOperatingRound')) {
+            this.act('ContinueOperatingRound', { companyId: state.privatePowerWindow!.companyId })
+            return
+        }
+        throw Error(`Unhandled ${state.machineState}: ${available.join(',')}`)
+    }
+    private stockTurn(): void {
+        const state = this.state,
+            playerId = state.activePlayerIds[0]
+        const buyer = { kind: 'player', playerId } as const
+        if (exceedsStockLimits(state, buyer, this.title.stocks)) {
+            for (const company of state.companies) {
+                const sales = [{ companyId: company.id, shares: 1 }]
+                const sale = evaluateShareSale(
+                    state,
+                    { playerId, seller: buyer, sales },
+                    this.title.stocks
+                ).details
+                if (sale) {
+                    this.act('SellShares', {
+                        seller: buyer,
+                        sales,
+                        expectedProceeds: sale.proceeds
+                    })
+                    return
+                }
+            }
+        }
+        if (!state.stockRound.turn.bought) {
+            for (const certificate of state.certificates) {
+                const company = state.companies.find(
+                    (company) => company.id === certificate.companyId
+                )!
+                if (!company.started || company.floated) continue
+                const purchase = evaluateSharePurchase(
+                    state,
+                    { playerId, buyer, certificateId: certificate.id },
+                    this.title.stocks
+                ).details
+                if (purchase) {
+                    this.act('BuyShares', {
+                        buyer,
+                        certificateId: certificate.id,
+                        expectedPrice: purchase.price
+                    })
+                    return
+                }
+            }
+            const live = state.companies.filter((company) => company.floated && !company.closed)
+            if (live.length < this.title.policy.floatedTarget(state)) {
+                for (const company of state.companies) {
+                    if (company.started) continue
+                    for (const marketSpaceId of this.title.companies.startMarketSpaces(
+                        state,
+                        company.id
+                    )) {
+                        const start = evaluateCompanyStart(
+                            state,
+                            { playerId, buyer, companyId: company.id, marketSpaceId },
+                            this.title.stocks,
+                            this.title.companies
+                        ).details
+                        if (start) {
+                            this.act('StartCompany', {
+                                buyer,
+                                companyId: company.id,
+                                marketSpaceId,
+                                expectedPrice: start.price
+                            })
+                            return
+                        }
+                    }
+                }
+            }
+        }
+        this.act('FinishStockTurn')
+    }
+    private routes(companyId: string): TrainRoute[] {
+        const running = new RouteEvaluation(this.state, this.title.routes)
+        const routes: TrainRoute[] = []
+        for (const train of trainsOwnedBy(this.state, { kind: 'company', companyId })) {
+            let best: TrainRoute | undefined,
+                revenue = -1,
+                count = 0
+            for (const route of enumerateRouteCandidates(running, companyId, train.id, 100)) {
+                const result = running.evaluate(companyId, [...routes, route]).result
+                if (result && result.revenue > revenue) {
+                    best = route
+                    revenue = result.revenue
+                }
+                if (++count === 500) break
+            }
+            if (best) routes.push(best)
+        }
+        return routes
+    }
+}

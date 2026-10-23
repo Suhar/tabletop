@@ -1,0 +1,174 @@
+<script lang="ts">
+    import { assert } from '@tabletop/common'
+    import type { GameSession } from '@tabletop/frontend-components'
+    import {
+        type EighteenFortySixProjectedState,
+        type HydratedEighteenFortySixState,
+        CompanyDescriptions1846
+    } from '@tabletop/1846'
+    import {
+        GameTable,
+        OperatingActions,
+        StationBuilding,
+        CompanyDecisions,
+        SlidingToggle
+    } from '@tabletop/18xx-ui'
+    import { fade } from 'svelte/transition'
+    import { prefersReducedMotion } from 'svelte/motion'
+    import { EighteenFortySixSession } from './session.svelte.js'
+    import OpeningCompanies from './OpeningCompanies.svelte'
+    import Draft from './Draft.svelte'
+    import RevenueMarkerPrompt from './RevenueMarkerPrompt.svelte'
+    import NothingToBuild from './NothingToBuild.svelte'
+    import SteamboatAssignment from './SteamboatAssignment.svelte'
+    import CorporateFinance from './CorporateFinance.svelte'
+    import PresidencyClaims from './PresidencyClaims.svelte'
+    import { describe1846Action } from './history.js'
+    import './panels.css'
+    let {
+        gameSession
+    }: { gameSession: GameSession<EighteenFortySixProjectedState, HydratedEighteenFortySixState> } =
+        $props()
+    const session = $derived.by(() => {
+        assert(gameSession instanceof EighteenFortySixSession, '1846 requires its title session')
+        return gameSession
+    })
+    const state = $derived(session.gameState)
+    const privateOperationDescription = (id: string) => CompanyDescriptions1846[id]
+    const operatingModes = $derived.by(() => {
+        const mode = session.constructionMode
+        const finance = session.financeChoices.length
+            ? [
+                  {
+                      label: session.financeLabel,
+                      selected: mode === 'finance',
+                      select: () => session.chooseConstructionMode('finance')
+                  }
+              ]
+            : []
+        const base =
+            state.machineState === 'LayingTrack'
+                ? [
+                      ...(session.validActionTypes.includes('LayTile')
+                          ? [
+                                {
+                                    label: 'Lay track',
+                                    selected: mode === 'track',
+                                    select: () => session.chooseConstructionMode('track')
+                                }
+                            ]
+                          : []),
+                      ...(session.validActionTypes.includes('PlaceStation')
+                          ? [
+                                {
+                                    label: 'Place station',
+                                    selected: mode === 'stations',
+                                    select: () => session.chooseConstructionMode('stations')
+                                }
+                            ]
+                          : [])
+                  ]
+                : []
+        const routes =
+            state.machineState === 'LayingTrack'
+                ? []
+                : [
+                      {
+                          label: 'Run trains',
+                          selected: mode !== 'finance',
+                          select: () => session.chooseConstructionMode(undefined)
+                      }
+                  ]
+        return [...base, ...routes, ...finance]
+    })
+    const showOperatingModes = $derived(
+        (state.machineState === 'LayingTrack' || state.machineState === 'RunningTrains') &&
+            (operatingModes.length > 1 || session.constructionMode === 'finance') &&
+            !state.pendingRevenueMarker &&
+            !state.purchaseOffer &&
+            !session.decisions.selection &&
+            !session.privateActions.selection
+    )
+    const showFinance = $derived(
+        session.constructionMode === 'finance' &&
+            session.financeChoices.length > 0 &&
+            !state.purchaseOffer &&
+            !session.privateActions.selection &&
+            !session.privateActions.trackPowerSelection &&
+            !session.decisions.selection
+    )
+    function createRouteWorker() {
+        return new Worker(new URL('./autorouter.worker.js', import.meta.url), { type: 'module' })
+    }
+</script>
+
+<GameTable
+    {session}
+    {privateOperationDescription}
+    historyDescription={describe1846Action}
+    additionalStockActions={session.stockPanels.menuOptions}
+>
+    {#snippet actions(_focusLocation, focusRoute)}
+        <div class="midwest-actions">
+            {#if showOperatingModes}
+                <nav aria-label="Operating mode" class="operating-mode midwest-panel">
+                    <SlidingToggle
+                        count={operatingModes.length}
+                        selectedIndex={operatingModes.findIndex((mode) => mode.selected)}
+                    >
+                        {#each operatingModes as mode (mode.label)}<button
+                                aria-pressed={mode.selected}
+                                disabled={!session.canChooseAction}
+                                onclick={mode.select}>{mode.label}</button
+                            >{/each}
+                    </SlidingToggle>
+                </nav>
+            {/if}
+            {#key showOperatingModes ? session.constructionMode : undefined}<div
+                    class="midwest-content"
+                    in:fade={{ duration: prefersReducedMotion.current ? 0 : 150 }}
+                >
+                    {#if state.machineState === 'BuyingOpeningCompanies'}
+                        <OpeningCompanies {session} />
+                    {:else if state.machineState === 'Drafting' || state.machineState === 'RevealingDraft'}
+                        <Draft {session} />
+                    {:else if state.pendingRevenueMarker}
+                        <RevenueMarkerPrompt {session} />
+                    {:else if state.machineState === 'AssigningSteamboat'}
+                        <SteamboatAssignment {session} />
+                    {:else if session.stockPanels.open === 'receivership'}
+                        <PresidencyClaims {session} />
+                    {:else if showFinance}
+                        <CorporateFinance {session} />
+                    {:else if state.machineState === 'LayingTrack' && session.constructionMode === 'stations' && !state.purchaseOffer}
+                        <div class="centered-panel">
+                            <CompanyDecisions
+                                {session}
+                                trainColors={session.presentation.trainColors}
+                                showUndo={false}
+                            />
+                            {#if !session.privateActions.selection && !session.decisions.selection}
+                                {#if session.nothingToBuild}
+                                    <NothingToBuild {session} />
+                                {:else}
+                                    <StationBuilding
+                                        {session}
+                                        showUndo={false}
+                                        canSkip={session.canChooseAction}
+                                        onSkip={() => session.finishConstruction()}
+                                    />
+                                {/if}
+                            {/if}
+                        </div>
+                    {:else}
+                        <OperatingActions
+                            {session}
+                            {privateOperationDescription}
+                            {createRouteWorker}
+                            onFocusRoute={focusRoute}
+                        />
+                    {/if}
+                </div>{/key}
+        </div>
+    {/snippet}
+</GameTable>

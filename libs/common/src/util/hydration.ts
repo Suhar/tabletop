@@ -2,9 +2,9 @@ import type * as Type from 'typebox'
 import { Validator } from 'typebox/compile'
 
 export abstract class Hydratable<T extends Type.TSchema> {
-    private _validator: Validator<{}, T>
+    private _validator: Validator<Record<never, never>, T>
 
-    constructor(data: Type.Static<T>, validator: Validator<{}, T>) {
+    constructor(data: Type.Static<T>, validator: Validator<Record<never, never>, T>) {
         this._validator = validator
 
         if (!validator.Check(data)) {
@@ -12,7 +12,7 @@ export abstract class Hydratable<T extends Type.TSchema> {
         }
 
         // Insure incoming data is dehydrated otherwise clone fails
-        if ((data as any) instanceof Hydratable) {
+        if ((data as unknown) instanceof Hydratable) {
             data = data.dehydrate()
         } else {
             // shallow dehydrate any nested Hydratable properties
@@ -41,16 +41,16 @@ export abstract class Hydratable<T extends Type.TSchema> {
         return rest as Type.Static<T>
     }
 
-    private dehydrateChildren(obj: object) {
+    private dehydrateChildren(obj: Record<string, unknown>) {
         for (const [key, value] of Object.entries(obj)) {
             if (Array.isArray(value)) {
-                ;(obj as any)[key] = value.map((item) =>
+                obj[key] = value.map((item) =>
                     item instanceof Hydratable ? item.dehydrate() : item
                 )
             } else if (value instanceof Hydratable) {
-                ;(obj as any)[key] = value.dehydrate()
+                obj[key] = value.dehydrate()
             } else if (value && typeof value === 'object') {
-                this.dehydrateChildren(value)
+                this.dehydrateChildren(value as Record<string, unknown>)
             }
         }
     }

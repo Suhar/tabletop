@@ -19,7 +19,7 @@ export class AddingBuildingsStateHandler implements MachineStateHandler<
 > {
     isValidAction(
         action: HydratedAction,
-        context: MachineContext<HydratedBusGameState>
+        _context: MachineContext<HydratedBusGameState>
     ): action is AddingBuildingsAction {
         // Leave this comment if you want the template to generate code for valid actions
         return isPlaceBuilding(action) || isPass(action)
@@ -48,13 +48,11 @@ export class AddingBuildingsStateHandler implements MachineStateHandler<
         assert(activePlayerId, 'No active player for adding buildings')
 
         if (!context.gameState.actionsTaken) {
-            console.log('Starting add buildings turn for player', activePlayerId)
             context.gameState.turnManager.startTurn(activePlayerId, context.gameState.actionCount)
             context.gameState.activePlayerIds = [activePlayerId]
         }
 
         const numActions = context.gameState.numAllowedActions()
-        console.log('calculated num actions for add buildings:', numActions)
         if (
             numActions === 0 ||
             !HydratedPlaceBuilding.canPlaceBuilding(context.gameState, activePlayerId)

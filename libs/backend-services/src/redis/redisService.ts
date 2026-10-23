@@ -4,6 +4,10 @@ import { createClient, RedisClientType } from 'redis'
 export class RedisService {
     private constructor(readonly client: RedisClientType) {}
 
+    destroy(): void {
+        if (this.client.isOpen) this.client.destroy()
+    }
+
     static async createRedisService(secretsService: SecretsService): Promise<RedisService> {
         const client = await this.createClient(secretsService)
         const service = new RedisService(client)
@@ -30,12 +34,11 @@ export class RedisService {
 
     private async initialize(): Promise<void> {
         console.log(`Initializing RedisService`)
-        const tempFix = this.client as any
-        tempFix.on('error', (err: unknown) => console.log('Redis client error:', err))
-        tempFix.on('connect', () => console.log('Redis client connected'))
-        tempFix.on('ready', () => console.log('Redis client ready'))
-        tempFix.on('end', () => console.log('Redis client has ended its connection'))
-        tempFix.on('reconnecting', () => console.log('Redis client is reconnecting'))
+        this.client.on('error', (err: unknown) => console.log('Redis client error:', err))
+        this.client.on('connect', () => console.log('Redis client connected'))
+        this.client.on('ready', () => console.log('Redis client ready'))
+        this.client.on('end', () => console.log('Redis client has ended its connection'))
+        this.client.on('reconnecting', () => console.log('Redis client is reconnecting'))
         await this.client.connect()
     }
 }

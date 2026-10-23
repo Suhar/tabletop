@@ -11,7 +11,6 @@ import {
     isPassMergerBid,
     isPlaceTurnOrderBid,
     isPlaceMergerBid,
-    isProposeMerger,
     isRemoveSiapSajiArea
 } from '@tabletop/indonesia'
 import { nanoid } from 'nanoid'
@@ -164,10 +163,10 @@ export function* aggregateActions(actions: GameAction[]) {
             } else if (
                 currentAggregatedType !== ActionType.ChooseOperatingCompany &&
                 aggregatedType === currentAggregatedType &&
-                ((aggregatedType === ActionType.PassMergerBid ||
+                (aggregatedType === ActionType.PassMergerBid ||
                     aggregatedType === ActionType.Pass ||
                     aggregatedType === ActionType.PlaceMergerBid ||
-                    aggregatedType === ActionType.PlaceTurnOrderBid) ||
+                    aggregatedType === ActionType.PlaceTurnOrderBid ||
                     action.playerId === currentPlayerId)
             ) {
                 aggregatedGroup.push(action)

@@ -1,0 +1,332 @@
+import { expect, it } from 'vitest'
+import { Color } from '@tabletop/common'
+import { createOrdinaryShareCertificates } from '../finance/finance.js'
+import { createStockRound } from './stockRound.js'
+import {
+    createRectangularStockMarketSpaces,
+    placeStockMarker,
+    StockMarketChart,
+    type StockMarket
+} from './stockMarket.js'
+import { evaluateShareSale, evaluateShareDisposal, applyShareSale } from './shareSale.js'
+import { shareSaleValue } from './shareSaleValue.js'
+import { priorityOrder } from './priorityOrder.js'
+import type { StockState } from './stockState.js'
+import type { StockRules } from './stockRules.js'
+import { companyCharters } from '../company/companyCharters.js'
+
+const seller = { kind: 'player', playerId: 'a' } as const
+const other = { kind: 'player', playerId: 'b' } as const
+const bank = { kind: 'bank' } as const
+const market = new StockMarketChart(
+    createRectangularStockMarketSpaces([[100], [90], [80], [70]], () => 'white')
+)
+function example(): StockState {
+    const stockMarket: StockMarket = { stacks: [] }
+    market.placeMarker(stockMarket, 'R', '0:0')
+    return {
+        bank: {},
+        companies: [
+            {
+                id: 'R',
+                kind: 'major',
+                president: seller,
+                started: true
+            }
+        ],
+        certificates: createOrdinaryShareCertificates(
+            'R',
+            [
+                { owner: seller },
+                { owner: seller },
+                { owner: seller },
+                { owner: other },
+                { owner: other },
+                { owner: bank, poolId: 'market' },
+                { owner: bank, poolId: 'ipo' },
+                { owner: bank, poolId: 'ipo' }
+            ],
+            seller
+        ),
+        cash: [
+            { owner: bank, amount: 10000 },
+            { owner: seller, amount: 200 },
+            { owner: other, amount: 100 }
+        ],
+        certificatePools: [
+            { id: 'market', owner: bank },
+            { id: 'ipo', owner: bank }
+        ],
+        players: [
+            { playerId: 'a', color: Color.Blue },
+            { playerId: 'b', color: Color.Red },
+            { playerId: 'c', color: Color.Green }
+        ],
+        activePlayerIds: ['a'],
+        turnManager: { turnOrder: ['a', 'b', 'c'], series: [], turnCounts: {} },
+        phaseId: '3',
+        ownershipLimitExemptions: [],
+        stockRound: createStockRound(2),
+        stockMarket
+    }
+}
+const rules: StockRules = {
+    market,
+    charters: companyCharters(() => ({ shareCounts: { R: 10 }, privateRevenues: {} })),
+    sellers: (_state, playerId) => [{ kind: 'player', playerId }],
+    buyers: () => [],
+    purchaseTerms: () => 'Unavailable',
+    saleTerms: () => ({
+        payer: bank,
+        price: 100,
+        destinationPoolId: 'market',
+        marketLimit: 50,
+        maximumShares: 10,
+        direction: 'down',
+        movement: 1
+    }),
+    presidencyCandidates: () => [seller, other],
+    certificateLimit: () => 20,
+    certificateWeight: () => 1,
+    ownershipLimit: () => 60,
+    turnOrder: 'sell-buy',
+    round: { passing: 'consecutive', nextPlayerOrder: () => [], soldOut: () => false }
+}
+
+it('limits liquidation by market capacity and presidency without mutating state', () => {
+    const state = example()
+    const before = structuredClone(state)
+    expect(shareSaleValue(state, seller, rules)).toBe(400)
+    expect(state).toEqual(before)
+    expect(shareSaleValue(state, seller, { ...rules, presidencyCandidates: () => [seller] })).toBe(
+        300
+    )
+    expect(
+        shareSaleValue(state, seller, {
+            ...rules,
+            saleTerms: () => ({
+                payer: bank,
+                price: 100,
+                destinationPoolId: 'market',
+                marketLimit: 50,
+                maximumShares: 2,
+                direction: 'down',
+                movement: 1
+            })
+        })
+    ).toBe(200)
+    expect(shareSaleValue(state, seller, { ...rules, saleTerms: () => 'Not until operated' })).toBe(
+        0
+    )
+})
+
+it('keeps priority through passes and advances it after a stock action', () => {
+    const state = example()
+    state.activePlayerIds = ['c']
+    state.stockRound.passedPlayerIds = ['b']
+    expect(priorityOrder(state, rules.round)).toEqual(['b', 'c', 'a'])
+    state.stockRound.turn.acted = true
+    expect(priorityOrder(state, rules.round)).toEqual(['a', 'b', 'c'])
+    state.stockRound.completed = true
+    state.turnManager.turnOrder = ['c', 'a', 'b']
+    expect(priorityOrder(state, rules.round)).toEqual(['c', 'a', 'b'])
+})
+
+it('uses pass order for titles that award priority by passing', () => {
+    const state = example()
+    state.stockRound.passedPlayerIds = ['c', 'a']
+    expect(priorityOrder(state, { ...rules.round, passing: 'pass-order' })).toEqual(['c', 'a', 'b'])
+    state.stockRound.passedPlayerIds = ['a']
+    expect(priorityOrder(state, { ...rules.round, passing: 'pass-order' })).toEqual(['a', 'b', 'c'])
+})
+
+it('requires a separate stock action for each company sale', () => {
+    const state = example()
+    const before = structuredClone(state)
+    expect(
+        evaluateShareSale(
+            state,
+            {
+                playerId: 'a',
+                seller,
+                sales: [
+                    { companyId: 'R', shares: 1 },
+                    { companyId: 'S', shares: 1 }
+                ]
+            },
+            rules
+        ).reason
+    ).toBe('Sell one company per action.')
+    expect(
+        evaluateShareSale(
+            state,
+            { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 2 }] },
+            rules
+        ).details?.proceeds
+    ).toBe(200)
+    expect(state).toEqual(before)
+})
+
+it.each([false, true])(
+    'extends a sale block at its original price with cumulative movement (per share: %s)',
+    (perShare) => {
+        const state = example()
+        const extended: StockRules = {
+            ...rules,
+            repeatSales: 'extend-block',
+            saleTerms: (current, companyId, shares) => ({
+                payer: bank,
+                price: market.companySpace(current.stockMarket, companyId).price,
+                destinationPoolId: 'market',
+                marketLimit: 80,
+                maximumShares: 3,
+                direction: 'down',
+                movement: perShare ? shares : 1
+            })
+        }
+        const first = evaluateShareSale(
+            state,
+            { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 1 }] },
+            extended
+        )
+        expect(first.details?.proceeds).toBe(100)
+        if (!first.details) throw new Error('Expected legal first sale')
+        applyShareSale(state, first.details)
+        state.stockRound.turn.companiesSold = ['R']
+        state.stockRound.turn.saleBlocks = [
+            {
+                id: 'first',
+                companyId: 'R',
+                seller,
+                price: 100,
+                shares: 1,
+                movement: 1,
+                direction: 'down'
+            }
+        ]
+        const next = evaluateShareSale(
+            state,
+            { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 2 }] },
+            extended
+        )
+        expect(next.details?.proceeds).toBe(200)
+        expect(next.details?.sales[0].price).toBe(100)
+        expect(next.details?.sales[0].toMarketSpaceId).toBe(perShare ? '3:0' : '1:0')
+        expect(
+            evaluateShareSale(
+                state,
+                { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 3 }] },
+                extended
+            ).reason
+        ).toContain('per-turn')
+        expect(
+            evaluateShareSale(
+                state,
+                { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 1 }] },
+                rules
+            ).reason
+        ).toContain('one block')
+        state.stockRound.turn = createStockRound(3).turn
+        expect(
+            evaluateShareSale(
+                state,
+                { playerId: 'a', seller, sales: [{ companyId: 'R', shares: 1 }] },
+                extended
+            ).details?.proceeds
+        ).toBe(90)
+    }
+)
+
+it('uses the actual asset owner for directional sales, independently of the active player', () => {
+    const state = example()
+    const row = new StockMarketChart(
+        createRectangularStockMarketSpaces([[80, 90, 100]], () => 'white')
+    )
+    state.stockMarket = { stacks: [] }
+    row.placeMarker(state.stockMarket, 'R', '0:2')
+    const directional: StockRules = {
+        ...rules,
+        market: row,
+        saleTerms(current, companyId, shares, owner) {
+            const president = current.companies.find(
+                (company) => company.id === companyId
+            )?.president
+            return {
+                payer: bank,
+                price: 100,
+                destinationPoolId: 'market',
+                marketLimit: 50,
+                maximumShares: 10,
+                direction: 'left',
+                movement:
+                    owner.kind === president?.kind &&
+                    owner.kind === 'player' &&
+                    president.kind === 'player' &&
+                    owner.playerId === president.playerId
+                        ? shares
+                        : 0
+            }
+        }
+    }
+    expect(
+        evaluateShareDisposal(state, other, [{ companyId: 'R', shares: 1 }], directional).details
+            ?.sales[0].toMarketSpaceId
+    ).toBe('0:2')
+    expect(
+        evaluateShareDisposal(state, seller, [{ companyId: 'R', shares: 1 }], directional).details
+            ?.sales[0].toMarketSpaceId
+    ).toBe('0:1')
+    state.stockRound.turn.saleBlocks = [
+        {
+            id: 'first',
+            companyId: 'R',
+            seller,
+            price: 100,
+            shares: 1,
+            movement: 1,
+            direction: 'left'
+        }
+    ]
+    state.stockRound.turn.companiesSold = ['R']
+    placeStockMarker(state.stockMarket, 'R', '0:1')
+    const extended = evaluateShareSale(
+        state,
+        {
+            playerId: 'a',
+            seller,
+            sales: [{ companyId: 'R', shares: 1 }]
+        },
+        { ...directional, repeatSales: 'extend-block' }
+    )
+    expect(extended.details?.sales[0].toMarketSpaceId).toBe('0:0')
+})
+
+it('leaves the marker in place for a held sale, so the next sale fetches the same price', () => {
+    const state = example()
+    const held: StockRules = {
+        ...rules,
+        saleTerms: (current, companyId) => ({
+            payer: bank,
+            price: market.companySpace(current.stockMarket, companyId).price,
+            destinationPoolId: 'market',
+            marketLimit: 80,
+            maximumShares: 3,
+            direction: 'down',
+            movement: 1
+        }),
+        holdsMarketMove: (_current, _sale, owner) => owner.kind === 'player'
+    }
+    const first = evaluateShareDisposal(state, seller, [{ companyId: 'R', shares: 1 }], held)
+    if (!first.details) throw new Error('Expected a legal sale')
+    expect(first.details.sales[0]).toMatchObject({
+        fromMarketSpaceId: '0:0',
+        toMarketSpaceId: '0:0'
+    })
+    applyShareSale(state, first.details)
+    expect(market.companySpace(state.stockMarket, 'R').id).toBe('0:0')
+    expect(
+        state.certificates.filter((certificate) => certificate.poolId === 'market')
+    ).toHaveLength(2)
+    const second = evaluateShareDisposal(state, seller, [{ companyId: 'R', shares: 1 }], held)
+    expect(second.details?.proceeds).toBe(100)
+})

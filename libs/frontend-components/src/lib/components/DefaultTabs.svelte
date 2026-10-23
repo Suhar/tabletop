@@ -1,12 +1,19 @@
 <script lang="ts">
     import { getGameSession } from '$lib/model/gameSessionContext.js'
+    import type { GameChatMessage } from '@tabletop/common'
     import { onMount, type ComponentType, type Snippet } from 'svelte'
     import { Tabs, TabItem, Indicator } from 'flowbite-svelte'
     import { UserCircleSolid, ClockSolid, AnnotationSolid } from 'flowbite-svelte-icons'
-    import { toast, Toaster } from 'svelte-sonner'
+    import { toast } from 'svelte-sonner'
     import { ChatEventType, type ChatEvent } from '$lib/services/chatService.js'
     import ChatToast from '$lib/components/ChatToast.svelte'
+    import GameToaster from '$lib/components/GameToaster.svelte'
     import GameChat from '$lib/components/GameChat.svelte'
+    import {
+        adminChatAuthorBgColor,
+        adminChatAuthorName,
+        adminChatAuthorTextColor
+    } from '$lib/components/chatPresentation.js'
 
     let {
         history,
@@ -35,9 +42,7 @@
     let gameSession = getGameSession()
 
     let chatActive: boolean = $state(false)
-    let showNewMessageIndicator: boolean = $derived(
-        gameSession.myPlayer !== undefined && gameSession.hasUnreadMessages && !chatActive
-    )
+    let showNewMessageIndicator: boolean = $derived(gameSession.hasUnreadMessages && !chatActive)
 
     let activeTabClasses = $derived(
         `relative box-border ${activeTabClass ?? 'py-1 px-3 bg-gray-300 border-2 border-transparent rounded-lg text-gray-900'}`
@@ -54,19 +59,27 @@
         chatActive = false
     }
 
+    function toastAttribution(message: GameChatMessage) {
+        if (message.admin) {
+            return {
+                playerName: adminChatAuthorName,
+                playerBgColor: adminChatAuthorBgColor,
+                playerTextColor: adminChatAuthorTextColor
+            }
+        }
+        return {
+            playerName: gameSession.getPlayerName(message.playerId),
+            playerBgColor: gameSession.colors.getPlayerBgColorValue(message.playerId),
+            playerTextColor: gameSession.colors.getPlayerTextColorValue(message.playerId)
+        }
+    }
+
     async function chatListener(event: ChatEvent) {
         if (event.eventType === ChatEventType.NewGameChatMessage && !chatActive) {
             toast.custom(ChatToast as unknown as ComponentType, {
                 duration: 3000,
                 position: 'bottom-left',
-                componentProps: {
-                    message: event.message,
-                    playerName: gameSession.getPlayerName(event.message.playerId),
-                    playerBgColor: gameSession.colors.getPlayerBgColorValue(event.message.playerId),
-                    playerTextColor: gameSession.colors.getPlayerTextColorValue(
-                        event.message.playerId
-                    )
-                }
+                componentProps: { message: event.message, ...toastAttribution(event.message) }
             })
         }
     }
@@ -81,7 +94,7 @@
     })
 </script>
 
-<Toaster position="top-center" richColors closeButton />
+<GameToaster />
 <Tabs
     tabStyle="pill"
     classes={{
@@ -123,7 +136,7 @@
             {/if}
         </TabItem>
     {/if}
-    {#if !gameSession.primaryGame.hotseat}
+    {#if gameSession.chatAvailable}
         <TabItem
             onclick={onChatClick}
             activeClass={activeTabClasses}

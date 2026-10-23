@@ -1,0 +1,34 @@
+import { expect, test } from '@playwright/test'
+import { openProtectedGame } from './protectedGame.js'
+
+test('Fresh Fish renders and discovers legal moves in the protected harness', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    const playerId = await openProtectedGame(page)
+    await page.getByRole('button', { name: 'Options' }).click()
+    await page.getByText('Protected mode', { exact: true }).click()
+    await page.getByRole('button', { name: 'Options' }).click()
+    await expect(page.getByLabel('Protected view', { exact: true })).toHaveValue(playerId)
+    await expect(page.getByText('Please place a disc', { exact: true })).toBeVisible()
+    await page.getByLabel('Protected view', { exact: true }).selectOption('spectator')
+    await expect(page.getByText('Please place a disc', { exact: true })).toHaveCount(0)
+    await page.getByLabel('Protected view', { exact: true }).selectOption('host')
+    await expect(page.getByText('Please place a disc', { exact: true })).toBeVisible()
+    await page.getByLabel('Protected view', { exact: true }).selectOption(playerId)
+    await expect(page.getByText('Please place a disc', { exact: true })).toBeVisible()
+    expect(errors).toEqual([])
+})
+
+test('reproduction seed survives harness creation and IndexedDB reload', async ({ page }) => {
+    await page.goto('/')
+    const { first, second } = await page.evaluate(async () => {
+        const fixture = await import(
+            new URL('/src/lib/stores/tests/exploration.fixture.ts', location.href).href
+        )
+        return fixture.reproduceHarnessGame()
+    })
+    expect(first).toEqual(second)
+    expect(first.masterSeed).toBe('0123456789abcdef0123456789abcdef')
+    expect(first.boardSeed).toBe(0)
+    expect(first.protectedPrng.algorithm).toBe('chacha20-v1')
+})

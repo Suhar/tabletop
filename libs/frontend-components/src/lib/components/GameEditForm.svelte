@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte'
     import {
         Toggle,
         Label,
@@ -11,6 +12,13 @@
         RadioButton
     } from 'flowbite-svelte'
     import {
+        normalizeMasterSeed,
+        GameVisibility,
+        getTitleVisibility,
+        defaultGameConfig,
+        normalizeGameConfig,
+        type GameCreationOptions,
+        assert,
         assertExists,
         BooleanConfigOption,
         ConfigOption,
@@ -20,6 +28,7 @@
         GameStorage,
         isBooleanConfigOption,
         isListConfigOption,
+        listOptionDescription,
         isNumberInputConfigOption,
         isStringInputConfigOption,
         ListConfigOption,
@@ -52,12 +61,14 @@
         game,
         title,
         hotseatOnly = false,
+        showHeading = true,
         oncancel,
         onsave
     }: {
         game?: Game
         title?: GameUiDefinition<GameState, HydratedGameState>
         hotseatOnly?: boolean
+        showHeading?: boolean
         oncancel: () => void
         onsave: (game: Game) => void
     } = $props()
@@ -82,15 +93,7 @@
               id: nanoid(),
               typeId: '',
               name: '',
-              players: [
-                  {
-                      id: nanoid(),
-                      userId: sessionUser?.id,
-                      isHuman: true,
-                      name: sessionUser?.username,
-                      status: PlayerStatus.Joined
-                  }
-              ],
+              players: [ownerPlayer()],
               isPublic: false,
               hotseat: false,
               ownerId: sessionUser?.id,
@@ -101,7 +104,9 @@
     let unexpectedError = $state(false)
     let errors: Record<string, string[]> = $state({})
     let name = $state(editedGame.name)
-    let config = $state(editedGame.config)
+    let config = $state(
+        untrack(() => normalizeGameConfig(editedGame.config, gameTitle.info.configurator))
+    )
     let seed = $state('')
     let numPlayers = $state(
         mode === EditMode.Edit
@@ -111,15 +116,37 @@
     let players: Player[] = $state(editedGame.players)
     let isPublic: boolean = $state(editedGame.isPublic)
     let isHotseat: boolean = $state(hotseatOnly || editedGame.hotseat)
+    let isUnlisted: boolean = $state(false)
+    let includeOwner: boolean = $state(true)
+    let publicGame = $derived(isPublic || isUnlisted)
+    let showUnlistedToggle = $derived(
+        authorizationService.canUseDeveloperTools && mode === EditMode.Create && !isHotseat
+    )
+    let showPublicToggle = $derived(
+        getTitleVisibility(gameTitle.info.metadata) === GameVisibility.Public &&
+            mode === EditMode.Create &&
+            !isHotseat &&
+            !isUnlisted
+    )
+    let showHotseatToggle = $derived(!hotseatOnly && !publicGame && includeOwner)
+    let reclaimableOwnerSeat = $derived.by(() => {
+        const ownNameSeat = players.findIndex((player) => player.name === sessionUser?.username)
+        return ownNameSeat !== -1
+            ? ownNameSeat
+            : players.findIndex((player) => player.status === PlayerStatus.Open)
+    })
+    let canIncludeOwner = $derived(includeOwner || reclaimableOwnerSeat !== -1)
+    let showIncludeOwnerToggle = $derived(
+        authorizationService.canUseDeveloperTools &&
+            mode === EditMode.Create &&
+            !hotseatOnly &&
+            !isHotseat
+    )
     let minPlayers: number = $derived(gameTitle?.info.metadata.minPlayers ?? 1)
     let maxPlayers: number = $derived(gameTitle?.info.metadata.maxPlayers ?? 1)
 
     function generateDefaultOptions() {
-        const defaultConfig: GameConfig = {}
-        for (const option of gameTitle.info.configurator?.options ?? []) {
-            defaultConfig[option.id] = option.default ?? null
-        }
-        return defaultConfig
+        return defaultGameConfig(gameTitle.info.configurator?.options ?? [])
     }
 
     function onOptionChange(option: ConfigOption, event: Event) {
@@ -142,6 +169,32 @@
         gameTitle.info.configurator.updateConfig(config, { id: option.id, value })
     }
 
+    function ownerPlayer(): Player {
+        assertExists(sessionUser?.username, 'Creating a game requires a user with a username')
+        return {
+            id: nanoid(),
+            userId: sessionUser.id,
+            isHuman: true,
+            name: sessionUser.username,
+            status: PlayerStatus.Joined
+        }
+    }
+
+    function openPlayer(): Player {
+        return { id: nanoid(), isHuman: true, name: '', status: PlayerStatus.Open }
+    }
+
+    function setOwnerIncluded(included: boolean) {
+        if (included) {
+            assert(reclaimableOwnerSeat !== -1, 'Including the owner requires a free seat')
+            players.splice(reclaimableOwnerSeat, 1)
+            players.unshift(ownerPlayer())
+        } else {
+            const ownerIndex = players.findIndex(isOwner)
+            players[ownerIndex] = openPlayer()
+        }
+    }
+
     function updatePlayers(numPlayers: number) {
         const difference: number = numPlayers - players.length
         if (difference === 0) {
@@ -151,7 +204,7 @@
             players.splice(numPlayers, -difference)
         } else {
             for (let i = 0; i < difference; i++) {
-                players.push({ id: nanoid(), isHuman: true, name: '', status: PlayerStatus.Open })
+                players.push(openPlayer())
             }
         }
     }
@@ -192,33 +245,41 @@
 
         const chosenConfig = $state.snapshot(config)
         const defaultConfig = generateDefaultOptions()
-        const mergedConfig = Object.assign(defaultConfig, chosenConfig)
-
-        // Remove null values from config
-        for (const key of Object.keys(mergedConfig)) {
-            if (mergedConfig[key] === null) {
-                delete mergedConfig[key]
-            }
-        }
+        const mergedConfig = normalizeGameConfig({ ...defaultConfig, ...chosenConfig })
 
         const gameData = <Partial<Game>>{
             id: editedGame.id,
             name: (formData.get('name') as string).trim(),
             players: playersToUpload,
-            isPublic,
-            hotseat: !isPublic && isHotseat,
-            storage: !isPublic && isHotseat ? GameStorage.Local : GameStorage.Remote,
+            isPublic: publicGame,
+            ...(isUnlisted ? { unlisted: true } : {}),
+            hotseat: !publicGame && isHotseat,
+            storage: !publicGame && isHotseat ? GameStorage.Local : GameStorage.Remote,
             ownerId: editedGame.ownerId,
             config: mergedConfig
         }
 
+        let options: GameCreationOptions | undefined
         if (mode === EditMode.Create) {
             gameData.typeId = gameTitle.info.id
             if (seed.trim().length > 0) {
                 try {
-                    gameData.seed = parseInt(seed.trim())
+                    const runtime = await gameTitle.runtime()
+                    if (runtime.randomnessVersion === 1) {
+                        if (gameService.supportsReproductionSeed !== true) {
+                            errors['seed'] = ['Reload the site to use reproduction seeds']
+                            return
+                        }
+                        options = { masterSeed: normalizeMasterSeed(seed) }
+                    } else {
+                        const numericSeed = Number(seed)
+                        if (!Number.isInteger(numericSeed)) throw Error('Invalid numeric seed')
+                        gameData.seed = numericSeed
+                    }
                 } catch {
-                    errors['seed'] = ['The seed must be a valid number']
+                    errors['seed'] = [
+                        'Use a 32-digit hexadecimal reproduction seed, or a number for legacy titles'
+                    ]
                     return
                 }
             }
@@ -227,7 +288,7 @@
         try {
             let updatedGame: Game
             if (mode === EditMode.Create) {
-                updatedGame = await gameService.createGame(gameData)
+                updatedGame = await gameService.createGame(gameData, options)
             } else {
                 updatedGame = await gameService.updateGame(gameData)
             }
@@ -324,26 +385,20 @@
         id={option.id}
         size="sm"
         items={option.options}
-        value={option.default}
+        value={`${config[option.id] ?? option.default}`}
         required
         class="w-fit"
     />
+    <Helper class="mt-1 text-[.65rem] dark:text-gray-400 leading-tight">
+        {listOptionDescription(option, config[option.id])}
+    </Helper>
 {/snippet}
 
-<div class="flex flex-row w-full justify-between items-center mb-4">
-    <div>
-        <h1 class="text-2xl font-medium text-gray-900 dark:text-gray-200">
-            {gameTitle.info.metadata.name}
-        </h1>
-    </div>
-    <div>
-        {#if !hotseatOnly && !isPublic}
-            <Toggle bind:checked={isHotseat} classes={{ span: 'me-0' }}
-                >{#snippet offLabel()}Hotseat{/snippet}</Toggle
-            >
-        {/if}
-    </div>
-</div>
+{#if showHeading}
+    <h1 class="text-2xl font-medium text-gray-900 dark:text-gray-200 mb-4">
+        {gameTitle.info.metadata.name}
+    </h1>
+{/if}
 {#if unexpectedError}
     <Alert class="dark:bg-red-200 dark:text-red-700 mb-4">
         <span class="font-bold text-lg">Oops...</span><br />
@@ -360,7 +415,7 @@
         required
     />
     {#if errors?.name}
-        {#each errors.name as error}
+        {#each errors.name as error, i (i)}
             <Helper class="mb-2" color="red"><span class="font-medium">{error}</span></Helper>
         {/each}
     {/if}
@@ -368,7 +423,7 @@
         <span>Player Count</span>
     </Label>
     <ButtonGroup>
-        {#each range(minPlayers, maxPlayers - minPlayers + 1) as i}
+        {#each range(minPlayers, maxPlayers - minPlayers + 1) as i (i)}
             <RadioButton
                 value={i}
                 checkedClass="dark:hover:bg-transparent dark:bg-transparent dark:text-primary-500 dark:hover:text-primary-500 dark:focus-within:text-primary-500"
@@ -397,7 +452,7 @@
                       : 'default'}
                 readonly={isOwner(player)}
                 disabled={isOwner(player)}
-                required={isHotseat || !isPublic}
+                required={isHotseat || !publicGame}
             >
                 <div class="flex flex-row justify-center align-center">
                     {#if isOwner(player)}
@@ -455,14 +510,34 @@
                 >
             {/if}
             {#if errors[player.id]}
-                {#each errors[player.id] as error}
+                {#each errors[player.id] as error, errorIndex (errorIndex)}
                     <Helper color="red"><span class="font-medium">{error}</span></Helper>
                 {/each}
             {/if}
         {/each}
     </div>
-    {#if !gameTitle.info.metadata.beta && mode === EditMode.Create}
-        <Toggle bind:checked={isPublic}>Public</Toggle>
+    {#if showPublicToggle || showUnlistedToggle || showHotseatToggle || showIncludeOwnerToggle}
+        <div class="flex flex-row items-center gap-6">
+            {#if showIncludeOwnerToggle}
+                <Toggle
+                    bind:checked={includeOwner}
+                    disabled={!canIncludeOwner}
+                    onchange={() => setOwnerIncluded(includeOwner)}>Include me</Toggle
+                >
+            {/if}
+            {#if showPublicToggle}
+                <Toggle bind:checked={isPublic}>Public</Toggle>
+            {/if}
+            {#if showUnlistedToggle}
+                <Toggle bind:checked={isUnlisted}>Unlisted</Toggle>
+            {/if}
+            {#if showHotseatToggle}
+                <Toggle bind:checked={isHotseat}>Hotseat</Toggle>
+            {/if}
+        </div>
+        {#if showIncludeOwnerToggle && !canIncludeOwner}
+            <Helper>Clear a seat to include yourself</Helper>
+        {/if}
     {/if}
     {#if gameTitle.info.configurator && gameTitle.info.configurator.options.length > 0}
         <div
@@ -482,8 +557,11 @@
         </div>
     {/if}
     {#if authorizationService.isAdmin && mode === EditMode.Create}
-        <Label class="mb-2">Seed</Label>
-        <Input type="text" name="seed" bind:value={seed} placeholder="optional game seed" />
+        <Label class="mb-2">Reproduction seed</Label>
+        <Input type="text" name="seed" bind:value={seed} placeholder="optional reproduction seed" />
+        {#each errors['seed'] ?? [] as error, i (i)}
+            <Helper color="red">{error}</Helper>
+        {/each}
     {/if}
 
     <div class="flex justify-between mt-6">

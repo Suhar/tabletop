@@ -1,17 +1,20 @@
+import { validateLocalGameState } from '$lib/utils/validateLocalGameState.js'
 import {
+    type GameCreationOptions,
     Game,
     GameStatus,
     GameAction,
     GameState,
     type HydratedGameState,
     GameEngine,
+    createGameFork,
+    GameForkError,
     GameStorage,
     GameCategory,
-    RunMode,
-    assertExists
+    assertExists,
+    type ScenarioData
 } from '@tabletop/common'
 import { SvelteMap } from 'svelte/reactivity'
-import { nanoid } from 'nanoid'
 import type { GameService } from '$lib/services/gameService.js'
 import type { GameStore } from '$lib/persistence/gameStore.js'
 import type { GameSession } from '$lib/model/gameSession.svelte.js'
@@ -20,6 +23,8 @@ import type { AuthorizationService } from '$lib/services/authorizationService.js
 import type { LibraryService } from '$lib/services/libraryService.js'
 
 export class HarnessGameService implements GameService {
+    readonly developerHarness = true
+    readonly supportsReproductionSeed = true
     private gamesById: Map<string, Game> = new SvelteMap()
     private localGameStore: GameStore
 
@@ -72,7 +77,7 @@ export class HarnessGameService implements GameService {
         await this.loadLocalGames()
     }
 
-    async loadOpenGames(titleId: string) {
+    async loadOpenGames(_titleId: string) {
         return
     }
 
@@ -100,15 +105,19 @@ export class HarnessGameService implements GameService {
                 this.gamesById.set(localGame.id, localGame)
             }
         }
-        return await this.localGameStore.loadGameData(id)
+        const data = await this.localGameStore.loadGameData(id)
+        if (data.game?.state)
+            await validateLocalGameState(this.libraryService, data.game, data.game.state)
+        return data
     }
 
     getExplorations(gameId: string): Game[] {
-        return Array.from(this.gamesById.values()).filter((game) => game.parentId === gameId)
+        return Array.from(this.gamesById.values()).filter(
+            (game) => game.parentId === gameId && game.category === GameCategory.Exploration
+        )
     }
 
-    async createGame(game: Partial<Game>): Promise<Game> {
-        let newGame: Game
+    async createGame(game: Partial<Game>, options?: GameCreationOptions): Promise<Game> {
         if (!game.typeId) {
             throw new Error('Game typeId is required to create a game')
         }
@@ -131,11 +140,11 @@ export class HarnessGameService implements GameService {
         const initializedGame = runtime.initializer.initializeGame(game, gameDefinition)
 
         const engine = new GameEngine(runtime)
-        const { startedGame, initialState } = engine.startGame(initializedGame)
+        const { startedGame, initialState } = engine.startGame(initializedGame, options?.masterSeed)
 
         startedGame.activePlayerIds = initialState.activePlayerIds
 
-        newGame = await this.localGameStore.createGame(startedGame, initialState)
+        const newGame = await this.localGameStore.createGame(startedGame, initialState)
         this.gamesById.set(newGame.id, newGame)
 
         return newGame
@@ -150,9 +159,21 @@ export class HarnessGameService implements GameService {
             throw new Error('Game ID is required to fork a local game')
         }
 
-        const { game: actualGame, actions } = await this.loadGame(game.id)
+        const fork = await this.forkOf(game.id, actionIndex, name)
+        await this.saveGameLocally(fork)
+        return fork.game
+    }
+
+    /** The game as it stands, with every action behind it, ready to be saved as a scenario file. */
+    async scenarioOf(gameId: string): Promise<ScenarioData> {
+        return this.forkOf(gameId, 'latest')
+    }
+
+    private async forkOf(gameId: string, at: number | 'latest', name?: string) {
+        const { game: actualGame, actions } = await this.loadGame(gameId)
+        const actionIndex = at === 'latest' ? actions.length - 1 : at
         if (!actualGame) {
-            throw new Error(`Local game not found for id ${game.id}`)
+            throw new Error(`Local game not found for id ${gameId}`)
         }
 
         const definition = this.libraryService.getTitle(actualGame.typeId)
@@ -160,71 +181,18 @@ export class HarnessGameService implements GameService {
             throw new Error(`Game definition not found for typeId ${actualGame.typeId}`)
         }
 
-        const forkedGame = structuredClone(actualGame)
-
-        // Reset fields
-        forkedGame.id = nanoid()
-        if (name && name.trim().length > 0) {
-            forkedGame.name = name
-        }
-        forkedGame.startedAt = undefined
-        forkedGame.status = GameStatus.Started
-        delete forkedGame.result
-        delete forkedGame.finishedAt
-        forkedGame.winningPlayerIds = []
-
-        // Generate initial state
-        const runtime = await definition.runtime()
-        const engine = new GameEngine(runtime)
-        const { startedGame, initialState } = engine.startGame(forkedGame)
-
-        // Copy the entire action history up to the specified index
-        const actionSubset = actions
-            .slice(0, actionIndex + 1)
-            .map((action) => structuredClone(action))
-
-        let state = initialState
-        const updatedActions = []
-        // Run the game to the desired index
-        for (const action of actionSubset) {
-            // Copy and adjust
-            action.id = nanoid()
-            action.gameId = forkedGame.id
-            action.undoPatch = undefined
-
-            // Apply each action to the forked game state
-            const { processedActions, updatedState } = engine.run(
-                action,
-                state,
-                startedGame,
-                RunMode.Single
-            )
-            state = updatedState
-            updatedActions.push(...processedActions)
-        }
-
-        // Update some relevant fields on the game
-        startedGame.activePlayerIds = state.activePlayerIds || []
-        const lastAction = updatedActions.at(-1)
-        if (lastAction) {
-            startedGame.lastActionAt = lastAction.createdAt
-            startedGame.lastActionPlayerId = lastAction.playerId
-        } else {
-            startedGame.lastActionAt = undefined
-            startedGame.lastActionPlayerId = undefined
-        }
-
-        await this.saveGameLocally({
-            game: startedGame,
-            state,
-            actions: updatedActions
+        if (!actualGame.state) throw new GameForkError(actualGame.id, actionIndex)
+        return createGameFork({
+            game: actualGame,
+            state: actualGame.state,
+            actions,
+            actionIndex,
+            runtime: await definition.runtime(),
+            name
         })
-        this.gamesById.set(startedGame.id, startedGame)
-
-        return startedGame
     }
 
-    async updateGame(game: Partial<Game>): Promise<Game> {
+    async updateGame(_game: Partial<Game>): Promise<Game> {
         throw new Error('Not implemented in harness')
     }
 
@@ -247,12 +215,28 @@ export class HarnessGameService implements GameService {
             throw new Error('Can only save local games locally')
         }
 
+        await validateLocalGameState(this.libraryService, gameData, stateData)
         await this.localGameStore.storeGameData({
             game: gameData,
             actions: actionsData,
             state: stateData
         })
         this.gamesById.set(gameData.id, gameData)
+    }
+
+    /** Saves a scenario as a local game of the harness user, replacing the copy loaded before, so loading it again starts it over. */
+    async loadScenario({ game, state, actions }: ScenarioData): Promise<Game> {
+        const user = this.authorizationService.getSessionUser()
+        assertExists(user, 'The harness has a session user')
+        const owned: Game = {
+            ...game,
+            ownerId: user.id,
+            storage: GameStorage.Local,
+            hotseat: true,
+            players: game.players.map((player) => ({ ...player, userId: user.id }))
+        }
+        await this.saveGameLocally({ game: owned, state, actions })
+        return owned
     }
 
     async deleteGame(gameId: string): Promise<void> {
@@ -262,15 +246,15 @@ export class HarnessGameService implements GameService {
         }
     }
 
-    async startGame(game: Game): Promise<Game> {
+    async startGame(_game: Game): Promise<Game> {
         throw new Error('Not implemented in harness')
     }
 
-    async joinGame(gameId: string): Promise<Game> {
+    async joinGame(_gameId: string): Promise<Game> {
         throw new Error('Not implemented in harness')
     }
 
-    async declineGame(gameId: string): Promise<Game> {
+    async declineGame(_gameId: string): Promise<Game> {
         throw new Error('Not implemented in harness')
     }
 

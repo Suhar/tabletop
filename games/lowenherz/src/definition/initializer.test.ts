@@ -1,0 +1,297 @@
+import { LowenherzGameExploration } from './gameExploration.js'
+import { HydratedLowenherzGameState } from '../model/gameState.js'
+import { PoliticsCardType } from './politicsCards.js'
+import { describe, expect, it } from 'vitest'
+import { Game, GameConfig, GameStatus, GameStorage, PlayerStatus } from '@tabletop/common'
+import { LowenherzRuntime } from './runtime.js'
+import { MachineState } from './states.js'
+import { CardBack } from './actionCards.js'
+import { RULEBOOK_CASTLE_MIN_DISTANCE } from '../model/gameState.js'
+
+function buildGame(playerCount: number, config: GameConfig = {}): Game {
+    return {
+        id: 'game-1',
+        typeId: 'lowenherz',
+        status: GameStatus.Started,
+        isPublic: false,
+        deleted: false,
+        ownerId: 'p1',
+        name: 'Test Game',
+        players: Array.from({ length: playerCount }, (_, i) => ({
+            id: `p${i + 1}`,
+            isHuman: true,
+            name: `Player ${i + 1}`,
+            status: PlayerStatus.Joined
+        })),
+        config,
+        hotseat: true,
+        createdAt: new Date(),
+        winningPlayerIds: [],
+        storage: GameStorage.Local
+    }
+}
+
+describe('LowenherzGameInitializer', () => {
+    it('keeps seating and the first player castle on the turn manager', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(4)
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        const seating = [...state.turnManager.turnOrder]
+        expect(seating).toHaveLength(4)
+        expect(state.turnOrder).toEqual(seating)
+        expect(state.firstPlayerId).toBe(seating[0])
+        expect(state.dehydrate()).not.toHaveProperty('turnOrder')
+        expect(state.dehydrate()).not.toHaveProperty('firstPlayerId')
+
+        state.turnManager.newFirstPlayer(seating[2])
+
+        expect(state.firstPlayerId).toBe(seating[2])
+        expect(state.turnOrder).toEqual([seating[2], seating[3], seating[0], seating[1]])
+    })
+
+    it('records the rulebook castle distance so the game keeps it even if the rule is read differently later', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(4)
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        expect(state.minimumCastleDistance).toBe(RULEBOOK_CASTLE_MIN_DISTANCE)
+        expect(state.requiredCastleDistance).toBe(7)
+    })
+
+    it('records that enclosing every castle ends a wall allotment', () => {
+        const state = LowenherzRuntime.initializer.initializeGameState(buildGame(4), {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        expect(state.enclosureEndsWallAllotment).toBe(true)
+    })
+
+    it('deals all 13 politics cards across the two piles with the printed multiplicities, and gives every player an empty hand', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(4)
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        const allCards = [...state.getPoliticsPile('A'), ...state.getPoliticsPile('B')]
+        expect(allCards).toHaveLength(13)
+        expect(allCards.filter((card) => card.type === PoliticsCardType.Alliance)).toHaveLength(3)
+        expect(state.politicsTakingPlayerId).toBeUndefined()
+
+        for (const player of state.players) {
+            expect(player.politicsCards).toEqual([])
+        }
+    })
+
+    it('defaults to the player-placed-castles flow, with the A-deck stacked on top', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(4)
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        expect(state.machineState).toBe(MachineState.PlacingCastles)
+        expect(state.getActionDeck().length).toBe(31)
+        expect(
+            state
+                .getActionDeck()
+                .slice(0, 6)
+                .every((c) => c.back === CardBack.A)
+        ).toBe(true)
+        expect(
+            state.board.squares.every((row) =>
+                row.every((sq) => !sq.castleOwner && !sq.knightOwner)
+            )
+        ).toBe(true)
+        expect(state.regions).toEqual([])
+    })
+
+    it('switches to the fixed basic-game setup when playerPlacedCastles is off', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(4, { playerPlacedCastles: false })
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        expect(state.machineState).toBe(MachineState.StartOfTurn)
+        // Basic-game deck: no A cards, 25 total (see actionDeckAssembly.ts).
+        expect(state.getActionDeck().length).toBe(25)
+        expect(state.getActionDeck().every((c) => c.back !== CardBack.A)).toBe(true)
+        // Every player already has a scored starting region and 9 knights left in
+        // stock (12 - 3 placed), without anyone ever submitting a PlaceCastle action.
+        expect(state.regions.length).toBe(4)
+        for (const player of state.players) {
+            expect(player.knightsInStock).toBe(9)
+            expect(player.powerPoints).toBeGreaterThan(0)
+        }
+    })
+
+    it('ignores playerPlacedCastles=off at 2 players, since that variant IS manual placement', () => {
+        const initializer = LowenherzRuntime.initializer
+        const game = buildGame(2, { playerPlacedCastles: false })
+
+        const state = initializer.initializeGameState(game, {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        // The 2-player rules build on the variable construction rules (4 castles each
+        // plus 2 of a neutral color), so the fixed basic-game layout - a 4-color,
+        // one-castle-each diagram with no neutral prince - would discard the variant
+        // wholesale. Placement happens regardless of the config option.
+        expect(state.machineState).toBe(MachineState.PlacingCastles)
+        expect(state.regions).toEqual([])
+        expect(
+            state.board.squares.every((row) =>
+                row.every((sq) => !sq.castleOwner && !sq.knightOwner)
+            )
+        ).toBe(true)
+        // ...and a neutral color exists for the 2 castles each player places in it.
+        expect(state.neutralColor).toBeDefined()
+        expect(state.players.some((p) => p.color === state.neutralColor)).toBe(false)
+        // A-lettered cards are stacked on top, as variable construction requires.
+        expect(state.getActionDeck()[0].back).toBe(CardBack.A)
+    })
+
+    it('redistributes the politics piles for exploration, not just shuffles within them', () => {
+        // The piles are unordered - a player commits to a pile and takes whichever card in it
+        // they like - so shuffling each in place conceals nothing. What has to be randomized is
+        // which pile a card is in.
+        const initializer = LowenherzRuntime.initializer
+        const state = initializer.initializeGameState(buildGame(3), {
+            id: 'game-1',
+            gameId: 'game-1',
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 1, invocations: 0 },
+            winningPlayerIds: []
+        })
+
+        const startingA = new Set(state.getPoliticsPile('A').map((card) => JSON.stringify(card)))
+        const sizeA = state.getPoliticsPile('A').length
+        const sizeB = state.getPoliticsPile('B').length
+        const everyCard = [...state.getPoliticsPile('A'), ...state.getPoliticsPile('B')]
+            .map((card) => JSON.stringify(card))
+            .sort()
+
+        let anyCardMoved = false
+        for (let attempt = 0; attempt < 40; attempt++) {
+            const source = state.dehydrate()
+            source.prng = { seed: attempt + 1, invocations: 0 }
+            const explored = new HydratedLowenherzGameState(
+                new LowenherzGameExploration().createFromCanonicalState(source)
+            )
+
+            // Same cards, same pile sizes - only the split between them may differ.
+            expect(explored.getPoliticsPile('A')).toHaveLength(sizeA)
+            expect(explored.getPoliticsPile('B')).toHaveLength(sizeB)
+            expect(
+                [...explored.getPoliticsPile('A'), ...explored.getPoliticsPile('B')]
+                    .map((card) => JSON.stringify(card))
+                    .sort()
+            ).toEqual(everyCard)
+
+            if (
+                explored.getPoliticsPile('A').some((card) => !startingA.has(JSON.stringify(card)))
+            ) {
+                anyCardMoved = true
+            }
+        }
+
+        // Forty differently seeded redeals of a 13-card deck: an in-place shuffle would
+        // never move one across.
+        expect(anyCardMoved).toBe(true)
+    })
+})
+
+describe('configuration format compatibility', () => {
+    it.each([2, 3, 4])('initializes equivalent states for all options with %i players', (count) => {
+        const initializer = LowenherzRuntime.initializer
+        for (const privateMoney of [false, true]) {
+            for (const standardSetup of [false, true]) {
+                for (const allowZeroDucatOffers of [false, true]) {
+                    const initial = {
+                        id: 'game-1',
+                        gameId: 'game-1',
+                        activePlayerIds: [],
+                        actionCount: 0,
+                        actionChecksum: 0,
+                        prng: { seed: 1, invocations: 0 },
+                        protectedPrng: { seed: 2, invocations: 0 },
+                        systemVersion: 3,
+                        winningPlayerIds: []
+                    }
+                    const legacy = initializer.initializeGameState(
+                        buildGame(count, {
+                            publicMoney: !privateMoney,
+                            playerPlacedCastles: !standardSetup,
+                            minimumOneDucat: !allowZeroDucatOffers
+                        }),
+                        structuredClone(initial)
+                    )
+                    const current = initializer.initializeGameState(
+                        buildGame(count, {
+                            privateMoney,
+                            standardSetup,
+                            allowZeroDucatOffers
+                        }),
+                        structuredClone(initial)
+                    )
+                    expect(current.dehydrate()).toEqual(legacy.dehydrate())
+                }
+            }
+        }
+    })
+})

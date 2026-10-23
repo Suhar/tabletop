@@ -36,12 +36,11 @@ export class HydratedAddBus extends HydratableAction<typeof AddBus> implements A
         super(data, AddBusValidator)
     }
 
-    apply(state: HydratedBusGameState, context?: MachineContext) {
+    apply(state: HydratedBusGameState, _context?: MachineContext) {
         if (!this.isValidAddBus(state)) {
             throw Error('Invalid AddBus action')
         }
 
-        console.log('Applying AddBus action for player', this.playerId)
         const playerState = state.getPlayerState(this.playerId)
         playerState.buses += 1
 

@@ -1,0 +1,51 @@
+import type { TrancheState } from '@tabletop/18xx'
+import { getCompany, type CompanyState } from '@tabletop/18xx'
+import { assert, type PlayerState } from '@tabletop/common'
+export function prepareTheOldPrincePrivates(
+    state: CompanyState & TrancheState,
+    players: readonly PlayerState[]
+): void {
+    assert(players.length === 4, 'Private examples include the four-player Ice Boats')
+    for (const [id, playerIndex] of [
+        ['MC', 0],
+        ['SB', 3],
+        ['IB', 3],
+        ['RA', 1],
+        ['RF', 2],
+        ['HS', 1],
+        ['SBC', 2],
+        ['MLC', 0],
+        ['SLC', 1]
+    ] as const) {
+        state.companies.push({ id, kind: 'private' })
+        state.certificates.push({
+            id: `${id}:charter`,
+            companyId: id,
+            kind: 'private',
+            owner: { kind: 'player', playerId: players[playerIndex].playerId }
+        })
+    }
+    getCompany(state, 'ML').operated = false
+    getCompany(state, 'So').operated = false
+    getCompany(state, 'VR').privateRevenue = 5
+    for (const id of ['So:share:6', 'So:share:7']) {
+        const share = state.certificates.find((item) => item.id === id)
+        assert(share, 'Private example requires reserved shares')
+        share.owner = { kind: 'bank' }
+        share.poolId = 'reserved'
+    }
+    const company = getCompany(state, 'A')
+    Object.assign(company, {
+        started: true,
+        floated: true,
+        funded: true,
+        operated: true,
+        parPrice: 80,
+        president: { kind: 'player', playerId: players[3].playerId }
+    })
+    const president = state.certificates.find((item) => item.id === 'A:president')
+    assert(president, 'Private example requires a president')
+    president.owner = { kind: 'player', playerId: players[3].playerId }
+    delete president.poolId
+    state.tranches[1].companyIds.push('A')
+}

@@ -1,0 +1,536 @@
+<script lang="ts">
+    import { marketDarkLightness, marketSpaceColor, marketZone } from './marketColors.js'
+    import { onMount, tick, untrack } from 'svelte'
+    import { prefersReducedMotion } from 'svelte/motion'
+    import {
+        type StockMarket as StockMarketModel,
+        type StockMarketChart,
+        type StockMarketSpace
+    } from '@tabletop/18xx'
+    import type { AnimationContext } from '@tabletop/frontend-components'
+    import type { MarketAnimationSource, MarketStateChange } from './marketAnimationSource.js'
+    import type { StationAppearance } from '../maps/stationPresentation.js'
+    import type { MarketLedge, MarketZone } from '../session/titlePresentation.js'
+    import CompanyToken from '../tokens/CompanyToken.svelte'
+    import {
+        marketTokenLayout,
+        expandedMarketStack,
+        DefaultMarketCell,
+        type MarketCellDimensions,
+        MarketTokenSize,
+        MarketScenePadding,
+        MarketZoneBannerHeight
+    } from './marketTokenLayout.js'
+
+    let {
+        chart,
+        market,
+        companyName,
+        appearances,
+        animation,
+        zones = [],
+        ledge,
+        cell = DefaultMarketCell,
+        renderScale = 1
+    }: {
+        chart: StockMarketChart
+        market: StockMarketModel
+        companyName: (companyId: string) => string
+        appearances: Readonly<Record<string, StationAppearance>>
+        animation?: MarketAnimationSource
+        zones?: readonly MarketZone[]
+        ledge?: MarketLedge
+        cell?: MarketCellDimensions
+        renderScale?: number
+    } = $props()
+    const columns = $derived(Math.max(...chart.spaces.map((space) => space.column)) + 1)
+    const rows = $derived(Math.max(...chart.spaces.map((space) => space.row)) + 1)
+    const spaceRows = $derived(new Map(chart.spaces.map((space) => [space.id, space.row])))
+    // An edge arrow marks a sideways move that leaves the row, such as up at a row's end.
+    function leavesRow(space: StockMarketSpace, move: 'left' | 'right'): boolean {
+        const target = space.moves[move]
+        return !target || spaceRows.get(target) !== space.row
+    }
+    const banners = $derived(
+        zones.flatMap((zone) => {
+            const { color, banner } = zone
+            const zoneColumns = chart.spaces
+                .filter((space) => space.color === color)
+                .map((space) => space.column)
+            return banner && zoneColumns.length
+                ? [
+                      {
+                          color,
+                          zoneColor: marketSpaceColor(color, zone),
+                          ...banner,
+                          firstColumn: Math.min(...zoneColumns),
+                          lastColumn: Math.max(...zoneColumns)
+                      }
+                  ]
+                : []
+        })
+    )
+    let tokens = $derived(marketTokenLayout(chart, market, cell))
+    let hoveredSpace: string | undefined = $derived.by(() => {
+        market
+        animation?.updatingVisibleState
+        return undefined
+    })
+    const expanded = $derived(
+        hoveredSpace ? expandedMarketStack(chart, market, hoveredSpace, cell) : []
+    )
+    const expandedIds = $derived(
+        market.stacks.find((stack) => stack.spaceId === hoveredSpace)?.companyIds ?? []
+    )
+    const hitbox = $derived(
+        expanded.length
+            ? {
+                  x: Math.min(...expanded.map((point) => point.x)) - MarketTokenSize / 2 - 3,
+                  y: Math.min(...expanded.map((point) => point.y)) - MarketTokenSize / 2 - 3,
+                  width:
+                      Math.max(...expanded.map((point) => point.x)) -
+                      Math.min(...expanded.map((point) => point.x)) +
+                      MarketTokenSize +
+                      6,
+                  height:
+                      Math.max(...expanded.map((point) => point.y)) -
+                      Math.min(...expanded.map((point) => point.y)) +
+                      MarketTokenSize +
+                      6
+              }
+            : undefined
+    )
+    let board: HTMLDivElement | undefined = $state()
+    const elements = new Map<string, HTMLElement>()
+    const timelines = new Set<AnimationContext['actionTimeline']>()
+    function register(node: HTMLElement, key: string) {
+        elements.set(key, node)
+        return {
+            destroy() {
+                for (const timeline of timelines) timeline.killTweensOf(node)
+                elements.delete(key)
+            }
+        }
+    }
+    onMount(() => {
+        const activeSession = untrack(() => animation)
+        if (!activeSession) return
+        const listener = async ({ to, from, action, animationContext }: MarketStateChange) => {
+            if (!from || !board || getComputedStyle(board).visibility !== 'visible') return
+            const before = marketTokenLayout(chart, from, cell)
+            const after = marketTokenLayout(chart, to, cell)
+            if (JSON.stringify(before) === JSON.stringify(after)) return
+            hoveredSpace = undefined
+            // The market shown when the run began; a newer one published meanwhile, such as a
+            // view switch, supersedes the run, and its tokens already follow that market.
+            const shownMarket = untrack(() => market)
+            const beforeById = new Map(before.map((item) => [item.companyId, item]))
+            const afterById = new Map(after.map((item) => [item.companyId, item]))
+            tokens = [
+                ...after.map((item) => ({
+                    ...item,
+                    x: beforeById.get(item.companyId)?.x ?? item.x,
+                    y: beforeById.get(item.companyId)?.y ?? item.y
+                })),
+                ...before.filter((item) => !afterById.has(item.companyId))
+            ]
+            await tick()
+            if (!board) return
+            const timeline = animationContext.actionTimeline
+            timelines.add(timeline)
+            const duration = prefersReducedMotion.current ? 0 : action ? 0.3 : 0.18
+            for (const item of tokens) {
+                const start = beforeById.get(item.companyId)
+                const end = afterById.get(item.companyId)
+                const element = elements.get(item.companyId)
+                if (!element) continue
+                const origin = start ?? item
+                const destination = end ?? item
+                timeline.fromTo(
+                    element,
+                    { x: 0, y: 0, opacity: start ? 1 : 0 },
+                    {
+                        x: (destination.x - origin.x) * renderScale,
+                        y: (destination.y - origin.y) * renderScale,
+                        opacity: end ? 1 : 0,
+                        duration,
+                        ease: 'power2.inOut'
+                    },
+                    0
+                )
+            }
+
+            animationContext.afterAnimations(() => {
+                timelines.delete(timeline)
+                if (!board) return
+                if (untrack(() => market) === shownMarket) tokens = after
+                void tick().then(() => {
+                    for (const element of elements.values()) {
+                        for (const property of [
+                            'transform',
+                            'translate',
+                            'rotate',
+                            'scale',
+                            'opacity'
+                        ])
+                            element.style.removeProperty(property)
+                    }
+                })
+            })
+        }
+        const unsubscribe = activeSession.subscribe(listener)
+        return () => {
+            unsubscribe()
+            for (const timeline of timelines)
+                for (const element of elements.values()) timeline.killTweensOf(element)
+            timelines.clear()
+            board = undefined
+        }
+    })
+    function expandStack(spaceId: string) {
+        if (animation?.updatingVisibleState) return
+        hoveredSpace = tokens.some((token) => token.spaceId === spaceId && token.overlapped)
+            ? spaceId
+            : undefined
+    }
+</script>
+
+<div
+    class="market"
+    bind:this={board}
+    role="region"
+    aria-label="Stock market board"
+    aria-busy={animation?.updatingVisibleState ?? false}
+    style:--render-scale={renderScale}
+    style:padding={`${MarketScenePadding * renderScale}px`}
+>
+    {#if banners.length}<div
+            class="banners"
+            style:grid-template-columns={`repeat(${columns}, ${cell.width * renderScale}px)`}
+            style:height={`${MarketZoneBannerHeight * renderScale}px`}
+        >
+            {#each banners as banner (banner.color)}<div
+                    class="banner"
+                    class:arrow={banner.shape === 'arrow'}
+                    style:grid-column={`${banner.firstColumn + 1} / ${banner.lastColumn + 2}`}
+                    style:--market-color={banner.zoneColor}
+                    style:--market-lightness={marketDarkLightness[banner.color]}
+                >
+                    {#if banner.shape === 'span'}<span class="banner-tick"></span><span
+                            class="banner-line"
+                        ></span>{/if}<span>{banner.label}</span><span
+                        class="banner-line"
+                        class:arrow-shaft={banner.shape === 'arrow'}
+                    ></span>{#if banner.shape === 'arrow'}<svg
+                            class="banner-head"
+                            viewBox="0 0 12 12"
+                            aria-hidden="true"><path d="M0 0L12 6L0 12L3 6Z"></path></svg
+                        >{:else}<span class="banner-tick"></span>{/if}
+                </div>{/each}
+        </div>{/if}
+    <div
+        class="grid"
+        role="group"
+        aria-label="Market spaces"
+        onpointerleave={() => (hoveredSpace = undefined)}
+        style:grid-template-columns={`repeat(${columns}, ${cell.width * renderScale}px)`}
+        style:grid-template-rows={`repeat(${rows}, ${cell.height * renderScale}px)`}
+    >
+        {#each chart.spaces as space (space.id)}
+            {@const crowded = tokens.some(
+                (token) => token.spaceId === space.id && token.overlapped
+            )}
+            {@const tinted = space.color !== 'white'}
+            {@const zone = marketZone(zones, space.color)}
+            {@const fillKind = zone?.fill?.kind}
+            <div
+                class="space"
+                class:tinted={tinted && !fillKind}
+                class:solid={fillKind === 'solid'}
+                class:recessed={fillKind === 'recessed'}
+                role="button"
+                tabindex={crowded ? 0 : -1}
+                aria-label={`Market value ${space.price}${zone ? `, ${zone.name}` : ''}${crowded ? ', expand company stack' : ''}`}
+                title={zone ? `${zone.name}: ${zone.description}` : undefined}
+                data-market-space={space.id}
+                style:grid-column={space.column + 1}
+                style:grid-row={space.row + 1}
+                style:--market-color={tinted || fillKind
+                    ? marketSpaceColor(space.color, zone)
+                    : undefined}
+                style:--market-lightness={marketDarkLightness[space.color]}
+                onpointerenter={() => expandStack(space.id)}
+                onfocus={() => expandStack(space.id)}
+                onblur={() => (hoveredSpace = undefined)}
+                onclick={() => expandStack(space.id)}
+                onkeydown={(event) => {
+                    if (event.key === 'Escape') hoveredSpace = undefined
+                    else if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        expandStack(space.id)
+                    }
+                }}
+            >
+                <strong>{space.price}</strong>
+                {#if zone?.marks}<span class="marks" aria-hidden="true"
+                        >{#each zone.marks as mark (mark)}<span>{mark}</span>{/each}</span
+                    >{/if}
+                {#each ledge?.edges.filter((edge) => edge.spaceId === space.id) ?? [] as edge (edge.side)}<span
+                        class="ledge {edge.side}"
+                        aria-hidden="true"
+                    ></span>{/each}
+                {#if space.moves.up && leavesRow(space, 'right')}<svg
+                        class="edge-arrow right"
+                        viewBox="0 0 10 32"
+                        role="img"
+                        aria-label="Right moves up"><path d="M7 28V4L3 10"></path></svg
+                    >{/if}
+                {#if space.moves.down && leavesRow(space, 'left')}<svg
+                        class="edge-arrow left"
+                        viewBox="0 0 10 32"
+                        role="img"
+                        aria-label="Left moves down"><path d="M7 28V4L3 10"></path></svg
+                    >{/if}
+            </div>
+        {/each}
+        {#if hitbox}<div
+                class="stack-hitbox"
+                aria-hidden="true"
+                style:left={`${hitbox.x * renderScale}px`}
+                style:top={`${hitbox.y * renderScale}px`}
+                style:width={`${hitbox.width * renderScale}px`}
+                style:height={`${hitbox.height * renderScale}px`}
+            ></div>{/if}
+        {#each tokens as token (token.companyId)}
+            {@const target =
+                hoveredSpace === token.spaceId
+                    ? expanded[expandedIds.indexOf(token.companyId)]
+                    : undefined}
+            <div
+                class="positioned market-token"
+                data-market-company={token.companyId}
+                data-market-token-space={token.spaceId}
+                style:transform={`translate(${token.x * renderScale}px, ${token.y * renderScale}px)`}
+                style:z-index={(target ? 101 : 1) + token.z}
+            >
+                <div class="token-motion" use:register={token.companyId}>
+                    <div
+                        class="hover-offset"
+                        class:moving={animation?.updatingVisibleState}
+                        style:transform={`translate(${((target?.x ?? token.x) - token.x) * renderScale}px, ${((target?.y ?? token.y) - token.y) * renderScale}px)`}
+                    >
+                        <div
+                            class="token-payload"
+                            role="img"
+                            aria-label={companyName(token.companyId)}
+                            onpointerenter={() => expandStack(token.spaceId)}
+                        >
+                            <CompanyToken
+                                appearance={appearances[token.companyId]}
+                                size={MarketTokenSize * renderScale}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {/each}
+    </div>
+</div>
+
+<style>
+    .market {
+        width: max-content;
+        --price-ink: light-dark(#253b35, #b4bfca);
+        color: light-dark(#253b35, var(--rail-text, #e3e9ef));
+        font:
+            14px/1.4 ui-sans-serif,
+            system-ui,
+            sans-serif;
+    }
+    .positioned {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+    .banners {
+        display: grid;
+        width: max-content;
+    }
+    .banner {
+        --zone-ink: light-dark(
+            oklch(from var(--market-color) 0.5 calc(c * 1.5) h),
+            color-mix(
+                in oklab,
+                oklch(from var(--market-color) var(--market-lightness, 0.62) calc(c * 1.25) h) 80%,
+                var(--rail-surface-raised, #2b3744)
+            )
+        );
+        display: flex;
+        align-items: center;
+        gap: calc(8px * var(--render-scale));
+        color: var(--zone-ink);
+        font-size: calc(13px * var(--render-scale));
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .banner.arrow {
+        padding-left: calc(6px * var(--render-scale));
+    }
+    .banner-line {
+        flex: 1;
+        height: calc(3px * var(--render-scale));
+        border-radius: calc(1.5px * var(--render-scale));
+        background: var(--zone-ink);
+    }
+    .banner-line.arrow-shaft {
+        margin-right: calc(-4px * var(--render-scale));
+        border-radius: calc(1.5px * var(--render-scale)) 0 0 calc(1.5px * var(--render-scale));
+    }
+    .banner-tick {
+        flex: none;
+        width: calc(3px * var(--render-scale));
+        height: calc(12px * var(--render-scale));
+        border-radius: calc(1.5px * var(--render-scale));
+        background: var(--zone-ink);
+    }
+    .banner-tick:first-child {
+        margin-right: calc(-8px * var(--render-scale));
+    }
+    .banner-tick:last-child {
+        margin-left: calc(-8px * var(--render-scale));
+    }
+    .banner-head {
+        flex: none;
+        width: calc(14px * var(--render-scale));
+        height: calc(14px * var(--render-scale));
+        fill: var(--zone-ink);
+    }
+    .grid {
+        position: relative;
+        display: grid;
+        width: max-content;
+    }
+    /* Explicit, so the scene stays interactive inside a pointer-transparent board panel. */
+    .space {
+        pointer-events: auto;
+        position: relative;
+        border: calc(1px * var(--render-scale)) solid
+            light-dark(#a4b3a7, var(--rail-border, #485666));
+        background: light-dark(#fffefa, var(--rail-surface-raised, #2b3744));
+        margin-right: calc(-1px * var(--render-scale));
+        margin-bottom: calc(-1px * var(--render-scale));
+        font-size: calc(12px * var(--render-scale));
+    }
+    .space.tinted {
+        background: light-dark(
+            var(--market-color),
+            color-mix(
+                in oklab,
+                oklch(from var(--market-color) var(--market-lightness, 0.62) calc(c * 1.25) h) 80%,
+                var(--rail-surface-raised, #2b3744)
+            )
+        );
+        --price-ink: light-dark(#253b35, #ebe6dcd9);
+    }
+    .space.solid,
+    .space.recessed {
+        background: var(--market-color);
+    }
+    .space.solid {
+        --price-ink: #253b35;
+    }
+    .space:focus-visible {
+        outline: calc(2px * var(--render-scale)) solid
+            light-dark(#796047, var(--rail-focus, #b8cddd));
+        outline-offset: calc(-2px * var(--render-scale));
+    }
+    .ledge {
+        position: absolute;
+        z-index: 1;
+        background: light-dark(#2f6fc0, #6aa8f0);
+    }
+    .ledge.bottom {
+        left: calc(-1px * var(--render-scale));
+        right: calc(-1px * var(--render-scale));
+        bottom: calc(-2.5px * var(--render-scale));
+        height: calc(4px * var(--render-scale));
+    }
+    .ledge.right {
+        top: calc(-1px * var(--render-scale));
+        bottom: calc(-1px * var(--render-scale));
+        right: calc(-2.5px * var(--render-scale));
+        width: calc(4px * var(--render-scale));
+    }
+    strong {
+        color: var(--price-ink);
+        position: absolute;
+        top: calc(2px * var(--render-scale));
+        left: calc(4px * var(--render-scale));
+        font-size: calc(13px * var(--render-scale));
+    }
+    .marks {
+        position: absolute;
+        left: calc(4px * var(--render-scale));
+        bottom: calc(3px * var(--render-scale));
+        display: flex;
+        flex-direction: column;
+        color: light-dark(#6f6355, var(--rail-muted, #7f8e9e));
+        font-size: calc(9px * var(--render-scale));
+        font-style: italic;
+        line-height: 1.1;
+    }
+    .market-token {
+        pointer-events: none;
+    }
+    .token-payload {
+        transform: translate(-50%, -50%);
+        width: max-content;
+        height: calc(26px * var(--render-scale));
+        pointer-events: auto;
+    }
+    .token-payload :global(svg) {
+        display: block;
+        border-radius: 50%;
+        box-shadow: 0 0 0 calc(1.5px * var(--render-scale)) light-dark(transparent, #0b1118);
+    }
+    .hover-offset {
+        transition: transform 140ms ease-out;
+    }
+    .hover-offset.moving {
+        transition: none;
+    }
+    .stack-hitbox {
+        pointer-events: auto;
+        position: absolute;
+        z-index: 100;
+        border-radius: calc(8px * var(--render-scale));
+        background: light-dark(#faf7f1e8, var(--rail-surface-inset, #1b232d));
+        box-shadow: 0 2px 8px light-dark(#0003, var(--rail-shadow, #00000055));
+    }
+    .edge-arrow {
+        opacity: 0.4;
+        position: absolute;
+        bottom: calc(3px * var(--render-scale));
+        width: calc(10px * var(--render-scale));
+        height: calc(32px * var(--render-scale));
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.25;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .edge-arrow.right {
+        right: calc(4px * var(--render-scale));
+    }
+    .edge-arrow.left {
+        left: calc(4px * var(--render-scale));
+        transform: rotate(180deg);
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .hover-offset {
+            transition: none;
+        }
+    }
+</style>

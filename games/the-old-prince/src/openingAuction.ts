@@ -1,0 +1,264 @@
+import { TheOldPrinceCharters } from './charters.js'
+import {
+    awardCertificates,
+    beginOfferPileAuction,
+    cashOwnedBy,
+    createCompanyStations,
+    createOrdinaryShareCertificates,
+    drawFirstPlayer,
+    getCompany,
+    treasuryPool,
+    type StockMarket,
+    privateIncomePayments,
+    settleCashPayments,
+    type InitialPosition,
+    type MapStateData,
+    type OfferPileAuctionRules,
+    type Opening,
+    type OpeningSetup,
+    type StartingCashSetup
+} from '@tabletop/18xx'
+import { assert, shuffle } from '@tabletop/common'
+import { addTheOldPrinceBranches } from './branches.js'
+import { TheOldPrinceCompanies, theOldPrinceRole } from './companies.js'
+import { TheOldPrinceMap } from './map.js'
+import { peirPresident } from './peir.js'
+import { TheOldPrincePrivateCatalog, TheOldPrincePrivates } from './privates.js'
+import type { HydratedTheOldPrinceState, TheOldPrinceState } from './state.js'
+import { TheOldPrinceMarket } from './stockMarket.js'
+import { TheOldPrinceTileSet } from './tiles.js'
+import { TheOldPrinceTrainDepot } from './trains.js'
+export const TheOldPrinceAuctionRules: OfferPileAuctionRules = {
+    increment: 5,
+    autoOfferSingleLot: true,
+    lots(state) {
+        return [
+            ...TheOldPrincePrivateCatalog.lots(state).filter((lot) => lot.id !== 'KM'),
+            ...TheOldPrinceCompanies.filter((item) =>
+                state.companies.some((company) => company.id === item.companyId && !company.role)
+            ).map((item) => ({
+                id: `PEIR:share:${item.number}`,
+                name: `PEIR ${item.number} · ${item.name}`,
+                price: 80
+            }))
+        ]
+    },
+    award(state, award) {
+        if (award.lotId.startsWith('PEIR:')) {
+            awardCertificates(state, award, [award.lotId])
+            const president = peirPresident(state)
+            if (president)
+                getCompany(state, 'PEIR').president = { kind: 'player', playerId: president }
+            return
+        }
+        const mainline = theOldPrinceRole(state, 'mainline'),
+            shortline = theOldPrinceRole(state, 'shortline')
+        const extras: Record<string, string[]> = {
+            MLC: [`${mainline}:president`],
+            SLC: [`${shortline}:president`],
+            RA: [`${mainline}:share:1`],
+            RF: [`${mainline}:share:2`]
+        }
+        awardCertificates(state, award, [`${award.lotId}:charter`, ...(extras[award.lotId] ?? [])])
+        if (award.lotId === 'MLC' || award.lotId === 'SLC')
+            getCompany(state, award.lotId === 'MLC' ? mainline : shortline).president = {
+                kind: 'player',
+                playerId: award.playerId
+            }
+    },
+    payIncome(state) {
+        settleCashPayments(
+            state,
+            privateIncomePayments(state, { charters: TheOldPrinceCharters }).filter(
+                (payment) => payment.to.kind === 'player'
+            )
+        )
+    },
+    firstStockOrder(state) {
+        const order = [...state.turnManager.turnOrder]
+        const index = order.indexOf(state.offerAuction!.auctioneerId)
+        const rotated = [...order.slice(index), ...order.slice(0, index)]
+        return rotated.sort((a, b) => {
+            const first = cashOwnedBy(state, { kind: 'player', playerId: a }),
+                second = cashOwnedBy(state, { kind: 'player', playerId: b })
+            assert(
+                typeof first === 'number' && typeof second === 'number',
+                'Players require finite cash'
+            )
+            return first - second
+        })
+    }
+}
+export function theOldPrinceStartingCash({ playerCount }: StartingCashSetup): number {
+    return playerCount === 3 ? 580 : 480
+}
+export function createTheOldPrinceOpening({
+    players,
+    prng,
+    config,
+    startingPositions
+}: OpeningSetup): Opening<typeof TheOldPrinceState, HydratedTheOldPrinceState> {
+    assert(players.length === 3 || players.length === 4, 'TOP supports three or four players')
+    const shuffled = [...TheOldPrinceCompanies]
+    shuffle(shuffled, prng.random)
+    const [mainline, shortline, ...remaining] = shuffled
+    const privates = TheOldPrincePrivates.filter((p) => p.id !== 'IB' || players.length === 4)
+    const market = { owner: { kind: 'bank' } as const, poolId: 'market' }
+    const reserved = { owner: { kind: 'bank' } as const, poolId: 'reserved' }
+    const auction = { owner: { kind: 'bank' } as const, poolId: 'auction' }
+    const union = { owner: { kind: 'company' as const, companyId: 'UB' } }
+    const lotIds = [
+        ...privates.filter((p) => p.id !== 'KM').map((p) => p.id),
+        ...remaining.map((c) => `PEIR:share:${c.number}`)
+    ]
+    shuffle(lotIds, prng.random)
+    const auctioneerId = drawFirstPlayer(
+        players.map((player) => player.playerId),
+        prng,
+        startingPositions
+    )
+    const stockMarket: StockMarket = { stacks: [] }
+    TheOldPrinceMarket.placeMarker(stockMarket, mainline.companyId, '1:1')
+    TheOldPrinceMarket.placeMarker(stockMarket, shortline.companyId, '2:1')
+    const stations: MapStateData['stations'] = []
+    const stationReservations: MapStateData['stationReservations'] = []
+    for (const company of TheOldPrinceCompanies) {
+        const location = TheOldPrinceMap.definition.locations.find((l) =>
+            l.reservations?.some((r) => r.companyId === company.companyId)
+        )!
+        const reservation = location.reservations!.find((r) => r.companyId === company.companyId)!
+        const position = { locationId: location.id, nodeId: reservation.nodeId, slot: 0 }
+        const main = company.companyId === mainline.companyId
+        const [home, ...others] = createCompanyStations(company.companyId, 4)
+        stations.push(main ? { ...home, status: 'placed', position } : home, ...others)
+        if (!main) stationReservations.push({ ...reservation, locationId: location.id })
+        if (remaining.some((c) => c.companyId === company.companyId))
+            stations.push({
+                id: `PEIR:${company.companyId}`,
+                companyId: 'PEIR',
+                status: 'placed',
+                position
+            })
+    }
+    const position: InitialPosition = {
+        bank: {},
+        companies: [
+            ...TheOldPrinceCompanies.map((c) => ({
+                id: c.companyId,
+                kind: 'major',
+                started: c === mainline || c === shortline,
+                floated: c === mainline,
+                funded: c === mainline,
+                operated: false,
+                ...(c === mainline
+                    ? { role: 'mainline', parPrice: 92 }
+                    : c === shortline
+                      ? { role: 'shortline', parPrice: 86 }
+                      : {})
+            })),
+            { id: 'PEIR', kind: 'major' },
+            ...privates.map((p) => ({
+                id: p.id,
+                kind: 'private'
+            }))
+        ],
+        cash: [
+            { owner: { kind: 'bank' }, amount: 'unlimited' },
+            ...players.map((p) => ({
+                owner: { kind: 'player' as const, playerId: p.playerId },
+                amount: theOldPrinceStartingCash({ playerCount: players.length, config })
+            })),
+            ...TheOldPrinceCompanies.map((c) => ({
+                owner: { kind: 'company' as const, companyId: c.companyId },
+                amount: c === mainline ? 920 : 0
+            })),
+            { owner: { kind: 'company', companyId: 'PEIR' }, amount: 200 },
+            { owner: { kind: 'company', companyId: 'UB' }, amount: 0 }
+        ],
+        certificatePools: [
+            { id: 'market', owner: { kind: 'bank' } },
+            { id: 'reserved', owner: { kind: 'bank' } },
+            { id: 'auction', owner: { kind: 'bank' } },
+            ...TheOldPrinceCompanies.map((c) => treasuryPool(c.companyId))
+        ],
+        certificates: [
+            ...TheOldPrinceCompanies.flatMap((c) =>
+                createOrdinaryShareCertificates(
+                    c.companyId,
+                    Array.from({ length: 8 }, (_, index) =>
+                        c === mainline
+                            ? index < 2
+                                ? auction
+                                : index === 7
+                                  ? union
+                                  : market
+                            : c === shortline
+                              ? index >= 5
+                                  ? reserved
+                                  : market
+                              : c === remaining[0] && index === 7
+                                ? union
+                                : market
+                    ),
+                    c === mainline || c === shortline ? auction : market
+                )
+            ),
+            ...remaining.map((c) => ({
+                id: `PEIR:share:${c.number}`,
+                companyId: 'PEIR',
+                kind: 'share' as const,
+                shares: 1,
+                number: c.number,
+                owner: { kind: 'bank' as const },
+                poolId: 'auction'
+            })),
+            ...privates.map((p) => ({
+                id: `${p.id}:charter`,
+                companyId: p.id,
+                kind: 'private' as const,
+                owner:
+                    p.id === 'KM'
+                        ? { kind: 'company' as const, companyId: 'PEIR' }
+                        : { kind: 'bank' as const },
+                ...(p.id === 'KM' ? {} : { poolId: 'auction' })
+            }))
+        ],
+        tranches: [
+            {
+                id: 'initial',
+                name: 'Mainline and Shortline',
+                capacity: 2,
+                companyIds: [mainline.companyId, shortline.companyId]
+            },
+            { id: '1', name: 'Tranche 1', capacity: 1, companyIds: [] },
+            { id: '2', name: 'Tranche 2', capacity: 2, companyIds: [] },
+            { id: '3', name: 'Tranche 3', capacity: 3, companyIds: [] }
+        ],
+        ownershipLimitExemptions: [],
+        stations,
+        stationReservations,
+        stockMarket,
+        tileInventory: TheOldPrinceTileSet.createInventory(),
+        trainInventory: TheOldPrinceTrainDepot.createInventory(),
+        phaseId: '2H'
+    }
+    addTheOldPrinceBranches(position)
+    return {
+        position,
+        titleState: { unionBankDrawnCompanyId: remaining[0].companyId },
+        begin: beginOfferPileAuction({
+            piles: players.map((p, index) => ({
+                playerId: p.playerId,
+                lotIds: lotIds.slice(
+                    (index * lotIds.length) / players.length,
+                    ((index + 1) * lotIds.length) / players.length
+                )
+            })),
+            auctioneerId,
+            awards: [],
+            incomePayments: 0,
+            stalled: false,
+            completed: false
+        })
+    }
+}

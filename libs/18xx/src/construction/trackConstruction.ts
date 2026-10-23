@@ -1,0 +1,568 @@
+import type { RevenueCenter } from '../routes/route.js'
+import { actsFor } from '../finance/receivership.js'
+import * as Type from 'typebox'
+import { cashOwnedBy, type Owner } from '../finance/finance.js'
+import type { CompanyState } from '../company/companyState.js'
+import { RailwayMapState, type MapStateData } from '../map/mapState.js'
+import type { RailwayMap } from '../map/map.js'
+import {
+    PlacedStation,
+    type Station,
+    type StationReservation,
+    type StationState
+} from '../map/station.js'
+import { CashPayment } from '../finance/cashPayments.js'
+import { TilePlacement, type TileInventory, type TileSet } from '../tiles/inventory.js'
+import { TileRotation, type TileDefinition, type TileFace, type TileEdge } from '../tiles/tile.js'
+import { rotateTileEdge, rotateTileFace } from '../tiles/topology.js'
+import { ConstructionReachability } from './constructionReachability.js'
+import { preservesPath, fixedNodeRevenue, type TileNodeMapping } from './trackUpgrade.js'
+import {
+    replacementMappings,
+    replacesColorAndStops,
+    requiredLabels,
+    sameLabels,
+    tileExitCount
+} from './tileReplacement.js'
+import { assert, assertExists } from '@tabletop/common'
+
+export const TrackStep = Type.Object(
+    {
+        companyId: Type.String(),
+        lays: Type.Array(
+            Type.Object(
+                {
+                    locationId: Type.String(),
+                    /** The tile laid; stored games from before it was recorded lack it. */
+                    definitionId: Type.Optional(Type.String()),
+                    // Stored games from before these stopped being recorded may hold them; never read.
+                    color: Type.Optional(Type.Unsafe<never>(Type.String())),
+                    cost: Type.Optional(Type.Unsafe<never>(Type.Integer({ minimum: 0 })))
+                },
+                { additionalProperties: false }
+            )
+        ),
+        completed: Type.Boolean()
+    },
+    { additionalProperties: false }
+)
+export type TrackStep = Type.Static<typeof TrackStep>
+
+/**
+ * The face of a tile laid this turn. A lay stored before its tile was recorded reads the board,
+ * which holds the same tile in The Old Prince, the only title with such games.
+ */
+export function laidTileFace(
+    state: Pick<MapStateData, 'tileInventory'>,
+    rules: Pick<TrackRules, 'map' | 'tileSet'>,
+    lay: TrackStep['lays'][number]
+): TileFace {
+    if (!lay.definitionId)
+        return new RailwayMapState(rules.map, rules.tileSet, state.tileInventory).tile(
+            lay.locationId
+        ).face
+    const definition = rules.tileSet.definitions.find((tile) => tile.id === lay.definitionId)
+    assertExists(definition, 'A lay records a tile of its set')
+    return definition.face
+}
+export type ConstructionState = CompanyState & MapStateData & { trackStep?: TrackStep }
+export const TrackRequest = Type.Object(
+    {
+        companyId: Type.String(),
+        locationId: Type.String(),
+        definitionId: Type.String(),
+        rotation: TileRotation,
+        nodeMapping: Type.Record(Type.String(), Type.String())
+    },
+    { additionalProperties: false }
+)
+export type TrackRequest = Type.Static<typeof TrackRequest>
+export const TrackLayEffects = Type.Object(
+    {
+        payments: Type.Array(CashPayment),
+        closedPrivateIds: Type.Array(Type.String())
+    },
+    { additionalProperties: false }
+)
+export type TrackLayEffects = Type.Static<typeof TrackLayEffects>
+export const TrackLayDetails = Type.Object(
+    {
+        ...TrackRequest.properties,
+        placement: TilePlacement,
+        previous: Type.Optional(TilePlacement),
+        cost: Type.Integer({ minimum: 0 }),
+        consentPlayerId: Type.Optional(Type.String()),
+        terrainCost: Type.Integer({ minimum: 0 }),
+        allowanceCost: Type.Integer({ minimum: 0 }),
+        movedStations: Type.Array(PlacedStation),
+        effects: Type.Optional(TrackLayEffects)
+    },
+    { additionalProperties: false }
+)
+export type TrackLayDetails = Type.Static<typeof TrackLayDetails>
+export type TrackEvaluation =
+    { details: TrackLayDetails; reason?: never } | { reason: string; details?: never }
+export interface TrackRules {
+    map: RailwayMap
+    tileSet: TileSet
+    colorOrder: readonly string[]
+    availableColors(state: ConstructionState): readonly string[]
+    /** Whether the company may lay a tile of the colour, replacing a tile when ``upgrade``. */
+    allowance(
+        state: ConstructionState,
+        color: string,
+        upgrade?: boolean
+    ): { cost: number } | { reason: string }
+    /**
+     * A replacement in the same colour the title allows on this hex, such as a medium city's
+     * yellow town becoming a yellow city; the title then judges its stops, and towns may become
+     * cities. When it becomes allowed is the title's ``restriction``.
+     */
+    upgradesWithinColor?(locationId: string, before: TileFace, after: TileFace): boolean
+    /** Whether the company's network may continue through a revenue center, as its routes may. */
+    stopAllowed?(state: ConstructionState, companyId: string, center: RevenueCenter): boolean
+    preservesStops(before: TileFace, after: TileFace): boolean
+    /** Whether a tile on this hex must be one of the tiles of its colour with the most exits. */
+    mostExits?(before: TileFace): boolean
+    restriction(state: ConstructionState, request: TrackRequest): string | undefined
+    /**
+     * Whether a lay is allowed: on a home hex, touching the company's network (``connected``),
+     * adding connected track, raising a connected city's revenue, or putting a city or town on
+     * the company's network.
+     */
+    useful(change: {
+        home: boolean
+        connected: boolean
+        newTrack: boolean
+        increasedCityRevenue: boolean
+        connectedCity: boolean
+        connectedTown: boolean
+    }): boolean
+    homeLocations(companyId: string): readonly string[]
+    consentPlayerId?(state: ConstructionState, request: TrackRequest): string | undefined
+    borderCost?(
+        state: ConstructionState,
+        request: TrackRequest,
+        edge: TileEdge,
+        cost: number
+    ): number
+    terrainCost?(state: ConstructionState, request: TrackRequest, cost: number): number
+    afterLay?(state: ConstructionState, details: TrackLayDetails, payer: Owner): TrackLayEffects
+    relabels?(locationId: string, definitionId: string): boolean
+}
+const Rotations: readonly TileRotation[] = [0, 1, 2, 3, 4, 5]
+
+export class TrackConstruction {
+    private reachability: ConstructionReachability | undefined
+    private readonly pieces = new Map<string, ReturnType<TileSet['availablePieces']>>()
+    readonly mapState: RailwayMapState
+    constructor(
+        readonly state: ConstructionState,
+        readonly rules: TrackRules,
+        readonly payer?: Owner
+    ) {
+        this.mapState = new RailwayMapState(rules.map, rules.tileSet, state.tileInventory)
+    }
+    canAct(playerId: string, companyId: string): boolean {
+        const turn = this.state.trackStep
+        return (
+            !!turn &&
+            this.state.companies.some((company) => company.id === companyId && !company.closed) &&
+            !turn.completed &&
+            turn.companyId === companyId &&
+            actsFor(this.state, playerId, companyId)
+        )
+    }
+    canReach(locationId: string): boolean {
+        const companyId = this.state.trackStep?.companyId
+        return (
+            !!companyId &&
+            (this.network(companyId).canReach(locationId) ||
+                this.rules.useful({
+                    home: this.rules.homeLocations(companyId).includes(locationId),
+                    connected: false,
+                    newTrack: false,
+                    increasedCityRevenue: false,
+                    connectedCity: false,
+                    connectedTown: false
+                }))
+        )
+    }
+    choices(locationId: string): TrackLayDetails[] {
+        const companyId = this.state.trackStep?.companyId
+        if (!companyId || !this.canReach(locationId)) return []
+        const choices: TrackLayDetails[] = []
+        const reservations = this.state.stationReservations.filter(
+            (reservation) => reservation.locationId === locationId
+        )
+        for (const definition of this.rules.tileSet.definitions) {
+            if (
+                !this.basicTileAllowed(locationId, definition) ||
+                'reason' in
+                    this.rules.allowance(
+                        this.state,
+                        definition.face.color,
+                        this.replacesTile(locationId)
+                    )
+            )
+                continue
+            for (const rotation of Rotations) {
+                const before = this.mapState.tile(locationId)
+                const after = rotateTileFace(definition.face, rotation)
+                for (const nodeMapping of replacementMappings(
+                    rotateTileFace(before.face, before.rotation),
+                    after
+                )) {
+                    const result = this.evaluate({
+                        companyId,
+                        locationId,
+                        definitionId: definition.id,
+                        rotation,
+                        nodeMapping
+                    })
+                    if (
+                        result.details &&
+                        !choices.some((choice) =>
+                            samePlacement(choice, result.details, reservations)
+                        )
+                    )
+                        choices.push(result.details)
+                }
+            }
+        }
+        return choices
+    }
+    evaluate(request: TrackRequest): TrackEvaluation {
+        const result = this.evaluatePlacement(request)
+        if (!result.details || !this.hasMoreExitsElsewhere(request)) return result
+        return { reason: 'The upgrade must use a tile of its colour with the most exits' }
+    }
+    private hasMoreExitsElsewhere(request: TrackRequest): boolean {
+        const previous = this.mapState.tile(request.locationId)
+        if (!this.rules.mostExits?.(previous.face)) return false
+        const definition = this.tileDefinition(request.definitionId)
+        assertExists(definition, 'An evaluated lay names a known tile')
+        const before = rotateTileFace(previous.face, previous.rotation)
+        return this.rules.tileSet.definitions.some(
+            (other) =>
+                other.face.color === definition.face.color &&
+                tileExitCount(other.face) > tileExitCount(definition.face) &&
+                Rotations.some((rotation) =>
+                    replacementMappings(before, rotateTileFace(other.face, rotation)).some(
+                        (nodeMapping) =>
+                            !!this.evaluatePlacement({
+                                ...request,
+                                definitionId: other.id,
+                                rotation,
+                                nodeMapping
+                            }).details
+                    )
+                )
+        )
+    }
+    private tileDefinition(definitionId: string): TileDefinition | undefined {
+        return this.rules.tileSet.definitions.find((tile) => tile.id === definitionId)
+    }
+    private evaluatePlacement(request: TrackRequest): TrackEvaluation {
+        const { locationId, companyId, definitionId, rotation, nodeMapping } = request
+        if (
+            !this.state.trackStep ||
+            this.state.trackStep.completed ||
+            this.state.trackStep.companyId !== companyId
+        )
+            return { reason: 'It is not this company’s track step' }
+        const location = this.rules.map.definition.locations.find(
+            (location) => location.id === locationId
+        )
+        const definition = this.tileDefinition(definitionId)
+        if (!location || !definition) return { reason: 'Unknown map location or tile' }
+        if (!this.basicTileAllowed(locationId, definition))
+            return { reason: 'The tile’s color, labels, or stops cannot replace this hex' }
+        const allowance = this.rules.allowance(
+            this.state,
+            definition.face.color,
+            this.replacesTile(locationId)
+        )
+        if ('reason' in allowance) return allowance
+        const restriction = this.rules.restriction(this.state, request)
+        if (restriction) return { reason: restriction }
+        const previous = this.mapState.tile(locationId)
+        const before = rotateTileFace(previous.face, previous.rotation)
+        const after = rotateTileFace(definition.face, rotation)
+        if (
+            !replacementMappings(before, after).some(
+                (mapping) =>
+                    Object.keys(mapping).length === Object.keys(nodeMapping).length &&
+                    Object.entries(mapping).every(([id, target]) => nodeMapping[id] === target)
+            )
+        )
+            return { reason: 'Existing track and stops must be preserved' }
+        let borderCost = 0
+        const edges = new Set(
+            after.paths.flatMap((path) =>
+                path.endpoints.flatMap((end) => (end.kind === 'edge' ? [end.edge] : []))
+            )
+        )
+        for (const edge of edges) {
+            const neighbor = this.rules.map.neighbor(locationId, edge)
+            if (!neighbor) return { reason: 'Track cannot run off the map' }
+            const opposite = rotateTileEdge(edge, 3)
+            const borders = [
+                ...(location.borders?.filter((border) => border.edge === edge) ?? []),
+                ...(neighbor.borders?.filter((border) => border.edge === opposite) ?? [])
+            ]
+            if (borders.some((border) => border.kind === 'impassable'))
+                return { reason: 'Track cannot cross an impassable border' }
+            const adjacent = this.mapState.tile(neighbor.id)
+            if (
+                !neighbor.buildable &&
+                !rotateTileFace(adjacent.face, adjacent.rotation).paths.some((path) =>
+                    path.endpoints.some((end) => end.kind === 'edge' && end.edge === opposite)
+                )
+            )
+                return { reason: 'Track must meet the track in a fixed neighboring hex' }
+            if (
+                !before.paths.some((path) =>
+                    path.endpoints.some((end) => end.kind === 'edge' && end.edge === edge)
+                )
+            ) {
+                const cost = Math.max(0, ...borders.map((border) => border.cost ?? 0))
+                borderCost += this.rules.borderCost?.(this.state, request, edge, cost) ?? cost
+            }
+        }
+        const printedTerrainCost =
+            (!previous.placement ? (location.terrain?.cost ?? 0) : 0) +
+            (before.upgradeCost ?? 0) +
+            borderCost
+        const terrainCost =
+            this.rules.terrainCost?.(this.state, request, printedTerrainCost) ?? printedTerrainCost
+        const consentPlayerId = this.rules.consentPlayerId?.(this.state, request)
+        const cost = terrainCost + allowance.cost
+        const cash = cashOwnedBy(this.state, this.payer ?? { kind: 'company', companyId })
+        if (cash === undefined || (cash !== 'unlimited' && cash < cost))
+            return { reason: 'The company cannot afford construction' }
+        const piece =
+            this.availablePieces(definitionId)[0] ??
+            this.rules.tileSet.pieces.find(
+                (piece) =>
+                    piece.id === previous.placement?.pieceId &&
+                    piece.faceDefinitionIds.includes(definitionId)
+            )
+        if (!piece) return { reason: 'No tile remains in the supply' }
+        const migrated = this.migrateStations(locationId, after, nodeMapping)
+        if (!migrated) return { reason: 'The upgrade cannot preserve all station spaces' }
+        const network = this.network(companyId).connections(locationId, after, migrated)
+        const reverse = Object.fromEntries(
+            Object.entries(nodeMapping).map(([id, target]) => [target, id])
+        )
+        const newTrack = after.paths.some(
+            (path) => network.paths.has(path.id) && !preservesPath(path, before, reverse)
+        )
+        const increasedCityRevenue = before.nodes.some(
+            (node) =>
+                node.kind === 'city' &&
+                after.nodes.some(
+                    (target) =>
+                        target.id === nodeMapping[node.id] &&
+                        fixedNodeRevenue(target) > fixedNodeRevenue(node) &&
+                        network.nodes.has(target.id)
+                )
+        )
+        if (
+            !this.rules.useful({
+                home: this.rules.homeLocations(companyId).includes(locationId),
+                connected: after.paths.some((path) => network.paths.has(path.id)),
+                newTrack,
+                increasedCityRevenue,
+                connectedCity: after.nodes.some(
+                    (node) => node.kind === 'city' && network.nodes.has(node.id)
+                ),
+                connectedTown: after.nodes.some(
+                    (node) => node.kind === 'town' && network.nodes.has(node.id)
+                )
+            })
+        )
+            return {
+                reason: 'Construction must add connected track or increase a connected city’s revenue'
+            }
+        return {
+            details: {
+                companyId,
+                locationId,
+                definitionId,
+                rotation,
+                nodeMapping,
+                placement: { pieceId: piece.id, definitionId, rotation },
+                ...(previous.placement ? { previous: previous.placement } : {}),
+                cost,
+                terrainCost,
+                ...(consentPlayerId ? { consentPlayerId } : {}),
+                allowanceCost: allowance.cost,
+                movedStations: migrated.moved
+            }
+        }
+    }
+    stationsAfter(details: TrackLayDetails): StationState {
+        return stationsAfterLay(this.state, details)
+    }
+    inventoryAfter(details: TrackLayDetails): TileInventory {
+        return this.rules.tileSet.replace(this.state.tileInventory, {
+            locationId: details.locationId,
+            placement: details.placement,
+            returnPrevious: true
+        })
+    }
+    private network(companyId: string): ConstructionReachability {
+        return (this.reachability ??= new ConstructionReachability(
+            this.mapState,
+            this.state,
+            companyId,
+            (locationId, nodeId) =>
+                this.rules.stopAllowed?.(this.state, companyId, { locationId, nodeId }) === false
+        ))
+    }
+    private availablePieces(definitionId: string): ReturnType<TileSet['availablePieces']> {
+        let pieces = this.pieces.get(definitionId)
+        if (!pieces) {
+            pieces = this.rules.tileSet.availablePieces(this.state.tileInventory, definitionId)
+            this.pieces.set(definitionId, pieces)
+        }
+        return pieces
+    }
+    hasFutureUpgrade(locationId: string): boolean {
+        const tile = this.mapState.tile(locationId)
+        const before = rotateTileFace(tile.face, tile.rotation)
+        return this.rules.tileSet.definitions.some(
+            (definition) =>
+                this.basicTileAllowed(locationId, definition, this.rules.colorOrder) &&
+                this.availablePieces(definition.id).length > 0 &&
+                Rotations.some(
+                    (rotation) =>
+                        replacementMappings(before, rotateTileFace(definition.face, rotation))
+                            .length > 0
+                )
+        )
+    }
+    private replacesTile(locationId: string): boolean {
+        return this.rules.colorOrder.indexOf(this.mapState.tile(locationId).face.color) > 0
+    }
+    private basicTileAllowed(
+        locationId: string,
+        definition: TileDefinition,
+        colors: readonly string[] = this.rules.availableColors(this.state)
+    ): boolean {
+        const location = this.rules.map.location(locationId)
+        const before = this.mapState.tile(locationId).face
+        const after = definition.face
+        if (
+            !location.buildable ||
+            !colors.includes(after.color) ||
+            !replacesColorAndStops(this.rules, locationId, before, after)
+        )
+            return false
+        return (
+            !!this.rules.relabels?.(locationId, definition.id) ||
+            sameLabels(
+                requiredLabels(location, after.color, this.rules.colorOrder, before.labels),
+                after.labels
+            )
+        )
+    }
+    private migrateStations(
+        locationId: string,
+        after: TileFace,
+        mapping: TileNodeMapping
+    ): (StationState & { moved: PlacedStation[] }) | undefined {
+        const occupied = new Map<string, Set<number>>()
+        const stations: Station[] = []
+        const moved: PlacedStation[] = []
+        for (const station of this.state.stations) {
+            if (station.status !== 'placed' || station.position.locationId !== locationId) {
+                stations.push(station)
+                continue
+            }
+            const nodeId = mapping[station.position.nodeId]
+            const node = after.nodes.find((node) => node.id === nodeId)
+            if (node?.kind !== 'city') return undefined
+            const slots = occupied.get(nodeId) ?? new Set<number>()
+            const slot =
+                station.position.slot < node.stationSlots && !slots.has(station.position.slot)
+                    ? station.position.slot
+                    : Array.from({ length: node.stationSlots }, (_, index) => index).find(
+                          (index) => !slots.has(index)
+                      )
+            if (slot === undefined) return undefined
+            slots.add(slot)
+            occupied.set(nodeId, slots)
+            if (nodeId === station.position.nodeId && slot === station.position.slot) {
+                stations.push(station)
+                continue
+            }
+            const migrated = { ...station, position: { locationId, nodeId, slot } }
+            stations.push(migrated)
+            moved.push(migrated)
+        }
+        return {
+            stations,
+            moved,
+            stationReservations: reservationsAfterLay(this.state, locationId, mapping)
+        }
+    }
+}
+
+export function stationsAfterLay(state: StationState, details: TrackLayDetails): StationState {
+    return {
+        stations: state.stations.map(
+            (station) => details.movedStations.find((moved) => moved.id === station.id) ?? station
+        ),
+        stationReservations: reservationsAfterLay(state, details.locationId, details.nodeMapping)
+    }
+}
+
+function reservationsAfterLay(
+    state: StationState,
+    locationId: string,
+    mapping: TileNodeMapping
+): StationReservation[] {
+    return state.stationReservations.map((reservation) =>
+        reservation.locationId === locationId
+            ? { ...reservation, nodeId: mapping[reservation.nodeId] }
+            : reservation
+    )
+}
+
+function samePlacement(
+    first: TrackLayDetails,
+    second: TrackLayDetails,
+    reservations: readonly StationReservation[]
+): boolean {
+    const reserved = ({ nodeMapping }: TrackLayDetails) =>
+        reservations.map(({ companyId, nodeId }) => [companyId, nodeMapping[nodeId]])
+    return (
+        first.definitionId === second.definitionId &&
+        first.rotation === second.rotation &&
+        sameMembers(first.movedStations, second.movedStations) &&
+        sameMembers(reserved(first), reserved(second))
+    )
+}
+
+function sameMembers(first: readonly unknown[], second: readonly unknown[]): boolean {
+    const keys = (items: readonly unknown[]) => items.map((item) => JSON.stringify(item)).sort()
+    return JSON.stringify(keys(first)) === JSON.stringify(keys(second))
+}
+
+export function validateTrackStep(state: {
+    machineState: string
+    trackStep?: TrackStep
+    operatingSet?: { companyOrder: readonly string[] }
+}): void {
+    if (state.machineState !== 'LayingTrack' && state.machineState !== 'PlacingStation') return
+    assert(
+        state.trackStep && state.operatingSet?.companyOrder.includes(state.trackStep.companyId),
+        'Track step requires an operating company'
+    )
+    assert(
+        state.trackStep.completed === (state.machineState !== 'LayingTrack'),
+        'Track completion does not match the machine state'
+    )
+}
