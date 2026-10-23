@@ -27,7 +27,8 @@
         type PlaceTile,
         type MovePiece,
         type PlacePiece,
-        TECHNOLOGY_EFFECT_INFO
+        TECHNOLOGY_EFFECT_INFO,
+        technologyName
     } from '@tabletop/earendel'
     import { describePiece } from '$lib/model/session.svelte.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -38,19 +39,6 @@
     }: { action: GameAction; justify?: 'start' | 'center' | 'end'; history?: boolean } = $props()
 
     const gameSession = getGameSession()
-
-    const techName = (id?: string) => (id ? id.replace('tech-', 'Tech ') : 'nothing')
-
-    // A claimed technology is named from the card itself, which the planet still holds - the id
-    // alone says nothing a player would recognise. Falls back to the tidied id if the planet
-    // has since left the board.
-    const claimedName = (id: string) => {
-        const card = Object.values(gameSession.gameState.board.hexes).find(
-            (hex) => hex.technology?.id === id
-        )?.technology
-        const kind = card?.effect?.kind
-        return kind ? TECHNOLOGY_EFFECT_INFO[kind].name : techName(id)
-    }
 
     // History is read after the fact, so it has to say what happened rather than what was
     // clicked - which piece came out of the bag, what the flip turned up, who lost a ship.
@@ -91,7 +79,7 @@
             const chosen = action as ChooseTechnology
             return chosen.metadata?.noTechnologyAvailable
                 ? 'found nothing the planet could hold'
-                : `staked a claim on ${chosen.metadata?.technologyId ? claimedName(chosen.metadata.technologyId) : 'nothing'}`
+                : `staked a claim on ${chosen.metadata?.technology ? technologyName(chosen.metadata.technology) : 'nothing'}`
         }
         if (isAttackPiece(action)) {
             const shot = action as AttackPiece
@@ -115,16 +103,16 @@
             const claimed = drew.metadata?.technologiesClaimed ?? []
             const lapsed = drew.metadata?.technologiesLapsed ?? []
             const parts = [drawn]
-            if (claimed.length > 0) parts.push(`gained ${claimed.map(claimedName).join(' and ')}`)
+            if (claimed.length > 0) parts.push(`gained ${claimed.map(technologyName).join(' and ')}`)
             if (lapsed.length > 0) {
-                parts.push(`lost the claim on ${lapsed.map(claimedName).join(' and ')}`)
+                parts.push(`lost the claim on ${lapsed.map(technologyName).join(' and ')}`)
             }
             return parts.join(', ')
         }
         if (isUseImmediateDownload(action)) {
             const read = action as UseImmediateDownload
-            const name = read.metadata?.technologyId
-                ? claimedName(read.metadata.technologyId)
+            const name = read.metadata?.technology
+                ? technologyName(read.metadata.technology)
                 : 'a technology'
             // Worth saying it went off at once: a downloaded Immediate effect is resolved in the
             // same breath, so the next entry in the log is its consequence.

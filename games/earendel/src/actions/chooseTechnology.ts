@@ -4,11 +4,13 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
-import { isElevated, matchesColor } from '../model/technology.js'
+import { isElevated, matchesColor, TechnologyCard } from '../model/technology.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
     technologyId: Type.Optional(Type.String()),
+    // The card itself, so history can name it without looking at the board.
+    technology: Type.Optional(TechnologyCard),
     // True when the deck couldn't offer anything: the planet is explored and simply holds no
     // technology. Rare by design, but the game continues rather than stalling.
     noTechnologyAvailable: Type.Optional(Type.Boolean())
@@ -80,7 +82,9 @@ export class HydratedChooseTechnology
 
         state.pendingExploration = undefined
 
-        this.metadata = chosen ? { technologyId: chosen.id } : { noTechnologyAvailable: true }
+        this.metadata = chosen
+            ? { technologyId: chosen.id, technology: chosen }
+            : { noTechnologyAvailable: true }
     }
 
     isValidChooseTechnology(state: HydratedEarendelGameState): boolean {

@@ -60,7 +60,11 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
 }
 
 describe('probeTechnologiesFor', () => {
-    const claim = (playerId: string, coords: AxialCoordinates, technologyId: string): ProbeClaim => ({
+    const claim = (
+        playerId: string,
+        coords: AxialCoordinates,
+        technologyId: string
+    ): ProbeClaim => ({
         playerId,
         coords,
         technologyId
@@ -267,8 +271,10 @@ describe('claiming a technology by surveying with probes', () => {
         return { game, mover, other, place, survey, draw, held }
     }
 
-    const probes = (count: number, level = PieceLevel.Two) => (playerId: string) =>
-        Array.from({ length: count }, (_, index) => probe(playerId, index, level))
+    const probes =
+        (count: number, level = PieceLevel.Two) =>
+        (playerId: string) =>
+            Array.from({ length: count }, (_, index) => probe(playerId, index, level))
 
     it('stakes a claim at the survey, leaving the probe where it is and giving nothing yet', () => {
         const { game, mover, place, survey, held } = scenario({
@@ -307,7 +313,7 @@ describe('claiming a technology by surveying with probes', () => {
         // The mover's turn comes round and the claim falls due as they draw.
         const opening = draw(mover)
         expect(held(mover)).toEqual(['tech-a'])
-        expect(opening?.metadata?.technologiesClaimed).toEqual(['tech-a'])
+        expect(opening?.metadata?.technologiesClaimed?.map((card) => card.id)).toEqual(['tech-a'])
         expect(opening?.metadata?.technologiesLapsed).toBeUndefined()
         expect(game.state.probeClaims).toEqual([])
     })
@@ -329,7 +335,7 @@ describe('claiming a technology by surveying with probes', () => {
         const opening = draw(mover)
         expect(held(mover)).toEqual([])
         expect(opening?.metadata?.technologiesClaimed).toBeUndefined()
-        expect(opening?.metadata?.technologiesLapsed).toEqual(['tech-a'])
+        expect(opening?.metadata?.technologiesLapsed?.map((card) => card.id)).toEqual(['tech-a'])
         expect(game.state.probeClaims).toEqual([])
         // The planet keeps its technology for whoever wins it next.
         expect(game.state.board.hexes[hexKey(at(0, 0))].technology?.id).toBe('tech-a')
@@ -353,7 +359,7 @@ describe('claiming a technology by surveying with probes', () => {
 
         // The mover's claim lapses; the other player's waits on their own turn.
         const opening = draw(mover)
-        expect(opening?.metadata?.technologiesLapsed).toEqual(['tech-a'])
+        expect(opening?.metadata?.technologiesLapsed?.map((card) => card.id)).toEqual(['tech-a'])
         expect(game.state.probeClaims).toEqual([
             { playerId: other, coords: at(0, 0), technologyId: 'tech-a' }
         ])

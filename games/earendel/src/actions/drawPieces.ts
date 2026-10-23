@@ -4,6 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
+import { TechnologyCard } from '../model/technology.js'
 import { drawCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
@@ -15,10 +16,10 @@ export const DrawPiecesMetadata = Type.Object({
     // Technologies that became this player's as the turn opened, because their probes still led
     // on the planets they surveyed last turn. Reported so history and the board can announce them:
     // unlike a placement's rewards, nobody was watching the moment these were earned.
-    technologiesClaimed: Type.Optional(Type.Array(Type.String())),
+    technologiesClaimed: Type.Optional(Type.Array(TechnologyCard)),
     // Claims that lapsed as the turn opened, because another player's probes drew level or
     // overtook theirs in between.
-    technologiesLapsed: Type.Optional(Type.Array(Type.String()))
+    technologiesLapsed: Type.Optional(Type.Array(TechnologyCard))
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>

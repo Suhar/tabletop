@@ -4,7 +4,7 @@ import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, sameHex } from '../model/board.js'
-import { hasImmediateEffect, TechnologyEffectKind } from '../model/technology.js'
+import { hasImmediateEffect, TechnologyCard, TechnologyEffectKind } from '../model/technology.js'
 import { downloadAnchorsFor, downloadTargetsFrom } from '../util/download.js'
 import { activateTechnologyEffect, grantTechnology } from '../util/technologyGrants.js'
 
@@ -13,6 +13,8 @@ export const UseImmediateDownloadMetadata = Type.Object({
     // The technology taken, so history can name it - the coordinates alone say nothing a reader
     // would recognise.
     technologyId: Type.Optional(Type.String()),
+    // The card itself, so history can name it without looking at the board.
+    technology: Type.Optional(TechnologyCard),
     // Whether it went off at once rather than being kept. An Immediate effect downloaded this way
     // fires on the spot, which is the difference worth recording.
     resolvedAtOnce: Type.Optional(Type.Boolean())
@@ -95,6 +97,7 @@ export class HydratedUseImmediateDownload
 
         this.metadata = {
             technologyId: card.id,
+            technology: card,
             ...(resolvedAtOnce ? { resolvedAtOnce } : {})
         }
     }
@@ -120,7 +123,9 @@ export class HydratedUseImmediateDownload
             return 'You have no Immediate Download to spend.'
         }
 
-        if (!downloadAnchorsFor(state, this.playerId).some((anchor) => sameHex(anchor, this.from))) {
+        if (
+            !downloadAnchorsFor(state, this.playerId).some((anchor) => sameHex(anchor, this.from))
+        ) {
             return "That isn't a planet holding an Immediate Download of yours."
         }
 

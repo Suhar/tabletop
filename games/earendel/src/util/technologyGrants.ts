@@ -100,12 +100,12 @@ function grantedPiece(
 // that act at once. Called at the top of a turn, which is the only moment a technology ever
 // changes hands.
 //
-// Returns the ids gained and lapsed so the action that triggered it can report them: nobody was
+// Returns the cards gained and lapsed so the action that triggered it can report them: nobody was
 // looking at the board when either was decided - each is the outcome of a round of other turns.
 export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: string[]; lapsed: string[] } {
+): { gained: TechnologyCard[]; lapsed: TechnologyCard[] } {
     const { gained, lapsed } = probeTechnologiesFor(state, playerId)
     state.probeClaims = state.probeClaims.filter((claim) => claim.playerId !== playerId)
 
@@ -126,7 +126,7 @@ export function claimProbeTechnologies(
     state.queuedTechnologyEffects = rest
     if (first) activateTechnologyEffect(state, first)
 
-    return { gained: gained.map((card) => card.id), lapsed: lapsed.map((card) => card.id) }
+    return { gained, lapsed }
 }
 
 // Puts one owed effect into the slot its resolving state watches. GrowBoard wants a tile in
