@@ -220,6 +220,8 @@ describe('scoring a chain in play', () => {
         expect((completing as PlacePiece).metadata).toMatchObject({
             chains: [{ length: 2, points: 3, color: PlanetColor.Periwinkle }]
         })
-        expect(game.state.scoredPlanetPairs).toEqual([planetPairKey(at(0, 0), at(3, 0))])
+        expect(
+            game.state.tradeRoutes.map((route) => [planetPairKey(...route.planets), route.playerId])
+        ).toEqual([[planetPairKey(at(0, 0), at(3, 0)), mover]])
     })
 })

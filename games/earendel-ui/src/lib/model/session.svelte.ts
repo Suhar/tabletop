@@ -56,7 +56,6 @@ import {
     planetCoordinates,
     relayedProbesOf,
     relayStationsOf,
-    planetPairKey,
     planetPointsByPlayer,
     neighborsOf,
     type EarendelGameState,
@@ -65,7 +64,6 @@ import {
     getHex,
     hexesClosedToProbesOf,
     hexKey,
-    HexKind,
     isElevated,
     legalMovesFor,
     legalPlacementsFor,
@@ -319,18 +317,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     })
 
     sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
-
-    planetPairsFrom(coords: AxialCoordinates): { to: AxialCoordinates; spent: boolean }[] {
-        const hex = getHex(this.gameState.board, coords)
-        if (hex?.kind !== HexKind.Planet || hex.color === undefined) return []
-
-        const spent = new Set(this.gameState.scoredPlanetPairs ?? [])
-
-        return planetCoordinates(this.gameState.board)
-            .filter((other) => !sameCoordinates(other, coords))
-            .filter((other) => getHex(this.gameState.board, other)?.color === hex.color)
-            .map((other) => ({ to: other, spent: spent.has(planetPairKey(coords, other)) }))
-    }
 
     stationTubes: StationTube[] = $derived(stationTubesOf(this.gameState.board))
 

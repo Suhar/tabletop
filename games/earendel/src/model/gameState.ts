@@ -16,6 +16,7 @@ import { PendingExploration, PendingTechnology, ProbeClaim } from './exploration
 import { Tile } from './tile.js'
 import { HydratedTechnologyDeck, HydratedTileSupply, TechnologyDeck, TileSupply } from './bags.js'
 import { PendingAttack } from './attack.js'
+import { TradeRoute } from './chains.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
 export const EarendelGameState = Type.Evaluate(
@@ -41,7 +42,7 @@ export const EarendelGameState = Type.Evaluate(
             // Control and scoring).
             planetControllers: Type.Record(Type.String(), Type.String()),
             pendingAttack: Type.Optional(PendingAttack),
-            scoredPlanetPairs: Type.Array(Type.String()),
+            tradeRoutes: Type.Array(TradeRoute),
             probeClaims: Type.Array(ProbeClaim)
         })
     ])
@@ -81,7 +82,7 @@ export class HydratedEarendelGameState
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string
     declare bonusPlacementPieceId?: string
-    declare scoredPlanetPairs: string[]
+    declare tradeRoutes: TradeRoute[]
     declare probeClaims: ProbeClaim[]
     declare result?: GameResult
     declare winningPlayerIds: string[]

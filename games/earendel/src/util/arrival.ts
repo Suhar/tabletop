@@ -3,7 +3,7 @@ import type { HydratedEarendelGameState } from './../model/gameState.js'
 import { getHex } from '../model/board.js'
 import { PieceLevel, PieceType } from '../model/pieces.js'
 import { attackableTargets } from './attack.js'
-import { chainsCompletedBy } from './chains.js'
+import { chainsCompletedBy, planetPairKey } from './chains.js'
 import { refreshPlanetControl } from './control.js'
 import { probeDestinations } from './exploration.js'
 import { stationGroupPoints } from './stations.js'
@@ -32,10 +32,11 @@ export function resolveArrival(
         piece.type === PieceType.Station ? stationGroupPoints(state.board, playerId, coords) : 0
     playerState.score += stationPoints
 
-    const chains = chainsCompletedBy(state.board, playerId, coords, state.scoredPlanetPairs)
+    const joined = state.tradeRoutes.map((route) => planetPairKey(...route.planets))
+    const chains = chainsCompletedBy(state.board, playerId, coords, joined)
     for (const chain of chains) {
         playerState.score += chain.points
-        state.scoredPlanetPairs.push(chain.pairKey)
+        state.tradeRoutes.push({ planets: chain.planets, playerId })
     }
 
     const targets = attackableTargets(state.board, coords, playerId)

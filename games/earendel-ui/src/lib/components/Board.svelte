@@ -8,6 +8,7 @@
         PieceType,
         PlanetColor,
         hexKey,
+        planetPairKey,
         powerOf,
         technologyAbility,
         technologyCard,
@@ -201,6 +202,25 @@
                 delay: (i * CONTROL_DOT_CYCLE) / CONTROL_DOTS
             }
         })
+    }
+
+    const ROUTE_SPEED = 45 // board units per second
+
+    // Between the edges of the two planets' discs.
+    function routeRun(a: AxialCoordinates, b: AxialCoordinates) {
+        const from = hexGeometry(a).center
+        const to = hexGeometry(b).center
+        const dx = to.x - from.x
+        const dy = to.y - from.y
+        const distance = Math.hypot(dx, dy)
+        const inset = 26
+        return {
+            x1: from.x + (dx / distance) * inset,
+            y1: from.y + (dy / distance) * inset,
+            x2: to.x - (dx / distance) * inset,
+            y2: to.y - (dy / distance) * inset,
+            length: distance - 2 * inset
+        }
     }
 
     const UPLINK_PIPS = 3
@@ -686,6 +706,24 @@
     <!-- A pending probe claim: a beam from the claimed planet into each of the claimant's probes
          beside it, gained on their next turn if their probes still lead (rules.md, Gaining a
          technology). -->
+    <!-- Joined pairs of planets: small ships in the joiner's colour ply each route both ways
+         (rules.md, Chains). A pair with no route can still be joined. -->
+    {#each gameSession.gameState.tradeRoutes as route (planetPairKey(...route.planets))}
+        {@const run = routeRun(route.planets[0], route.planets[1])}
+        {@const color = gameSession.colors.getPlayerUiColor(route.playerId)}
+        <g pointer-events="none">
+            <line x1={run.x1} y1={run.y1} x2={run.x2} y2={run.y2} stroke={color} stroke-opacity="0.22" stroke-width="2" stroke-linecap="round" />
+            {#each [`M${run.x1} ${run.y1} L${run.x2} ${run.y2}`, `M${run.x2} ${run.y2} L${run.x1} ${run.y1}`] as path, index (index)}
+                <g
+                    class="trade-ship"
+                    style="offset-path: path('{path}'); animation-duration: {run.length / ROUTE_SPEED}s; animation-delay: {-(index * run.length) / (2 * ROUTE_SPEED)}s;"
+                >
+                    <path d="M0,-7 L3,3 L0,1.5 L-3,3 Z" fill={color} />
+                </g>
+            {/each}
+        </g>
+    {/each}
+
     <!-- Probes spent researching a planet, circling it (rules.md, Gaining a technology). -->
     {#each placed as entry (entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const orbiters = entry.hex.orbiters ?? []}
@@ -1040,42 +1078,6 @@
         </g>
     {/each}
 
-    {#if focused}
-        {@const focusedHex = focused}
-        {@const focusedColor = placed.find((entry) => sameCoordinates(entry.hex.coords, focusedHex))?.hex
-            .color}
-        {@const pairColor = focusedColor ? PLANET_FILL[focusedColor] : '#dce6ff'}
-        {#each gameSession.planetPairsFrom(focusedHex) as pair, index (index)}
-            {@const from = hexGeometry(focusedHex).center}
-            {@const to = hexGeometry(pair.to).center}
-            {@const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }}
-            <g pointer-events="none">
-                <line
-                    x1={from.x}
-                    y1={from.y}
-                    x2={to.x}
-                    y2={to.y}
-                    stroke={pair.spent ? '#dce6ff' : pairColor}
-                    stroke-opacity={pair.spent ? 0.16 : 0.55}
-                    stroke-width={pair.spent ? 2 : 3}
-                    stroke-linecap="round"
-                    stroke-dasharray={pair.spent ? '3 9' : '2 7'}
-                />
-                {#if pair.spent}
-                    <g
-                        stroke="#dce6ff"
-                        stroke-opacity="0.5"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                    >
-                        <line x1={mid.x - 7} y1={mid.y - 7} x2={mid.x + 7} y2={mid.y + 7}></line>
-                        <line x1={mid.x + 7} y1={mid.y - 7} x2={mid.x - 7} y2={mid.y + 7}></line>
-                    </g>
-                {/if}
-            </g>
-        {/each}
-    {/if}
-
     <!-- Drawn here rather than with each station: a neighbouring hex fill would cover half a girder. -->
     {#each gameSession.stationTubes as tube (stationTubeKey(tube))}
         {@const color = gameSession.colors.getPlayerUiColor(tube.playerId)}
@@ -1168,6 +1170,34 @@
         .uplink-pip {
             animation: none;
             transform: translateX(var(--rest));
+        }
+    }
+
+    /* Ships fade in leaving one planet and out arriving at the other. */
+    @keyframes trade-ship-frames {
+        0% {
+            offset-distance: 0%;
+            opacity: 0;
+        }
+        10%,
+        90% {
+            opacity: 1;
+        }
+        100% {
+            offset-distance: 100%;
+            opacity: 0;
+        }
+    }
+
+    .trade-ship {
+        offset-rotate: auto 90deg;
+        animation: trade-ship-frames 4s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .trade-ship {
+            animation: none;
+            offset-distance: 35%;
         }
     }
 
