@@ -22,7 +22,10 @@
     import TrussGirder from './TrussGirder.svelte'
     import FighterShape from './FighterShape.svelte'
     import ProbeShape from './ProbeShape.svelte'
-    import { TrussGrowthAnimator } from '$lib/animators/trussGrowthAnimator.svelte.js'
+    import {
+        CLIP_OVERREACH,
+        TrussGrowthAnimator
+    } from '$lib/animators/trussGrowthAnimator.svelte.js'
     import { animatePiece, PieceMoveAnimator } from '$lib/animators/pieceMoveAnimator.svelte.js'
     import {
         ORBIT_PERIOD,
@@ -1103,7 +1106,7 @@
         <clipPath id="truss-grow-{truss.key}">
             <rect
                 use:registerElement={{ registry: trussGrowth.clips, key: truss.key }}
-                x="0"
+                x={-CLIP_OVERREACH}
                 y="-8"
                 width="0"
                 height="16"
@@ -1111,7 +1114,7 @@
             />
         </clipPath>
         <g clip-path="url(#truss-grow-{truss.key})">
-            <TrussGirder start={truss.start} end={truss.end} {color} />
+            <TrussGirder start={truss.girder.start} end={truss.girder.end} {color} />
         </g>
     {/each}
 

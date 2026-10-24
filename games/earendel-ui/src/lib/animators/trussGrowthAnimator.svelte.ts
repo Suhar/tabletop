@@ -15,11 +15,16 @@ import { stationTubeKey, stationTubesOf, type StationTube } from '$lib/utils/sta
 export type GrowingTruss = {
     key: string
     playerId: string
+    // The girder as the board will draw it, so the swap to the real one is seamless.
+    girder: { start: Point; end: Point }
+    // The clip grows from the new station's end towards the station it joins.
     start: Point
-    end: Point
     length: number
     degrees: number
 }
+
+// The clip overreaches the girder by this much so the rails' stroke ends aren't trimmed.
+export const CLIP_OVERREACH = 2
 
 export type ArrivingStation = {
     coords: AxialCoordinates
@@ -87,7 +92,7 @@ export class TrussGrowthAnimator {
                     hub: piece.hub === true
                 })
             }
-            return growingTruss(oriented)
+            return growingTruss(tube, oriented)
         })
 
         this.growing = growing
@@ -104,7 +109,11 @@ export class TrussGrowthAnimator {
             timeline.fromTo(
                 clip,
                 { attr: { width: 0 } },
-                { attr: { width: truss.length }, duration, ease: 'power2.out' },
+                {
+                    attr: { width: truss.length + 2 * CLIP_OVERREACH },
+                    duration,
+                    ease: 'power2.out'
+                },
                 0
             )
         }
@@ -121,19 +130,23 @@ function reversed(tube: StationTube): StationTube {
     return { ...tube, from: tube.to, to: tube.from, fromHub: tube.toHub, toHub: tube.fromHub }
 }
 
-function growingTruss(tube: StationTube): GrowingTruss {
-    const { start, end } = trussEnds(
+function girderEnds(tube: StationTube): { start: Point; end: Point } {
+    return trussEnds(
         hexGeometry(tube.from).center,
         hexGeometry(tube.to).center,
         tube.fromHub,
         tube.toHub
     )
+}
+
+function growingTruss(tube: StationTube, oriented: StationTube): GrowingTruss {
+    const { start, end } = girderEnds(oriented)
     return {
         // Hex keys joined with a dash, so the key is safe inside a clip-path url().
         key: stationTubeKey(tube).replace(':', '-'),
         playerId: tube.playerId,
+        girder: girderEnds(tube),
         start,
-        end,
         length: Math.hypot(end.x - start.x, end.y - start.y),
         degrees: (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI
     }
