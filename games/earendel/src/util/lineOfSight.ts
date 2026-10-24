@@ -37,6 +37,42 @@ export function probeBlockedBy(
     return undefined
 }
 
+// The pieces of `type` belonging to the same player as the piece at `coords` that it can see
+// along the six axes, past empty space only (rules.md, Relay).
+function ownPiecesInSight(
+    board: EarendelBoard,
+    coords: AxialCoordinates,
+    type: PieceType
+): AxialCoordinates[] {
+    const piece = getHex(board, coords)?.piece
+    if (!piece) return []
+
+    return HEX_STEPS.flatMap((step) => {
+        const seen = firstPieceAlong(board, coords, step)
+        return seen?.piece.type === type && seen.piece.playerId === piece.playerId
+            ? [seen.coords]
+            : []
+    })
+}
+
+// The player's own stations a probe at `coords` is relayed by.
+export function relayStationsOf(
+    board: EarendelBoard,
+    coords: AxialCoordinates
+): AxialCoordinates[] {
+    if (getHex(board, coords)?.piece?.type !== PieceType.Probe) return []
+    return ownPiecesInSight(board, coords, PieceType.Station)
+}
+
+// The player's own probes a station at `coords` relays.
+export function relayedProbesOf(
+    board: EarendelBoard,
+    coords: AxialCoordinates
+): AxialCoordinates[] {
+    if (getHex(board, coords)?.piece?.type !== PieceType.Station) return []
+    return ownPiecesInSight(board, coords, PieceType.Probe)
+}
+
 export function sightLinkedStations(
     board: EarendelBoard,
     coords: AxialCoordinates

@@ -1,6 +1,7 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, neighborsOf } from '../model/board.js'
 import { type Piece, PIECE_POWER, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
+import { relayStationsOf } from './lineOfSight.js'
 
 // Empty on purpose: no piece type can remove a station yet.
 const STATION_KILLERS: PieceType[] = []
@@ -46,6 +47,7 @@ export function attackOutcomeAt(
     const target = getHex(board, targetCoords)?.piece
     if (!attacker || !target) return undefined
     if (isEscorted(board, targetCoords)) return undefined
+    if (relayStationsOf(board, targetCoords).length > 0) return undefined
 
     return attackOutcome(attacker, target)
 }

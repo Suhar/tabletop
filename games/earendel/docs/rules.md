@@ -24,9 +24,9 @@ planets. Each contributes _power_ toward controlling adjacent planets:
 | ----------------- | ----- | --------------------------------------------------------------------------------------------------------------- |
 | Probe             | 1     | An explorer. Its **level** (2 or 3) is how many technology cards it reveals, and its weight in probe influence. |
 | Station           | 1     |                                                                                                                 |
-| Fighter (level 1) | 1     | Only reached by damage. Destroys an enemy probe on arrival.                                                     |
-| Fighter (level 2) | 2     | Destroys an enemy probe; damages a level 1 fighter to destruction.                                              |
-| Fighter (level 3) | 3     | Destroys an enemy probe; damages a level 2 fighter, or finishes a level 1.                                      |
+| Fighter (level 1) | 1     | Only reached by damage. Destroys an enemy probe on arrival, unless relayed.                                     |
+| Fighter (level 2) | 2     | Destroys an unrelayed enemy probe; damages a level 1 fighter to destruction.                                    |
+| Fighter (level 3) | 3     | Destroys an unrelayed enemy probe; damages a level 2 fighter, or finishes a level 1.                            |
 
 Probes and fighters come in two **levels**, 2 and 3, visually distinct and known to the
 player the moment the piece is drawn. The number means something different for each: a
@@ -461,6 +461,18 @@ no one is then holding it outright.
 
 Scores are **public** and are a **running total that never decreases**: points scored for
 control during the game are kept even if control is later lost.
+
+### Relay
+
+**A probe with a clear line of sight to one of its own stations cannot be attacked.** The line
+runs straight along one of the six hex directions, at any distance, and must cross only empty
+space: any piece in between, of either side, or a planet breaks it. A station right beside the
+probe counts.
+
+Probes are too small to find in open space on their own; a station relays and hides them. So a
+station gives research a direct job — build where you want to survey — and fighters hunt the
+probes that have strayed out of sight of their stations. Placing a piece across the line is how
+to break a relay, exactly as it breaks a blockade.
 
 ### Chains
 

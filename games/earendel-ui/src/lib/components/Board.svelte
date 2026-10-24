@@ -146,6 +146,24 @@
     )
 
     let shownControlEdges = $derived(focused ? gameSession.controlEdgesFor(focused) : [])
+    let shownRelayLines = $derived(focused ? gameSession.relayLinesFor(focused) : [])
+
+    // From the edge of the station's core to the edge of the probe's hub.
+    function relayRun(station: AxialCoordinates, probe: AxialCoordinates) {
+        const from = hexGeometry(station).center
+        const to = hexGeometry(probe).center
+        const dx = to.x - from.x
+        const dy = to.y - from.y
+        const distance = Math.hypot(dx, dy)
+        const ux = dx / distance
+        const uy = dy / distance
+        return {
+            x1: from.x + ux * 20,
+            y1: from.y + uy * 20,
+            x2: to.x - ux * 11,
+            y2: to.y - uy * 11
+        }
+    }
 
     // Sampled rather than drawn with arcs so the wavelength stays constant at any length or angle.
     function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
@@ -811,6 +829,24 @@
         </g>
     {/each}
 
+    <!-- A probe in clear sight of its own station is safe from fighters (rules.md, Relay). -->
+    {#each shownRelayLines as relay (relay.station.q + ',' + relay.station.r + '>' + relay.probe.q + ',' + relay.probe.r)}
+        {@const run = relayRun(relay.station, relay.probe)}
+        <line
+            x1={run.x1}
+            y1={run.y1}
+            x2={run.x2}
+            y2={run.y2}
+            stroke={gameSession.colors.getPlayerUiColor(relay.playerId)}
+            stroke-width="2.5"
+            stroke-opacity="0.85"
+            stroke-dasharray="6 7"
+            stroke-linecap="round"
+            class="relay-line"
+            pointer-events="none"
+        />
+    {/each}
+
     {#each shownControlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
         {@const edgeColor = gameSession.colors.getPlayerUiColor(edge.playerId)}
 
@@ -1101,6 +1137,23 @@
         .uplink-pip {
             animation: none;
             transform: translateX(var(--rest));
+        }
+    }
+
+    /* The dashes run from the station to the probe it relays. */
+    @keyframes relay-line-frames {
+        to {
+            stroke-dashoffset: -26;
+        }
+    }
+
+    .relay-line {
+        animation: relay-line-frames 1.2s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .relay-line {
+            animation: none;
         }
     }
 

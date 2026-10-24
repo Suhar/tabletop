@@ -54,6 +54,8 @@ import {
     AttackSpread,
     controllerOf,
     planetCoordinates,
+    relayedProbesOf,
+    relayStationsOf,
     planetPairKey,
     planetPointsByPlayer,
     neighborsOf,
@@ -491,6 +493,31 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
             return edges
         })
+
+    // Relay lines touching the piece at `coords`: from each station relaying a probe there, or from
+    // a station there to each probe it relays.
+    relayLinesFor(
+        coords: AxialCoordinates
+    ): { station: AxialCoordinates; probe: AxialCoordinates; playerId: string }[] {
+        const piece = getHex(this.gameState.board, coords)?.piece
+        if (!piece) return []
+        const board = this.gameState.board
+        if (piece.type === PieceType.Probe) {
+            return relayStationsOf(board, coords).map((station) => ({
+                station,
+                probe: coords,
+                playerId: piece.playerId
+            }))
+        }
+        if (piece.type === PieceType.Station) {
+            return relayedProbesOf(board, coords).map((probe) => ({
+                station: coords,
+                probe,
+                playerId: piece.playerId
+            }))
+        }
+        return []
+    }
 
     controlEdgesFor(
         coords: AxialCoordinates
