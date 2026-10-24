@@ -1,6 +1,11 @@
 import type { AnimationContext } from '@tabletop/frontend-components'
 import type { AxialCoordinates, GameAction, Point } from '@tabletop/common'
-import { getHex, hexKey, type HydratedEarendelGameState } from '@tabletop/earendel'
+import {
+    type EarendelBoard,
+    getHex,
+    hexKey,
+    type HydratedEarendelGameState
+} from '@tabletop/earendel'
 import { tick } from 'svelte'
 import { ElementRegistry } from './elementRegistry.js'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
@@ -28,6 +33,8 @@ const FALLBACK_DURATION = 0.15
 export class TrussGrowthAnimator {
     growing: GrowingTruss[] = $state([])
     arriving: ArrivingStation[] = $state([])
+    // While girders grow, stations dock as they will on this board, so their stubs drop at once.
+    dockingBoard: EarendelBoard | undefined = $state()
 
     readonly clips = new ElementRegistry<SVGRectElement>()
     readonly girders = new ElementRegistry<SVGGElement>()
@@ -85,6 +92,7 @@ export class TrussGrowthAnimator {
 
         this.growing = growing
         this.arriving = [...arrivals.values()]
+        this.dockingBoard = to.board
 
         // The transient girders have to be mounted before their clips can be tweened.
         await tick()
@@ -104,6 +112,7 @@ export class TrussGrowthAnimator {
         animationContext.afterAnimations(() => {
             this.growing = []
             this.arriving = []
+            this.dockingBoard = undefined
         })
     }
 }

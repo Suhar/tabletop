@@ -33,7 +33,7 @@
     import { ScoreFloatAnimator } from '$lib/animators/scoreFloatAnimator.svelte.js'
     import { BlastAnimator } from '$lib/animators/blastAnimator.svelte.js'
     import { registerElement } from '$lib/animators/elementRegistry.js'
-    import { stationTubeKey } from '$lib/utils/stationLinks.js'
+    import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
 
     let gameSession = getGameSession()
 
@@ -241,6 +241,16 @@
             length: distance - startInset - endInset,
             degrees: (Math.atan2(dy, dx) * 180) / Math.PI
         }
+    }
+
+    // Sides of a station joined to a neighbour, which lose their docking stubs.
+    function linkedAngles(coords: AxialCoordinates, playerId: string): number[] {
+        const board = trussGrowth.dockingBoard ?? gameSession.gameState.board
+        const from = hexGeometry(coords).center
+        return linkedStationNeighbors(board, coords, playerId).map((neighbor) => {
+            const to = hexGeometry(neighbor).center
+            return Math.atan2(to.y - from.y, to.x - from.x)
+        })
     }
 
     function insetPoints(coords: AxialCoordinates, inset: number): string {
@@ -782,6 +792,7 @@
                             center={entry.center}
                             {color}
                             hub={piece.hub}
+                            linkedAngles={linkedAngles(entry.hex.coords, piece.playerId)}
                         />
                     {:else}
                         <FighterShape center={entry.center} {color} level={powerOf(piece)} />
@@ -1084,6 +1095,7 @@
             center={hexGeometry(station.coords).center}
             color={gameSession.colors.getPlayerUiColor(station.playerId)}
             hub={station.hub}
+            linkedAngles={linkedAngles(station.coords, station.playerId)}
         />
     {/each}
     {#each trussGrowth.growing as truss (truss.key)}
