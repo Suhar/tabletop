@@ -1,6 +1,6 @@
 import * as Type from 'typebox'
 import { AxialCoordinates } from '@tabletop/common'
-import { PieceLevel } from './pieces.js'
+import { Piece, PieceLevel } from './pieces.js'
 
 export type PendingTechnology = Type.Static<typeof PendingTechnology>
 export const PendingTechnology = Type.Object({
@@ -14,6 +14,14 @@ export const ProbeClaim = Type.Object({
     playerId: Type.String(),
     coords: AxialCoordinates,
     technologyId: Type.String()
+})
+
+// A probe that left the board for a planet's orbit when its claim paid out.
+export type OrbitedProbe = Type.Static<typeof OrbitedProbe>
+export const OrbitedProbe = Type.Object({
+    probe: Piece,
+    from: AxialCoordinates,
+    planet: AxialCoordinates
 })
 
 export type PendingExploration = Type.Static<typeof PendingExploration>

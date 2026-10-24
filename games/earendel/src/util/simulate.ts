@@ -263,8 +263,13 @@ export function playRandomGame(
     const onBoard = Object.values(game.state.board.hexes)
         .map((hex) => hex.piece)
         .filter((piece) => piece !== undefined && !granted(piece)).length
+    const inOrbit = Object.values(game.state.board.hexes).reduce(
+        (total, hex) => total + (hex.orbiters?.length ?? 0),
+        0
+    )
     const accountedFor =
         onBoard +
+        inOrbit +
         game.state.heldPieces.filter((piece) => !granted(piece)).length +
         piecesDestroyed +
         discards +

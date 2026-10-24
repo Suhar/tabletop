@@ -29,7 +29,9 @@ export const Hex = Type.Object({
     color: Type.Optional(Type.Enum(PlanetColor)),
     technologyId: Type.Optional(Type.String()),
     piece: Type.Optional(Piece),
-    explored: Type.Optional(Type.Boolean())
+    explored: Type.Optional(Type.Boolean()),
+    // Probes spent researching this planet, out of the game (rules.md, Gaining a technology).
+    orbiters: Type.Optional(Type.Array(Piece))
 })
 
 export type EarendelBoard = Type.Static<typeof EarendelBoard>

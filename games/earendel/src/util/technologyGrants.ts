@@ -1,4 +1,6 @@
-import { getHex } from '../model/board.js'
+import { assertExists, type AxialCoordinates } from '@tabletop/common'
+import { getHex, neighborsOf } from '../model/board.js'
+import { refreshPlanetControl } from './control.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import {
     cooldownEffectOf,
@@ -8,7 +10,7 @@ import {
     TechnologyEffectKind
 } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
-import type { PendingTechnology } from '../model/exploration.js'
+import type { OrbitedProbe, PendingTechnology } from '../model/exploration.js'
 import { probeLeaderOf } from './probes.js'
 import { drawIfAny } from '../model/bags.js'
 import { type Piece, PieceType } from '../model/pieces.js'
@@ -16,10 +18,11 @@ import { type Piece, PieceType } from '../model/pieces.js'
 export function probeTechnologiesFor(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: string[]; lapsed: string[] } {
+): { gained: string[]; lapsed: string[]; researched: AxialCoordinates[] } {
     const held = state.getPlayerState(playerId).technologies
     const gained: string[] = []
     const lapsed: string[] = []
+    const researched: AxialCoordinates[] = []
 
     for (const claim of state.probeClaims) {
         if (claim.playerId !== playerId) continue
@@ -29,12 +32,37 @@ export function probeTechnologiesFor(
 
         if (probeLeaderOf(state.board, claim.coords) === playerId) {
             gained.push(technologyId)
+            researched.push(claim.coords)
         } else {
             lapsed.push(technologyId)
         }
     }
 
-    return { gained, lapsed }
+    return { gained, lapsed, researched }
+}
+
+// The claimant's probes beside each researched planet leave the board for its orbit, out of the
+// game. Every claim is judged first, so one planet's probes leaving cannot change another's result.
+function sendProbesToOrbit(
+    state: HydratedEarendelGameState,
+    playerId: string,
+    planets: AxialCoordinates[]
+): OrbitedProbe[] {
+    const orbited: OrbitedProbe[] = []
+    for (const planet of planets) {
+        const planetHex = getHex(state.board, planet)
+        assertExists(planetHex, 'A researched planet must be on the board')
+        for (const from of neighborsOf(planet)) {
+            const hex = getHex(state.board, from)
+            const probe = hex?.piece
+            if (!hex || probe?.type !== PieceType.Probe || probe.playerId !== playerId) continue
+            hex.piece = undefined
+            planetHex.orbiters = [...(planetHex.orbiters ?? []), probe]
+            orbited.push({ probe, from, planet })
+        }
+    }
+    if (orbited.length > 0) refreshPlanetControl(state)
+    return orbited
 }
 
 export function grantTechnology(
@@ -80,9 +108,10 @@ function grantedPiece(
 export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: string[]; lapsed: string[] } {
-    const { gained, lapsed } = probeTechnologiesFor(state, playerId)
+): { gained: string[]; lapsed: string[]; orbited: OrbitedProbe[] } {
+    const { gained, lapsed, researched } = probeTechnologiesFor(state, playerId)
     state.probeClaims = state.probeClaims.filter((claim) => claim.playerId !== playerId)
+    const orbited = sendProbesToOrbit(state, playerId, researched)
 
     const effects: PendingTechnology[] = []
 
@@ -98,7 +127,7 @@ export function claimProbeTechnologies(
     state.queuedTechnologyEffects = rest
     if (first) activateTechnologyEffect(state, first)
 
-    return { gained, lapsed }
+    return { gained, lapsed, orbited }
 }
 
 export function activateTechnologyEffect(

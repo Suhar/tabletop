@@ -306,6 +306,43 @@ describe('claiming a technology by surveying with probes', () => {
         expect(game.state.probeClaims).toEqual([])
     })
 
+    it('sends the claimant’s probes beside the planet into its orbit when the claim pays', () => {
+        const { game, mover, other, place, survey, draw } = scenario({
+            mover: probes(4),
+            other: probes(4)
+        })
+
+        place(mover, at(1, 0))
+        survey(mover, at(0, 0))
+        place(other, at(8, 8))
+
+        const opening = draw(mover)
+        const planet = game.state.board.hexes[hexKey(at(0, 0))]
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toBeUndefined()
+        expect(planet.orbiters?.map((probe) => probe.playerId)).toEqual([mover])
+        expect(opening?.metadata?.orbited).toEqual([
+            { probe: planet.orbiters?.[0], from: at(1, 0), planet: at(0, 0) }
+        ])
+        // The other player's probe elsewhere is untouched.
+        expect(game.state.board.hexes[hexKey(at(8, 8))].piece?.playerId).toBe(other)
+    })
+
+    it('leaves the probes where they are when the claim lapses', () => {
+        const { game, mover, other, place, survey, draw } = scenario({
+            mover: probes(4),
+            other: probes(4)
+        })
+
+        place(mover, at(1, 0))
+        survey(mover, at(0, 0))
+        place(other, at(0, 1))
+
+        const opening = draw(mover)
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece?.playerId).toBe(mover)
+        expect(game.state.board.hexes[hexKey(at(0, 0))].orbiters).toBeUndefined()
+        expect(opening?.metadata?.orbited).toBeUndefined()
+    })
+
     it('lets the claim lapse when a rival draws level before the turn comes round', () => {
         const { game, mover, other, place, survey, draw, held } = scenario({
             mover: probes(4),

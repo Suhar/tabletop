@@ -4,6 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
+import { OrbitedProbe } from '../model/exploration.js'
 import { drawCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
@@ -13,7 +14,8 @@ export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
     drawn: Type.Optional(Type.Array(Piece)),
     technologiesClaimed: Type.Optional(Type.Array(Type.String())),
-    technologiesLapsed: Type.Optional(Type.Array(Type.String()))
+    technologiesLapsed: Type.Optional(Type.Array(Type.String())),
+    orbited: Type.Optional(Type.Array(OrbitedProbe))
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>
@@ -56,10 +58,11 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         // machine state, and an immediate effect may have to redirect the turn.
         refreshPlanetControl(state)
 
-        const { gained: technologiesClaimed, lapsed: technologiesLapsed } = claimProbeTechnologies(
-            state,
-            this.playerId
-        )
+        const {
+            gained: technologiesClaimed,
+            lapsed: technologiesLapsed,
+            orbited
+        } = claimProbeTechnologies(state, this.playerId)
 
         const playerState = state.getPlayerState(this.playerId)
         const wanted = drawCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
@@ -78,7 +81,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         this.metadata = {
             drawn: [...state.heldPieces],
             ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {}),
-            ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {})
+            ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {}),
+            ...(orbited.length > 0 ? { orbited } : {})
         }
     }
 

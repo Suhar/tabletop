@@ -16,6 +16,10 @@ export class PieceMoveAnimator {
         this.pieces.set(pieceId, piece)
     }
 
+    nodeOf(pieceId: string): SVGGElement | undefined {
+        return this.pieces.get(pieceId)?.node
+    }
+
     releasePiece(pieceId: string, node: SVGGElement) {
         if (this.pieces.get(pieceId)?.node === node) this.pieces.delete(pieceId)
     }

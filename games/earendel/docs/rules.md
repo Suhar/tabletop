@@ -326,6 +326,11 @@ At the start of the claimant's **next turn**, before anything else, the claim is
 — a rival's probes have drawn level or overtaken theirs — the claim **lapses**: the planet keeps
 its technology, and nobody gains it. Either way the claim is spent.
 
+When a claim pays, **every one of the claimant's probes beside the planet leaves the board** and
+goes into orbit around it: it is out of the game, its hex reopens, and it no longer counts for
+control, chains, relays or probe influence. The probes in orbit stay as a record of who
+researched the planet and count for nothing else.
+
 So a technology is won by surveying a planet and **keeping the probe lead for a round**. Rivals
 have one round of turns to answer: placing probes beside the planet to match or outweigh yours
 stops your claim, and a rival who now leads may survey it themselves and stake a claim of their

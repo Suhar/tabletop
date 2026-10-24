@@ -23,6 +23,12 @@
     import ProbeShape from './ProbeShape.svelte'
     import { TrussGrowthAnimator } from '$lib/animators/trussGrowthAnimator.svelte.js'
     import { animatePiece, PieceMoveAnimator } from '$lib/animators/pieceMoveAnimator.svelte.js'
+    import {
+        ORBIT_PERIOD,
+        ORBITER_SCALE,
+        OrbitAnimator,
+        orbitSlot
+    } from '$lib/animators/orbitAnimator.svelte.js'
     import { ScoreFloatAnimator } from '$lib/animators/scoreFloatAnimator.svelte.js'
     import { BlastAnimator } from '$lib/animators/blastAnimator.svelte.js'
     import { registerElement } from '$lib/animators/elementRegistry.js'
@@ -284,9 +290,10 @@
     const pieceMoves = new PieceMoveAnimator()
     const scoreFloats = new ScoreFloatAnimator()
     const blasts = new BlastAnimator()
+    const orbits = new OrbitAnimator((pieceId) => pieceMoves.nodeOf(pieceId))
 
     onMount(() => {
-        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats]
+        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats, orbits]
         const listeners = animators.map((animator) => animator.onGameStateChange.bind(animator))
         for (const listener of listeners) gameSession.addGameStateChangeListener(listener)
         return () => {
@@ -679,6 +686,30 @@
     <!-- A pending probe claim: a beam from the claimed planet into each of the claimant's probes
          beside it, gained on their next turn if their probes still lead (rules.md, Gaining a
          technology). -->
+    <!-- Probes spent researching a planet, circling it (rules.md, Gaining a technology). -->
+    {#each placed as entry (entry.hex.coords.q + ',' + entry.hex.coords.r)}
+        {@const orbiters = entry.hex.orbiters ?? []}
+        {#if orbiters.length > 0}
+            <g
+                class="orbit"
+                style="transform-origin: {entry.center.x}px {entry.center.y}px; animation-duration: {ORBIT_PERIOD}s;"
+                use:registerElement={{ registry: orbits.orbits, key: String(hexKey(entry.hex.coords)) }}
+                pointer-events="none"
+            >
+                {#each orbiters as probe, index (probe.id)}
+                    {@const slot = orbitSlot(entry.hex.coords, index, orbiters.length)}
+                    <g transform="translate({slot.x} {slot.y}) scale({ORBITER_SCALE})">
+                        <ProbeShape
+                            center={{ x: 0, y: 0 }}
+                            color={gameSession.colors.getPlayerUiColor(probe.playerId)}
+                            level={probe.level ?? PieceLevel.Two}
+                        />
+                    </g>
+                {/each}
+            </g>
+        {/if}
+    {/each}
+
     {#each gameSession.claimUplinks as uplink (uplink.planet.q + ',' + uplink.planet.r + '>' + uplink.probe.q + ',' + uplink.probe.r)}
         {@const beam = uplinkBeam(uplink.planet, uplink.probe)}
         {@const color = gameSession.colors.getPlayerUiColor(uplink.playerId)}
@@ -1137,6 +1168,23 @@
         .uplink-pip {
             animation: none;
             transform: translateX(var(--rest));
+        }
+    }
+
+    @keyframes orbit-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .orbit {
+        transform-box: view-box;
+        animation: orbit-spin 40s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .orbit {
+            animation: none;
         }
     }
 

@@ -281,6 +281,8 @@ describe('a drafted turn', () => {
                 level: PieceLevel.Two
             }
         }
+        // The probe goes into orbit when the claim pays; this gives Tactical Shift a piece to move.
+        board.hexes[hexKey(at(5, 3))].piece = station(mover)
         game.state.board = board
         game.state.probeClaims = [{ playerId: mover, coords: at(0, 3), technologyId: SHIFT }]
         game.state.tileSupply = stackedBag([])
@@ -305,8 +307,8 @@ describe('a drafted turn', () => {
         game.run(MovePiece, {
             type: ActionType.MovePiece,
             playerId: mover,
-            from: at(0, 4),
-            to: at(1, 3)
+            from: at(5, 3),
+            to: at(6, 3)
         })
 
         // Only now is the player asked to give one up - and all three are still there to choose

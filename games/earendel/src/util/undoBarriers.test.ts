@@ -73,6 +73,8 @@ function twoClaims(first: string, second: string, supply: number, moverBag: numb
     planet(board, at(8, 0), second)
     board.hexes[hexKey(at(1, 0))].piece = ship(mover, PieceType.Probe, PieceLevel.Two)
     board.hexes[hexKey(at(7, 0))].piece = ship(mover, PieceType.Probe, PieceLevel.Two)
+    // The probes go into orbit when the claims pay; this gives Tactical Shift a piece to move.
+    board.hexes[hexKey(at(10, 3))].piece = ship(mover, PieceType.Station)
     game.state.board = board
     game.state.probeClaims = [
         { playerId: mover, coords: at(2, 0), technologyId: first },
