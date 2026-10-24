@@ -506,9 +506,18 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    claimOn(coords: AxialCoordinates): string | undefined {
-        return this.pendingClaims.find((claim) => sameCoordinates(claim.coords, coords))?.playerId
-    }
+    // Each probe staking a pending claim: the claimant's probes beside the claimed planet.
+    claimUplinks: { planet: AxialCoordinates; probe: AxialCoordinates; playerId: string }[] =
+        $derived(
+            this.pendingClaims.flatMap(({ coords, playerId }) =>
+                neighborsOf(coords)
+                    .filter((neighbor) => {
+                        const piece = getHex(this.gameState.board, neighbor)?.piece
+                        return piece?.type === PieceType.Probe && piece.playerId === playerId
+                    })
+                    .map((probe) => ({ planet: coords, probe, playerId }))
+            )
+        )
 
     canUseUpdatedLogistics: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseUpdatedLogistics)

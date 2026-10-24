@@ -43,7 +43,7 @@ Lifetime and validity are separate: `beforeNewState` resets the whole selection 
 - **Piece moves.** `PieceMoveAnimator` slides every piece that changes hexes (technology move, Wormhole, Tactical Feint and their undo) on `actionTimeline` (450ms with an action, 150ms without).
 - **Girders.** `TrussGrowthAnimator` fades girders the transition breaks and grows the ones it makes from the end that changed, drawing a transient station only for a station new to the board. With an action the growth runs on `finalTimeline`, after pieces finish moving (500ms); without one everything runs at once (150ms).
 - **Blasts and score floats.** `BlastAnimator` (actionTimeline, up to 780ms) and `ScoreFloatAnimator` (finalTimeline, 800ms) draw action-scoped transients only when an action is present: live play, other players' actions and full-action replay. Undo and state-only history show the result directly. Their transients clear in `afterAnimations`.
-- **Continuous cues** (claim hourglass, control dots, planet motion, pulses, missiles, reach pointers, beams, hub ring) are local CSS on state-derived marks and explain no transition.
+- **Continuous cues** (claim uplinks, control dots, planet motion, pulses, missiles, reach pointers, beams, hub ring) are local CSS on state-derived marks and explain no transition.
 
 ## Verification scenarios
 

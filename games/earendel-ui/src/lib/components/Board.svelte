@@ -179,6 +179,26 @@
         })
     }
 
+    const UPLINK_PIPS = 3
+    const UPLINK_CYCLE = 1.8 // seconds, matching uplink-pip-frames
+
+    // From the edge of the planet's disc to the edge of the probe's hub.
+    function uplinkBeam(planet: AxialCoordinates, probe: AxialCoordinates) {
+        const from = hexGeometry(planet).center
+        const to = hexGeometry(probe).center
+        const dx = to.x - from.x
+        const dy = to.y - from.y
+        const distance = Math.hypot(dx, dy)
+        const startInset = 22
+        const endInset = 8
+        return {
+            x: from.x + (dx / distance) * startInset,
+            y: from.y + (dy / distance) * startInset,
+            length: distance - startInset - endInset,
+            degrees: (Math.atan2(dy, dx) * 180) / Math.PI
+        }
+    }
+
     function linkedAngles(coords: AxialCoordinates, playerId: string): number[] {
         return anglesTo(coords, gameSession.linkedStationNeighbors(coords, playerId))
     }
@@ -509,42 +529,6 @@
                         </g>
                     </g>
                 {/if}
-                {@const claimant = gameSession.claimOn(hex.coords)}
-                {#if claimant}
-                    {@const hx = entry.center.x - 30}
-                    {@const hy = entry.center.y + 20}
-                    {@const claimColor = gameSession.colors.getPlayerUiColor(claimant)}
-                    <g class="claim-glass" pointer-events="none">
-                        <path
-                            d="M {hx - 6} {hy - 9} L {hx + 6} {hy - 9} L {hx} {hy} Z"
-                            fill={claimColor}
-                            fill-opacity="0.9"
-                        />
-                        <path
-                            d="M {hx - 6} {hy + 9} L {hx + 6} {hy + 9} L {hx} {hy} Z"
-                            fill={claimColor}
-                            fill-opacity="0.45"
-                        />
-                        <line
-                            x1={hx - 7}
-                            y1={hy - 10}
-                            x2={hx + 7}
-                            y2={hy - 10}
-                            stroke={claimColor}
-                            stroke-width="2"
-                            stroke-linecap="round"
-                        />
-                        <line
-                            x1={hx - 7}
-                            y1={hy + 10}
-                            x2={hx + 7}
-                            y2={hy + 10}
-                            stroke={claimColor}
-                            stroke-width="2"
-                            stroke-linecap="round"
-                        />
-                    </g>
-                {/if}
 
                 {#if hex.technologyId}
                     <circle
@@ -671,6 +655,30 @@
                     />
                 {/if}
             {/if}
+        </g>
+    {/each}
+
+    <!-- A pending probe claim: a beam from the claimed planet into each of the claimant's probes
+         beside it, gained on their next turn if their probes still lead (rules.md, Gaining a
+         technology). -->
+    {#each gameSession.claimUplinks as uplink (uplink.planet.q + ',' + uplink.planet.r + '>' + uplink.probe.q + ',' + uplink.probe.r)}
+        {@const beam = uplinkBeam(uplink.planet, uplink.probe)}
+        {@const color = gameSession.colors.getPlayerUiColor(uplink.playerId)}
+        <g transform="translate({beam.x} {beam.y}) rotate({beam.degrees})" pointer-events="none">
+            <polygon
+                points="0,-15 {beam.length},-5 {beam.length},5 0,15"
+                fill={color}
+                fill-opacity="0.35"
+            />
+            <line x1="0" y1="0" x2={beam.length} y2="0" stroke={color} stroke-opacity="0.6" stroke-width="1.5" />
+            {#each Array.from({ length: UPLINK_PIPS }, (_unused, i) => i) as pip (pip)}
+                <path
+                    d="M-5,0 L0,-5 L5,0 L0,5 Z"
+                    fill="#fff6d8"
+                    class="uplink-pip"
+                    style="--run: {beam.length}px; --rest: {(beam.length * (pip + 0.5)) / UPLINK_PIPS}px; animation-delay: {(pip * UPLINK_CYCLE) / UPLINK_PIPS}s;"
+                />
+            {/each}
         </g>
     {/each}
 
@@ -1069,24 +1077,31 @@
         outline: none;
     }
 
-    @keyframes claim-glass-frames {
-        0%,
-        44% {
-            transform: rotate(0deg);
+    /* Data pips stream from the claimed planet into the probe, each delayed to its own slot. */
+    @keyframes uplink-pip-frames {
+        0% {
+            transform: translateX(0);
+            opacity: 0;
         }
-        50%,
-        94% {
-            transform: rotate(180deg);
+        15%,
+        80% {
+            opacity: 1;
         }
         100% {
-            transform: rotate(360deg);
+            transform: translateX(var(--run));
+            opacity: 0;
         }
     }
 
-    .claim-glass {
-        transform-box: fill-box;
-        transform-origin: center;
-        animation: claim-glass-frames 6s ease-in-out infinite;
+    .uplink-pip {
+        animation: uplink-pip-frames 1.8s linear infinite backwards;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .uplink-pip {
+            animation: none;
+            transform: translateX(var(--rest));
+        }
     }
 
     /* Use the `animation` shorthand: Svelte rewrites scoped @keyframes names only there. */
