@@ -5,12 +5,7 @@ import { tick } from 'svelte'
 import { ElementRegistry } from './elementRegistry.js'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
 import { trussEnds } from '$lib/utils/stationGeometry.js'
-import {
-    linkedStationNeighbors,
-    stationTubeKey,
-    stationTubesOf,
-    type StationTube
-} from '$lib/utils/stationLinks.js'
+import { stationTubeKey, stationTubesOf, type StationTube } from '$lib/utils/stationLinks.js'
 
 export type GrowingTruss = {
     key: string
@@ -25,7 +20,6 @@ export type ArrivingStation = {
     coords: AxialCoordinates
     playerId: string
     hub: boolean
-    linked: AxialCoordinates[]
 }
 
 const GROW_DURATION = 0.5
@@ -83,8 +77,7 @@ export class TrussGrowthAnimator {
                 arrivals.set(hexKey(coords), {
                     coords,
                     playerId: piece.playerId,
-                    hub: piece.hub === true,
-                    linked: linkedStationNeighbors(to.board, coords, piece.playerId)
+                    hub: piece.hub === true
                 })
             }
             return growingTruss(oriented)

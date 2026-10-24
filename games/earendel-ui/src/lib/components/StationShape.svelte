@@ -5,9 +5,8 @@
     let {
         center,
         color,
-        hub = false,
-        linkedAngles
-    }: { center: Point; color: string; hub?: boolean; linkedAngles: number[] } = $props()
+        hub = false
+    }: { center: Point; color: string; hub?: boolean } = $props()
 
     // Flat-topped hexes put the six neighbours at 30° plus multiples of 60°.
     const NEIGHBOUR_ANGLES = Array.from(
@@ -17,15 +16,9 @@
 
     let coreRadius = $derived(stationCoreRadius(hub))
 
+    // Every side keeps its docking stub; a girder to a linked neighbour runs into it.
     let stubs = $derived(
-        NEIGHBOUR_ANGLES.filter(
-            (angle) =>
-                !linkedAngles.some(
-                    (linked) =>
-                        Math.abs(Math.atan2(Math.sin(linked - angle), Math.cos(linked - angle))) <
-                        0.1
-                )
-        ).map((angle) => ({
+        NEIGHBOUR_ANGLES.map((angle) => ({
             x: center.x + (coreRadius + 3) * Math.cos(angle),
             y: center.y + (coreRadius + 3) * Math.sin(angle),
             degrees: (angle * 180) / Math.PI

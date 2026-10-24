@@ -243,10 +243,6 @@
         }
     }
 
-    function linkedAngles(coords: AxialCoordinates, playerId: string): number[] {
-        return anglesTo(coords, gameSession.linkedStationNeighbors(coords, playerId))
-    }
-
     function insetPoints(coords: AxialCoordinates, inset: number): string {
         const { center, vertices } = hexGeometry(coords)
         return vertices
@@ -257,14 +253,6 @@
                 return `${center.x + dx * scale},${center.y + dy * scale}`
             })
             .join(' ')
-    }
-
-    function anglesTo(coords: AxialCoordinates, neighbors: AxialCoordinates[]): number[] {
-        const from = hexGeometry(coords).center
-        return neighbors.map((neighbor) => {
-            const to = hexGeometry(neighbor).center
-            return Math.atan2(to.y - from.y, to.x - from.x)
-        })
     }
 
     function sharedEdge(a: AxialCoordinates, b: AxialCoordinates) {
@@ -794,7 +782,6 @@
                             center={entry.center}
                             {color}
                             hub={piece.hub}
-                            linkedAngles={linkedAngles(entry.hex.coords, piece.playerId)}
                         />
                     {:else}
                         <FighterShape center={entry.center} {color} level={powerOf(piece)} />
@@ -818,7 +805,6 @@
                     center={ghostEntry.center}
                     color={ghostColor}
                     hub={ghostPiece.hub}
-                    linkedAngles={linkedAngles(ghostEntry.hex.coords, ghostPiece.playerId)}
                 />
             {:else}
                 <FighterShape
@@ -1098,7 +1084,6 @@
             center={hexGeometry(station.coords).center}
             color={gameSession.colors.getPlayerUiColor(station.playerId)}
             hub={station.hub}
-            linkedAngles={anglesTo(station.coords, station.linked)}
         />
     {/each}
     {#each trussGrowth.growing as truss (truss.key)}

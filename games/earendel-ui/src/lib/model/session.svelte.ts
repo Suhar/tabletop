@@ -17,11 +17,7 @@ import {
 import { describePiece } from '$lib/utils/describe.js'
 import { highlightedHexesOf } from '$lib/utils/highlights.js'
 import { rankStandings, type FinalStanding } from '$lib/utils/standings.js'
-import {
-    linkedStationNeighbors,
-    stationTubesOf,
-    type StationTube
-} from '$lib/utils/stationLinks.js'
+import { stationTubesOf, type StationTube } from '$lib/utils/stationLinks.js'
 import {
     ActionType,
     ChoosePlanet,
@@ -319,10 +315,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     sightLines: SightLine[] = $derived(sightLines(this.gameState.board))
 
     stationTubes: StationTube[] = $derived(stationTubesOf(this.gameState.board))
-
-    linkedStationNeighbors(coords: AxialCoordinates, playerId: string): AxialCoordinates[] {
-        return linkedStationNeighbors(this.gameState.board, coords, playerId)
-    }
 
     hexesClosedToMe: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
