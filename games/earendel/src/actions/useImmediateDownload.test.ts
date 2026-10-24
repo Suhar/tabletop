@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
-import { type TechnologyCard, TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId } from '../model/technologyCards.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { UseImmediateDownload } from './useImmediateDownload.js'
 import { planetsInSightOf } from '../util/lineOfSight.js'
 import { downloadTargetsFrom } from '../util/download.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -20,12 +20,11 @@ const ship = (playerId: string, type: PieceType): Piece => ({
     type
 })
 
-const card = (id: string, kind?: TechnologyEffectKind): TechnologyCard => ({
-    id,
-    colors: [PlanetColor.Periwinkle],
-    tier: TechnologyTier.Standard,
-    ...(kind ? { effect: { kind } } : {})
-})
+const card = (effect: TechnologyEffectKind, copy = 0) =>
+    focusedCardId(effect, PlanetColor.Periwinkle, copy)
+
+const DOWNLOAD = card(TechnologyEffectKind.ImmediateDownload)
+const FAR_RAILGUN = card(TechnologyEffectKind.Railgun, 1)
 
 function openRow(length = 16): EarendelBoard {
     const board: EarendelBoard = { hexes: {} }
@@ -40,7 +39,7 @@ function openRow(length = 16): EarendelBoard {
 const planet = (
     board: EarendelBoard,
     coords: AxialCoordinates,
-    technology?: TechnologyCard,
+    technologyId?: string,
     explored = true
 ) => {
     board.hexes[hexKey(coords)] = {
@@ -49,28 +48,27 @@ const planet = (
         kind: HexKind.Planet,
         color: PlanetColor.Periwinkle,
         ...(explored ? { explored } : {}),
-        ...(technology ? { technology } : {})
+        ...(technologyId ? { technologyId } : {})
     }
 }
 
 // The anchor planet at (2,0) holds the mover's Download. A far planet at (8,0) holds a Railgun,
 // with clear space between them. Row 3 is spare.
-function scenario(farEffect: TechnologyEffectKind | undefined = TechnologyEffectKind.Railgun) {
+function scenario(farEffect = TechnologyEffectKind.Railgun) {
     const game = new TestGame()
     const mover = game.activePlayerId
     const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
 
     const board = openRow()
-    const download = card('tech-download', TechnologyEffectKind.ImmediateDownload)
-    planet(board, at(2, 0), download)
-    planet(board, at(8, 0), card('tech-far', farEffect))
+    planet(board, at(2, 0), DOWNLOAD)
+    planet(board, at(8, 0), card(farEffect, 1))
 
     game.state.board = board
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     const playerState = game.state.players.find((p) => p.playerId === mover)!
     // Gained the hard way already: they hold the Download card and its stored effect.
-    playerState.technologies = ['tech-download']
+    playerState.technologies = [DOWNLOAD]
     playerState.storedEffects = [TechnologyEffectKind.ImmediateDownload]
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Station),
@@ -139,7 +137,7 @@ describe('Immediate Download', () => {
         game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
 
         const playerState = game.state.players.find((p) => p.playerId === mover)!
-        expect(playerState.technologies).toContain('tech-far')
+        expect(playerState.technologies).toContain(FAR_RAILGUN)
         // A Railgun is a cooldown power, so "available immediately" means it is simply usable.
         expect(playerState.cooldownEffects).toContain(TechnologyEffectKind.Railgun)
         // Spent: one time use.
@@ -150,14 +148,14 @@ describe('Immediate Download', () => {
 
     it('leaves the card on its planet, and its owner holding it too', () => {
         const { game, mover, other } = scenario()
-        game.state.players.find((p) => p.playerId === other)!.technologies = ['tech-far']
+        game.state.players.find((p) => p.playerId === other)!.technologies = [FAR_RAILGUN]
 
         game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
 
         // A technology gained is a record, not a token: nobody is robbed.
-        expect(game.state.board.hexes[hexKey(at(8, 0))].technology?.id).toBe('tech-far')
+        expect(game.state.board.hexes[hexKey(at(8, 0))].technologyId).toBe(FAR_RAILGUN)
         expect(game.state.players.find((p) => p.playerId === other)!.technologies).toContain(
-            'tech-far'
+            FAR_RAILGUN
         )
     })
 
@@ -172,7 +170,9 @@ describe('Immediate Download', () => {
         // Tactical Shift acts at once when gained, so downloading it hands the player its
         // decision rather than a card to remember.
         expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
-        expect(game.state.pendingTechnology?.kind).toBe(TechnologyEffectKind.MoveFriendlyPiece)
+        expect(game.state.pendingTechnology?.technologyId).toBe(
+            card(TechnologyEffectKind.MoveFriendlyPiece, 1)
+        )
     })
 
     it('refuses a planet it cannot see, one already held, and an unexplored one', () => {
@@ -185,15 +185,12 @@ describe('Immediate Download', () => {
         delete game.state.board.hexes[hexKey(at(5, 0))].piece
 
         // Already theirs - nothing to download, and a one-shot power would be wasted.
-        game.state.players.find((p) => p.playerId === mover)!.technologies = [
-            'tech-download',
-            'tech-far'
-        ]
+        game.state.players.find((p) => p.playerId === mover)!.technologies = [DOWNLOAD, FAR_RAILGUN]
         expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
-        game.state.players.find((p) => p.playerId === mover)!.technologies = ['tech-download']
+        game.state.players.find((p) => p.playerId === mover)!.technologies = [DOWNLOAD]
 
         // Unexplored, so it holds no technology to read.
-        delete game.state.board.hexes[hexKey(at(8, 0))].technology
+        delete game.state.board.hexes[hexKey(at(8, 0))].technologyId
         game.state.board.hexes[hexKey(at(8, 0))].explored = false
         expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
     })

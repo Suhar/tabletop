@@ -67,8 +67,7 @@ describe('planetControl', () => {
 
         const control = planetControl(board, ORIGIN)
 
-        // p2's station and probe now add to 2 and match the fighter, where the probe used to
-        // count nothing and leave the fighter ahead.
+        // p2's station and probe add to 2 and tie the fighter.
         expect(control.powerByPlayerId).toEqual({ p1: 2, p2: 2 })
         expect(control.controllingPlayerIds).toEqual(['p1', 'p2'])
         expect(control.power).toBe(2)

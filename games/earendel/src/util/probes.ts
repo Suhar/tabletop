@@ -1,5 +1,6 @@
+import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, neighborsOf, sameHex } from '../model/board.js'
+import { type EarendelBoard, getHex, neighborsOf } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 
 export function probeInfluence(
@@ -15,7 +16,7 @@ export function probeInfluence(
     }
 
     for (const neighbor of neighborsOf(planet)) {
-        if (arriving && sameHex(neighbor, arriving.coords)) {
+        if (arriving && sameCoordinates(neighbor, arriving.coords)) {
             add(arriving.piece)
             continue
         }

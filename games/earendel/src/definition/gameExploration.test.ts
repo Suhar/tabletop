@@ -16,9 +16,7 @@ describe('EarendelGameExploration.createFromCanonicalState', () => {
         expect(EarendelGameStateValidator.Check(branch)).toBe(true)
 
         const sorted = (ids: string[]) => [...ids].sort()
-        expect(sorted(branch.technologyDeck.items.map((card) => card.id))).toEqual(
-            sorted(source.technologyDeck.items.map((card) => card.id))
-        )
+        expect(sorted(branch.technologyDeck.items)).toEqual(sorted(source.technologyDeck.items))
         expect(branch.technologyDeck.remaining).toBe(source.technologyDeck.remaining)
         expect(branch.tileSupply.remaining).toBe(source.tileSupply.remaining)
         branch.players.forEach((player, index) => {
@@ -27,8 +25,6 @@ describe('EarendelGameExploration.createFromCanonicalState', () => {
                 sorted(source.players[index].bag.items.map((piece) => piece.id))
             )
         })
-        expect(branch.technologyDeck.items.map((card) => card.id)).not.toEqual(
-            source.technologyDeck.items.map((card) => card.id)
-        )
+        expect(branch.technologyDeck.items).not.toEqual(source.technologyDeck.items)
     })
 })

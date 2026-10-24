@@ -3,7 +3,7 @@ import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { returnTo } from '../util/drawBags.js'
+import { returnToBag } from '../model/bags.js'
 
 export type PassMetadata = Type.Static<typeof PassMetadata>
 export const PassMetadata = Type.Object({})
@@ -42,7 +42,7 @@ export class HydratedPass extends HydratableAction<typeof Pass> implements Pass 
 
         if (state.heldPieces.length > 0) {
             const playerState = state.getPlayerState(this.playerId)
-            returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
+            returnToBag(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
             state.heldPieces = []
         }
 

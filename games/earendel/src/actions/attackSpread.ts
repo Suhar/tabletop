@@ -1,10 +1,17 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
-import { sameHex } from '../model/board.js'
+
 import { Piece } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveShot } from '../util/attack.js'
@@ -61,7 +68,8 @@ export class HydratedAttackSpread
             throw Error(`Invalid AttackSpread action: ${invalidReason}`)
         }
 
-        const pending = state.pendingAttack!
+        const pending = state.pendingAttack
+        assertExists(pending, 'AttackSpread requires a pending attack')
         startCooldown(state, this.playerId, TechnologyEffectKind.FullTorpedoSpread)
 
         // In the order given: escorts are judged as each shot lands (rules.md, Escort).
@@ -99,7 +107,7 @@ export class HydratedAttackSpread
         }
 
         for (const target of this.targets) {
-            if (!pending.targets.some((candidate) => sameHex(candidate, target))) {
+            if (!pending.targets.some((candidate) => sameCoordinates(candidate, target))) {
                 return 'One of those pieces is out of reach, or too strong for this fighter.'
             }
         }

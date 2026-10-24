@@ -1,6 +1,12 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
@@ -12,7 +18,7 @@ import {
     placeTileOnBoard,
     TILE_ROTATIONS
 } from '../util/tilePlacement.js'
-import { returnTo } from '../util/drawBags.js'
+import { returnToBag } from '../model/bags.js'
 
 export type PlaceTileMetadata = Type.Static<typeof PlaceTileMetadata>
 export const PlaceTileMetadata = Type.Object({
@@ -62,7 +68,8 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
             throw Error(`Invalid PlaceTile action: ${invalidReason}`)
         }
 
-        const pending = state.pendingTile!
+        const pending = state.pendingTile
+        assertExists(pending, 'PlaceTile requires a pending tile')
 
         if (!this.coords) {
             state.pendingTile = undefined
@@ -83,7 +90,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
             state.bonusPlacementTileId = pending.tile.id
             state.bonusPlacementPieceId = drawn.id
         } else if (drawn) {
-            returnTo(playerState.bag, [drawn], state.getProtectedPrng().random)
+            returnToBag(playerState.bag, [drawn], state.getProtectedPrng().random)
         }
 
         state.pendingTile = undefined

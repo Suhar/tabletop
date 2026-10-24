@@ -1,93 +1,95 @@
 import { describe, expect, it } from 'vitest'
 import { Prng } from '@tabletop/common'
-import { PlanetColor } from '../model/board.js'
-import type { TechnologyCard } from '../model/technology.js'
+import { PlanetColor, PLANET_COLORS } from '../model/board.js'
+import {
+    choosableFrom,
+    type TechnologyCard,
+    TechnologyEffectKind,
+    TechnologyTier
+} from '../model/technology.js'
+import {
+    DEALING_ORDER,
+    focusedCardId,
+    FOCUSED_COPIES_PER_COLOR,
+    focusedTechnologyDeck,
+    FULL_TECHNOLOGY_DECK,
+    technologyCard
+} from '../model/technologyCards.js'
+import { HydratedTechnologyDeck } from '../model/bags.js'
 import {
     buildFocusedTechnologyDeck,
     buildTechnologyDeck,
     revealForExploration,
     type TechnologyPiles
 } from './technologyDeck.js'
-import { bagOf } from './drawBags.js'
-import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
+import { stackedBag } from './testHarness.js'
 
 const prng = () => new Prng({ seed: 5, invocations: 0 })
 
-function card(id: string, ...colors: PlanetColor[]): TechnologyCard {
-    return { id, colors, tier: TechnologyTier.Standard }
+const card = (color: PlanetColor, copy = 0) =>
+    focusedCardId(TechnologyEffectKind.Railgun, color, copy)
+
+// Single- and multi-colour cards from the full deck.
+const PERIWINKLE_TEAL = 'tech-8'
+const MINT_VIOLET = 'tech-21'
+
+function piles(drawOrder: string[], discard: string[] = []): TechnologyPiles {
+    return { deck: new HydratedTechnologyDeck(stackedBag(drawOrder)), discard }
 }
 
 describe('revealForExploration', () => {
     it('flips until enough cards show the planet’s colour', () => {
-        const piles: TechnologyPiles = {
-            deck: bagOf([
-                card('a', PlanetColor.Periwinkle),
-                card('b', PlanetColor.Aqua),
-                card('c', PlanetColor.Periwinkle, PlanetColor.Teal),
-                card('d', PlanetColor.Periwinkle)
-            ]),
-            discard: []
-        }
+        const a = card(PlanetColor.Periwinkle, 0)
+        const b = card(PlanetColor.Aqua)
+        const d = card(PlanetColor.Periwinkle, 1)
+        const deck = piles([a, b, PERIWINKLE_TEAL, d])
 
-        const result = revealForExploration(piles, PlanetColor.Periwinkle, 2, prng())
+        const result = revealForExploration(deck, PlanetColor.Periwinkle, 2, prng())
 
-        // Stops the moment the second Periwinkle card appears - 'd' is never turned over.
-        expect(result.candidates.map((c) => c.id)).toEqual(['a', 'c'])
-        expect(result.flipped.map((c) => c.id)).toEqual(['a', 'b', 'c'])
-        expect(piles.deck.items.map((c) => c.id)).toEqual(['d'])
-        expect(piles.deck.remaining).toBe(1)
+        expect(result.candidates).toEqual([a, PERIWINKLE_TEAL])
+        expect(result.flipped).toEqual([a, b, PERIWINKLE_TEAL])
+        expect(deck.deck.items).toEqual([d])
+        expect(deck.deck.remaining).toBe(1)
         expect(result.exhausted).toBe(false)
     })
 
     it('offers only the matching cards as candidates', () => {
-        // Cards without the colour are turned over on the way and are never choosable.
-        const piles: TechnologyPiles = {
-            deck: bagOf([
-                card('miss1', PlanetColor.Mint),
-                card('hit1', PlanetColor.Violet),
-                card('miss2', PlanetColor.Teal),
-                card('hit2', PlanetColor.Violet, PlanetColor.Mint)
-            ]),
-            discard: []
-        }
+        const hit = card(PlanetColor.Violet)
+        const deck = piles([card(PlanetColor.Mint), hit, card(PlanetColor.Teal), MINT_VIOLET])
 
-        const result = revealForExploration(piles, PlanetColor.Violet, 2, prng())
+        const result = revealForExploration(deck, PlanetColor.Violet, 2, prng())
 
-        expect(result.candidates.map((c) => c.id)).toEqual(['hit1', 'hit2'])
+        expect(result.candidates).toEqual([hit, MINT_VIOLET])
         expect(result.flipped).toHaveLength(4)
     })
 
     it('reshuffles the discard when the deck runs out mid-reveal', () => {
-        const piles: TechnologyPiles = {
-            deck: bagOf([card('a', PlanetColor.Teal)]),
-            discard: [card('b', PlanetColor.Teal), card('c', PlanetColor.Periwinkle)]
-        }
+        const deck = piles(
+            [card(PlanetColor.Teal, 0)],
+            [card(PlanetColor.Teal, 1), card(PlanetColor.Periwinkle)]
+        )
 
-        const result = revealForExploration(piles, PlanetColor.Teal, 2, prng())
+        const result = revealForExploration(deck, PlanetColor.Teal, 2, prng())
 
         expect(result.candidates).toHaveLength(2)
         expect(result.exhausted).toBe(false)
-        expect(piles.discard).toEqual([]) // consumed by the reshuffle
+        expect(deck.discard).toEqual([])
     })
 
     it('explores with fewer candidates when both piles are spent', () => {
-        // A level 3 probe on a colour with only one card left anywhere.
-        const piles: TechnologyPiles = {
-            deck: bagOf([card('only', PlanetColor.Aqua), card('other', PlanetColor.Periwinkle)]),
-            discard: []
-        }
+        const only = card(PlanetColor.Aqua)
+        const deck = piles([only, card(PlanetColor.Periwinkle)])
 
-        const result = revealForExploration(piles, PlanetColor.Aqua, 3, prng())
+        const result = revealForExploration(deck, PlanetColor.Aqua, 3, prng())
 
-        expect(result.candidates.map((c) => c.id)).toEqual(['only'])
+        expect(result.candidates).toEqual([only])
         expect(result.exhausted).toBe(true)
-        expect(piles.deck).toEqual({ items: [], remaining: 0 })
+        expect(deck.deck.items).toEqual([])
+        expect(deck.deck.remaining).toBe(0)
     })
 
     it('explores with no candidates at all rather than hanging', () => {
-        const piles: TechnologyPiles = { deck: bagOf([]), discard: [] }
-
-        const result = revealForExploration(piles, PlanetColor.Periwinkle, 2, prng())
+        const result = revealForExploration(piles([]), PlanetColor.Periwinkle, 2, prng())
 
         expect(result.candidates).toEqual([])
         expect(result.flipped).toEqual([])
@@ -95,58 +97,102 @@ describe('revealForExploration', () => {
     })
 
     it('cannot re-flip a card already turned over in the same reveal', () => {
-        // The flipped cards are on the table, not in the discard, so a reshuffle mid-reveal
-        // can't hand the same card back - which would otherwise let one card satisfy a
-        // level 3 probe by itself.
-        const piles: TechnologyPiles = {
-            deck: bagOf([card('a', PlanetColor.Teal)]),
-            discard: []
-        }
+        // Flipped cards are on the table, not in the discard, so a reshuffle cannot hand one back.
+        const only = card(PlanetColor.Teal)
 
-        const result = revealForExploration(piles, PlanetColor.Teal, 3, prng())
+        const result = revealForExploration(piles([only]), PlanetColor.Teal, 3, prng())
 
-        expect(result.candidates.map((c) => c.id)).toEqual(['a'])
-        expect(result.flipped.map((c) => c.id)).toEqual(['a'])
+        expect(result.candidates).toEqual([only])
+        expect(result.flipped).toEqual([only])
     })
 })
 
-describe('buildTechnologyDeck', () => {
-    it('covers every colour combination of one, two and three colours', () => {
-        const deck = buildTechnologyDeck(prng())
+describe('the full technology deck', () => {
+    it('has one card for every combination of one, two and three colours', () => {
+        const sizes = FULL_TECHNOLOGY_DECK.map((definition) => definition.colors.length)
 
-        const sizes = new Set(deck.map((c) => c.colors.length))
-        expect([...sizes].sort()).toEqual([1, 2, 3])
-        // 5 singles + 10 pairs + 10 triples
-        expect(deck).toHaveLength(25)
-        expect(new Set(deck.map((c) => c.id)).size).toBe(deck.length)
+        expect(sizes.filter((size) => size === 1)).toHaveLength(5)
+        expect(sizes.filter((size) => size === 2)).toHaveLength(10)
+        expect(sizes.filter((size) => size === 3)).toHaveLength(10)
+        const combinations = FULL_TECHNOLOGY_DECK.map((definition) => definition.colors.join('+'))
+        expect(new Set(combinations).size).toBe(25)
+    })
+
+    it('deals the technologies across the cards in the rules order', () => {
+        expect(FULL_TECHNOLOGY_DECK.map((definition) => definition.effect)).toEqual(
+            Array.from({ length: 25 }, (_, index) => DEALING_ORDER[index % DEALING_ORDER.length])
+        )
+        expect(FULL_TECHNOLOGY_DECK.every((d) => d.tier === TechnologyTier.Standard)).toBe(true)
     })
 
     it('gives every colour a fair share of the deck', () => {
-        const deck = buildTechnologyDeck(prng())
-
-        const counts = Object.values(PlanetColor).map(
-            (color) => deck.filter((card) => card.colors.includes(color)).length
+        const counts = PLANET_COLORS.map(
+            (color) => FULL_TECHNOLOGY_DECK.filter((d) => d.colors.includes(color)).length
         )
-        // Even coverage matters: the reveal rule stalls on a colour the deck neglects.
+        // The reveal rule stalls on a colour the deck neglects.
         expect(new Set(counts).size).toBe(1)
     })
 
-    it('is deterministic for a given seed', () => {
-        expect(buildTechnologyDeck(prng())).toEqual(buildTechnologyDeck(prng()))
+    it('is dealt as the 25 card ids, shuffled deterministically by seed', () => {
+        const deck = buildTechnologyDeck(prng())
+
+        expect([...deck].sort()).toEqual(FULL_TECHNOLOGY_DECK.map((d) => d.id).sort())
+        expect(buildTechnologyDeck(prng())).toEqual(deck)
     })
 })
 
-describe('buildFocusedTechnologyDeck', () => {
-    it('fills the deck with one effect in every colour, so it always comes up', () => {
-        const deck = buildFocusedTechnologyDeck(prng(), TechnologyEffectKind.MoveFriendlyPiece)
+describe('the focused technology deck', () => {
+    it('holds twelve single-colour cards of the one effect in every colour', () => {
+        const effect = TechnologyEffectKind.MoveFriendlyPiece
+        const deck = buildFocusedTechnologyDeck(prng(), effect)
 
-        expect(
-            deck.every((card) => card.effect?.kind === TechnologyEffectKind.MoveFriendlyPiece)
-        ).toBe(true)
-        // Every colour is represented, so whatever planet a probe reaches finds a match.
-        for (const color of Object.values(PlanetColor)) {
-            expect(deck.some((card) => card.colors.includes(color))).toBe(true)
+        expect(deck).toHaveLength(60)
+        expect(new Set(deck).size).toBe(60)
+        for (const color of PLANET_COLORS) {
+            const ofColor = focusedTechnologyDeck(effect).filter((d) => d.colors.includes(color))
+            expect(ofColor).toHaveLength(FOCUSED_COPIES_PER_COLOR)
         }
-        expect(new Set(deck.map((card) => card.id)).size).toBe(deck.length)
+        expect(deck.every((id) => technologyCard(id).effect === effect)).toBe(true)
+        expect(deck.every((id) => technologyCard(id).colors.length === 1)).toBe(true)
+    })
+})
+
+describe('technologyCard', () => {
+    it('looks a card up by its id', () => {
+        expect(technologyCard('tech-0')).toEqual({
+            id: 'tech-0',
+            colors: [PlanetColor.Periwinkle],
+            tier: TechnologyTier.Standard,
+            effect: TechnologyEffectKind.MoveFriendlyPiece
+        })
+    })
+
+    it('rejects an unknown id', () => {
+        expect(() => technologyCard('nonsense')).toThrow()
+    })
+})
+
+describe('choosableFrom', () => {
+    // No elevated card is dealt yet, so the rule is checked on definitions made up here.
+    const definition = (id: string, tier: TechnologyTier): TechnologyCard => ({
+        id,
+        colors: [PlanetColor.Periwinkle],
+        tier,
+        effect: TechnologyEffectKind.Railgun
+    })
+    const standard = definition('standard', TechnologyTier.Standard)
+    const elevatedA = definition('elevated-a', TechnologyTier.Elevated)
+    const elevatedB = definition('elevated-b', TechnologyTier.Elevated)
+
+    it('offers every matching card when none is elevated', () => {
+        expect(choosableFrom([standard])).toEqual([standard])
+    })
+
+    it('forces an elevated card, putting the standard matches out of reach', () => {
+        expect(choosableFrom([standard, elevatedA])).toEqual([elevatedA])
+    })
+
+    it('offers the choice between elevated cards when more than one turns up', () => {
+        expect(choosableFrom([elevatedA, standard, elevatedB])).toEqual([elevatedA, elevatedB])
     })
 })

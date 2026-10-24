@@ -19,8 +19,7 @@ export function stationComplex(
     const queue: AxialCoordinates[] = [coords]
     const complex: AxialCoordinates[] = []
 
-    while (queue.length > 0) {
-        const at = queue.shift()!
+    for (let at = queue.shift(); at !== undefined; at = queue.shift()) {
         complex.push(at)
 
         const linked = [...neighborsOf(at).filter(isOwnStation), ...sightLinkedStations(board, at)]

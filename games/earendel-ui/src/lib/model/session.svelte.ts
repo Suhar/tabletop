@@ -1,4 +1,4 @@
-import type { AxialCoordinates } from '@tabletop/common'
+import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
 import {
     GameSession,
     undoableStagedSelection,
@@ -15,6 +15,8 @@ import {
     type EarendelSelectionValues
 } from './stagedSelection.js'
 import { describePiece } from '$lib/utils/describe.js'
+import { highlightedHexesOf } from '$lib/utils/highlights.js'
+import { rankStandings, type FinalStanding } from '$lib/utils/standings.js'
 import {
     linkedStationNeighbors,
     stationTubesOf,
@@ -30,7 +32,7 @@ import {
     feintTargets,
     wakeableFighters,
     AttackOutcome,
-    attackOutcome,
+    attackOutcomeAt,
     canUseCooldownEffect,
     DiscardPiece,
     drawCountForPlayer,
@@ -39,6 +41,7 @@ import {
     turnsUntilReady,
     attackableTargets,
     probeDestinations,
+    technologyCard,
     technologyName,
     UseUpdatedLogistics,
     UseTacticalFeint,
@@ -52,6 +55,7 @@ import {
     controllerOf,
     planetCoordinates,
     planetPairKey,
+    planetPointsByPlayer,
     neighborsOf,
     type EarendelGameState,
     type HydratedEarendelGameState,
@@ -61,7 +65,6 @@ import {
     hexKey,
     HexKind,
     isElevated,
-    isOpenHex,
     legalMovesFor,
     legalPlacementsFor,
     legalTilePlacements,
@@ -74,7 +77,6 @@ import {
     PieceSource,
     PieceType,
     PlacePiece,
-    sameHex,
     type SightLine,
     sightLines,
     type TechnologyCard
@@ -104,7 +106,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     private pinned: AxialCoordinates | undefined = $state(undefined)
     pinnedPlanet: AxialCoordinates | undefined = $derived.by(() => {
         const pinned = this.pinned
-        return pinned && getHex(this.gameState.board, pinned)?.technology ? pinned : undefined
+        return pinned && getHex(this.gameState.board, pinned)?.technologyId ? pinned : undefined
     })
 
     activePower: Power | undefined = $derived.by(() => {
@@ -146,7 +148,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return undefined
         }
         return legalMovesFor(this.gameState.board, playerId).some((move) =>
-            sameHex(move.from, origin)
+            sameCoordinates(move.from, origin)
         )
             ? origin
             : undefined
@@ -163,7 +165,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const held = this.gameState.heldPieces
         if (held.length === 0) return undefined
         if (held.length === 1) return held[0]
-        return held.find((piece) => piece.id === this.chosenHeldId)
+        const heldId = this.pinnedHeldId ?? this.chosenHeldId
+        return held.find((piece) => piece.id === heldId)
     })
 
     isDiscarding: boolean = $derived(
@@ -191,19 +194,17 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     railgunTargets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingAttack
-        if (!pending || this.attackTargets.length === 0) return []
+        if (!pending) return []
 
-        const attacker = getHex(this.gameState.board, pending.fighterCoords)?.piece
-        if (!attacker) return []
-
-        return this.attackTargets.filter((coords) => {
-            const target = getHex(this.gameState.board, coords)?.piece
-            return target !== undefined && attackOutcome(attacker, target) === AttackOutcome.Damaged
-        })
+        return this.attackTargets.filter(
+            (coords) =>
+                attackOutcomeAt(this.gameState.board, pending.fighterCoords, coords) ===
+                AttackOutcome.Damaged
+        )
     })
 
     railgunWouldMatter(coords: AxialCoordinates): boolean {
-        return this.railgunTargets.some((target) => sameHex(target, coords))
+        return this.railgunTargets.some((target) => sameCoordinates(target, coords))
     }
 
     railgunTurnsLeft: number = $derived.by(() => {
@@ -262,13 +263,13 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const pending = this.gameState.pendingExploration
         if (!this.isMyTurn || !pending?.exploringPlanet) return []
         if (pending.playerId !== this.myPlayer?.id) return []
-        return pending.candidates ?? []
+        return (pending.candidates ?? []).map(technologyCard)
     })
 
     discardedTechnologies: { name: string; count: number; colors: string[] }[] = $derived.by(() => {
         const groups = new Map<string, { name: string; count: number; colors: Set<string> }>()
 
-        for (const card of this.gameState.technologyDiscard ?? []) {
+        for (const card of (this.gameState.technologyDiscard ?? []).map(technologyCard)) {
             const name = technologyName(card)
             const group = groups.get(name) ?? { name, count: 0, colors: new Set<string>() }
             group.count += 1
@@ -289,8 +290,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const pending = this.gameState.pendingExploration
         if (!pending?.revealed) return []
 
-        const choosable = new Set((pending.candidates ?? []).map((card) => card.id))
-        return pending.revealed.filter((card) => !choosable.has(card.id))
+        const choosable = new Set(pending.candidates ?? [])
+        return pending.revealed.filter((id) => !choosable.has(id)).map(technologyCard)
     })
 
     explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
@@ -324,7 +325,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         const spent = new Set(this.gameState.scoredPlanetPairs ?? [])
 
         return planetCoordinates(this.gameState.board)
-            .filter((other) => !sameHex(other, coords))
+            .filter((other) => !sameCoordinates(other, coords))
             .filter((other) => getHex(this.gameState.board, other)?.color === hex.color)
             .map((other) => ({ to: other, spent: spent.has(planetPairKey(coords, other)) }))
     }
@@ -385,27 +386,34 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return moves.map((move) => move.from)
     })
 
-    highlightedHexes: AxialCoordinates[] = $derived.by(() => {
-        if (this.choosingFeint) return this.feintHexes
-        if (this.choosingWormhole) return this.wormholeHexes
-        if (this.choosingDownload) return this.downloadHexes
-        if (this.choosingUpdatedLogistics) return this.wakeableFighters
-        if (this.isPlacingTile) return this.tileOrigins
-        if (this.bonusPlacementHexes.length > 0) return this.bonusPlacementHexes
-        if (this.isMovingForTechnology) return this.movableHexes
-        if (this.choosablePlanets.length > 0) return this.choosablePlanets
-        if (this.attackTargets.length > 0) return this.attackTargets
-        if (!this.isPlacing || !this.pieceToPlace) return []
+    highlightedHexes: AxialCoordinates[] = $derived.by(() =>
+        highlightedHexesOf({
+            feint: this.choosingFeint ? this.feintHexes : undefined,
+            wormhole: this.choosingWormhole ? this.wormholeHexes : undefined,
+            download: this.choosingDownload ? this.downloadHexes : undefined,
+            updatedLogistics: this.choosingUpdatedLogistics ? this.wakeableFighters : undefined,
+            tileOrigins: this.isPlacingTile ? this.tileOrigins : undefined,
+            bonusPlacement: this.bonusPlacementHexes.length > 0 ? this.placementHexes : undefined,
+            technologyMove: this.isMovingForTechnology ? this.movableHexes : undefined,
+            survey: this.choosablePlanets.length > 0 ? this.choosablePlanets : undefined,
+            attack: this.attackTargets.length > 0 ? this.attackTargets : undefined,
+            placement: this.placementHexes
+        })
+    )
 
-        const closed = this.hexesClosedToMe
-        return Object.values(this.gameState.board.hexes)
-            .filter((hex) => isOpenHex(this.gameState.board, hex.coords))
-            .filter((hex) => !closed.some((blocked) => sameHex(blocked, hex.coords)))
-            .map((hex) => hex.coords)
+    private placementHexes: AxialCoordinates[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        const piece = this.pieceToPlace
+        if (!this.isPlacing || !piece || !playerId) return []
+
+        const legal = legalPlacementsFor(this.gameState.board, playerId, piece)
+        const bonus = this.bonusPlacementHexes
+        if (bonus.length === 0) return legal
+        return legal.filter((coords) => bonus.some((hex) => sameCoordinates(hex, coords)))
     })
 
     isClosedToMe(coords: AxialCoordinates): boolean {
-        return this.hexesClosedToMe.some((blocked) => sameHex(blocked, coords))
+        return this.hexesClosedToMe.some((blocked) => sameCoordinates(blocked, coords))
     }
 
     previewTargetsFor(coords: AxialCoordinates): AxialCoordinates[] {
@@ -434,13 +442,13 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     spreadTargets: AxialCoordinates[] = $derived(
         this.spreading
             ? (this.selection.targets?.value ?? []).filter((target) =>
-                  this.attackTargets.some((candidate) => sameHex(candidate, target))
+                  this.attackTargets.some((candidate) => sameCoordinates(candidate, target))
               )
             : []
     )
 
     isSpreadTarget(coords: AxialCoordinates): boolean {
-        return this.spreadTargets.some((target) => sameHex(target, coords))
+        return this.spreadTargets.some((target) => sameCoordinates(target, coords))
     }
 
     private toggleSpreadTarget(coords: AxialCoordinates) {
@@ -494,12 +502,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.controlEdges.filter(
             (edge) =>
                 edge.playerId === piece.playerId &&
-                planets.some((planet) => sameHex(planet, edge.planet))
+                planets.some((planet) => sameCoordinates(planet, edge.planet))
         )
     }
 
     claimOn(coords: AxialCoordinates): string | undefined {
-        return this.pendingClaims.find((claim) => sameHex(claim.coords, coords))?.playerId
+        return this.pendingClaims.find((claim) => sameCoordinates(claim.coords, coords))?.playerId
     }
 
     canUseUpdatedLogistics: boolean = $derived(
@@ -549,7 +557,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     private async onFeintClick(coords: AxialCoordinates) {
         const from = this.feintFrom
-        if (from && this.feintTargetsFrom(from).some((target) => sameHex(target, coords))) {
+        if (from && this.feintTargetsFrom(from).some((target) => sameCoordinates(target, coords))) {
             await this.useTacticalFeint(from, coords)
             return
         }
@@ -584,7 +592,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     private async onWormholeClick(coords: AxialCoordinates) {
         const from = this.wormholeFrom
-        if (from && this.wormholeExits(from).some((exit) => sameHex(exit, coords))) {
+        if (from && this.wormholeExits(from).some((exit) => sameCoordinates(exit, coords))) {
             await this.useTradeRouteWormhole(from, coords)
             return
         }
@@ -621,7 +629,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     private async onDownloadClick(coords: AxialCoordinates) {
         const from = this.downloadFrom
-        if (from && this.downloadTargets(from).some((target) => sameHex(target, coords))) {
+        if (from && this.downloadTargets(from).some((target) => sameCoordinates(target, coords))) {
             await this.useImmediateDownload(from, coords)
             return
         }
@@ -652,12 +660,22 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
+    finalStandings: FinalStanding[] = $derived.by(() => {
+        if (!this.gameState.result) return []
+        return rankStandings(
+            this.gameState.players.map((player) => ({
+                playerId: player.playerId,
+                score: player.score
+            })),
+            planetPointsByPlayer(this.gameState.board)
+        )
+    })
+
     isHighlighted(coords: AxialCoordinates): boolean {
-        return this.highlightedHexes.some((candidate) => sameHex(candidate, coords))
+        return this.highlightedHexes.some((candidate) => sameCoordinates(candidate, coords))
     }
 
     prompt: string = $derived.by(() => {
-        if (this.gameState.result) return 'The game is over.'
         if (!this.isMyTurn) return 'Waiting for the other players.'
         if (this.choosablePlanets.length > 0) {
             return this.choosablePlanets.length > 1
@@ -887,7 +905,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     // Touch has no hover, so the first tap previews a placement and a second tap commits.
     async onTileOriginClick(origin: AxialCoordinates, touch = false) {
-        if (this.busy || !this.tileOrigins.some((candidate) => sameHex(candidate, origin))) return
+        if (this.busy || !this.tileOrigins.some((candidate) => sameCoordinates(candidate, origin)))
+            return
         if (touch && !this.isPreviewing(origin)) {
             this.select('preview', origin)
             return
@@ -909,12 +928,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 await this.onDownloadClick(coords)
                 return
             case Power.Logistics:
-                if (this.wakeableFighters.some((fighter) => sameHex(fighter, coords))) {
+                if (this.wakeableFighters.some((fighter) => sameCoordinates(fighter, coords))) {
                     await this.useUpdatedLogistics(coords)
                 }
                 return
             case Power.Spread:
-                if (this.attackTargets.some((target) => sameHex(target, coords))) {
+                if (this.attackTargets.some((target) => sameCoordinates(target, coords))) {
                     this.toggleSpreadTarget(coords)
                 }
                 return
@@ -927,7 +946,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
         if (this.isMovingForTechnology) {
             const from = this.movingFrom
-            if (from && this.movableHexes.some((hex) => sameHex(hex, coords))) {
+            if (from && this.movableHexes.some((hex) => sameCoordinates(hex, coords))) {
                 await this.movePiece(coords)
                 return
             }
@@ -937,24 +956,20 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return
         }
 
-        if (this.choosablePlanets.some((candidate) => sameHex(candidate, coords))) {
+        if (this.choosablePlanets.some((candidate) => sameCoordinates(candidate, coords))) {
             await this.choosePlanet(coords)
             return
         }
-        if (this.attackTargets.some((target) => sameHex(target, coords))) {
+        if (this.attackTargets.some((target) => sameCoordinates(target, coords))) {
             await this.attack(coords)
             return
         }
 
-        if (getHex(this.gameState.board, coords)?.technology) {
+        if (getHex(this.gameState.board, coords)?.technologyId) {
             this.togglePinnedPlanet(coords)
             return
         }
-        if (
-            this.isPlacing &&
-            isOpenHex(this.gameState.board, coords) &&
-            this.isHighlighted(coords)
-        ) {
+        if (this.isPlacing && this.isHighlighted(coords)) {
             if (touch && !this.isPreviewing(coords)) {
                 this.select('preview', coords)
                 return
@@ -964,7 +979,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     togglePinnedPlanet(coords: AxialCoordinates) {
-        this.pinned = this.pinnedPlanet && sameHex(this.pinnedPlanet, coords) ? undefined : coords
+        this.pinned =
+            this.pinnedPlanet && sameCoordinates(this.pinnedPlanet, coords) ? undefined : coords
     }
 
     override beforeNewState(_transition: PresentedTransition) {
@@ -989,20 +1005,20 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     private isPreviewing(coords: AxialCoordinates): boolean {
-        return this.previewHex !== undefined && sameHex(this.previewHex, coords)
+        return this.previewHex !== undefined && sameCoordinates(this.previewHex, coords)
     }
 
     private validOrigin(candidates: AxialCoordinates[]): AxialCoordinates | undefined {
         const origin = this.originChoice
-        return origin && candidates.some((candidate) => sameHex(candidate, origin))
+        return origin && candidates.some((candidate) => sameCoordinates(candidate, origin))
             ? origin
             : undefined
     }
 
     private toggleOrigin(coords: AxialCoordinates, candidates: AxialCoordinates[]) {
-        if (!candidates.some((candidate) => sameHex(candidate, coords))) return
+        if (!candidates.some((candidate) => sameCoordinates(candidate, coords))) return
         const origin = this.originChoice
-        this.select('origin', origin && sameHex(origin, coords) ? undefined : coords)
+        this.select('origin', origin && sameCoordinates(origin, coords) ? undefined : coords)
     }
 
     private originCandidates(power: Power): AxialCoordinates[] {

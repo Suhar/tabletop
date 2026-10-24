@@ -6,15 +6,15 @@ import { TurnStyle } from '../definition/config.js'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { MovePiece } from '../actions/movePiece.js'
-import { TechnologyTier } from '../model/technology.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { focusedCardId } from '../model/technologyCards.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
+const SHIFT = focusedCardId(TechnologyEffectKind.MoveFriendlyPiece, PlanetColor.Periwinkle, 0)
 
 let ids = 0
 const station = (playerId: string): Piece => ({
@@ -36,8 +36,8 @@ function emptyBoard(hexes = 30): EarendelBoard {
 function draftGame(bagSize = 9) {
     const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
     game.state.board = emptyBoard()
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     game.stackBags((playerId) => Array.from({ length: bagSize }, () => station(playerId)))
     return game
 }
@@ -255,8 +255,7 @@ describe('a drafted turn', () => {
         // Order matters here twice over. A technology claimed at the top of the turn acts first,
         // because it can hand over a tile, a hub or a move - any of which changes what the hand
         // is worth, and being made to throw a ship away before seeing that is choosing blind.
-        // And both kept ships must survive the effect: the reported bug this still guards is a
-        // technology interrupting a drafted turn and the held ships going missing.
+        // And the held ships must survive a technology interrupting the drafted turn.
         const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
         const mover = game.activePlayerId
 
@@ -267,12 +266,7 @@ describe('a drafted turn', () => {
             kind: HexKind.Planet,
             color: PlanetColor.Periwinkle,
             explored: true,
-            technology: {
-                id: 'shift',
-                colors: [PlanetColor.Periwinkle],
-                tier: TechnologyTier.Standard,
-                effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
-            }
+            technologyId: SHIFT
         }
         // Surveyed by the mover's probe last turn, and it still leads, so the claim is due on the
         // draw.
@@ -288,9 +282,9 @@ describe('a drafted turn', () => {
             }
         }
         game.state.board = board
-        game.state.probeClaims = [{ playerId: mover, coords: at(0, 3), technologyId: 'shift' }]
-        game.state.tileSupply = bagOf([])
-        game.state.technologyDeck = bagOf([])
+        game.state.probeClaims = [{ playerId: mover, coords: at(0, 3), technologyId: SHIFT }]
+        game.state.tileSupply = stackedBag([])
+        game.state.technologyDeck = stackedBag([])
         game.state.technologyDiscard = []
         game.stackBags((playerId) => [
             { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level: PieceLevel.Two },
@@ -303,9 +297,7 @@ describe('a drafted turn', () => {
         //
         // The technology is claimed and owed straight away, with all three ships still in hand
         // and the discard still to come.
-        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
-            'shift'
-        ])
+        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([SHIFT])
         expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
         expect(game.state.heldPieces).toHaveLength(3)
         expect(game.state.draftPending).toBe(true)
@@ -357,15 +349,15 @@ describe('a drafted turn', () => {
     it('burns the bag half again as fast as the simple turn', () => {
         const draft = draftGame(9)
         const mover = draft.activePlayerId
-        const bagOf = (game: TestGame, playerId: string) =>
+        const bagRemaining = (game: TestGame, playerId: string) =>
             game.state.players.find((p) => p.playerId === playerId)!.bag.remaining
 
         // Three gone from the bag for two placements.
-        expect(bagOf(draft, mover)).toBe(6)
+        expect(bagRemaining(draft, mover)).toBe(6)
 
         const simple = new TestGame(2, 1, { turnStyle: TurnStyle.SinglePiece })
         simple.state.board = emptyBoard()
         simple.stackBags((playerId) => Array.from({ length: 9 }, () => station(playerId)))
-        expect(bagOf(simple, simple.activePlayerId)).toBe(8)
+        expect(bagRemaining(simple, simple.activePlayerId)).toBe(8)
     })
 })

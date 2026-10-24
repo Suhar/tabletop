@@ -13,8 +13,7 @@ export function connectedGroup(
     const queue: AxialCoordinates[] = [start]
     const group: AxialCoordinates[] = []
 
-    while (queue.length > 0) {
-        const coords = queue.shift()!
+    for (let coords = queue.shift(); coords !== undefined; coords = queue.shift()) {
         group.push(coords)
 
         for (const neighbor of neighborsOf(coords)) {

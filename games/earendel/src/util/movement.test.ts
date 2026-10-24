@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId } from '../model/technologyCards.js'
 import { destinationsFrom, legalMovesFor } from './movement.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
@@ -10,10 +11,10 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { MovePiece } from '../actions/movePiece.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
+const SHIFT = focusedCardId(TechnologyEffectKind.MoveFriendlyPiece, PlanetColor.Periwinkle, 0)
 
 let ids = 0
 const ship = (playerId: string, type: PieceType, level?: PieceLevel): Piece => ({
@@ -99,10 +100,9 @@ describe('destinationsFrom', () => {
 })
 
 describe('an immediate technology', () => {
-    // The effect no longer fires when the card is chosen - it fires when the technology is
-    // actually GAINED, at the top of the surveying player's next turn, their probe having kept
-    // the lead on the planet since. So every test here surveys, hands the turn round, and comes
-    // back.
+    // The effect fires when the technology is GAINED, at the top of the surveying player's next
+    // turn if their probe kept the lead, not when the card is chosen. So every test here
+    // surveys, hands the turn round, and comes back.
     function scenario() {
         const game = new TestGame()
         const mover = game.activePlayerId
@@ -116,16 +116,9 @@ describe('an immediate technology', () => {
             [at(7, 7), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([
-            {
-                id: 'mover-tech',
-                colors: [PlanetColor.Periwinkle],
-                tier: TechnologyTier.Standard,
-                effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
-            }
-        ])
+        game.state.technologyDeck = stackedBag([SHIFT])
         game.state.technologyDiscard = []
-        game.state.tileSupply = bagOf([])
+        game.state.tileSupply = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
             ship(playerId, PieceType.Station),
@@ -165,7 +158,7 @@ describe('an immediate technology', () => {
         explore(game, mover)
 
         // Chosen and housed, but nothing is owed: the probe lead has to last a round first.
-        expect(game.state.board.hexes[hexKey(at(0, 0))].technology?.id).toBe('mover-tech')
+        expect(game.state.board.hexes[hexKey(at(0, 0))].technologyId).toBe(SHIFT)
         expect(game.state.pendingTechnology).toBeUndefined()
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
@@ -181,7 +174,7 @@ describe('an immediate technology', () => {
         expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
         expect(game.activePlayerId).toBe(mover)
         expect(game.validActionsFor(mover)).toEqual([ActionType.MovePiece])
-        expect(game.state.pendingTechnology?.technologyId).toBe('mover-tech')
+        expect(game.state.pendingTechnology?.technologyId).toBe(SHIFT)
 
         game.run(MovePiece, {
             type: ActionType.MovePiece,
@@ -268,16 +261,9 @@ describe('an immediate technology', () => {
             [at(7, 7), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([
-            {
-                id: 'mover-tech',
-                colors: [PlanetColor.Periwinkle],
-                tier: TechnologyTier.Standard,
-                effect: { kind: TechnologyEffectKind.MoveFriendlyPiece }
-            }
-        ])
+        game.state.technologyDeck = stackedBag([SHIFT])
         game.state.technologyDiscard = []
-        game.state.tileSupply = bagOf([])
+        game.state.tileSupply = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Probe, PieceLevel.Two),
             ship(playerId, PieceType.Station),

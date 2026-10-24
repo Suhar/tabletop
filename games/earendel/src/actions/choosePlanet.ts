@@ -1,17 +1,25 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, sameHex } from '../model/board.js'
-import { choosableFrom, TechnologyCard } from '../model/technology.js'
+import { getHex } from '../model/board.js'
+import { choosableFrom } from '../model/technology.js'
+import { technologyCard } from '../model/technologyCards.js'
 import { markExplored } from '../util/exploration.js'
 import { revealForExploration } from '../util/technologyDeck.js'
 
 export type ChoosePlanetMetadata = Type.Static<typeof ChoosePlanetMetadata>
 export const ChoosePlanetMetadata = Type.Object({
-    flipped: Type.Optional(Type.Array(TechnologyCard)),
-    candidates: Type.Optional(Type.Array(TechnologyCard)),
+    flipped: Type.Optional(Type.Array(Type.String())),
+    candidates: Type.Optional(Type.Array(Type.String())),
     alreadyExplored: Type.Optional(Type.Boolean()),
     declined: Type.Optional(Type.Boolean())
 })
@@ -57,7 +65,8 @@ export class HydratedChoosePlanet
             throw Error(`Invalid ChoosePlanet action: ${invalidReason}`)
         }
 
-        const pending = state.pendingExploration!
+        const pending = state.pendingExploration
+        assertExists(pending, 'Validated: a probe is waiting to explore')
         this.revealsInfo = false
 
         if (!this.coords) {
@@ -68,9 +77,10 @@ export class HydratedChoosePlanet
 
         pending.exploringPlanet = this.coords
 
-        const planet = getHex(state.board, this.coords)!
+        const planet = getHex(state.board, this.coords)
+        assertExists(planet, 'Validated: candidate planets are on the board')
         if (planet.explored) {
-            const held = planet.technology ? [planet.technology] : []
+            const held = planet.technologyId ? [planet.technologyId] : []
             pending.revealed = held
             pending.candidates = held
             this.metadata = { candidates: held, alreadyExplored: true }
@@ -79,17 +89,20 @@ export class HydratedChoosePlanet
 
         markExplored(state.board, this.coords)
 
+        assertExists(planet.color, 'Planets have a colour')
         const piles = { deck: state.technologyDeck, discard: state.technologyDiscard }
         const result = revealForExploration(
             piles,
-            planet.color!,
+            planet.color,
             pending.probeLevel,
             state.getProtectedPrng()
         )
         state.technologyDeck = piles.deck
         state.technologyDiscard = piles.discard
 
-        const choosable = choosableFrom(result.candidates)
+        const choosable = choosableFrom(result.candidates.map(technologyCard)).map(
+            (card) => card.id
+        )
 
         pending.revealed = result.flipped
         pending.candidates = choosable
@@ -109,7 +122,7 @@ export class HydratedChoosePlanet
         if (pending.exploringPlanet) return 'That probe has already chosen its planet.'
         const coords = this.coords
         if (!coords) return undefined
-        if (!pending.candidatePlanets.some((candidate) => sameHex(candidate, coords))) {
+        if (!pending.candidatePlanets.some((candidate) => sameCoordinates(candidate, coords))) {
             return "Your probes don't lead on that planet, so this probe can't survey it."
         }
         return undefined

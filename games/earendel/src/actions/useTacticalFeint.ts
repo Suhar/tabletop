@@ -1,9 +1,16 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, hexKey, sameHex } from '../model/board.js'
+import { getHex, hexKey } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveArrival } from '../util/arrival.js'
@@ -62,8 +69,10 @@ export class HydratedUseTacticalFeint
 
         const fromHex = state.board.hexes[hexKey(this.from)]
         const toHex = state.board.hexes[hexKey(this.to)]
-        const mine = fromHex.piece!
-        const theirs = toHex.piece!
+        const mine = fromHex.piece
+        const theirs = toHex.piece
+        assertExists(mine, 'Tactical Feint moves a piece of yours')
+        assertExists(theirs, 'Tactical Feint swaps with an enemy piece')
 
         toHex.piece = mine
         fromHex.piece = theirs
@@ -111,7 +120,7 @@ export class HydratedUseTacticalFeint
 
         if (
             !feintTargets(state.board, this.from, this.playerId).some((target) =>
-                sameHex(target, this.to)
+                sameCoordinates(target, this.to)
             )
         ) {
             return 'A feint only reaches a ship right beside your own.'

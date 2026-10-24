@@ -9,7 +9,8 @@ import {
     PlanetColor
 } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId } from '../model/technologyCards.js'
 import {
     canPlaceTileAt,
     legalTilePlacements,
@@ -25,10 +26,10 @@ import { PlaceTile } from '../actions/placeTile.js'
 import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { TurnStyle } from '../definition/config.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
+const FRONTIER = focusedCardId(TechnologyEffectKind.GrowBoard, PlanetColor.Periwinkle, 0)
 
 let ids = 0
 const ship = (playerId: string, type: PieceType, level?: PieceLevel): Piece => ({
@@ -194,16 +195,9 @@ describe('growing the board in play', () => {
         }
         game.state.board = board
 
-        game.state.technologyDeck = bagOf([
-            {
-                id: 'grow-tech',
-                colors: [PlanetColor.Periwinkle],
-                tier: TechnologyTier.Standard,
-                effect: { kind: TechnologyEffectKind.GrowBoard }
-            }
-        ])
+        game.state.technologyDeck = stackedBag([FRONTIER])
         game.state.technologyDiscard = []
-        game.state.tileSupply = bagOf(
+        game.state.tileSupply = stackedBag(
             Array.from({ length: supplyCount }, (_unused, index) => ({
                 id: `spare-${index}`,
                 planetOffset: 0,
@@ -371,12 +365,7 @@ describe('growing the board in play', () => {
             kind: HexKind.Planet,
             color: PlanetColor.Periwinkle,
             explored: true,
-            technology: {
-                id: 'grow-tech',
-                colors: [PlanetColor.Periwinkle],
-                tier: TechnologyTier.Standard,
-                effect: { kind: TechnologyEffectKind.GrowBoard }
-            }
+            technologyId: FRONTIER
         }
         // Surveyed by the mover's probe last turn, which still leads, so the claim falls due as
         // the turn opens.
@@ -387,10 +376,12 @@ describe('growing the board in play', () => {
             piece: ship(mover, PieceType.Probe, PieceLevel.Two)
         }
         game.state.board = board
-        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: 'grow-tech' }]
-        game.state.technologyDeck = bagOf([])
+        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: FRONTIER }]
+        game.state.technologyDeck = stackedBag([])
         game.state.technologyDiscard = []
-        game.state.tileSupply = bagOf([{ id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }])
+        game.state.tileSupply = stackedBag([
+            { id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }
+        ])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station),
@@ -438,7 +429,7 @@ describe('growing the board in play', () => {
         // with no tile to draw it hands over nothing, and the turn carries on to its placement
         // rather than stalling on an effect that cannot happen.
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
-            'grow-tech'
+            FRONTIER
         ])
         expect(processed.map((action) => action.type)).toEqual([ActionType.DrawPieces])
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)

@@ -5,8 +5,7 @@ import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { hexesClosedToProbesOf, probeBlockedBy, sightLines } from './lineOfSight.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece, HydratedPlacePiece } from '../actions/placePiece.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -179,7 +178,7 @@ describe('the blockade in play', () => {
         ])
         board.hexes[hexKey(at(0, 4))] = { coords: at(0, 4), tileId: 't1', kind: HexKind.Open }
         game.state.board = board
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [ship(playerId, PieceType.Probe, PieceLevel.Two)])
 
         const probeAttempt = new HydratedPlacePiece({

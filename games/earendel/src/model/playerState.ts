@@ -1,9 +1,9 @@
-import { DrawBag, Hydratable, PlayerState } from '@tabletop/common'
+import { Hydratable, PlayerState } from '@tabletop/common'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { Color } from '@tabletop/common'
 import { Piece } from './pieces.js'
-import { type Bag, drawFrom } from '../util/drawBags.js'
+import { drawIfAny, HydratedPieceBag, PieceBag } from './bags.js'
 import { TechnologyEffectKind } from './technology.js'
 
 export type EarendelPlayerState = Type.Static<typeof EarendelPlayerState>
@@ -11,7 +11,7 @@ export const EarendelPlayerState = Type.Evaluate(
     Type.Intersect([
         PlayerState,
         Type.Object({
-            bag: DrawBag(Piece),
+            bag: PieceBag,
             specialPieces: Type.Array(Piece),
             technologies: Type.Array(Type.String()),
             storedEffects: Type.Array(Type.Enum(TechnologyEffectKind)),
@@ -30,7 +30,7 @@ export class HydratedEarendelPlayerState
 {
     declare playerId: string
     declare color: Color
-    declare bag: Bag<Piece>
+    declare bag: HydratedPieceBag
     declare specialPieces: Piece[]
     declare technologies: string[]
     declare storedEffects: TechnologyEffectKind[]
@@ -39,7 +39,7 @@ export class HydratedEarendelPlayerState
     declare score: number
 
     get bagIsEmpty(): boolean {
-        return this.bag.remaining === 0
+        return this.bag.isEmpty()
     }
 
     hasCooldownEffect(kind: TechnologyEffectKind): boolean {
@@ -56,10 +56,11 @@ export class HydratedEarendelPlayerState
     }
 
     drawFromBag(): Piece | undefined {
-        return drawFrom(this.bag)
+        return drawIfAny(this.bag)
     }
 
     constructor(data: EarendelPlayerState) {
         super(data, EarendelPlayerStateValidator)
+        this.bag = new HydratedPieceBag(data.bag)
     }
 }

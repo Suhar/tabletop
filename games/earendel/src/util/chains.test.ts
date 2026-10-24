@@ -5,8 +5,7 @@ import { PieceType } from '../model/pieces.js'
 import { chainsCompletedBy, planetPairKey, triangular } from './chains.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 // Hexes are axial with neighbours at (±1,0), (0,±1), (1,-1), (-1,1), so stepping q by one
 // walks a straight line - which is all these layouts need.
@@ -179,7 +178,7 @@ describe('scoring a chain in play', () => {
             [at(8, 8), {}],
             [at(7, 7), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         // A spare piece each, so no bag runs out and ends the game - planets pay out at the
         // end, and this test is about what the chain paid.
         game.stackBags((playerId) =>

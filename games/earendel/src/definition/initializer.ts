@@ -6,7 +6,6 @@ import {
     type UninitializedGameState
 } from '@tabletop/common'
 import { assertExists, Game, Player, HydratedTurnManager, shuffle } from '@tabletop/common'
-import { bagOf } from '../util/drawBags.js'
 import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState.js'
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
@@ -54,9 +53,9 @@ export class EarendelGameInitializer
             heldPieces: [],
             turnManager: turnManager,
             board: buildStartingBoard(game.players.length, prng),
-            technologyDeck: bagOf(buildDeckFor(config, secret)),
+            technologyDeck: fullBag(buildDeckFor(config, secret)),
             technologyDiscard: [],
-            tileSupply: bagOf(buildTileSupply(game.players.length, secret)),
+            tileSupply: fullBag(buildTileSupply(game.players.length, secret)),
             queuedTechnologyEffects: [],
             planetControllers: {},
             scoredPlanetPairs: [],
@@ -74,7 +73,7 @@ export class EarendelGameInitializer
             return new HydratedEarendelPlayerState({
                 playerId: player.id,
                 color: colors[index],
-                bag: bagOf(buildBag(player.id, secret)),
+                bag: fullBag(buildBag(player.id, secret)),
                 specialPieces: [],
                 technologies: [],
                 storedEffects: [],
@@ -94,4 +93,8 @@ function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
     return choice === FULL_DECK
         ? buildTechnologyDeck(prng)
         : buildFocusedTechnologyDeck(prng, choice)
+}
+
+function fullBag<T>(items: T[]) {
+    return { items, remaining: items.length }
 }

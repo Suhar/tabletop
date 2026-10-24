@@ -8,8 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { canUseCooldownEffect, turnsUntilReady } from './cooldowns.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -45,8 +44,8 @@ function scenario() {
         piece: ship(other, PieceType.Fighter, PieceLevel.Two)
     }
     game.state.board = board
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.Railgun
     ]
@@ -138,10 +137,8 @@ describe('Railgun', () => {
     })
 
     it('counts down 3, 2, 1 on the owner’s own turns', () => {
-        // What the player panel puts on screen beside the power's name, asked at the moments the
-        // panel is actually looked at. The engine's readiness is covered above; this pins the
-        // NUMBER, because a countdown that never leaves 0 is indistinguishable from one that is
-        // simply never used.
+        // The countdown the player panel shows beside the power's name; readiness is covered
+        // above.
         const { game, mover } = scenario()
         const left = () => turnsUntilReady(game.hydrated, mover, TechnologyEffectKind.Railgun)
 
@@ -220,7 +217,7 @@ describe('Railgun', () => {
             piece: ship(other, PieceType.Probe, PieceLevel.Two)
         }
         game.state.board = board
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
             TechnologyEffectKind.Railgun
         ]
@@ -255,9 +252,8 @@ describe('Railgun', () => {
     })
 
     it('does not extend a fighter’s reach', () => {
-        // A Railgun changes what a hit does, not what can be hit. An EQUAL fighter is reachable
-        // now, so the demonstration has to be a fighter above the attacker: a level 2 firing at
-        // a level 3, which no Railgun makes possible.
+        // A Railgun changes what a hit does, not what can be hit. An equal fighter is reachable
+        // anyway, so the demonstration is a level 2 firing at a level 3.
         const game = new TestGame()
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
@@ -270,7 +266,7 @@ describe('Railgun', () => {
             piece: ship(other, PieceType.Fighter, PieceLevel.Three)
         }
         game.state.board = board
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
             TechnologyEffectKind.Railgun
         ]

@@ -1,5 +1,4 @@
 import {
-    DrawBag,
     GameResult,
     GameState,
     HydratableGameState,
@@ -13,10 +12,9 @@ import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { Piece } from './pieces.js'
-import { TechnologyCard } from './technology.js'
 import { PendingExploration, PendingTechnology, ProbeClaim } from './exploration.js'
 import { Tile } from './tile.js'
-import type { Bag } from '../util/drawBags.js'
+import { HydratedTechnologyDeck, HydratedTileSupply, TechnologyDeck, TileSupply } from './bags.js'
 import { PendingAttack } from './attack.js'
 
 export type EarendelGameState = Type.Static<typeof EarendelGameState>
@@ -27,11 +25,11 @@ export const EarendelGameState = Type.Evaluate(
             players: Type.Array(EarendelPlayerState),
             machineState: Type.Enum(MachineState),
             board: EarendelBoard,
-            technologyDeck: DrawBag(TechnologyCard),
-            technologyDiscard: Type.Array(TechnologyCard),
+            technologyDeck: TechnologyDeck,
+            technologyDiscard: Type.Array(Type.String()),
             pendingExploration: Type.Optional(PendingExploration),
             heldPieces: Type.Array(Piece),
-            tileSupply: DrawBag(Tile),
+            tileSupply: TileSupply,
             pendingTile: Type.Optional(Type.Object({ playerId: Type.String(), tile: Tile })),
             bonusPlacementTileId: Type.Optional(Type.String()),
             bonusPlacementPieceId: Type.Optional(Type.String()),
@@ -70,8 +68,8 @@ export class HydratedEarendelGameState
     declare turnManager: HydratedTurnManager
     declare machineState: MachineState
     declare board: EarendelBoard
-    declare technologyDeck: Bag<TechnologyCard>
-    declare technologyDiscard: TechnologyCard[]
+    declare technologyDeck: HydratedTechnologyDeck
+    declare technologyDiscard: string[]
     declare pendingExploration?: PendingExploration
     declare heldPieces: Piece[]
     declare pendingAttack?: PendingAttack
@@ -79,7 +77,7 @@ export class HydratedEarendelGameState
     declare queuedTechnologyEffects: PendingTechnology[]
     declare draftPending?: boolean
     declare planetControllers: Record<string, string>
-    declare tileSupply: Bag<Tile>
+    declare tileSupply: HydratedTileSupply
     declare pendingTile?: { playerId: string; tile: Tile }
     declare bonusPlacementTileId?: string
     declare bonusPlacementPieceId?: string
@@ -92,5 +90,7 @@ export class HydratedEarendelGameState
         super(data, EarendelProjectedStateValidator)
 
         this.players = data.players.map((player) => new HydratedEarendelPlayerState(player))
+        this.technologyDeck = new HydratedTechnologyDeck(data.technologyDeck)
+        this.tileSupply = new HydratedTileSupply(data.tileSupply)
     }
 }

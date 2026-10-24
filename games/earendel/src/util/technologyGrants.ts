@@ -5,32 +5,32 @@ import {
     grantedPieceOf,
     hasImmediateEffect,
     storedEffectOf,
-    type TechnologyCard,
     TechnologyEffectKind
 } from '../model/technology.js'
+import { technologyCard } from '../model/technologyCards.js'
 import type { PendingTechnology } from '../model/exploration.js'
 import { probeLeaderOf } from './probes.js'
-import { drawFrom } from './drawBags.js'
+import { drawIfAny } from '../model/bags.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
 export function probeTechnologiesFor(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: TechnologyCard[]; lapsed: TechnologyCard[] } {
+): { gained: string[]; lapsed: string[] } {
     const held = state.getPlayerState(playerId).technologies
-    const gained: TechnologyCard[] = []
-    const lapsed: TechnologyCard[] = []
+    const gained: string[] = []
+    const lapsed: string[] = []
 
     for (const claim of state.probeClaims) {
         if (claim.playerId !== playerId) continue
-        const card = getHex(state.board, claim.coords)?.technology
-        if (!card || card.id !== claim.technologyId) continue
-        if (held.includes(card.id) || gained.some((other) => other.id === card.id)) continue
+        const technologyId = getHex(state.board, claim.coords)?.technologyId
+        if (technologyId !== claim.technologyId) continue
+        if (held.includes(technologyId) || gained.includes(technologyId)) continue
 
         if (probeLeaderOf(state.board, claim.coords) === playerId) {
-            gained.push(card)
+            gained.push(technologyId)
         } else {
-            lapsed.push(card)
+            lapsed.push(technologyId)
         }
     }
 
@@ -40,8 +40,9 @@ export function probeTechnologiesFor(
 export function grantTechnology(
     state: HydratedEarendelGameState,
     playerId: string,
-    card: TechnologyCard
+    technologyId: string
 ) {
+    const card = technologyCard(technologyId)
     const playerState = state.getPlayerState(playerId)
     playerState.technologies.push(card.id)
 
@@ -79,17 +80,17 @@ function grantedPiece(
 export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: TechnologyCard[]; lapsed: TechnologyCard[] } {
+): { gained: string[]; lapsed: string[] } {
     const { gained, lapsed } = probeTechnologiesFor(state, playerId)
     state.probeClaims = state.probeClaims.filter((claim) => claim.playerId !== playerId)
 
     const effects: PendingTechnology[] = []
 
-    for (const card of gained) {
-        grantTechnology(state, playerId, card)
+    for (const technologyId of gained) {
+        grantTechnology(state, playerId, technologyId)
 
-        if (hasImmediateEffect(card)) {
-            effects.push({ playerId, technologyId: card.id, kind: card.effect!.kind })
+        if (hasImmediateEffect(technologyCard(technologyId))) {
+            effects.push({ playerId, technologyId })
         }
     }
 
@@ -104,8 +105,8 @@ export function activateTechnologyEffect(
     state: HydratedEarendelGameState,
     effect: PendingTechnology
 ) {
-    if (effect.kind === TechnologyEffectKind.GrowBoard) {
-        const tile = drawFrom(state.tileSupply)
+    if (technologyCard(effect.technologyId).effect === TechnologyEffectKind.GrowBoard) {
+        const tile = drawIfAny(state.tileSupply)
         if (tile) state.pendingTile = { playerId: effect.playerId, tile }
         return
     }

@@ -1,15 +1,15 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import { assertExists, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
-import { isElevated, matchesColor, TechnologyCard } from '../model/technology.js'
+import { isElevated, matchesColor } from '../model/technology.js'
+import { technologyCard } from '../model/technologyCards.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
     technologyId: Type.Optional(Type.String()),
-    technology: Type.Optional(TechnologyCard),
     noTechnologyAvailable: Type.Optional(Type.Boolean())
 })
 
@@ -51,27 +51,28 @@ export class HydratedChooseTechnology
             throw Error(`Invalid ChooseTechnology action: ${invalidReason}`)
         }
 
-        const pending = state.pendingExploration!
+        const pending = state.pendingExploration
+        assertExists(pending, 'ChooseTechnology requires a pending exploration')
+        const planet = pending.exploringPlanet
+        assertExists(planet, 'ChooseTechnology requires a chosen planet')
         const revealed = pending.revealed ?? []
-        const chosen = revealed.find((card) => card.id === this.technologyId)
+        const chosen = revealed.find((id) => id === this.technologyId)
 
         if (chosen) {
-            state.board.hexes[hexKey(pending.exploringPlanet!)].technology = chosen
+            state.board.hexes[hexKey(planet)].technologyId = chosen
 
             state.probeClaims.push({
                 playerId: this.playerId,
-                coords: pending.exploringPlanet!,
-                technologyId: chosen.id
+                coords: planet,
+                technologyId: chosen
             })
         }
 
-        state.technologyDiscard.push(...revealed.filter((card) => card.id !== chosen?.id))
+        state.technologyDiscard.push(...revealed.filter((id) => id !== chosen))
 
         state.pendingExploration = undefined
 
-        this.metadata = chosen
-            ? { technologyId: chosen.id, technology: chosen }
-            : { noTechnologyAvailable: true }
+        this.metadata = chosen ? { technologyId: chosen } : { noTechnologyAvailable: true }
     }
 
     isValidChooseTechnology(state: HydratedEarendelGameState): boolean {
@@ -91,11 +92,18 @@ export class HydratedChooseTechnology
 
         if (!this.technologyId) return 'No technology was chosen.'
 
-        if (!candidates.some((card) => card.id === this.technologyId)) {
+        if (!candidates.includes(this.technologyId)) {
             const color = getHex(state.board, pending.exploringPlanet)?.color
-            const wanted = (pending.revealed ?? []).find((card) => card.id === this.technologyId)
+            const wanted = (pending.revealed ?? []).includes(this.technologyId)
+                ? technologyCard(this.technologyId)
+                : undefined
 
-            if (wanted && color && matchesColor(wanted, color) && candidates.some(isElevated)) {
+            if (
+                wanted &&
+                color &&
+                matchesColor(wanted, color) &&
+                candidates.map(technologyCard).some(isElevated)
+            ) {
                 return 'An elevated technology was revealed, so a standard one cannot be taken.'
             }
             return "That technology isn't one of the cards revealed for this planet."

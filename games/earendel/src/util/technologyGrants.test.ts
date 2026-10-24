@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { TechnologyTier } from '../model/technology.js'
 import type { ProbeClaim } from '../model/exploration.js'
 import { probeTechnologiesFor } from './technologyGrants.js'
 import { ActionType } from '../definition/actions.js'
@@ -10,8 +9,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { DrawPieces, isDrawPieces } from '../actions/drawPieces.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -31,16 +29,7 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
                 ? {
                       kind: HexKind.Planet,
                       color: planet,
-                      ...(technologyId
-                          ? {
-                                technology: {
-                                    id: technologyId,
-                                    colors: [planet],
-                                    tier: TechnologyTier.Standard
-                                },
-                                explored: true
-                            }
-                          : {})
+                      ...(technologyId ? { technologyId, explored: true } : {})
                   }
                 : {
                       kind: HexKind.Open,
@@ -85,112 +74,112 @@ describe('probeTechnologiesFor', () => {
         game.state.players.find((p) => p.playerId === playerId)!.technologies = held
         const { gained, lapsed } = probeTechnologiesFor(game.hydrated, playerId)
         return {
-            gained: gained.map((card) => card.id).sort(),
-            lapsed: lapsed.map((card) => card.id).sort()
+            gained: [...gained].sort(),
+            lapsed: [...lapsed].sort()
         }
     }
 
     it('gives a claim to a player whose probes still lead', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe] }]
         ])
 
-        expect(settle(board, [claim('p1', at(0, 0), 'tech-a')])).toEqual({
-            gained: ['tech-a'],
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
+            gained: ['tech-3'],
             lapsed: []
         })
     })
 
     it('lets a claim lapse once a rival has drawn level', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe, PieceLevel.Two] }],
             [at(0, 1), { ship: ['p2', PieceType.Probe, PieceLevel.Two] }]
         ])
 
         // A tie stakes out nothing - matching a rival's probes is how a claim is blocked.
-        expect(settle(board, [claim('p1', at(0, 0), 'tech-a')])).toEqual({
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
             gained: [],
-            lapsed: ['tech-a']
+            lapsed: ['tech-3']
         })
     })
 
     it('weighs probes by level, so one level 3 outweighs a level 2', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe, PieceLevel.Two] }],
             [at(0, 1), { ship: ['p2', PieceType.Probe, PieceLevel.Three] }]
         ])
 
-        expect(settle(board, [claim('p1', at(0, 0), 'tech-a')])).toEqual({
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
             gained: [],
-            lapsed: ['tech-a']
+            lapsed: ['tech-3']
         })
     })
 
     it('adds probe levels up, so two level 2s beat a level 3', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe, PieceLevel.Two] }],
             [at(-1, 0), { ship: ['p1', PieceType.Probe, PieceLevel.Two] }],
             [at(0, 1), { ship: ['p2', PieceType.Probe, PieceLevel.Three] }]
         ])
 
-        expect(settle(board, [claim('p1', at(0, 0), 'tech-a')])).toEqual({
-            gained: ['tech-a'],
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
+            gained: ['tech-3'],
             lapsed: []
         })
     })
 
     it('counts only probes, however strongly a rival holds the planet', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe, PieceLevel.Two] }],
             [at(0, 1), { ship: ['p2', PieceType.Fighter, PieceLevel.Three] }],
             [at(-1, 0), { ship: ['p2', PieceType.Station] }]
         ])
 
         // p2 controls the planet for scoring, but that has no bearing on its technology.
-        expect(settle(board, [claim('p1', at(0, 0), 'tech-a')])).toEqual({
-            gained: ['tech-a'],
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
+            gained: ['tech-3'],
             lapsed: []
         })
     })
 
     it('settles every claim the player has at once, wherever they are', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe] }],
-            [at(8, 8), { planet: PlanetColor.Teal, technologyId: 'tech-b' }],
+            [at(8, 8), { planet: PlanetColor.Teal, technologyId: 'tech-13' }],
             [at(9, 8), { ship: ['p1', PieceType.Probe] }],
-            [at(4, 4), { planet: PlanetColor.Teal, technologyId: 'tech-c' }],
+            [at(4, 4), { planet: PlanetColor.Teal, technologyId: 'tech-23' }],
             [at(5, 4), { ship: ['p2', PieceType.Probe] }]
         ])
 
         expect(
             settle(board, [
-                claim('p1', at(0, 0), 'tech-a'),
-                claim('p1', at(8, 8), 'tech-b'),
-                claim('p1', at(4, 4), 'tech-c')
+                claim('p1', at(0, 0), 'tech-3'),
+                claim('p1', at(8, 8), 'tech-13'),
+                claim('p1', at(4, 4), 'tech-23')
             ])
-        ).toEqual({ gained: ['tech-a', 'tech-b'], lapsed: ['tech-c'] })
+        ).toEqual({ gained: ['tech-13', 'tech-3'], lapsed: ['tech-23'] })
     })
 
     it('ignores other players’ claims and technologies already held', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             [at(1, 0), { ship: ['p1', PieceType.Probe] }],
-            [at(8, 8), { planet: PlanetColor.Teal, technologyId: 'tech-b' }],
+            [at(8, 8), { planet: PlanetColor.Teal, technologyId: 'tech-13' }],
             [at(9, 8), { ship: ['p1', PieceType.Probe] }]
         ])
 
         expect(
             settle(
                 board,
-                [claim('p1', at(0, 0), 'tech-a'), claim('p2', at(8, 8), 'tech-b')],
+                [claim('p1', at(0, 0), 'tech-3'), claim('p2', at(8, 8), 'tech-13')],
                 'p1',
-                ['tech-a']
+                ['tech-3']
             )
         ).toEqual({ gained: [], lapsed: [] })
     })
@@ -225,7 +214,7 @@ describe('claiming a technology by surveying with probes', () => {
             [
                 at(0, 0),
                 explored
-                    ? { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }
+                    ? { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }
                     : { planet: PlanetColor.Periwinkle }
             ],
             [at(1, 0), {}],
@@ -235,11 +224,9 @@ describe('claiming a technology by surveying with probes', () => {
             [at(8, 9), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([
-            { id: 'tech-a', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard }
-        ])
+        game.state.technologyDeck = stackedBag(['tech-3'])
         game.state.technologyDiscard = []
-        game.state.tileSupply = bagOf([])
+        game.state.tileSupply = stackedBag([])
 
         const mover = game.activePlayerId
         const other = game.state.players.find((p) => p.playerId !== mover)!.playerId
@@ -288,10 +275,10 @@ describe('claiming a technology by surveying with probes', () => {
         survey(mover, at(0, 0))
 
         expect(game.state.board.hexes[hexKey(at(0, 0))].explored).toBe(true)
-        expect(game.state.board.hexes[hexKey(at(0, 0))].technology?.id).toBe('tech-a')
+        expect(game.state.board.hexes[hexKey(at(0, 0))].technologyId).toBe('tech-3')
         expect(game.state.board.hexes[hexKey(at(1, 0))].piece?.id).toBe(`${mover}-probe-0`)
         expect(game.state.probeClaims).toEqual([
-            { playerId: mover, coords: at(0, 0), technologyId: 'tech-a' }
+            { playerId: mover, coords: at(0, 0), technologyId: 'tech-3' }
         ])
         // It has to survive a round of other turns first.
         expect(held(mover)).toEqual([])
@@ -313,8 +300,8 @@ describe('claiming a technology by surveying with probes', () => {
 
         // The mover's turn comes round and the claim falls due as they draw.
         const opening = draw(mover)
-        expect(held(mover)).toEqual(['tech-a'])
-        expect(opening?.metadata?.technologiesClaimed?.map((card) => card.id)).toEqual(['tech-a'])
+        expect(held(mover)).toEqual(['tech-3'])
+        expect(opening?.metadata?.technologiesClaimed).toEqual(['tech-3'])
         expect(opening?.metadata?.technologiesLapsed).toBeUndefined()
         expect(game.state.probeClaims).toEqual([])
     })
@@ -336,10 +323,10 @@ describe('claiming a technology by surveying with probes', () => {
         const opening = draw(mover)
         expect(held(mover)).toEqual([])
         expect(opening?.metadata?.technologiesClaimed).toBeUndefined()
-        expect(opening?.metadata?.technologiesLapsed?.map((card) => card.id)).toEqual(['tech-a'])
+        expect(opening?.metadata?.technologiesLapsed).toEqual(['tech-3'])
         expect(game.state.probeClaims).toEqual([])
         // The planet keeps its technology for whoever wins it next.
-        expect(game.state.board.hexes[hexKey(at(0, 0))].technology?.id).toBe('tech-a')
+        expect(game.state.board.hexes[hexKey(at(0, 0))].technologyId).toBe('tech-3')
     })
 
     it('passes the claim to a rival who outweighs the probes and surveys it themselves', () => {
@@ -360,14 +347,14 @@ describe('claiming a technology by surveying with probes', () => {
 
         // The mover's claim lapses; the other player's waits on their own turn.
         const opening = draw(mover)
-        expect(opening?.metadata?.technologiesLapsed?.map((card) => card.id)).toEqual(['tech-a'])
+        expect(opening?.metadata?.technologiesLapsed).toEqual(['tech-3'])
         expect(game.state.probeClaims).toEqual([
-            { playerId: other, coords: at(0, 0), technologyId: 'tech-a' }
+            { playerId: other, coords: at(0, 0), technologyId: 'tech-3' }
         ])
         place(mover, at(8, 8))
 
         draw(other)
-        expect(held(other)).toEqual(['tech-a'])
+        expect(held(other)).toEqual(['tech-3'])
         expect(held(mover)).toEqual([])
     })
 

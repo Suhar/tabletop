@@ -1,10 +1,17 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
-import { hexKey, sameHex } from '../model/board.js'
+import { hexKey } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
 import { destinationsFrom, legalMovesFor } from '../util/movement.js'
 
@@ -60,7 +67,8 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         }
 
         const origin = state.board.hexes[hexKey(this.from)]
-        const piece = origin.piece!
+        const piece = origin.piece
+        assertExists(piece, 'MovePiece moves a piece')
         origin.piece = undefined
         state.board.hexes[hexKey(this.to)].piece = piece
 
@@ -87,7 +95,11 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         if (!piece) return 'There is no piece there to move.'
         if (piece.playerId !== this.playerId) return "That piece isn't yours."
 
-        if (!destinationsFrom(state.board, this.from).some((option) => sameHex(option, this.to!))) {
+        if (
+            !destinationsFrom(state.board, this.from).some((option) =>
+                sameCoordinates(option, this.to)
+            )
+        ) {
             return 'That piece cannot step there: it must be adjacent, empty open space.'
         }
 

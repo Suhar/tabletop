@@ -1,3 +1,4 @@
+import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
 import {
     type EarendelBoard,
@@ -5,8 +6,7 @@ import {
     HexKind,
     hexKey,
     neighborsOf,
-    type PlanetColor,
-    sameHex
+    type PlanetColor
 } from '../model/board.js'
 import type { ScoredChain } from '../model/chains.js'
 import { connectedGroup } from './groups.js'
@@ -57,28 +57,27 @@ function chainLength(
 ): number | undefined {
     const inComponent = new Set(component.map(hexKey))
     const touches = (coords: AxialCoordinates, planet: AxialCoordinates) =>
-        neighborsOf(coords).some((neighbor) => sameHex(neighbor, planet))
+        neighborsOf(coords).some((neighbor) => sameCoordinates(neighbor, planet))
 
-    const distances = new Map<number, number>()
-    const queue: AxialCoordinates[] = []
+    const reached = new Set<number>()
+    const queue: { coords: AxialCoordinates; distance: number }[] = []
 
     for (const coords of component) {
         if (touches(coords, from)) {
-            distances.set(hexKey(coords), 1)
-            queue.push(coords)
+            reached.add(hexKey(coords))
+            queue.push({ coords, distance: 1 })
         }
     }
 
-    while (queue.length > 0) {
-        const coords = queue.shift()!
-        const distance = distances.get(hexKey(coords))!
+    for (let step = queue.shift(); step !== undefined; step = queue.shift()) {
+        const { coords, distance } = step
         if (touches(coords, to)) return distance
 
         for (const neighbor of neighborsOf(coords)) {
             const key = hexKey(neighbor)
-            if (!inComponent.has(key) || distances.has(key)) continue
-            distances.set(key, distance + 1)
-            queue.push(neighbor)
+            if (!inComponent.has(key) || reached.has(key)) continue
+            reached.add(key)
+            queue.push({ coords: neighbor, distance: distance + 1 })
         }
     }
 

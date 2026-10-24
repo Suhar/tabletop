@@ -1,10 +1,17 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
-import { sameHex } from '../model/board.js'
+
 import { Piece } from '../model/pieces.js'
 import { AttackOutcome, attackOutcomeAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
@@ -59,7 +66,8 @@ export class HydratedAttackPiece
             throw Error(`Invalid AttackPiece action: ${invalidReason}`)
         }
 
-        const pending = state.pendingAttack!
+        const pending = state.pendingAttack
+        assertExists(pending, 'AttackPiece requires a pending attack')
 
         if (!this.coords) {
             state.pendingAttack = undefined
@@ -72,7 +80,8 @@ export class HydratedAttackPiece
             startCooldown(state, this.playerId, TechnologyEffectKind.Railgun)
         }
 
-        const result = resolveShot(state.board, pending.fighterCoords, this.coords, railgun)!
+        const result = resolveShot(state.board, pending.fighterCoords, this.coords, railgun)
+        assertExists(result, 'Validated targets hold a piece')
 
         refreshPlanetControl(state)
 
@@ -95,7 +104,7 @@ export class HydratedAttackPiece
 
         if (!this.coords) return undefined
 
-        if (!pending.targets.some((target) => sameHex(target, this.coords!))) {
+        if (!pending.targets.some((target) => sameCoordinates(target, this.coords))) {
             return 'That piece is out of reach, or too strong for this fighter to touch.'
         }
 

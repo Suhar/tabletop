@@ -7,8 +7,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { AttackPiece } from './attackPiece.js'
 import { UseUpdatedLogistics } from './useUpdatedLogistics.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -40,8 +39,8 @@ function scenario() {
     board.hexes[hexKey(at(0, 0))].piece = ship(mover, PieceType.Fighter, PieceLevel.Three)
     board.hexes[hexKey(at(1, 0))].piece = ship(other, PieceType.Probe)
     game.state.board = board
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.UpdatedLogistics
     ]

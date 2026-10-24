@@ -8,7 +8,6 @@ import {
 } from '@tabletop/common'
 import { Piece, powerOf } from './pieces.js'
 import { PlanetColor } from './planetColor.js'
-import { TechnologyCard } from './technology.js'
 
 // Re-exported for existing importers; defined in planetColor.ts to keep board and technology
 // acyclic.
@@ -28,7 +27,7 @@ export const Hex = Type.Object({
     tileId: Type.String(),
     kind: Type.Enum(HexKind),
     color: Type.Optional(Type.Enum(PlanetColor)),
-    technology: Type.Optional(TechnologyCard),
+    technologyId: Type.Optional(Type.String()),
     piece: Type.Optional(Piece),
     explored: Type.Optional(Type.Boolean())
 })
@@ -40,10 +39,6 @@ export const EarendelBoard = Type.Object({
 
 export function hexKey(coords: AxialCoordinates): number {
     return coordinatesToNumber(coords)
-}
-
-export function sameHex(a: AxialCoordinates, b: AxialCoordinates): boolean {
-    return a.q === b.q && a.r === b.r
 }
 
 export function getHex(board: EarendelBoard, coords: AxialCoordinates): Hex | undefined {

@@ -2,6 +2,7 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { getHex, HexKind, planetCoordinates } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { TechnologyEffectKind } from '../model/technology.js'
+import { technologyCard } from '../model/technologyCards.js'
 import { planetsInSightOf } from './lineOfSight.js'
 
 export function downloadAnchorsFor(
@@ -11,11 +12,11 @@ export function downloadAnchorsFor(
     const held = new Set(state.getPlayerState(playerId).technologies)
 
     return planetCoordinates(state.board).filter((coords) => {
-        const hex = getHex(state.board, coords)
+        const technologyId = getHex(state.board, coords)?.technologyId
         return (
-            hex?.technology !== undefined &&
-            held.has(hex.technology.id) &&
-            hex.technology.effect?.kind === TechnologyEffectKind.ImmediateDownload
+            technologyId !== undefined &&
+            held.has(technologyId) &&
+            isImmediateDownload(technologyId)
         )
     })
 }
@@ -30,8 +31,12 @@ export function downloadTargetsFrom(
     return planetsInSightOf(state.board, anchor).filter((coords) => {
         const hex = getHex(state.board, coords)
         if (hex?.kind !== HexKind.Planet) return false
-        if (!hex.explored || !hex.technology) return false
-        if (hex.technology.effect?.kind === TechnologyEffectKind.ImmediateDownload) return false
-        return !held.has(hex.technology.id)
+        if (!hex.explored || !hex.technologyId) return false
+        if (isImmediateDownload(hex.technologyId)) return false
+        return !held.has(hex.technologyId)
     })
+}
+
+function isImmediateDownload(technologyId: string): boolean {
+    return technologyCard(technologyId).effect === TechnologyEffectKind.ImmediateDownload
 }

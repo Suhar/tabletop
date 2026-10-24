@@ -4,6 +4,7 @@
         EarendelPlayerState,
         planetPointsByPlayer,
         TECHNOLOGY_EFFECT_INFO,
+        technologyCard,
         technologyName,
         turnsUntilReady
     } from '@tabletop/earendel'
@@ -20,13 +21,11 @@
     )
 
     let heldTechnologyNames = $derived.by(() => {
-        const held = new Set(playerState.technologies)
         const repeatable = new Set(
             playerState.cooldownEffects.map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
         )
-        const names = Object.values(gameSession.gameState.board.hexes)
-            .filter((hex) => hex.technology && held.has(hex.technology.id))
-            .map((hex) => technologyName(hex.technology!))
+        const names = playerState.technologies
+            .map((technologyId) => technologyName(technologyCard(technologyId)))
             .filter((name) => !repeatable.has(name))
 
         const counts = new Map<string, number>()

@@ -4,7 +4,6 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
-import { TechnologyCard } from '../model/technology.js'
 import { drawCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
@@ -13,8 +12,8 @@ import { earendelConfig } from '../definition/config.js'
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
     drawn: Type.Optional(Type.Array(Piece)),
-    technologiesClaimed: Type.Optional(Type.Array(TechnologyCard)),
-    technologiesLapsed: Type.Optional(Type.Array(TechnologyCard))
+    technologiesClaimed: Type.Optional(Type.Array(Type.String())),
+    technologiesLapsed: Type.Optional(Type.Array(Type.String()))
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>

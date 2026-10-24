@@ -1,12 +1,6 @@
+import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
-import {
-    type EarendelBoard,
-    getHex,
-    HexKind,
-    hexKey,
-    neighborsOf,
-    sameHex
-} from '../model/board.js'
+import { type EarendelBoard, getHex, HexKind, hexKey, neighborsOf } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 import { probeLeaderOf } from './probes.js'
@@ -29,13 +23,14 @@ export function probeDestinations(
         if (probeLeaderOf(state.board, neighbor, arriving) !== piece.playerId) return false
         if (
             state.probeClaims.some(
-                (claim) => claim.playerId === piece.playerId && sameHex(claim.coords, neighbor)
+                (claim) =>
+                    claim.playerId === piece.playerId && sameCoordinates(claim.coords, neighbor)
             )
         ) {
             return false
         }
         if (!hex.explored) return true
-        return hex.technology !== undefined && !held.includes(hex.technology.id)
+        return hex.technologyId !== undefined && !held.includes(hex.technologyId)
     })
 }
 

@@ -1,3 +1,4 @@
+import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
 import {
     type EarendelBoard,
@@ -5,8 +6,7 @@ import {
     getHex,
     HexKind,
     isOpenHex,
-    neighborsOf,
-    sameHex
+    neighborsOf
 } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { probeBlockedBy } from './lineOfSight.js'
@@ -34,7 +34,7 @@ export function wormholeDestinations(
             planetsBeside(board, hex.coords).some((destination) =>
                 sources.some(
                     (source) =>
-                        !sameHex(source.coords, destination.coords) &&
+                        !sameCoordinates(source.coords, destination.coords) &&
                         source.color === destination.color
                 )
             )

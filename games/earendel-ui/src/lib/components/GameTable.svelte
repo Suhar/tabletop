@@ -15,6 +15,7 @@
 
     import Header from '$lib/components/Header.svelte'
     import HistoryDescription from '$lib/components/HistoryDescription.svelte'
+    import GameEndSummary from '$lib/components/GameEndSummary.svelte'
     import { assert } from '@tabletop/common'
     import { EarendelGameSession } from '$lib/model/session.svelte'
     import type { HydratedEarendelGameState, EarendelGameState } from '@tabletop/earendel'
@@ -56,6 +57,8 @@
                 <Header />
                 {#if gameSession.isViewingHistory}
                     <HistoryDescription />
+                {:else if gameSession.gameState.result}
+                    <GameEndSummary />
                 {:else}
                     <InformationPanel />
                 {/if}

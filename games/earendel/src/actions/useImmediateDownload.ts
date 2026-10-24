@@ -1,17 +1,24 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, sameHex } from '../model/board.js'
-import { hasImmediateEffect, TechnologyCard, TechnologyEffectKind } from '../model/technology.js'
+import { getHex } from '../model/board.js'
+import { hasImmediateEffect, TechnologyEffectKind } from '../model/technology.js'
+import { technologyCard } from '../model/technologyCards.js'
 import { downloadAnchorsFor, downloadTargetsFrom } from '../util/download.js'
 import { activateTechnologyEffect, grantTechnology } from '../util/technologyGrants.js'
 
 export type UseImmediateDownloadMetadata = Type.Static<typeof UseImmediateDownloadMetadata>
 export const UseImmediateDownloadMetadata = Type.Object({
     technologyId: Type.Optional(Type.String()),
-    technology: Type.Optional(TechnologyCard),
     resolvedAtOnce: Type.Optional(Type.Boolean())
 })
 
@@ -56,27 +63,23 @@ export class HydratedUseImmediateDownload
         }
 
         const playerState = state.getPlayerState(this.playerId)
-        const card = getHex(state.board, this.to)!.technology!
+        const technologyId = getHex(state.board, this.to)?.technologyId
+        assertExists(technologyId, 'Download targets hold a technology')
 
         // Spent before the grant: the downloaded card could itself be a stored Download.
         playerState.spendStoredEffect(TechnologyEffectKind.ImmediateDownload)
 
-        grantTechnology(state, this.playerId, card)
+        grantTechnology(state, this.playerId, technologyId)
 
-        const resolvedAtOnce = hasImmediateEffect(card)
+        const resolvedAtOnce = hasImmediateEffect(technologyCard(technologyId))
         if (resolvedAtOnce) {
-            activateTechnologyEffect(state, {
-                playerId: this.playerId,
-                technologyId: card.id,
-                kind: card.effect!.kind
-            })
+            activateTechnologyEffect(state, { playerId: this.playerId, technologyId })
         }
 
         if (state.pendingTile) this.revealsInfo = true
 
         this.metadata = {
-            technologyId: card.id,
-            technology: card,
+            technologyId,
             ...(resolvedAtOnce ? { resolvedAtOnce } : {})
         }
     }
@@ -100,7 +103,9 @@ export class HydratedUseImmediateDownload
         }
 
         if (
-            !downloadAnchorsFor(state, this.playerId).some((anchor) => sameHex(anchor, this.from))
+            !downloadAnchorsFor(state, this.playerId).some((anchor) =>
+                sameCoordinates(anchor, this.from)
+            )
         ) {
             return "That isn't a planet holding an Immediate Download of yours."
         }
@@ -109,7 +114,7 @@ export class HydratedUseImmediateDownload
         if (targets.length === 0) {
             return 'Nothing that planet can see holds a technology you could take.'
         }
-        if (!targets.some((target) => sameHex(target, this.to))) {
+        if (!targets.some((target) => sameCoordinates(target, this.to))) {
             return 'That planet is not an explored planet in clear line of sight with a technology new to you.'
         }
 

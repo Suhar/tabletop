@@ -1,9 +1,16 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { AxialCoordinates, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import {
+    assertExists,
+    AxialCoordinates,
+    GameAction,
+    HydratableAction,
+    MachineContext,
+    sameCoordinates
+} from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, hexKey, sameHex } from '../model/board.js'
+import { getHex, hexKey } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveArrival } from '../util/arrival.js'
@@ -60,7 +67,8 @@ export class HydratedUseTradeRouteWormhole
         }
 
         const fromHex = state.board.hexes[hexKey(this.from)]
-        const piece = fromHex.piece!
+        const piece = fromHex.piece
+        assertExists(piece, 'Trade Route Wormhole moves a piece of yours')
 
         delete fromHex.piece
         state.board.hexes[hexKey(this.to)].piece = piece
@@ -109,7 +117,7 @@ export class HydratedUseTradeRouteWormhole
         if (destinations.length === 0) {
             return 'That ship has nowhere to travel to.'
         }
-        if (!destinations.some((destination) => sameHex(destination, this.to))) {
+        if (!destinations.some((destination) => sameCoordinates(destination, this.to))) {
             return 'A wormhole only reaches an empty hex beside a different planet of the same colour.'
         }
 

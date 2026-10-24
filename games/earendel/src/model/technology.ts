@@ -1,4 +1,3 @@
-import * as Type from 'typebox'
 import { PlanetColor } from './planetColor.js'
 
 export enum TechnologyTier {
@@ -28,18 +27,12 @@ export enum TechnologyTiming {
 
 export const COOLDOWN_TURNS = 3
 
-export type TechnologyEffect = Type.Static<typeof TechnologyEffect>
-export const TechnologyEffect = Type.Object({
-    kind: Type.Enum(TechnologyEffectKind)
-})
-
-export type TechnologyCard = Type.Static<typeof TechnologyCard>
-export const TechnologyCard = Type.Object({
-    id: Type.String(),
-    colors: Type.Array(Type.Enum(PlanetColor)),
-    tier: Type.Enum(TechnologyTier),
-    effect: Type.Optional(TechnologyEffect)
-})
+export type TechnologyCard = {
+    readonly id: string
+    readonly colors: readonly PlanetColor[]
+    readonly tier: TechnologyTier
+    readonly effect: TechnologyEffectKind
+}
 
 export function hasImmediateEffect(card: TechnologyCard): boolean {
     return timingOf(card) === TechnologyTiming.Immediate
@@ -105,30 +98,35 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     }
 }
 
-export function timingOf(card: TechnologyCard): TechnologyTiming | undefined {
-    return card.effect ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].timing : undefined
+export function timingOf(card: TechnologyCard): TechnologyTiming {
+    return TECHNOLOGY_EFFECT_INFO[card.effect].timing
+}
+
+function effectWithTiming(
+    card: TechnologyCard,
+    timing: TechnologyTiming
+): TechnologyEffectKind | undefined {
+    return timingOf(card) === timing ? card.effect : undefined
 }
 
 export function storedEffectOf(card: TechnologyCard): TechnologyEffectKind | undefined {
-    return timingOf(card) === TechnologyTiming.Stored ? card.effect!.kind : undefined
+    return effectWithTiming(card, TechnologyTiming.Stored)
 }
 
 export function grantedPieceOf(card: TechnologyCard): TechnologyEffectKind | undefined {
-    return timingOf(card) === TechnologyTiming.Grant ? card.effect!.kind : undefined
+    return effectWithTiming(card, TechnologyTiming.Grant)
 }
 
 export function cooldownEffectOf(card: TechnologyCard): TechnologyEffectKind | undefined {
-    return timingOf(card) === TechnologyTiming.Cooldown ? card.effect!.kind : undefined
+    return effectWithTiming(card, TechnologyTiming.Cooldown)
 }
 
 export function technologyName(card: TechnologyCard): string {
-    return card.effect ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].name : 'Uncharted'
+    return TECHNOLOGY_EFFECT_INFO[card.effect].name
 }
 
 export function technologyAbility(card: TechnologyCard): string {
-    return card.effect
-        ? TECHNOLOGY_EFFECT_INFO[card.effect.kind].ability
-        : 'Nothing yet - this technology has no effect.'
+    return TECHNOLOGY_EFFECT_INFO[card.effect].ability
 }
 
 export function matchesColor(card: TechnologyCard, color: PlanetColor): boolean {

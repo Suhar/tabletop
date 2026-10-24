@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates, GameAction } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { type TechnologyCard, TechnologyEffectKind, TechnologyTier } from '../model/technology.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId } from '../model/technologyCards.js'
 import type { Tile } from '../model/tile.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
@@ -12,8 +13,7 @@ import { UseImmediateDownload } from '../actions/useImmediateDownload.js'
 import { legalTilePlacements, openHexesOfTile } from './tilePlacement.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { legalMovesFor } from './movement.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 // A tile drawn from the hidden supply is information nobody had before. Whatever action led to
 // the draw must be an Undo barrier (revealsInfo), or a player could undo, peek again, and redo.
@@ -28,12 +28,10 @@ const ship = (playerId: string, type: PieceType, level?: PieceLevel): Piece => (
     ...(level ? { level } : {})
 })
 
-const card = (id: string, kind?: TechnologyEffectKind): TechnologyCard => ({
-    id,
-    colors: [PlanetColor.Periwinkle],
-    tier: TechnologyTier.Standard,
-    ...(kind ? { effect: { kind } } : {})
-})
+const card = (effect: TechnologyEffectKind, copy = 0) =>
+    focusedCardId(effect, PlanetColor.Periwinkle, copy)
+
+const DOWNLOAD = card(TechnologyEffectKind.ImmediateDownload)
 
 const spareTiles = (count: number): Tile[] =>
     Array.from({ length: count }, (_unused, index) => ({
@@ -53,25 +51,20 @@ function openRows(): EarendelBoard {
     return board
 }
 
-function planet(board: EarendelBoard, coords: AxialCoordinates, technology: TechnologyCard) {
+function planet(board: EarendelBoard, coords: AxialCoordinates, technologyId: string) {
     board.hexes[hexKey(coords)] = {
         coords,
         tileId: 't1',
         kind: HexKind.Planet,
         color: PlanetColor.Periwinkle,
         explored: true,
-        technology
+        technologyId
     }
 }
 
 // The mover surveyed two planets last turn and their probes still lead on both, so opening the
 // turn claims both technologies at once: the first acts, the second waits in the queue.
-function twoClaims(
-    first: TechnologyCard,
-    second: TechnologyCard,
-    supply: number,
-    moverBag: number
-) {
+function twoClaims(first: string, second: string, supply: number, moverBag: number) {
     const game = new TestGame()
     const mover = game.activePlayerId
 
@@ -82,12 +75,12 @@ function twoClaims(
     board.hexes[hexKey(at(7, 0))].piece = ship(mover, PieceType.Probe, PieceLevel.Two)
     game.state.board = board
     game.state.probeClaims = [
-        { playerId: mover, coords: at(2, 0), technologyId: first.id },
-        { playerId: mover, coords: at(8, 0), technologyId: second.id }
+        { playerId: mover, coords: at(2, 0), technologyId: first },
+        { playerId: mover, coords: at(8, 0), technologyId: second }
     ]
-    game.state.technologyDeck = bagOf([])
+    game.state.technologyDeck = stackedBag([])
     game.state.technologyDiscard = []
-    game.state.tileSupply = bagOf(spareTiles(supply))
+    game.state.tileSupply = stackedBag(spareTiles(supply))
 
     // stackBags opens the turn through the engine, which is when the claims settle.
     game.stackBags((playerId) =>
@@ -108,10 +101,14 @@ describe('Undo barriers on hidden tile draws', () => {
     describe('a PlaceTile that hands on to a queued Beyond the Frontier', () => {
         // The mover's bag holds one ship, which the turn's draw takes - so laying the first tile
         // draws no bonus ship, and PlaceTile reveals nothing of its own.
-        const grow = (id: string) => card(id, TechnologyEffectKind.GrowBoard)
 
         it('is a barrier when the second tile is drawn', () => {
-            const { game, mover } = twoClaims(grow('grow-a'), grow('grow-b'), 2, 1)
+            const { game, mover } = twoClaims(
+                card(TechnologyEffectKind.GrowBoard, 0),
+                card(TechnologyEffectKind.GrowBoard, 1),
+                2,
+                1
+            )
             expect(game.state.machineState).toBe(MachineState.PlacingTile)
             expect(game.state.pendingTile?.tile.id).toBe('spare-0')
             expect(game.state.queuedTechnologyEffects).toHaveLength(1)
@@ -132,11 +129,15 @@ describe('Undo barriers on hidden tile draws', () => {
             expect(placeTile.revealsInfo).toBe(true)
         })
 
-        // The first tile draws a bonus ship. The queued second Beyond the Frontier used to be
-        // dropped once that ship was placed; it must still be carried out, and the placement
-        // that draws its tile is the barrier.
+        // The first tile draws a bonus ship. The queued second Beyond the Frontier is carried out
+        // once that ship is placed, and the placement that draws its tile is the barrier.
         it('carries out the queued effect after the bonus ship, as a barrier', () => {
-            const { game, mover } = twoClaims(grow('grow-a'), grow('grow-b'), 2, 4)
+            const { game, mover } = twoClaims(
+                card(TechnologyEffectKind.GrowBoard, 0),
+                card(TechnologyEffectKind.GrowBoard, 1),
+                2,
+                4
+            )
             const { origin, rotation } = legalTilePlacements(game.state.board)[0]
             game.run(PlaceTile, {
                 type: ActionType.PlaceTile,
@@ -162,7 +163,12 @@ describe('Undo barriers on hidden tile draws', () => {
         })
 
         it('is not a barrier when the supply has run dry and nothing is drawn', () => {
-            const { game, mover } = twoClaims(grow('grow-a'), grow('grow-b'), 1, 1)
+            const { game, mover } = twoClaims(
+                card(TechnologyEffectKind.GrowBoard, 0),
+                card(TechnologyEffectKind.GrowBoard, 1),
+                1,
+                1
+            )
             expect(game.state.pendingTile?.tile.id).toBe('spare-0')
 
             const { origin, rotation } = legalTilePlacements(game.state.board)[0]
@@ -182,8 +188,8 @@ describe('Undo barriers on hidden tile draws', () => {
     describe('a MovePiece that hands on to a queued Beyond the Frontier', () => {
         const scenario = (supply: number) =>
             twoClaims(
-                card('move-a', TechnologyEffectKind.MoveFriendlyPiece),
-                card('grow-b', TechnologyEffectKind.GrowBoard),
+                card(TechnologyEffectKind.MoveFriendlyPiece),
+                card(TechnologyEffectKind.GrowBoard),
                 supply,
                 3
             )
@@ -228,14 +234,14 @@ describe('Undo barriers on hidden tile draws', () => {
             const game = new TestGame()
             const mover = game.activePlayerId
             const board = openRows()
-            planet(board, at(2, 0), card('tech-download', TechnologyEffectKind.ImmediateDownload))
-            planet(board, at(8, 0), card('tech-far', farEffect))
+            planet(board, at(2, 0), DOWNLOAD)
+            planet(board, at(8, 0), card(farEffect, 1))
             game.state.board = board
-            game.state.technologyDeck = bagOf([])
+            game.state.technologyDeck = stackedBag([])
             game.state.technologyDiscard = []
-            game.state.tileSupply = bagOf(spareTiles(supply))
+            game.state.tileSupply = stackedBag(spareTiles(supply))
             const playerState = game.state.players.find((p) => p.playerId === mover)!
-            playerState.technologies = ['tech-download']
+            playerState.technologies = [DOWNLOAD]
             playerState.storedEffects = [TechnologyEffectKind.ImmediateDownload]
             game.stackBags((playerId) => [
                 ship(playerId, PieceType.Station),

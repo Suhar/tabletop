@@ -1,5 +1,6 @@
 import {
     assert,
+    assertExists,
     type Game,
     GameAction,
     GameEngine,
@@ -18,7 +19,12 @@ import type { Piece } from '../model/pieces.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { DrawPieces } from '../actions/drawPieces.js'
-import { bagOf, drawFrom } from './drawBags.js'
+import { drawIfAny, HydratedPieceBag } from '../model/bags.js'
+
+// The shared DrawBag draws from the end of its items, so this lists them first-drawn first.
+export function stackedBag<T>(drawOrder: T[]): { items: T[]; remaining: number } {
+    return { items: [...drawOrder].reverse(), remaining: drawOrder.length }
+}
 
 export class TestGame {
     readonly engine = new GameEngine<EarendelGameState, HydratedEarendelGameState>(EarendelRuntime)
@@ -62,7 +68,7 @@ export class TestGame {
 
     stackBags(bag: (playerId: string) => Piece[]) {
         for (const player of this.state.players) {
-            player.bag = bagOf(bag(player.playerId))
+            player.bag = stackedBag(bag(player.playerId))
         }
 
         const playerId = this.activePlayerId
@@ -71,14 +77,17 @@ export class TestGame {
             return
         }
 
-        const active = this.state.players.find((player) => player.playerId === playerId)!
+        const active = this.state.players.find((player) => player.playerId === playerId)
+        assertExists(active, `No player ${playerId}`)
+        const activeBag = new HydratedPieceBag(active.bag)
         const wanted = Math.max(1, this.state.heldPieces.length)
         this.state.heldPieces = []
         for (let drawn = 0; drawn < wanted; drawn++) {
-            const piece = drawFrom(active.bag)
+            const piece = drawIfAny(activeBag)
             if (!piece) break
             this.state.heldPieces.push(piece)
         }
+        active.bag = activeBag.dehydrate()
     }
 
     get hydrated(): HydratedEarendelGameState {

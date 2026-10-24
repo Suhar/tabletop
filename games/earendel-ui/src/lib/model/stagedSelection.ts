@@ -1,5 +1,4 @@
-import type { AxialCoordinates } from '@tabletop/common'
-import { sameHex } from '@tabletop/earendel'
+import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
 import {
     clearStagedSelectionAtOrAfter,
     hasManualStagedSelection,
@@ -69,8 +68,8 @@ export function toggleEarendelTarget(
     coords: AxialCoordinates
 ): EarendelSelection {
     const targets = selection.targets?.value ?? []
-    const next = targets.some((target) => sameHex(target, coords))
-        ? targets.filter((target) => !sameHex(target, coords))
+    const next = targets.some((target) => sameCoordinates(target, coords))
+        ? targets.filter((target) => !sameCoordinates(target, coords))
         : [...targets, coords]
     return setEarendelSelection(selection, 'targets', next.length > 0 ? next : undefined)
 }

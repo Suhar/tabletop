@@ -8,7 +8,7 @@ import { Piece, PieceType } from '../model/pieces.js'
 import { resolveArrival } from '../util/arrival.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
-import { returnTo } from '../util/drawBags.js'
+import { returnToBag } from '../model/bags.js'
 
 // Not `source`: GameAction already has a `source` (User vs System).
 export enum PieceSource {
@@ -80,7 +80,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
             returnedToBag = state.heldPieces[0]
             if (state.heldPieces.length > 0) {
-                returnTo(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
+                returnToBag(playerState.bag, state.heldPieces, state.getProtectedPrng().random)
                 state.heldPieces = []
             }
         }

@@ -4,13 +4,11 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
-import { TechnologyTier } from '../model/technology.js'
 import { attackableTargets } from '../util/attack.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { AttackPiece } from '../actions/attackPiece.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -33,16 +31,7 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
                 ? {
                       kind: HexKind.Planet,
                       color: planet,
-                      ...(technologyId
-                          ? {
-                                technology: {
-                                    id: technologyId,
-                                    colors: [planet],
-                                    tier: TechnologyTier.Standard
-                                },
-                                explored: true
-                            }
-                          : {})
+                      ...(technologyId ? { technologyId, explored: true } : {})
                   }
                 : { kind: HexKind.Open, ...(piece ? { piece } : {}) })
         }
@@ -121,7 +110,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -165,7 +154,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
             ship(playerId, PieceType.Station)
@@ -203,7 +192,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.One) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -227,9 +216,8 @@ describe('a fighter arriving', () => {
     })
 
     it('reaches an equal fighter, but never one above it', () => {
-        // A fighter now reaches its own level or below. Equal fighters used to be permanently
-        // safe from each other, which left two level 2s staring at each other forever and made a
-        // level 3 the only piece worth having.
+        // A fighter reaches its own level or below, so equal fighters are never safe from each
+        // other.
         const board = boardOf([
             [at(0, 0), { ship: ship('p1', PieceType.Fighter, PieceLevel.Two) }],
             [at(1, 0), { ship: ship('p2', PieceType.Fighter, PieceLevel.Two) }]
@@ -293,7 +281,7 @@ describe('a fighter arriving', () => {
             [at(1, 0), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -329,7 +317,7 @@ describe('a fighter arriving', () => {
             [at(2, 0), { ship: ship(other, PieceType.Fighter, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)
@@ -351,7 +339,7 @@ describe('a fighter arriving', () => {
         const [mover, blocker, bystander] = game.state.turnManager.turnOrder
 
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-a' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
             // The bystander surveyed the planet, but the blocker's probe has since drawn level,
             // so as things stand the bystander's claim would lapse.
             [at(1, 0), { ship: ship(blocker, PieceType.Probe, PieceLevel.Two) }],
@@ -361,9 +349,9 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}],
             [at(6, 5), {}]
         ])
-        game.state.probeClaims = [{ playerId: bystander, coords: at(0, 0), technologyId: 'tech-a' }]
-        game.state.technologyDeck = bagOf([])
-        game.state.tileSupply = bagOf([])
+        game.state.probeClaims = [{ playerId: bystander, coords: at(0, 0), technologyId: 'tech-3' }]
+        game.state.technologyDeck = stackedBag([])
+        game.state.tileSupply = stackedBag([])
         // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
@@ -386,9 +374,8 @@ describe('a fighter arriving', () => {
             coords: at(1, 0)
         })
 
-        // The tie is broken and the bystander's probes lead again - but a shot hands nothing
-        // over. It has rescued someone else's claim, which is the strange and rather good part:
-        // the attacker has given a third party a technology they must now defend.
+        // The tie is broken and the bystander's probes lead again, but a shot hands nothing over:
+        // the claim pays on the bystander's own turn.
         expect(held(bystander)).toEqual([])
         expect(held(mover)).toEqual([])
 
@@ -402,7 +389,7 @@ describe('a fighter arriving', () => {
 
         // And now it is the bystander's turn, so the claim pays.
         game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: bystander })
-        expect(held(bystander)).toEqual(['tech-a'])
+        expect(held(bystander)).toEqual(['tech-3'])
         expect(held(mover)).toEqual([])
     })
 
@@ -417,7 +404,7 @@ describe('a fighter arriving', () => {
             [at(4, 4), { ship: ship(other, PieceType.Probe, PieceLevel.Two) }],
             [at(5, 5), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)

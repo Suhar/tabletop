@@ -1,13 +1,11 @@
 import * as Type from 'typebox'
 import { AxialCoordinates } from '@tabletop/common'
 import { PieceLevel } from './pieces.js'
-import { TechnologyCard, TechnologyEffectKind } from './technology.js'
 
 export type PendingTechnology = Type.Static<typeof PendingTechnology>
 export const PendingTechnology = Type.Object({
     playerId: Type.String(),
-    technologyId: Type.String(),
-    kind: Type.Enum(TechnologyEffectKind)
+    technologyId: Type.String()
 })
 
 // Stored, not derived: which planet the probe surveyed is a choice the board does not record.
@@ -25,6 +23,6 @@ export const PendingExploration = Type.Object({
     probeLevel: Type.Enum(PieceLevel),
     candidatePlanets: Type.Array(AxialCoordinates),
     exploringPlanet: Type.Optional(AxialCoordinates),
-    revealed: Type.Optional(Type.Array(TechnologyCard)),
-    candidates: Type.Optional(Type.Array(TechnologyCard))
+    revealed: Type.Optional(Type.Array(Type.String())),
+    candidates: Type.Optional(Type.Array(Type.String()))
 })

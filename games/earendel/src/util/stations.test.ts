@@ -5,8 +5,7 @@ import { PieceLevel, type Piece, PieceType } from '../model/pieces.js'
 import { hubMultiplier, stationGroupPoints } from './stations.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame } from './testHarness.js'
-import { bagOf } from './drawBags.js'
+import { TestGame, stackedBag } from './testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -230,7 +229,7 @@ describe('Station Hub', () => {
             [at(1, 0), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [station(playerId), station(playerId)])
 
         const before = game.state.players.find((p) => p.playerId === mover)!.score
@@ -264,7 +263,7 @@ describe('scoring stations in play', () => {
             [at(2, -2), { ship: station(mover) }],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [station(playerId), station(playerId)])
 
         const scoreOf = () => game.state.players.find((p) => p.playerId === mover)!.score
@@ -293,7 +292,7 @@ describe('scoring stations in play', () => {
             [at(8, 8), {}],
             [at(9, 9), {}]
         ])
-        game.state.technologyDeck = bagOf([])
+        game.state.technologyDeck = stackedBag([])
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station),

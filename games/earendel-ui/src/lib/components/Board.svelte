@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import type { AxialCoordinates } from '@tabletop/common'
+    import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
     import {
         HexKind,
         type Hex,
@@ -9,8 +9,8 @@
         PlanetColor,
         hexKey,
         powerOf,
-        sameHex,
         technologyAbility,
+        technologyCard,
         technologyName,
         tileFootprint
     } from '@tabletop/earendel'
@@ -123,7 +123,7 @@
     async function onHexClick(coords: AxialCoordinates) {
         const touch = lastPointerType === 'touch'
         if (touch) {
-            inspected = inspected && sameHex(inspected, coords) ? undefined : coords
+            inspected = inspected && sameCoordinates(inspected, coords) ? undefined : coords
         }
         await gameSession.onBoardClick(coords, touch)
     }
@@ -134,7 +134,7 @@
     let ghostEntry = $derived.by(() => {
         const at = placementFocus
         if (!showGhost || !at || !gameSession.isHighlighted(at)) return undefined
-        return placed.find((entry) => sameHex(entry.hex.coords, at))
+        return placed.find((entry) => sameCoordinates(entry.hex.coords, at))
     })
 
     let previewTargets: AxialCoordinates[] = $derived(
@@ -260,12 +260,12 @@
         const coords = gameSession.pinnedPlanet ?? focused
         if (!coords) return undefined
 
-        const entry = placed.find((candidate) => sameHex(candidate.hex.coords, coords))
-        if (!entry?.hex.technology) return undefined
+        const entry = placed.find((candidate) => sameCoordinates(candidate.hex.coords, coords))
+        if (!entry?.hex.technologyId) return undefined
 
         return {
             key: `${coords.q},${coords.r}`,
-            card: entry.hex.technology,
+            card: technologyCard(entry.hex.technologyId),
             center: entry.center
         }
     })
@@ -363,7 +363,7 @@
 
     function isExploringPlanet(coords: AxialCoordinates): boolean {
         const planet = gameSession.gameState.pendingExploration?.exploringPlanet
-        return planet !== undefined && sameHex(planet, coords)
+        return planet !== undefined && sameCoordinates(planet, coords)
     }
 </script>
 
@@ -546,7 +546,7 @@
                     </g>
                 {/if}
 
-                {#if hex.technology}
+                {#if hex.technologyId}
                     <circle
                         cx={entry.center.x}
                         cy={entry.center.y}
@@ -595,7 +595,7 @@
                 />
             {/if}
 
-            {#if gameSession.movingFrom && sameHex(gameSession.movingFrom, hex.coords)}
+            {#if gameSession.movingFrom && sameCoordinates(gameSession.movingFrom, hex.coords)}
                 <polygon
                     points={entry.points}
                     fill="#ffd479"
@@ -605,7 +605,7 @@
                 />
             {/if}
 
-            {#if gameSession.feintFrom && sameHex(gameSession.feintFrom, hex.coords)}
+            {#if gameSession.feintFrom && sameCoordinates(gameSession.feintFrom, hex.coords)}
                 <polygon
                     points={entry.points}
                     fill="#c4a2ff"
@@ -615,7 +615,7 @@
                 />
             {/if}
 
-            {#if gameSession.wormholeFrom && sameHex(gameSession.wormholeFrom, hex.coords)}
+            {#if gameSession.wormholeFrom && sameCoordinates(gameSession.wormholeFrom, hex.coords)}
                 <polygon
                     points={entry.points}
                     fill="#7fe3d4"
@@ -625,7 +625,7 @@
                 />
             {/if}
 
-            {#if gameSession.downloadFrom && sameHex(gameSession.downloadFrom, hex.coords)}
+            {#if gameSession.downloadFrom && sameCoordinates(gameSession.downloadFrom, hex.coords)}
                 <polygon
                     points={entry.points}
                     fill="#7ff0c0"
@@ -737,7 +737,7 @@
 
     {#each ghosts as ghost (ghost.origin.q + ',' + ghost.origin.r)}
         {@const previewing =
-            tilePreviewOrigin && sameHex(tilePreviewOrigin, ghost.origin)}
+            tilePreviewOrigin && sameCoordinates(tilePreviewOrigin, ghost.origin)}
         <g
             role="button"
             tabindex="-1"
@@ -967,7 +967,7 @@
 
     {#if focused}
         {@const focusedHex = focused}
-        {@const focusedColor = placed.find((entry) => sameHex(entry.hex.coords, focusedHex))?.hex
+        {@const focusedColor = placed.find((entry) => sameCoordinates(entry.hex.coords, focusedHex))?.hex
             .color}
         {@const pairColor = focusedColor ? PLANET_FILL[focusedColor] : '#dce6ff'}
         {#each gameSession.planetPairsFrom(focusedHex) as pair, index (index)}

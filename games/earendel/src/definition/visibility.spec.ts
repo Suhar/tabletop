@@ -106,6 +106,9 @@ describe('Earendel visibility', () => {
             // Nothing hidden leaks anywhere else in the view.
             const encoded = JSON.stringify(view)
             for (const tile of state.tileSupply.items) expect(encoded).not.toContain(tile.id)
+            for (const technologyId of state.technologyDeck.items) {
+                expect(encoded).not.toContain(`"${technologyId}"`)
+            }
         })
 
         it('offers each player the same actions from their own view as from the full state', () => {

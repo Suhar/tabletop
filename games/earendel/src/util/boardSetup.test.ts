@@ -52,12 +52,18 @@ describe('buildStartingBoard', () => {
         const layouts = new Set<string>()
         const byTile = new Map<string, string[]>()
         for (const hex of Object.values(board.hexes)) {
-            byTile.set(hex.tileId, [...(byTile.get(hex.tileId) ?? []), `${hex.coords.q},${hex.coords.r}:${hex.kind}`])
+            byTile.set(hex.tileId, [
+                ...(byTile.get(hex.tileId) ?? []),
+                `${hex.coords.q},${hex.coords.r}:${hex.kind}`
+            ])
         }
         for (const [tileId, entries] of byTile) {
             const origin = entries
                 .map((entry) => entry.split(':')[0].split(',').map(Number))
-                .reduce((min, [q, r]) => [Math.min(min[0], q), Math.min(min[1], r)], [Infinity, Infinity])
+                .reduce(
+                    (min, [q, r]) => [Math.min(min[0], q), Math.min(min[1], r)],
+                    [Infinity, Infinity]
+                )
             layouts.add(
                 entries
                     .map((entry) => {

@@ -8,8 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { isUseTradeRouteWormhole, UseTradeRouteWormhole } from './useTradeRouteWormhole.js'
 import { ChoosePlanet } from './choosePlanet.js'
 import { wormholeDestinations } from '../util/wormhole.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -53,8 +52,8 @@ function scenario(mine: PieceType = PieceType.Station, level?: PieceLevel) {
     board.hexes[hexKey(at(0, 0))].piece = ship(mover, mine, level)
 
     game.state.board = board
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.TradeRouteWormhole
     ]

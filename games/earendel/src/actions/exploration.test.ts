@@ -5,15 +5,20 @@ import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
 import { PieceType, PieceLevel } from '../model/pieces.js'
-import { TechnologyTier } from '../model/technology.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId } from '../model/technologyCards.js'
+import { HydratedTechnologyDeck } from '../model/bags.js'
 import type { PendingExploration } from '../model/exploration.js'
 import { HydratedChoosePlanet } from './choosePlanet.js'
 import { HydratedChooseTechnology } from './chooseTechnology.js'
-import { bagOf } from '../util/drawBags.js'
+import { stackedBag } from '../util/testHarness.js'
 
 const PLANET_A: AxialCoordinates = { q: 0, r: 0 }
 const PLANET_B: AxialCoordinates = { q: 3, r: 0 }
 const PROBE_HEX = neighborsOf(PLANET_A)[0]
+const PERIWINKLE_1 = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 1)
+const PERIWINKLE_2 = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 2)
+const HELD = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 3)
 
 function board(): EarendelBoard {
     const hexes: EarendelBoard['hexes'] = {
@@ -46,7 +51,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         players: ['p1', 'p2'].map((playerId) => ({
             playerId,
             color: 'blue',
-            bag: bagOf([]),
+            bag: stackedBag([]),
             specialPieces: [],
             technologies: [],
             storedEffects: [],
@@ -62,16 +67,13 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         turnManager: { series: [], turnOrder: ['p1', 'p2'], turnCounts: {} },
         winningPlayerIds: [],
         board: board(),
-        technologyDeck: bagOf([
-            { id: 'periwinkle-1', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard },
-            { id: 'periwinkle-2', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard }
-        ]),
+        technologyDeck: stackedBag([PERIWINKLE_1, PERIWINKLE_2]),
         technologyDiscard: [],
         queuedTechnologyEffects: [],
         planetControllers: {},
         scoredPlanetPairs: [],
         probeClaims: [],
-        tileSupply: bagOf([]),
+        tileSupply: stackedBag([]),
         heldPieces: [],
         ...(pending ? { pendingExploration: pending } : {})
     } as EarendelGameState
@@ -144,10 +146,7 @@ describe('HydratedChoosePlanet', () => {
         expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.id).toBe('probe')
         expect(state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
         // Level two: two matching cards, which here is the whole deck.
-        expect(state.pendingExploration?.candidates?.map((c) => c.id)).toEqual([
-            'periwinkle-1',
-            'periwinkle-2'
-        ])
+        expect(state.pendingExploration?.candidates).toEqual([PERIWINKLE_1, PERIWINKLE_2])
         expect(action.revealsInfo).toBe(true)
     })
 
@@ -167,15 +166,14 @@ describe('HydratedChoosePlanet', () => {
 
     it('turns nothing over for an explored planet, offering only what it already holds', () => {
         const state = buildState(unsettled())
-        const held = { id: 'held', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard }
         state.board.hexes[hexKey(PLANET_A)].explored = true
-        state.board.hexes[hexKey(PLANET_A)].technology = held
+        state.board.hexes[hexKey(PLANET_A)].technologyId = HELD
         const action = choosePlanet('p1', PLANET_A)
         action.apply(state)
 
         expect(action.metadata?.alreadyExplored).toBe(true)
         expect(action.metadata?.flipped).toBeUndefined()
-        expect(state.pendingExploration?.candidates).toEqual([held])
+        expect(state.pendingExploration?.candidates).toEqual([HELD])
         expect(state.technologyDeck.remaining).toBe(2)
         expect(action.revealsInfo).toBe(false)
         expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.id).toBe('probe')
@@ -193,7 +191,7 @@ describe('HydratedChooseTechnology', () => {
         expect(chooseTechnology('p1').invalidChooseTechnologyReason(state)).toBe(
             'No technology was chosen.'
         )
-        expect(chooseTechnology('p2', 'periwinkle-1').invalidChooseTechnologyReason(state)).toBe(
+        expect(chooseTechnology('p2', PERIWINKLE_1).invalidChooseTechnologyReason(state)).toBe(
             "That exploration isn't yours."
         )
     })
@@ -201,7 +199,7 @@ describe('HydratedChooseTechnology', () => {
     it('refuses to choose a technology before the planet is settled', () => {
         const state = buildState(unsettled())
 
-        expect(chooseTechnology('p1', 'periwinkle-1').invalidChooseTechnologyReason(state)).toBe(
+        expect(chooseTechnology('p1', PERIWINKLE_1).invalidChooseTechnologyReason(state)).toBe(
             'That probe hasn’t chosen a planet yet.'
         )
     })
@@ -209,12 +207,12 @@ describe('HydratedChooseTechnology', () => {
     it('houses the chosen card and stakes a claim on it, without handing it over', () => {
         const state = buildState(unsettled())
         choosePlanet('p1', PLANET_A).apply(state)
-        chooseTechnology('p1', 'periwinkle-2').apply(state)
+        chooseTechnology('p1', PERIWINKLE_2).apply(state)
 
-        expect(state.board.hexes[hexKey(PLANET_A)].technology?.id).toBe('periwinkle-2')
-        expect(state.technologyDiscard.map((card) => card.id)).toEqual(['periwinkle-1'])
+        expect(state.board.hexes[hexKey(PLANET_A)].technologyId).toBe(PERIWINKLE_2)
+        expect(state.technologyDiscard).toEqual([PERIWINKLE_1])
         expect(state.probeClaims).toEqual([
-            { playerId: 'p1', coords: PLANET_A, technologyId: 'periwinkle-2' }
+            { playerId: 'p1', coords: PLANET_A, technologyId: PERIWINKLE_2 }
         ])
         // Won only at the start of p1's next turn, and only if their probes still lead.
         expect(state.getPlayerState('p1').technologies).toEqual([])
@@ -223,16 +221,15 @@ describe('HydratedChooseTechnology', () => {
 
     it('stakes a claim on what an explored planet already holds, discarding nothing', () => {
         const state = buildState(unsettled())
-        const held = { id: 'held', colors: [PlanetColor.Periwinkle], tier: TechnologyTier.Standard }
         state.board.hexes[hexKey(PLANET_A)].explored = true
-        state.board.hexes[hexKey(PLANET_A)].technology = held
+        state.board.hexes[hexKey(PLANET_A)].technologyId = HELD
         choosePlanet('p1', PLANET_A).apply(state)
-        chooseTechnology('p1', 'held').apply(state)
+        chooseTechnology('p1', HELD).apply(state)
 
-        expect(state.board.hexes[hexKey(PLANET_A)].technology).toEqual(held)
+        expect(state.board.hexes[hexKey(PLANET_A)].technologyId).toBe(HELD)
         expect(state.technologyDiscard).toEqual([])
         expect(state.probeClaims).toEqual([
-            { playerId: 'p1', coords: PLANET_A, technologyId: 'held' }
+            { playerId: 'p1', coords: PLANET_A, technologyId: HELD }
         ])
         expect(state.getPlayerState('p1').technologies).toEqual([])
     })
@@ -240,10 +237,10 @@ describe('HydratedChooseTechnology', () => {
     it('takes nothing, and only nothing, when the reveal produced no candidates', () => {
         // A planet whose colour the deck couldn't match: explored, but with nothing to house.
         const state = buildState(unsettled())
-        state.technologyDeck = bagOf([])
+        state.technologyDeck = new HydratedTechnologyDeck(stackedBag([]))
         choosePlanet('p1', PLANET_A).apply(state)
 
-        expect(chooseTechnology('p1', 'periwinkle-1').invalidChooseTechnologyReason(state)).toBe(
+        expect(chooseTechnology('p1', PERIWINKLE_1).invalidChooseTechnologyReason(state)).toBe(
             'There was no technology to choose.'
         )
         expect(chooseTechnology('p1').invalidChooseTechnologyReason(state)).toBeUndefined()

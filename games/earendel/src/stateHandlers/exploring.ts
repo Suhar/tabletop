@@ -46,7 +46,7 @@ export class ExploringStateHandler implements MachineStateHandler<
         if (candidates.length <= 1) {
             context.addSystemAction(ChooseTechnology, {
                 playerId: pending.playerId,
-                ...(candidates.length === 1 ? { technologyId: candidates[0].id } : {})
+                ...(candidates.length === 1 ? { technologyId: candidates[0] } : {})
             })
         }
     }

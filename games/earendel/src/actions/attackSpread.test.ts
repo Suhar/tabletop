@@ -7,8 +7,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from './placePiece.js'
 import { AttackSpread } from './attackSpread.js'
-import { TestGame } from '../util/testHarness.js'
-import { bagOf } from '../util/drawBags.js'
+import { TestGame, stackedBag } from '../util/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -52,8 +51,8 @@ function scenario() {
     board.hexes[hexKey(at(0, 1))].piece = ship(other, PieceType.Probe)
     board.hexes[hexKey(at(-1, 1))].piece = ship(other, PieceType.Probe)
     game.state.board = board
-    game.state.technologyDeck = bagOf([])
-    game.state.tileSupply = bagOf([])
+    game.state.technologyDeck = stackedBag([])
+    game.state.tileSupply = stackedBag([])
     game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
         TechnologyEffectKind.FullTorpedoSpread
     ]
@@ -108,11 +107,8 @@ describe('Full Torpedo Spread', () => {
 
     it('wears fighters down rather than destroying them, exactly as one shot would', () => {
         const { game, mover, other } = scenario()
-        // Two level 2 fighters: reachable by a level 3, but only damaged.
-        //
-        // Placed on OPPOSITE sides of the ring, not side by side. Adjacent fighters of the same
-        // player escort each other and become immune to everything - which is exactly what the
-        // first draft of this test did, and the spread correctly bounced off both of them.
+        // Two level 2 fighters: reachable by a level 3, but only damaged. On opposite sides of the
+        // ring, because adjacent fighters of one player escort each other.
         game.state.board.hexes[hexKey(at(1, 0))].piece = ship(
             other,
             PieceType.Fighter,

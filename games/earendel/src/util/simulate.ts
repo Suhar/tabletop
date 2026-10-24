@@ -6,7 +6,7 @@ import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { AttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
-import { type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
+import { assertExists, type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
 import { buildBag } from './bag.js'
@@ -92,10 +92,11 @@ export function playRandomGame(
             buildBag(playerId, new Prng({ seed: seed + 1, invocations: 0 }), perType)
         )
     } else if (overrides.tilesPerPlayer !== undefined || overrides.planetsPerTile !== undefined) {
-        game.stackBags(
-            (playerId) =>
-                game.state.players.find((player) => player.playerId === playerId)!.bag.items
-        )
+        game.stackBags((playerId) => {
+            const player = game.state.players.find((candidate) => candidate.playerId === playerId)
+            assertExists(player, `No player ${playerId}`)
+            return [...player.bag.items].reverse()
+        })
     }
     const random = lcg(seed * 7919 + 13)
     const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]
@@ -166,7 +167,8 @@ export function playRandomGame(
                 .filter(isPlacePiece)
                 .reduce((total, action) => total + (action.metadata?.chains ?? []).length, 0)
         } else if (game.state.machineState === MachineState.Exploring) {
-            const pending = game.state.pendingExploration!
+            const pending = game.state.pendingExploration
+            assertExists(pending, 'Exploring has a pending exploration')
             if (!pending.exploringPlanet) {
                 const unexplored = pending.candidatePlanets.filter(
                     (coords) => !getHex(game.state.board, coords)?.explored
@@ -181,7 +183,7 @@ export function playRandomGame(
                 game.run(ChooseTechnology, {
                     type: ActionType.ChooseTechnology,
                     playerId,
-                    ...(candidates.length > 0 ? { technologyId: pick(candidates).id } : {})
+                    ...(candidates.length > 0 ? { technologyId: pick(candidates) } : {})
                 })
             }
         } else if (game.state.machineState === MachineState.PlacingTile) {
@@ -199,7 +201,8 @@ export function playRandomGame(
             })
             tilesPlaced++
         } else if (game.state.machineState === MachineState.PlacingBonusPiece) {
-            const tileId = game.state.bonusPlacementTileId!
+            const tileId = game.state.bonusPlacementTileId
+            assertExists(tileId, 'A bonus placement names its tile')
             const open = openHexesOfTile(game.state.board, tileId)
             if (open.length === 0) {
                 stoppedBecause = 'nowhere on the new tile to place the ship'
@@ -227,7 +230,8 @@ export function playRandomGame(
             })
             technologiesResolved++
         } else if (game.state.machineState === MachineState.Attacking) {
-            const pending = game.state.pendingAttack!
+            const pending = game.state.pendingAttack
+            assertExists(pending, 'Attacking has a pending attack')
             const fire = random() < 0.67
             const shot = game
                 .run(AttackPiece, {

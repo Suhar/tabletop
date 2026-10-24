@@ -7,7 +7,7 @@ import type { EarendelGameState } from '../model/gameState.js'
 
 // A game must be a pure function of its seeds and its recorded actions: the server replays
 // history to rebuild state, Undo walks it backwards, and a reproduction seed is only worth
-// anything if it reproduces. (Audit finding VERIFY-004.)
+// anything if it reproduces.
 
 const masterSeed = '0123456789abcdef0123456789abcdef'
 const players = 3

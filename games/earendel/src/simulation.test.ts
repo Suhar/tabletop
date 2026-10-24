@@ -39,42 +39,29 @@ describe('a whole game, played at random', () => {
         }
     })
 
-    it(
-        'almost always ends on an empty bag at the playtest board size',
-        { timeout: 120000 },
-        () => {
-            // Both endings are real rules now, but they say different things about the board.
-            // A bag running out means the map held the game it was carrying; a player unable
-            // to place what they drew should be the rare case, not the norm. If this ratio
-            // slips, the board has got too small for the bags again - which is exactly the
-            // failure two planets per tile used to produce, silently.
-            // Asked of the playtest sizing rather than the current default, which is
-            // deliberately too small so that test games finish quickly. This is the check that
-            // the real board still holds the game it is carrying.
-            const summaries = [2, 3, 4, 5].flatMap((playerCount) =>
-                SEEDS.map((seed) =>
-                    playRandomGame(playerCount, seed, {
-                        tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER
-                    })
-                )
+    it('almost always ends on an empty bag at the playtest board size', { timeout: 120000 }, () => {
+        // The settled board is 3 tiles per player (rules.md). At 7, games end on an empty bag
+        // rather than on a player unable to place; if this ratio slips, the board no longer
+        // holds the bags.
+        const summaries = [2, 3, 4, 5].flatMap((playerCount) =>
+            SEEDS.map((seed) =>
+                playRandomGame(playerCount, seed, {
+                    tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER
+                })
             )
+        )
 
-            const byEmptyBag = summaries.filter(
-                (summary) => summary.endedBy === 'empty bag'
-            ).length
-            expect(byEmptyBag / summaries.length).toBeGreaterThan(0.85)
+        const byEmptyBag = summaries.filter((summary) => summary.endedBy === 'empty bag').length
+        expect(byEmptyBag / summaries.length).toBeGreaterThan(0.85)
 
-            // Measured on what is LEFT rather than on what the slowest player placed. A
-            // drafted turn takes three from the bag and plays two, and the board-growing
-            // technology adds a placement on top, so players finish at noticeably different
-            // depths. That asymmetry is the rules working; a board too small for the bags
-            // would instead show up as everyone stopping early at once.
-            const mostLeftBehind = Math.max(
-                ...summaries.flatMap((summary) => summary.piecesLeftInBags)
-            )
-            expect(mostLeftBehind).toBeLessThan(14)
-        }
-    )
+        // Measured on what is LEFT rather than on what the slowest player placed. A
+        // drafted turn takes three from the bag and plays two, and the board-growing
+        // technology adds a placement on top, so players finish at noticeably different
+        // depths. That asymmetry is the rules working; a board too small for the bags
+        // would instead show up as everyone stopping early at once.
+        const mostLeftBehind = Math.max(...summaries.flatMap((summary) => summary.piecesLeftInBags))
+        expect(mostLeftBehind).toBeLessThan(14)
+    })
 
     it('explores a good share of the planets and pays chains without being swamped by them', () => {
         // Not assertions about balance, which is a playtest question - just a tripwire for a
