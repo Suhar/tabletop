@@ -59,23 +59,23 @@
             "description": "Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+."
         },
         {
-            "name": "Narodna Bond",
+            "name": "Public Line Bond",
             "id": "BD",
             "revenue": 10,
             "token": {
                 "label": "NAR",
                 "color": "narodna"
             },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Narodna Line share; forced exchange on the first 4+. Reserved shares pay the Narodna Line's treasury."
+            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
         },
         {
             "name": "Ganz Locomotive Works",
-            "note": "Ungaro-Croata, Path B",
+            "note": "Ungaro-Croata conversion",
             "id": "G",
             "revenue": 20,
             "icon": "train",
             "iconColor": "red",
-            "description": "Attach when a Luka company you preside floats: it floats at 50% and buys the current train at the mooring discount. Or sell it to any company for $1–200: that company may close it to buy one train from the supply at the discount at any point in its turn, like Wiener Neustadt. Closes on the first 4+."
+            "description": "Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+."
         },
         {
             "name": "Kupa River Bridge",
@@ -100,14 +100,14 @@
             "id": "P3",
             "price": 50,
             "revenue": 10,
-            "description": "Blocks Zadar. The owning company may lay or upgrade Zadar and place its cheapest station there free, without a connection. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+            "description": "Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
         },
         {
             "name": "Vukovar Station Rights",
             "id": "P4",
             "price": 50,
             "revenue": 10,
-            "description": "Blocks Vukovar. The owning company may lay or upgrade Vukovar and place its cheapest station there free, without a connection. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+            "description": "Blocks Vukovar. The owning company may lay or upgrade Vukovar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
         },
         {
             "name": "Rijeka Lazaretto",
@@ -117,16 +117,6 @@
             "description": "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
             "icon": "train",
             "iconColor": "lightBlue"
-        },
-        {
-            "name": "Dubrovnik Lazaretto",
-            "id": "P6",
-            "price": 60,
-            "revenue": 10,
-            "description": "3 players only. Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
-            "maxPlayers": 3,
-            "icon": "train",
-            "iconColor": "orange"
         },
         {
             "name": "Kvarner Shipbuilding",
@@ -179,7 +169,7 @@
             "description": "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
         },
         {
-            "name": "Narodna Line Concession",
+            "name": "Narodna Concession",
             "id": "P13",
             "price": 140,
             "revenue": 25,
@@ -187,19 +177,18 @@
                 "label": "NAR",
                 "color": "narodna"
             },
-            "description": "Comes with the 20% president's certificate of the Narodna Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Narodna Bond. The Narodna Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Narodna Line operates."
+            "description": "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
         },
         {
             "name": "Ungaro-Croata Charter",
             "id": "P14",
-            "price": 150,
-            "revenue": 25,
-            "minPlayers": 4,
+            "price": 90,
+            "revenue": 0,
             "token": {
                 "label": "U-C",
                 "color": "cherry"
             },
-            "description": "Converts as a free action into the Maritime Fund or Ganz. Mooring marker moves each SR; must convert by the SR after the first 4+. 4–5 players only."
+            "description": "No income. Comes with a Public Line share; works as a second Štedionica. Until the first 2+, may convert as a free action into Ganz: its cash and shares go to the owner, who sells down to 60% and the cert limit."
         },
         {
             "name": "MÁV Concession",
@@ -230,7 +219,7 @@
             "revenue": 15,
             "icon": "boat",
             "iconColor": "navyBlue",
-            "description": "Can't be sold. Once, assign it to a company you preside: free station on Ancona, its routes through Ancona add the largest other city, and its Berth costs $40. Closes when assigned."
+            "description": "Can't be sold. Once, assign it to a company you preside: its cheapest station on Ancona, free (no connection or Berth needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop; its Berth costs $40. Closes when assigned or on the first 4+."
         }
     ],
     "tiles": {
@@ -1717,7 +1706,7 @@
                 },
                 {
                     "width": 1,
-                    "label": "Narodna",
+                    "label": "Public",
                     "color": "narodna"
                 }
             ],
@@ -1913,9 +1902,9 @@
             "name": "Stock Round",
             "steps": [
                 "Sell (at most 30% of one company per turn)",
-                "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Štedionica or Fund"
+                "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Štedionica or Ungaro-Croata Charter"
             ],
-            "optional": ["Free: private exchanges, Ungaro-Croata conversion"],
+            "optional": ["Free: private exchanges, Ungaro-Croata conversion (until 2+)"],
             "ordered": true
         },
         {
@@ -1972,7 +1961,8 @@
             "train": "2+",
             "limit": 3,
             "tiles": "green",
-            "rounds": 2
+            "rounds": 2,
+            "notes": "Ungaro-Croata Charter can no longer convert"
         },
         {
             "train": "3+",
@@ -1989,11 +1979,7 @@
             "events": {
                 "closeCompanies": true
             },
-            "notes": [
-                "Privates close, except the Štedionica",
-                "Junction upgrades open",
-                "Ungaro-Croata must convert to the Fund by the end of the next SR"
-            ]
+            "notes": ["Privates close, except the Štedionica", "Junction upgrades open"]
         },
         {
             "train": "7",
@@ -2280,11 +2266,11 @@
             "subtext": "Union Bank"
         },
         {
-            "name": "Maritime Fund",
-            "subtext": "Ungaro-Croata Fund",
-            "abbrev": "MF",
+            "name": "Ungaro-Croata Charter",
+            "subtext": "Ungaro-Croata bank",
+            "abbrev": "UC",
             "token": {
-                "label": "MF"
+                "label": "UC"
             },
             "marketTokens": 0,
             "tokens": [],
@@ -3408,7 +3394,7 @@
                 ],
                 "companies": [
                     {
-                        "label": "P12",
+                        "label": "P4",
                         "color": "red",
                         "angle": 120,
                         "percent": 0.65
@@ -3427,7 +3413,7 @@
                 ],
                 "companies": [
                     {
-                        "label": "P11",
+                        "label": "P3",
                         "color": "red",
                         "angle": 120,
                         "percent": 0.65

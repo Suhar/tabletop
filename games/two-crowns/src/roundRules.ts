@@ -1,6 +1,7 @@
 import { TwoCrownsCharters } from './charters.js'
 import { TwoCrownsMarket } from './stockMarket.js'
 import { TwoCrownsPhases } from './trains.js'
+import { isHeldShare } from './holdings.js'
 import {
     allSharesHeld,
     floatedCompaniesInMarketOrder,
@@ -12,15 +13,7 @@ import {
 export const TwoCrownsStockRoundRules: StockRoundRules = {
     passing: 'pass-order',
     nextPlayerOrder: (state) => [...state.stockRound.passedPlayerIds],
-    soldOut: (state, companyId) =>
-        allSharesHeld(
-            state,
-            companyId,
-            (certificate) =>
-                certificate.owner.kind === 'player' ||
-                certificate.poolId === 'reserved' ||
-                (certificate.owner.kind === 'company' && certificate.owner.companyId === 'P12')
-        )
+    soldOut: (state, companyId) => allSharesHeld(state, companyId, isHeldShare)
 }
 export const TwoCrownsOperatingRules: OperatingRules = {
     charters: TwoCrownsCharters,

@@ -157,6 +157,7 @@ export class TwoCrownsBranchSplit {
                 .filter((p) => p.playerId !== playerId)
                 .map((p) => ({ kind: 'player' as const, playerId: p.playerId })),
             { kind: 'company', companyId: 'P12' },
+            { kind: 'company', companyId: 'P14' },
             { kind: 'bank' },
             treasury
         ]

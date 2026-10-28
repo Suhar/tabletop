@@ -21,9 +21,12 @@ export const TwoCrownsEarningsRules: EarningsRules = {
         return count
     },
     entitlements: (state, companyId) =>
+        // Reserved Bond shares pay the Public Line's treasury (1874design.md, Public Line Bond).
         dividendEntitlements(state, companyId, (certificate) =>
             certificate.poolId === 'reserved'
-                ? undefined
+                ? getCompany(state, companyId).role === 'narodna'
+                    ? { kind: 'company', companyId }
+                    : undefined
                 : certificate.owner.kind === 'bank'
                   ? { kind: 'company', companyId }
                   : certificate.owner

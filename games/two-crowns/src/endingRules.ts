@@ -8,6 +8,9 @@ import {
     type EndingRules
 } from '@tabletop/18xx'
 import { TwoCrownsPrivateCatalog } from './privates.js'
+import { bondShareNumber, isBond } from './holdings.js'
+import { twoCrownsRole } from './companies.js'
+const HolderLabels: Record<string, string> = { P12: 'Štedionica', P14: 'Ungaro-Croata Charter' }
 export const TwoCrownsEndingRules: EndingRules = {
     trigger(state) {
         if (state.bankruptcy) return { reason: 'Bankruptcy' }
@@ -20,15 +23,24 @@ export const TwoCrownsEndingRules: EndingRules = {
     },
     certificateItems(state, certificate) {
         const company = getCompany(state, certificate.companyId)
-        if (company.id === 'P12' && !company.closed)
+        const holder = HolderLabels[company.id]
+        if (holder && !company.closed)
             return portfolioWealth(
                 state,
-                { kind: 'company', companyId: 'P12' },
+                { kind: 'company', companyId: company.id },
                 TwoCrownsEndingRules
-            ).map((item) => ({ ...item, label: `Štedionica: ${item.label}` }))
+            ).map((item) => ({ ...item, label: `${holder}: ${item.label}` }))
         let value = 0
         if (certificate.kind === 'share' && company.id === 'LUKA') value = 80 * certificate.shares
-        else if (!company.closed) {
+        else if (isBond(company.id) && !company.closed) {
+            // An unexchanged Bond is worth the share it becomes.
+            const share = state.certificates.find(
+                (item) =>
+                    item.id ===
+                    `${twoCrownsRole(state, 'narodna')}:share:${bondShareNumber(company.id)}`
+            )
+            value = share ? marketShareValue(TwoCrownsMarket, state, share) : 0
+        } else if (!company.closed) {
             value =
                 certificate.kind === 'share'
                     ? marketShareValue(TwoCrownsMarket, state, certificate)

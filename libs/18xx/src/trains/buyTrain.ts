@@ -109,12 +109,14 @@ export function applyTrainPurchase(
             amount: details.price
         }
     ])
-    if (details.exchangeTrainId)
+    if (details.exchangeTrainId) {
         releaseTrains(
             state.trainInventory,
             [details.exchangeTrainId],
             rules.exchangedTrainDestination ?? 'market'
         )
+        rules.afterExchange?.(state, details)
+    }
     const toPhaseId = rules.phaseAfterPurchase(state, details.definitionId)
     const payments = settleTrainDepartures(state, rules, [
         { trainId: details.trainId, definitionId: details.definitionId, cause: 'purchase' }

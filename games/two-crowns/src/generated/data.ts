@@ -32,11 +32,11 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'BD',
-        name: 'Narodna Bond',
+        name: 'Public Line Bond',
         faceValue: 0,
         revenue: 10,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Narodna Line share; forced exchange on the first 4+. Reserved shares pay the Narodna Line's treasury."
+            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
     },
     {
         id: 'G',
@@ -44,7 +44,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 20,
         description:
-            'Attach when a Luka company you preside floats: it floats at 50% and buys the current train at the mooring discount. Or sell it to any company for $1–200: that company may close it to buy one train from the supply at the discount at any point in its turn, like Wiener Neustadt. Closes on the first 4+.'
+            'Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+.'
     },
     {
         id: 'P1',
@@ -68,7 +68,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 50,
         revenue: 10,
         description:
-            'Blocks Zadar. The owning company may lay or upgrade Zadar and place its cheapest station there free, without a connection. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
+            'Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
     },
     {
         id: 'P4',
@@ -76,7 +76,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 50,
         revenue: 10,
         description:
-            'Blocks Vukovar. The owning company may lay or upgrade Vukovar and place its cheapest station there free, without a connection. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
+            'Blocks Vukovar. The owning company may lay or upgrade Vukovar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
     },
     {
         id: 'P5',
@@ -85,15 +85,6 @@ export const TwoCrownsPrivateData = [
         revenue: 10,
         description:
             "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+."
-    },
-    {
-        id: 'P6',
-        name: 'Dubrovnik Lazaretto',
-        faceValue: 60,
-        revenue: 10,
-        description:
-            "3 players only. Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
-        maxPlayers: 3
     },
     {
         id: 'P7',
@@ -143,20 +134,19 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'P13',
-        name: 'Narodna Line Concession',
+        name: 'Narodna Concession',
         faceValue: 140,
         revenue: 25,
         description:
-            "Comes with the 20% president's certificate of the Narodna Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Narodna Bond. The Narodna Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Narodna Line operates."
+            "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
     },
     {
         id: 'P14',
         name: 'Ungaro-Croata Charter',
-        faceValue: 150,
-        revenue: 25,
+        faceValue: 90,
+        revenue: 0,
         description:
-            'Converts as a free action into the Maritime Fund or Ganz. Mooring marker moves each SR; must convert by the SR after the first 4+. 4–5 players only.',
-        minPlayers: 4
+            'No income. Comes with a Public Line share; works as a second Štedionica. Until the first 2+, may convert as a free action into Ganz: its cash and shares go to the owner, who sells down to 60% and the cert limit.'
     },
     {
         id: 'P15',
@@ -180,7 +170,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 15,
         description:
-            "Can't be sold. Once, assign it to a company you preside: free station on Ancona, its routes through Ancona add the largest other city, and its Berth costs $40. Closes when assigned."
+            "Can't be sold. Once, assign it to a company you preside: its cheapest station on Ancona, free (no connection or Berth needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop; its Berth costs $40. Closes when assigned or on the first 4+."
     }
 ] as const
 

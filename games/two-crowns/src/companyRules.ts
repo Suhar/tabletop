@@ -26,6 +26,7 @@ import { lukaCompanies } from './companies.js'
 import { lukaPresident } from './luka.js'
 import { TwoCrownsStockRules, twoCrownsPurchasePayers } from './stockRules.js'
 import { TwoCrownsPhases } from './trains.js'
+import { isHeldShare } from './holdings.js'
 
 function releasesNextTranche(state: FormationState, companyId: string): boolean {
     const company = getCompany(state, companyId)
@@ -35,9 +36,7 @@ function releasesNextTranche(state: FormationState, companyId: string): boolean 
             (certificate) =>
                 certificate.kind !== 'share' ||
                 certificate.companyId !== companyId ||
-                certificate.poolId === 'reserved' ||
-                certificate.owner.kind === 'player' ||
-                (certificate.owner.kind === 'company' && certificate.owner.companyId === 'P12')
+                isHeldShare(certificate)
         )
     )
 }
@@ -49,9 +48,20 @@ export function availableTwoCrownsTranche(state: FormationState) {
     const next = nextTwoCrownsTranche(state)
     return next?.waitingCompanyIds.length === 0 ? next.tranche : undefined
 }
-export function twoCrownsStartMarketSpaces(state: StockState): string[] {
+// The Late space is the last space of the bottom tranche row (1874design.md, Late space).
+export function inLateSpace(state: FormationState): boolean {
+    const tranche = availableTwoCrownsTranche(state)
+    return (
+        !!tranche &&
+        tranche === state.tranches?.at(-1) &&
+        tranche.companyIds.length === tranche.capacity - 1
+    )
+}
+export function twoCrownsStartMarketSpaces(state: StockState, late = false): string[] {
     const reached = (phaseId: string) => TwoCrownsPhases.isAtLeast(state.phaseId, phaseId)
-    const minimumRow = reached('7') ? 6 : reached('3+') ? 5 : reached('5H') ? 4 : 3
+    // A Late-space company may also start one space above the phase's highest start price.
+    const minimumRow =
+        (reached('7') ? 6 : reached('3+') ? 5 : reached('5H') ? 4 : 3) - (late ? 1 : 0)
     return TwoCrownsMarket.spaces
         .filter((space) => space.column === 1 && space.row >= minimumRow)
         .map((space) => space.id)
@@ -59,7 +69,7 @@ export function twoCrownsStartMarketSpaces(state: StockState): string[] {
 export const TwoCrownsCompanyRules: CompanyRules = {
     startMarketSpaces(state, companyId) {
         if (!lukaCompanies(state).some((item) => item.companyId === companyId)) return []
-        return twoCrownsStartMarketSpaces(state)
+        return twoCrownsStartMarketSpaces(state, inLateSpace(state))
     },
     startTerms(state, companyId, buyer, marketSpaceId) {
         if (!availableTwoCrownsTranche(state)) return 'No company tranche is available.'
@@ -102,9 +112,10 @@ export const TwoCrownsCompanyRules: CompanyRules = {
     onFloat(state, companyId) {
         const association = lukaCompanies(state).find((item) => item.companyId === companyId)
         if (!association) {
-            if (getCompany(state, companyId).role === 'shortline') {
+            const role = getCompany(state, companyId).role
+            if (role === 'shortline' || role === 'narodna') {
                 const reservation = state.stationReservations.find((r) => r.companyId === companyId)
-                assertExists(reservation, 'Shortline requires its reserved home')
+                assertExists(reservation, 'A leased line requires its reserved home')
                 applyStationPlacement(state, {
                     stationId: homeStationId(companyId),
                     companyId,

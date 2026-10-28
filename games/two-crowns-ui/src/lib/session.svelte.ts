@@ -1,4 +1,4 @@
-import { getCompany } from '@tabletop/18xx'
+import { EighteenXXTransferTiming, getCompany } from '@tabletop/18xx'
 import { createEighteenXXSessionClass, type MapLocationChoice } from '@tabletop/18xx-ui'
 import type { GameSession } from '@tabletop/frontend-components'
 import type { HydratedTwoCrownsState, TwoCrownsState } from '@tabletop/two-crowns'
@@ -13,6 +13,9 @@ import { TwoCrownsPresentation } from './presentation.js'
 
 import { assert } from '@tabletop/common'
 import {
+    AssignAncona,
+    BuyBerth,
+    ConvertCharter,
     SplitCompany,
     TwoCrownsBranchSplit,
     isSplitCompany,
@@ -180,6 +183,28 @@ export class TwoCrownsSession extends BaseSession {
                 ? allocation.trainIds.filter((id) => id !== trainId)
                 : [...allocation.trainIds, trainId]
         })
+    }
+    // 1874's own free actions: converting the charter, buying a Berth, assigning the Ancona line.
+    titleActionAvailable(type: 'ConvertCharter' | 'BuyBerth' | 'AssignAncona') {
+        return (
+            !this.busy &&
+            !this.updatingVisibleState &&
+            !this.isViewingHistory &&
+            this.validActionTypes.includes(type)
+        )
+    }
+    async convertCharter() {
+        await this.applyAction(this.createPlayerAction(ConvertCharter, {}))
+    }
+    async buyBerth() {
+        const companyId = EighteenXXTransferTiming.operatingCompany(this.gameState)
+        assert(companyId, 'A Berth is bought during a company’s turn')
+        await this.applyAction(this.createPlayerAction(BuyBerth, { companyId }))
+    }
+    async assignAncona() {
+        const companyId = EighteenXXTransferTiming.operatingCompany(this.gameState)
+        assert(companyId, 'The Ancona line is assigned during a company’s turn')
+        await this.applyAction(this.createPlayerAction(AssignAncona, { companyId }))
     }
     async confirmSplit() {
         const preview = this.splitPreview?.details

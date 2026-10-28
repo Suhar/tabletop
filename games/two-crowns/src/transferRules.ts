@@ -8,13 +8,16 @@ export const TwoCrownsTransferRules: TransferRules = {
     priceRange(state, companyId, asset) {
         if (asset.kind === 'train') return { minimum: 1 }
         if (asset.kind !== 'private') return undefined
-        return asset.privateCompanyId === 'P10' &&
-            companyId !== 'LUKA' &&
-            TwoCrownsPhases.isAtLeast(state.phaseId, '4H') &&
-            !TwoCrownsPhases.isAtLeast(state.phaseId, '4+') &&
-            privateOwner(state, 'P10')?.kind === 'player'
-            ? TwoCrownsPrivateCatalog.priceRange('P10')
-            : undefined
+        const id = asset.privateCompanyId
+        if (privateOwner(state, id)?.kind !== 'player') return undefined
+        if (TwoCrownsPhases.isAtLeast(state.phaseId, '4+')) return undefined
+        // Ganz may go to any company at any time (1874design.md, Ganz Locomotive Works).
+        if (id === 'G') return TwoCrownsPrivateCatalog.priceRange(id)
+        // From 4H: the Station Rights to any company, Wiener Neustadt to a non-Luka one.
+        if (!TwoCrownsPhases.isAtLeast(state.phaseId, '4H')) return undefined
+        if (id === 'P3' || id === 'P4' || (id === 'P10' && companyId !== 'LUKA'))
+            return TwoCrownsPrivateCatalog.priceRange(id)
+        return undefined
     },
     afterPurchase: () => {}
 }

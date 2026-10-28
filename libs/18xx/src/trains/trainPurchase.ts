@@ -28,6 +28,8 @@ export interface TrainRules {
     availableDefinitions(state: TrainPurchaseState): string[]
     phaseAfterPurchase(state: TrainPurchaseState, definitionId: string): string
     trainLimit(state: TrainPurchaseState, companyId: string): number
+    /** Records the title's consequences of a purchase that handed in a train. */
+    afterExchange?(state: TrainPurchaseState, details: TrainPurchaseDetails): void
     countsForLimit?(state: TrainPurchaseState, train: Train): boolean
     marketDefinitions?(state: TrainPurchaseState, train: Train): readonly string[]
     purchaseLimit(state: TrainPurchaseState, companyId: string): number | 'unlimited'

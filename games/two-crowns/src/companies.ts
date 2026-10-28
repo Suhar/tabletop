@@ -10,7 +10,7 @@ export const TwoCrownsCompanies = TwoCrownsLukaCompanies.map(({ companyId, name,
 export const TwoCrownsRoles = {
     mainline: { name: 'Mainline', shortName: 'Main' },
     shortline: { name: 'Shortline', shortName: 'Short' },
-    narodna: { name: 'Narodna Line', shortName: 'Narodna' }
+    narodna: { name: 'Public Line', shortName: 'Public' }
 } as const
 export type TwoCrownsRole = keyof typeof TwoCrownsRoles
 function isTwoCrownsRole(role: string | undefined): role is TwoCrownsRole {

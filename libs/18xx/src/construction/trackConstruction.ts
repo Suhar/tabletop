@@ -570,22 +570,41 @@ export class TrackConstruction {
         const occupied = new Map<string, Set<number>>()
         const stations: Station[] = []
         const moved: PlacedStation[] = []
+        // A lone city split into several (preservesSplitPath) spreads its stations over them.
+        const afterCities = after.nodes.filter((node) => node.kind === 'city')
+        const splitting =
+            afterCities.length > 1 &&
+            new Set(
+                Object.values(mapping).filter((id) => afterCities.some((city) => city.id === id))
+            ).size === 1
+        const freeSlot = (nodeId: string, stationSlots: number, preferred: number) => {
+            const slots = occupied.get(nodeId) ?? new Set<number>()
+            return preferred < stationSlots && !slots.has(preferred)
+                ? preferred
+                : Array.from({ length: stationSlots }, (_, index) => index).find(
+                      (index) => !slots.has(index)
+                  )
+        }
         for (const station of this.state.stations) {
             if (station.status !== 'placed' || station.position.locationId !== locationId) {
                 stations.push(station)
                 continue
             }
-            const nodeId = mapping[station.position.nodeId]
-            const node = after.nodes.find((node) => node.id === nodeId)
+            let nodeId = mapping[station.position.nodeId]
+            let node = after.nodes.find((node) => node.id === nodeId)
             if (node?.kind !== 'city') return undefined
-            const slots = occupied.get(nodeId) ?? new Set<number>()
-            const slot =
-                station.position.slot < node.stationSlots && !slots.has(station.position.slot)
-                    ? station.position.slot
-                    : Array.from({ length: node.stationSlots }, (_, index) => index).find(
-                          (index) => !slots.has(index)
-                      )
+            let slot = freeSlot(nodeId, node.stationSlots, station.position.slot)
+            if (slot === undefined && splitting) {
+                node = afterCities.find(
+                    (city) => freeSlot(city.id, city.stationSlots, 0) !== undefined
+                )
+                if (node) {
+                    nodeId = node.id
+                    slot = freeSlot(nodeId, node.stationSlots, 0)
+                }
+            }
             if (slot === undefined) return undefined
+            const slots = occupied.get(nodeId) ?? new Set<number>()
             slots.add(slot)
             occupied.set(nodeId, slots)
             if (nodeId === station.position.nodeId && slot === station.position.slot) {

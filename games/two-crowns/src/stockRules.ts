@@ -3,6 +3,7 @@ import { TwoCrownsMarket } from './stockMarket.js'
 import { twoCrownsPlayerSetup } from './players.js'
 import { TwoCrownsStockRoundRules } from './roundRules.js'
 import { assertExists } from '@tabletop/common'
+import { ShareHoldingCharterIds } from './holdings.js'
 import {
     companyShareCount,
     getCompany,
@@ -24,9 +25,17 @@ export const TwoCrownsStockRules: StockRules = {
     buyers(state, playerId) {
         const player: Owner = { kind: 'player', playerId }
         const buyers: Owner[] = [player]
-        const owner = privateOwner(state, 'P12')
-        if (owner && sameOwner(owner, player) && !state.stockRound.companyPurchases.includes('P12'))
-            buyers.push({ kind: 'company', companyId: 'P12' })
+        // The Štedionica and the Ungaro-Croata Charter each buy once per stock round.
+        for (const charterId of ShareHoldingCharterIds) {
+            const charter = state.companies.find((company) => company.id === charterId)
+            const owner = charter && !charter.closed ? privateOwner(state, charterId) : undefined
+            if (
+                owner &&
+                sameOwner(owner, player) &&
+                !state.stockRound.companyPurchases.includes(charterId)
+            )
+                buyers.push({ kind: 'company', companyId: charterId })
+        }
         return buyers
     },
     sellers: (_state, playerId) => [{ kind: 'player', playerId }],
@@ -66,7 +75,7 @@ export const TwoCrownsStockRules: StockRules = {
     presidencyCandidates(state, companyId) {
         return [
             ...playersAfterPresident(state, companyId, state.turnManager.turnOrder),
-            { kind: 'company', companyId: 'P12' }
+            ...ShareHoldingCharterIds.map((companyId) => ({ kind: 'company' as const, companyId }))
         ]
     },
     turnOrder: 'sell-buy',

@@ -33,10 +33,12 @@ describe('The Two Crowns imported from 18xx Maker', () => {
     })
 
     it('deals the 1874 privates by player count', () => {
-        expect(privatesForPlayerCount(3)).not.toContain('P14')
-        expect(privatesForPlayerCount(3)).toContain('P6')
-        expect(privatesForPlayerCount(4)).toContain('P14')
-        expect(privatesForPlayerCount(4)).not.toContain('P6')
+        // All 16 privates at every count; P6 was cut (1874design.md, Private companies).
+        for (const count of [3, 4, 5]) {
+            expect(privatesForPlayerCount(count)).toHaveLength(17)
+            expect(privatesForPlayerCount(count)).toContain('P14')
+            expect(privatesForPlayerCount(count)).not.toContain('P6')
+        }
     })
 
     it('reads the market and trains', () => {

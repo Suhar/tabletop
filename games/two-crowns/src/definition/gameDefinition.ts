@@ -1,5 +1,10 @@
 import { TwoCrownsNames } from '../names.js'
-import { createEighteenXXRuntime, defineAction, type EighteenXXTitleRules } from '@tabletop/18xx'
+import {
+    createEighteenXXRuntime,
+    defineAction,
+    type EighteenXXStateHandler,
+    type EighteenXXTitleRules
+} from '@tabletop/18xx'
 import type { GameDefinition } from '@tabletop/common'
 import { TwoCrownsCompanyRules } from '../companyRules.js'
 import { TwoCrownsEarningsRules } from '../earningsRules.js'
@@ -15,6 +20,7 @@ import { TwoCrownsPrivateRules } from '../privateRules.js'
 import { TwoCrownsOperatingRules } from '../roundRules.js'
 import { TwoCrownsRouteRules } from '../routeRules.js'
 import { HydratedSplitCompany, SplitCompany, isSplitCompany } from '../splitCompany.js'
+import { ConvertCharter, HydratedConvertCharter, isConvertCharter } from '../charterConversion.js'
 import { TwoCrownsState, TwoCrownsStateDefinition, type HydratedTwoCrownsState } from '../state.js'
 import { TwoCrownsStationRules } from '../stationRules.js'
 import { TwoCrownsStockRoundHandler } from '../stockRoundHandler.js'
@@ -24,6 +30,16 @@ import { TwoCrownsTrainFundingRules } from '../trainFundingRules.js'
 import { TwoCrownsPhases, TwoCrownsTrainRules } from '../trains.js'
 import { TwoCrownsTransferRules } from '../transferRules.js'
 import { TwoCrownsInfo } from './info.js'
+import {
+    AssignAncona,
+    BuyBerth,
+    HydratedAssignAncona,
+    HydratedBuyBerth,
+    OperatingTitleStates,
+    isAssignAncona,
+    isBuyBerth
+} from '../berths.js'
+import { TwoCrownsOperatingTitleHandler } from '../operatingTitleHandler.js'
 
 export const TwoCrownsTitleRules: EighteenXXTitleRules<
     typeof TwoCrownsState,
@@ -32,9 +48,25 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
     state: TwoCrownsStateDefinition,
     endingRules: TwoCrownsEndingRules,
     names: TwoCrownsNames,
-    decisionHandlers: { StockRound: (family) => new TwoCrownsStockRoundHandler(family) },
+    decisionHandlers: {
+        StockRound: (family) => new TwoCrownsStockRoundHandler(family),
+        ...Object.fromEntries(
+            OperatingTitleStates.map((state) => [
+                state,
+                (family: EighteenXXStateHandler<HydratedTwoCrownsState>) =>
+                    new TwoCrownsOperatingTitleHandler(family)
+            ])
+        )
+    },
     titleActions: [
-        defineAction(SplitCompany, isSplitCompany, (action) => new HydratedSplitCompany(action))
+        defineAction(SplitCompany, isSplitCompany, (action) => new HydratedSplitCompany(action)),
+        defineAction(BuyBerth, isBuyBerth, (action) => new HydratedBuyBerth(action)),
+        defineAction(AssignAncona, isAssignAncona, (action) => new HydratedAssignAncona(action)),
+        defineAction(
+            ConvertCharter,
+            isConvertCharter,
+            (action) => new HydratedConvertCharter(action)
+        )
     ],
     offerAuctionRules: TwoCrownsAuctionRules,
     trainFundingRules: TwoCrownsTrainFundingRules,

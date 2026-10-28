@@ -30,12 +30,15 @@ import type { HydratedTwoCrownsState, TwoCrownsState } from './state.js'
 import { TwoCrownsMarket } from './stockMarket.js'
 import { TwoCrownsTileSet } from './tiles.js'
 import { TwoCrownsTrainDepot } from './trains.js'
+import { BondIds, CharterPublicShareNumber, isBond } from './holdings.js'
 export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
     increment: 5,
     autoOfferSingleLot: true,
     lots(state) {
         return [
-            ...TwoCrownsPrivateCatalog.lots(state).filter((lot) => lot.id !== 'P'),
+            ...TwoCrownsPrivateCatalog.lots(state).filter(
+                (lot) => lot.id !== 'P' && !isBond(lot.id)
+            ),
             ...TwoCrownsCompanies.filter((item) =>
                 state.companies.some((company) => company.id === item.companyId && !company.role)
             ).map((item) => ({
@@ -54,19 +57,24 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
             return
         }
         const mainline = twoCrownsRole(state, 'mainline'),
-            shortline = twoCrownsRole(state, 'shortline')
+            shortline = twoCrownsRole(state, 'shortline'),
+            publicLine = twoCrownsRole(state, 'narodna')
+        const concessions: Record<string, string> = {
+            P15: mainline,
+            P16: shortline,
+            P13: publicLine
+        }
         const extras: Record<string, string[]> = {
             P15: [`${mainline}:president`],
             P16: [`${shortline}:president`],
+            P13: [`${publicLine}:president`],
             P9: [`${mainline}:share:1`],
             P11: [`${mainline}:share:2`]
         }
         awardCertificates(state, award, [`${award.lotId}:charter`, ...(extras[award.lotId] ?? [])])
-        if (award.lotId === 'P15' || award.lotId === 'P16')
-            getCompany(state, award.lotId === 'P15' ? mainline : shortline).president = {
-                kind: 'player',
-                playerId: award.playerId
-            }
+        const concession = concessions[award.lotId]
+        if (concession)
+            getCompany(state, concession).president = { kind: 'player', playerId: award.playerId }
     },
     payIncome(state) {
         settleCashPayments(
@@ -108,8 +116,8 @@ export function createTwoCrownsOpening({
     startingPositions
 }: OpeningSetup): Opening<typeof TwoCrownsState, HydratedTwoCrownsState> {
     assert(
-        players.length === 3 || players.length === 4,
-        'The Two Crowns on 1871 rules supports three or four players'
+        players.length >= 3 && players.length <= 5,
+        'The Two Crowns supports three to five players'
     )
     const shuffled = [...TwoCrownsCompanies]
     shuffle(shuffled, prng.random)
@@ -120,6 +128,11 @@ export function createTwoCrownsOpening({
     const reserved = { owner: { kind: 'bank' } as const, poolId: 'reserved' }
     const auction = { owner: { kind: 'bank' } as const, poolId: 'auction' }
     const union = { owner: { kind: 'company' as const, companyId: 'P12' } }
+    const charter = { owner: { kind: 'company' as const, companyId: 'P14' } }
+    const bonds = BondIds.slice(0, players.length)
+    // Public Line shares 1..players are the Bonds' reserved shares; the last is the charter's.
+    const publicLinePool = (index: number) =>
+        index < bonds.length ? reserved : index + 1 === CharterPublicShareNumber ? charter : market
     const lotIds = [
         ...privates.filter((p) => p.id !== 'P').map((p) => p.id),
         ...remaining.map((c) => `LUKA:share:${c.number}`)
@@ -133,6 +146,7 @@ export function createTwoCrownsOpening({
     const stockMarket: StockMarket = { stacks: [] }
     TwoCrownsMarket.placeMarker(stockMarket, mainline.companyId, TwoCrownsParCells.mainline)
     TwoCrownsMarket.placeMarker(stockMarket, shortline.companyId, TwoCrownsParCells.shortline)
+    TwoCrownsMarket.placeMarker(stockMarket, narodna.companyId, TwoCrownsParCells.shortline)
     const stations: MapStateData['stations'] = []
     const stationReservations: MapStateData['stationReservations'] = []
     for (const company of TwoCrownsCompanies) {
@@ -159,7 +173,7 @@ export function createTwoCrownsOpening({
             ...TwoCrownsCompanies.map((c) => ({
                 id: c.companyId,
                 kind: 'major',
-                started: c === mainline || c === shortline,
+                started: c === mainline || c === shortline || c === narodna,
                 floated: c === mainline,
                 funded: c === mainline,
                 operated: false,
@@ -174,14 +188,18 @@ export function createTwoCrownsOpening({
                             parPrice: TwoCrownsMarket.space(TwoCrownsParCells.shortline).price
                         }
                       : c === narodna
-                        ? { role: 'narodna' }
+                        ? {
+                              role: 'narodna',
+                              parPrice: TwoCrownsMarket.space(TwoCrownsParCells.shortline).price
+                          }
                         : {})
             })),
             { id: 'LUKA', kind: 'major' },
             ...privates.map((p) => ({
                 id: p.id,
                 kind: 'private'
-            }))
+            })),
+            ...bonds.map((id) => ({ id, kind: 'private' }))
         ],
         cash: [
             { owner: { kind: 'bank' }, amount: 'unlimited' },
@@ -194,7 +212,8 @@ export function createTwoCrownsOpening({
                 amount: c === mainline ? 920 : 0
             })),
             { owner: { kind: 'company', companyId: 'LUKA' }, amount: 200 },
-            { owner: { kind: 'company', companyId: 'P12' }, amount: 0 }
+            { owner: { kind: 'company', companyId: 'P12' }, amount: 0 },
+            { owner: { kind: 'company', companyId: 'P14' }, amount: 0 }
         ],
         certificatePools: [
             { id: 'market', owner: { kind: 'bank' } },
@@ -217,11 +236,13 @@ export function createTwoCrownsOpening({
                               ? index >= 5
                                   ? reserved
                                   : market
-                              : c === remaining[0] && index === 7
-                                ? union
-                                : market
+                              : c === narodna
+                                ? publicLinePool(index)
+                                : c === remaining[0] && index === 7
+                                  ? union
+                                  : market
                     ),
-                    c === mainline || c === shortline ? auction : market
+                    c === mainline || c === shortline || c === narodna ? auction : market
                 )
             ),
             ...remaining.map((c) => ({
@@ -242,14 +263,20 @@ export function createTwoCrownsOpening({
                         ? { kind: 'company' as const, companyId: 'LUKA' }
                         : { kind: 'bank' as const },
                 ...(p.id === 'P' ? {} : { poolId: 'auction' })
+            })),
+            ...bonds.map((id, index) => ({
+                id: `${id}:charter`,
+                companyId: id,
+                kind: 'private' as const,
+                owner: { kind: 'player' as const, playerId: players[index].playerId }
             }))
         ],
         tranches: [
             {
                 id: 'initial',
-                name: 'Mainline and Shortline',
-                capacity: 2,
-                companyIds: [mainline.companyId, shortline.companyId]
+                name: 'Mainline, Shortline and Public Line',
+                capacity: 3,
+                companyIds: [mainline.companyId, shortline.companyId, narodna.companyId]
             },
             { id: '1', name: 'Tranche 1', capacity: 2, companyIds: [] },
             { id: '2', name: 'Tranche 2', capacity: 2, companyIds: [] },

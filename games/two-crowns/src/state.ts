@@ -5,6 +5,7 @@ import {
     OfferAuctionMachineStates,
     OfferPileFields,
     OwnershipExemptionFields,
+    PrivateStationFields,
     RailwayFields,
     RailwayMachineStates,
     RoleCompany,
@@ -25,9 +26,17 @@ export const TwoCrownsState = composeEighteenXXState(
         ...OfferPileFields,
         ...TrancheFields,
         ...OwnershipExemptionFields,
+        ...PrivateStationFields,
         fourPlusTrainIdsWithOperatingOpportunity: Type.Optional(
             Type.Array(Type.String(), { uniqueItems: true })
         ),
+        // Companies owning a Berth, and the one the Ancona Steamship Line was assigned to.
+        berthCompanyIds: Type.Optional(Type.Array(Type.String(), { uniqueItems: true })),
+        anconaCompanyId: Type.Optional(Type.String({ minLength: 1 })),
+        // Trade-ins this operating round, as "set.round:companyId" (once per OR, 1874design.md).
+        tradeIns: Type.Optional(Type.Array(Type.String(), { uniqueItems: true })),
+        // The train the Rijeka Lazaretto saved from its rust, which runs once more.
+        quarantinedTrainId: Type.Optional(Type.String({ minLength: 1 })),
         // Optional because games set up before it was recorded lack it.
         unionBankDrawnCompanyId: Type.Optional(Type.String({ minLength: 1 }))
     },

@@ -45,9 +45,40 @@ export const TwoCrownsPhases = new PhaseTable(
     TwoCrownsTrainDepot
 )
 const hasRoute = requiresStationRoute(TwoCrownsMap, TwoCrownsTileSet)
+type TradeInState = { tradeIns?: string[]; operatingSet?: { number: number; roundNumber: number } }
+const tradeInState = (state: object) => state as TradeInState
+function tradeInKey(state: object, companyId: string): string {
+    const set = tradeInState(state).operatingSet
+    return `${set?.number ?? 0}.${set?.roundNumber ?? 0}:${companyId}`
+}
+const TrainOrder = TwoCrownsTrainData.map((train) => train.id as string)
+/**
+ * 1894's train upgrade (1874design.md, Trade-ins): once per OR, a supply purchase may hand in a
+ * train of the rank just below, never a 4+, for half its face; the train leaves the game.
+ */
+export function tradeInPrice(definitionId: string, tradedDefinitionId: string): number | undefined {
+    const rank = TrainOrder.indexOf(definitionId)
+    if (rank < 1 || TrainOrder[rank - 1] !== tradedDefinitionId || tradedDefinitionId === '4+')
+        return undefined
+    const price = TwoCrownsTrainDepot.trainDefinition(definitionId).price
+    return price - TwoCrownsTrainDepot.trainDefinition(tradedDefinitionId).price / 2
+}
 export const TwoCrownsTrainRules: TrainRules = {
     depot: TwoCrownsTrainDepot,
-    exchangePrice: () => undefined,
+    exchangePrice: (state, companyId, definitionId, train) =>
+        tradeInState(state).tradeIns?.includes(tradeInKey(state, companyId))
+            ? undefined
+            : tradeInPrice(definitionId, train.definitionId),
+    exchangedTrainDestination: 'removed',
+    afterExchange(state, details) {
+        const key = tradeInKey(state, details.companyId)
+        const round = key.split(':')[0]
+        const title = tradeInState(state)
+        title.tradeIns = [
+            ...(title.tradeIns ?? []).filter((item) => item.startsWith(`${round}:`)),
+            key
+        ]
+    },
     requiresTrain: (state, companyId) => companyId !== 'LUKA' && hasRoute(state, companyId),
     availableDefinitions(state) {
         const next = TwoCrownsTrainDepot.nextDefinitionId(state.trainInventory)

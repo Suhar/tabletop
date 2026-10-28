@@ -28,7 +28,13 @@ export function tileUpgradeMappings(
     function visit(index: number, mapping: Record<string, string>) {
         const node = before.nodes[index]
         if (!node) {
-            if (before.paths.every((path) => preservesPath(path, after, mapping)))
+            if (
+                before.paths.every(
+                    (path) =>
+                        preservesPath(path, after, mapping) ||
+                        preservesSplitPath(path, before, after, mapping)
+                )
+            )
                 mappings.push({ ...mapping })
             return
         }
@@ -76,6 +82,24 @@ function trackLessCityTargets(before: TileFace, after: TileFace): Map<string, st
     )
         return undefined
     return new Map(cities.map((city, index) => [city.id, targets[index].id]))
+}
+
+/**
+ * A lone city that an upgrade splits into several, as 1894's junctions are: each of its paths may
+ * run from any of the new cities. The title's ``preservesStops`` decides when a split is allowed.
+ */
+function preservesSplitPath(
+    path: TilePath,
+    before: TileFace,
+    after: TileFace,
+    mapping: TileNodeMapping
+): boolean {
+    const cities = before.nodes.filter((node) => node.kind === 'city')
+    const targets = after.nodes.filter((node) => node.kind === 'city')
+    if (cities.length !== 1 || targets.length < 2) return false
+    const city = cities[0].id
+    if (!path.endpoints.some((end) => end.kind === 'node' && end.nodeId === city)) return false
+    return targets.some((target) => preservesPath(path, after, { ...mapping, [city]: target.id }))
 }
 
 export function preservesPath(path: TilePath, after: TileFace, mapping: TileNodeMapping): boolean {
