@@ -17,6 +17,16 @@ import {
     TheOldPrinceTrainFundingRules
 } from '@tabletop/the-old-prince'
 import {
+    Definition as TwoCrowns,
+    TwoCrownsAuctionRules,
+    TwoCrownsStockRules,
+    TwoCrownsCompanyRules,
+    TwoCrownsTrackRules,
+    TwoCrownsTrainRules,
+    TwoCrownsRouteRules,
+    TwoCrownsTrainFundingRules
+} from '@tabletop/two-crowns'
+import {
     Definition as Shikoku,
     Shikoku1889AuctionRules,
     Shikoku1889StockRules,
@@ -78,6 +88,7 @@ export const FullGameTitles = [
         ending: 'First D',
         finalPhaseId: undefined,
         waterfall: undefined,
+        offer: TheOldPrinceAuctionRules,
         policy: {
             floatedTarget: (state: EighteenXXState) => state.companies.length,
             laysEveryTurn: false,
@@ -103,6 +114,7 @@ export const FullGameTitles = [
         routes: Shikoku1889RouteRules,
         funding: Shikoku1889TrainFundingRules,
         waterfall: Shikoku1889AuctionRules,
+        offer: undefined,
         ending: 'Bank broken',
         finalPhaseId: undefined,
         policy: {
@@ -120,6 +132,7 @@ export const FullGameTitles = [
         routes: EighteenThirtyTwoRouteRules,
         funding: EighteenThirtyTwoTrainFundingRules,
         waterfall: EighteenThirtyTwoAuctionRules,
+        offer: undefined,
         ending: 'Bank broken',
         finalPhaseId: '12',
         // 1832's companies must keep building and buying trains, and only withhold to afford
@@ -175,6 +188,29 @@ export const FullGameTitles = [
         }
     }
 ]
+// The Two Crowns has only its opening position, so it runs its own complete-game examples.
+export const TwoCrownsFullGame: (typeof FullGameTitles)[number] = {
+    definition: TwoCrowns,
+    ending: 'First D',
+    finalPhaseId: undefined,
+    waterfall: undefined,
+    offer: TwoCrownsAuctionRules,
+    policy: {
+        floatedTarget: (state: EighteenXXState) => state.companies.length,
+        laysEveryTurn: false,
+        dividend: (state: EighteenXXState, companyId: string) =>
+            trainsOwnedBy(state, { kind: 'company', companyId }).length >=
+            TwoCrownsTrainRules.trainLimit(state, companyId)
+                ? ('pay' as const)
+                : ('withhold' as const)
+    },
+    stocks: TwoCrownsStockRules,
+    companies: TwoCrownsCompanyRules,
+    track: TwoCrownsTrackRules,
+    trains: TwoCrownsTrainRules,
+    routes: TwoCrownsRouteRules,
+    funding: TwoCrownsTrainFundingRules
+}
 export class CompleteGameRun {
     readonly game
     readonly engine: GameEngine<EighteenXXState, HydratedEighteenXXState>
@@ -243,7 +279,8 @@ export class CompleteGameRun {
             return
         }
         if (state.machineState === 'OfferingLot') {
-            const auction = new OfferAuction(state, TheOldPrinceAuctionRules)
+            assertExists(this.title.offer, 'An offer-pile opening has its rules')
+            const auction = new OfferAuction(state, this.title.offer)
             this.act('OfferAuctionLot', { lotId: auction.offerIds[0] })
             return
         }

@@ -22,9 +22,9 @@
         "@tabletop/1817": "workspace:*",
         "@tabletop/1817-ui": "workspace:*",
         "@tabletop/1830": "workspace:*",
+        "@tabletop/1830-ui": "workspace:*",
         "@tabletop/1832": "workspace:*",
         "@tabletop/1832-ui": "workspace:*",
-        "@tabletop/1830-ui": "workspace:*",
         "@tabletop/1846": "workspace:*",
         "@tabletop/1846-ui": "workspace:*",
         "@tabletop/1894": "workspace:*",
@@ -38,6 +38,8 @@
         "@tabletop/shikoku-1889-ui": "workspace:*",
         "@tabletop/the-old-prince": "workspace:*",
         "@tabletop/the-old-prince-ui": "workspace:*",
+        "@tabletop/two-crowns": "workspace:*",
+        "@tabletop/two-crowns-ui": "workspace:*",
         "nanoid": "5.1.6"
     },
     "devDependencies": {

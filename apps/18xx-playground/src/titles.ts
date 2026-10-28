@@ -54,6 +54,10 @@ import {
     EighteenNinetyFourMapView,
     EighteenNinetyFourTileLayouts
 } from '@tabletop/1894-ui/playground'
+import { TwoCrownsMap, TwoCrownsTileSet, TwoCrownsTitleRules } from '@tabletop/two-crowns'
+import { TwoCrownsScenarios } from '@tabletop/two-crowns/scenarios'
+import { UiDefinition as TwoCrownsUi } from '@tabletop/two-crowns-ui'
+import { TwoCrownsMapView } from '@tabletop/two-crowns-ui/playground'
 import type { EighteenXXTitleRules, RailwayMap, TileRotation, TileSet } from '@tabletop/18xx'
 import type { ScenarioDefinition, ScenarioPosition } from '@tabletop/18xx/scenarios'
 import type { Component } from 'svelte'
@@ -202,6 +206,20 @@ export const PlaygroundTitles: readonly PlaygroundTitle[] = [
         mapExample: { locationId: 'E16', definitionId: '18xx:57', rotation: 0, label: 'Belge' },
         tileSets: { '1894': EighteenNinetyFourTileSet },
         positions: [],
+        playerCounts: [3, 4]
+    },
+    {
+        key: '1874',
+        name: 'The Two Crowns 1874',
+        rules: TwoCrownsTitleRules,
+        scenarios: TwoCrownsScenarios,
+        host: scenarioHost(TwoCrownsUi, TwoCrownsScenarios),
+        map: TwoCrownsMap,
+        mapView: TwoCrownsMapView,
+        mapExample: { locationId: 'P8', definitionId: '18xx:5', rotation: 0, label: 'SLA' },
+        tileSets: { 'The Two Crowns 1874': TwoCrownsTileSet },
+        positions: [],
+        supportedPositions: ['opening'],
         playerCounts: [3, 4]
     }
 ]
