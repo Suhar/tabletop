@@ -12,9 +12,9 @@ export const TwoCrownsInfo: GameInfo = {
         designer: TwoCrownsTitle.designer,
         year: '',
         description:
-            'Austria and Hungary race their railways to Rijeka. A prototype 18xx for 3–4 players on The Old Prince 1871’s rules, with the Croatian map, privates and companies.',
+            'Austria and Hungary race their railways to Rijeka. A prototype 18xx for 3–5 players on The Old Prince 1871’s rules, with the Croatian map, privates and companies.',
         minPlayers: 3,
-        maxPlayers: 4,
+        maxPlayers: 5,
         defaultPlayerCount: 4,
         version: GAME_VERSION,
         beta: true
