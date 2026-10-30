@@ -5,10 +5,12 @@
         planetPointsByPlayer,
         TECHNOLOGY_EFFECT_INFO,
         technologyCard,
-        technologyName,
+        TechnologyEffectKind,
+        TechnologyTiming,
         turnsUntilReady
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import TechnologyChip from './TechnologyChip.svelte'
 
     let gameSession = getGameSession()
     let { player, playerState }: { player: Player; playerState: EarendelPlayerState } = $props()
@@ -20,18 +22,45 @@
         planetPointsByPlayer(gameSession.gameState.board)[playerState.playerId] ?? 0
     )
 
-    let heldTechnologyNames = $derived.by(() => {
-        const repeatable = new Set(
-            playerState.cooldownEffects.map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
-        )
-        const names = playerState.technologies
-            .map((technologyId) => technologyName(technologyCard(technologyId)))
-            .filter((name) => !repeatable.has(name))
+    type TechnologyEntry = {
+        kind: TechnologyEffectKind
+        count: number
+        turnsLeft?: number
+        unspent?: boolean
+    }
 
-        const counts = new Map<string, number>()
-        for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1)
+    // One chip per technology, in the order they were gained.
+    let technologyEntries: TechnologyEntry[] = $derived.by(() => {
+        const counts = new Map<TechnologyEffectKind, number>()
+        const kinds = [
+            ...playerState.technologies.map((technologyId) => technologyCard(technologyId).effect),
+            ...playerState.cooldownEffects,
+            ...playerState.storedEffects
+        ]
+        for (const technologyId of playerState.technologies) {
+            const kind = technologyCard(technologyId).effect
+            counts.set(kind, (counts.get(kind) ?? 0) + 1)
+        }
 
-        return [...counts].map(([name, count]) => (count > 1 ? `${name} ×${count}` : name))
+        return [...new Set(kinds)].map((kind) => {
+            const timing = TECHNOLOGY_EFFECT_INFO[kind].timing
+            return {
+                kind,
+                count: counts.get(kind) ?? 1,
+                ...(timing === TechnologyTiming.Cooldown
+                    ? {
+                          turnsLeft: turnsUntilReady(
+                              gameSession.gameState,
+                              playerState.playerId,
+                              kind
+                          )
+                      }
+                    : {}),
+                ...(timing === TechnologyTiming.Stored
+                    ? { unspent: playerState.storedEffects.includes(kind) }
+                    : {})
+            }
+        })
     })
 </script>
 
@@ -51,36 +80,16 @@
             <span title="Pieces left in the bag">{playerState.bag.remaining} in bag</span>
         </div>
 
-        {#if heldTechnologyNames.length > 0}
-            <div class="mt-1 text-xs opacity-90" title="Technologies gained, kept for good">
-                {heldTechnologyNames.join(', ')}
-            </div>
-        {/if}
-
-        {#if playerState.storedEffects.length > 0}
-            <div class="text-xs opacity-90" title="Technology powers not yet spent">
-                unspent: {playerState.storedEffects
-                    .map((kind) => TECHNOLOGY_EFFECT_INFO[kind].name)
-                    .join(', ')}
-            </div>
-        {/if}
-
-        {#if playerState.cooldownEffects.length > 0}
-            <div class="text-xs flex flex-wrap justify-center gap-x-2">
-                {#each playerState.cooldownEffects as kind (kind)}
-                    {@const left = turnsUntilReady(gameSession.gameState, playerState.playerId, kind)}
-                    <span
-                        title={left > 0
-                            ? `${TECHNOLOGY_EFFECT_INFO[kind].name} — ready in ${left} of this player's turns`
-                            : `${TECHNOLOGY_EFFECT_INFO[kind].name} — ready to use`}
-                    >
-                        <span class="opacity-90">{TECHNOLOGY_EFFECT_INFO[kind].name}</span>
-                        {#if left > 0}
-                            <span class="font-semibold opacity-100">⏳{left}</span>
-                        {:else}
-                            <span class="font-semibold opacity-100">ready</span>
-                        {/if}
-                    </span>
+        {#if technologyEntries.length > 0}
+            <div class="mt-1 mb-0.5 flex flex-wrap justify-center gap-1">
+                {#each technologyEntries as entry (entry.kind)}
+                    <TechnologyChip
+                        name={TECHNOLOGY_EFFECT_INFO[entry.kind].name}
+                        ability={TECHNOLOGY_EFFECT_INFO[entry.kind].ability}
+                        count={entry.count}
+                        turnsLeft={entry.turnsLeft}
+                        unspent={entry.unspent}
+                    />
                 {/each}
             </div>
         {/if}
