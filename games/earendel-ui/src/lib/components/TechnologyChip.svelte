@@ -9,7 +9,11 @@
         turnsLeft,
         unspent,
         pending = false,
-        planet
+        planet,
+        detail,
+        elevated = false,
+        dimmed = false,
+        onchoose
     }: {
         name: string
         ability: string
@@ -22,6 +26,14 @@
         pending?: boolean
         // The planet a pending claim is on, which a line links to while the popup is open.
         planet?: AxialCoordinates
+        // A further line for the popup, such as the planet colours a card matches.
+        detail?: string
+        // An elevated card, picked out in gold.
+        elevated?: boolean
+        dimmed?: boolean
+        // Makes the chip a choice: a click chooses it. On touch the first tap shows the popup and
+        // a second tap chooses.
+        onchoose?: () => void
     } = $props()
 
     // The popup's border, which the trace to a pending claim's planet continues.
@@ -40,6 +52,7 @@
     let popupHeight = $state(0)
 
     let open = $derived(hovered || pinned)
+    let lastPointerType = 'mouse'
 
     let status = $derived.by(() => {
         if (pending) {
@@ -50,6 +63,7 @@
             return `Ready in ${turnsLeft} more ${turnsLeft === 1 ? 'round' : 'rounds'}.`
         }
         if (unspent !== undefined) return unspent ? 'Not used yet.' : 'Used.'
+        if (onchoose) return lastPointerType === 'touch' ? 'Tap again to choose it.' : 'Click to choose it.'
         return undefined
     })
 
@@ -123,6 +137,21 @@
         pinned = !pinned
     }
 
+    function onClick() {
+        if (!onchoose) {
+            togglePin()
+            return
+        }
+        if (lastPointerType === 'touch' && !pinned) {
+            placePopup()
+            pinned = true
+            return
+        }
+        pinned = false
+        hovered = false
+        onchoose()
+    }
+
     function unpinOutside(event: PointerEvent) {
         if (pinned && chip && event.target instanceof Node && !chip.contains(event.target)) {
             pinned = false
@@ -135,18 +164,21 @@
 <button
     bind:this={chip}
     type="button"
-    class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-tight
-        border-current/35 hover:bg-black/20 {pinned ? 'bg-black/25 border-current/70' : 'bg-black/10'}
+    class="inline-flex items-center gap-1.5 rounded-full border leading-tight
+        {onchoose
+        ? `border-2 px-4 py-1.5 text-sm font-semibold ${elevated ? 'border-amber-300 bg-amber-300/20 hover:bg-amber-300/30' : 'border-white bg-white/15 hover:bg-white/25'}`
+        : `px-2 py-0.5 text-xs border-current/35 hover:bg-black/20 ${pinned ? 'bg-black/25 border-current/70' : 'bg-black/10'}`}
         {pending ? 'border-dashed' : ''}
-        {unspent === false ? 'opacity-55' : ''}"
+        {unspent === false || dimmed ? 'opacity-55' : ''}"
+    onpointerdown={(event) => (lastPointerType = event.pointerType)}
     onmouseenter={show}
     onmouseleave={() => (hovered = false)}
     onfocus={show}
     onblur={() => (hovered = false)}
-    onclick={togglePin}
+    onclick={onClick}
     aria-expanded={open}
 >
-    <span class="font-medium">{name}</span>
+    <span class={onchoose ? '' : 'font-medium'}>{name}{elevated ? ' ★' : ''}</span>
     {#if count > 1}
         <span class="opacity-75">×{count}</span>
     {/if}
@@ -200,6 +232,9 @@
     >
         <div class="text-[19px] font-bold">{name}</div>
         <div class="mt-1 text-[15px] leading-snug text-white/80">{ability}</div>
+        {#if detail}
+            <div class="mt-1 text-[13px] text-white/60">{detail}</div>
+        {/if}
         {#if status}
             <div class="mt-2 text-[13px] font-semibold text-[#8fb6ff]">{status}</div>
         {/if}

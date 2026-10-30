@@ -8,13 +8,12 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { describePiece } from '$lib/utils/describe.js'
     import { Power } from '$lib/model/stagedSelection.js'
+    import TechnologyChip from './TechnologyChip.svelte'
 
     let gameSession = getGameSession()
 
     let specials = $derived(gameSession.myPlayerState?.specialPieces ?? [])
 
-    let setAsideHovered = $state(false)
-    let setAsidePinned = $state(false)
 
 
     const SHAPE: Record<string, string> = {
@@ -92,60 +91,27 @@
     {#if gameSession.technologyChoices.length > 0}
         <div class="flex flex-wrap items-center justify-center gap-2">
             {#each gameSession.technologyChoices as card (card.id)}
-                <button
-                    class="rounded-md px-3 py-2 text-sm border-2 cursor-pointer {isElevated(card)
-                        ? 'border-amber-300 bg-amber-300/20 hover:bg-amber-300/30'
-                        : 'border-white bg-white/15 hover:bg-white/25'}"
-                    onclick={() => gameSession.chooseTechnology(card.id)}
-                >
-                    <div class="font-semibold">
-                        {technologyName(card)}{isElevated(card) ? ' ★' : ''}
-                    </div>
-                    <div class="text-[11px] opacity-80 max-w-[16rem]">
-                        {technologyAbility(card)}
-                    </div>
-                    <div class="text-[11px] opacity-60">{card.colors.join(' · ')}</div>
-                </button>
+                <TechnologyChip
+                    name={technologyName(card)}
+                    ability={technologyAbility(card)}
+                    detail="Matches {card.colors.join(' · ')} planets."
+                    elevated={isElevated(card)}
+                    onchoose={() => gameSession.chooseTechnology(card.id)}
+                />
             {/each}
+
+            {#if gameSession.setAsideCards.length > 0}
+                <span class="ml-2 text-xs uppercase tracking-widest opacity-60">Set aside</span>
+                {#each gameSession.setAsideCards as card (card.id)}
+                    <TechnologyChip
+                        name={technologyName(card)}
+                        ability={technologyAbility(card)}
+                        detail="Turned over without this planet's colour ({card.colors.join(' · ')}), and discarded."
+                        dimmed
+                    />
+                {/each}
+            {/if}
         </div>
-
-        {#if gameSession.setAsideCards.length > 0}
-            <div
-                class="relative text-xs"
-                role="group"
-                onmouseenter={() => (setAsideHovered = true)}
-                onmouseleave={() => (setAsideHovered = false)}
-            >
-                <button
-                    type="button"
-                    class="rounded-md px-2 py-1 border border-white/25 bg-white/5 hover:bg-white/15 {setAsidePinned
-                        ? 'border-white/60 bg-white/15'
-                        : ''}"
-                    onclick={() => (setAsidePinned = !setAsidePinned)}
-                >
-                    {gameSession.setAsideCards.length} set aside
-                </button>
-
-                {#if setAsideHovered || setAsidePinned}
-                    <div
-                        class="absolute left-1/2 top-full z-30 mt-1 w-[19rem] -translate-x-1/2 rounded-lg border border-white/25 bg-[#0d1424]/95 p-2 text-left shadow-xl"
-                    >
-                        <div class="mb-1 opacity-70">
-                            Turned over without this planet's colour, and discarded.
-                        </div>
-                        {#each gameSession.setAsideCards as card (card.id)}
-                            <div class="border-t border-white/10 py-1 first:border-t-0">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="font-semibold">{technologyName(card)}</span>
-                                    <span class="shrink-0 opacity-60">{card.colors.join(' · ')}</span>
-                                </div>
-                                <div class="opacity-70">{technologyAbility(card)}</div>
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
-            </div>
-        {/if}
     {/if}
 
     {#if gameSession.canDraw}
