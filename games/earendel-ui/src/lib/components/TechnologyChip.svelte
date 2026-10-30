@@ -30,11 +30,6 @@
     const GAP = 6
     const MARGIN = 8
     const ROOM_ABOVE = 180
-    // Where the trace leaves the popup: level with the technology's name.
-    const TRACE_ROW = 26
-    const MIN_RUN = 14
-    // When a 45° run can't reach the planet, the level part still takes this share of the way.
-    const MIN_RUN_SHARE = 0.4
 
     let chip: HTMLButtonElement | undefined = $state()
     let hovered = $state(false)
@@ -89,30 +84,29 @@
         }
     }
 
-    // A circuit trace: level out of the popup's side, then an angled run, 45° where it fits, to
-    // the planet's ring.
+    // A straight line from the popup's edge to the planet's ring, aimed at the planet's centre.
     let trace = $derived.by(() => {
         if (!anchor || !target || popupHeight === 0) return undefined
         const top = anchor.top ?? viewportHeight - (anchor.bottom ?? 0) - popupHeight
-        const rightward = target.center.x > anchor.left + POPUP_WIDTH / 2
-        const side = rightward ? 1 : -1
-        const start = { x: rightward ? anchor.left + POPUP_WIDTH : anchor.left, y: top + TRACE_ROW }
+        const middle = { x: anchor.left + POPUP_WIDTH / 2, y: top + popupHeight / 2 }
 
-        const rise = Math.abs(target.center.y - start.y)
-        const reach = Math.abs(target.center.x - start.x)
-        const junction = {
-            x: start.x + side * Math.max(MIN_RUN, reach - rise, reach * MIN_RUN_SHARE),
-            y: start.y
-        }
-
-        const dx = target.center.x - junction.x
-        const dy = target.center.y - junction.y
+        const dx = target.center.x - middle.x
+        const dy = target.center.y - middle.y
         const length = Math.hypot(dx, dy) || 1
-        const end = {
-            x: target.center.x - (dx / length) * target.radius,
-            y: target.center.y - (dy / length) * target.radius
+        // How far along the line from the popup's middle its edge is.
+        const exit = Math.min(
+            dx === 0 ? Infinity : POPUP_WIDTH / 2 / Math.abs(dx),
+            dy === 0 ? Infinity : popupHeight / 2 / Math.abs(dy)
+        )
+        if (exit * length + target.radius >= length) return undefined
+
+        return {
+            start: { x: middle.x + dx * exit, y: middle.y + dy * exit },
+            end: {
+                x: target.center.x - (dx / length) * target.radius,
+                y: target.center.y - (dy / length) * target.radius
+            }
         }
-        return { path: `M${start.x},${start.y} H${junction.x} L${end.x},${end.y}`, junction }
     })
 
     function reposition() {
@@ -173,14 +167,14 @@
 
 {#if open && trace && target}
     <svg class="pointer-events-none fixed inset-0 z-40 h-full w-full" aria-hidden="true">
-        <path
-            d={trace.path}
-            fill="none"
+        <line
+            x1={trace.start.x}
+            y1={trace.start.y}
+            x2={trace.end.x}
+            y2={trace.end.y}
             stroke={ACCENT}
             stroke-width="1.25"
-            stroke-linejoin="round"
         />
-        <circle cx={trace.junction.x} cy={trace.junction.y} r="2.5" fill={ACCENT} />
         <circle
             cx={target.center.x}
             cy={target.center.y}
