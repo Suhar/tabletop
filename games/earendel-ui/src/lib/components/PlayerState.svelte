@@ -92,6 +92,16 @@
                     />
                 {/each}
             </div>
+        {:else}
+            <div class="mt-1 mb-0.5 flex justify-center">
+                <button
+                    type="button"
+                    disabled
+                    class="inline-flex items-center rounded-full border border-current/35 bg-black/10 px-2 py-0.5 text-xs leading-tight opacity-60"
+                >
+                    No technologies currently
+                </button>
+            </div>
         {/if}
 
         {#if playerState.specialPieces.length > 0}
