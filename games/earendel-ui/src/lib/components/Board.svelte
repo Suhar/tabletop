@@ -353,30 +353,15 @@
         }
     }
 
-    // pathLength 100 lets one dash animation fly every arc at the same rate.
-    const ARC_BOW = 34
-
-    function attackArc(from: AxialCoordinates, to: AxialCoordinates) {
+    // Two chevrons on the shared edge, pointing from a fighter at a target it can hit.
+    function attackChevrons(from: AxialCoordinates, to: AxialCoordinates) {
         const start = hexGeometry(from).center
         const end = hexGeometry(to).center
-
-        const dx = end.x - start.x
-        const dy = end.y - start.y
-        const length = Math.hypot(dx, dy) || 1
-
-        let nx = -dy / length
-        let ny = dx / length
-        if (ny > 0) {
-            nx = -nx
-            ny = -ny
+        return {
+            x: (start.x + end.x) / 2,
+            y: (start.y + end.y) / 2,
+            degrees: (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI
         }
-
-        const control = {
-            x: (start.x + end.x) / 2 + nx * ARC_BOW,
-            y: (start.y + end.y) / 2 + ny * ARC_BOW
-        }
-
-        return `M${start.x},${start.y} Q${control.x},${control.y} ${end.x},${end.y}`
     }
 
     function reachPointer(from: AxialCoordinates, to: AxialCoordinates) {
@@ -429,6 +414,23 @@
         return planet !== undefined && sameCoordinates(planet, coords)
     }
 </script>
+
+{#snippet attackPulse(at: { x: number; y: number; degrees: number }, strength: number)}
+    <g
+        transform="translate({at.x} {at.y}) rotate({at.degrees})"
+        opacity={strength}
+        pointer-events="none"
+    >
+        <g class="attack-pulse">
+            {#each [-6, 4] as offset (offset)}
+                <polygon
+                    points="{offset - 5},-7 {offset + 4},0 {offset - 5},7 {offset - 2},0"
+                    fill="#ff2f2f"
+                />
+            {/each}
+        </g>
+    </g>
+{/snippet}
 
 <svg {viewBox} class="w-[1200px] max-w-full select-none" role="presentation">
     {#each placed as entry (entry.hex.tileId + entry.hex.coords.q + ',' + entry.hex.coords.r)}
@@ -945,18 +947,9 @@
     {/each}
 
     {#if ghostEntry}
-        {#each previewTargets as target, index (target.q + ',' + target.r)}
-            {@const path = attackArc(ghostEntry.hex.coords, target)}
-            <path
-                d={path}
-                fill="none"
-                stroke="#ff2f2f"
-                stroke-opacity="0.53"
-                stroke-width="3.75"
-                stroke-linecap="round"
-                stroke-dasharray="7 6"
-                pointer-events="none"
-            />
+        {#each previewTargets as target (target.q + ',' + target.r)}
+            {@const chevrons = attackChevrons(ghostEntry.hex.coords, target)}
+            {@render attackPulse(chevrons, 0.55)}
         {/each}
 
         {#each previewProbeDestinations as target, index (target.q + ',' + target.r)}
@@ -985,34 +978,10 @@
         />
     {/each}
 
-    {#each gameSession.attackChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
-        {@const path = attackArc(gameSession.attackChoice!.from, target)}
-        {@const delay = `${index * 200}ms`}
-        <g pointer-events="none">
-            <path
-                d={path}
-                pathLength="100"
-                fill="none"
-                stroke="#ff2f2f"
-                stroke-opacity="0.45"
-                stroke-width="5"
-                stroke-linecap="round"
-                stroke-dasharray="100"
-                class="missile-trail"
-                style="animation-delay: {delay}"
-            />
-            <path
-                d={path}
-                pathLength="100"
-                fill="none"
-                stroke="#ff2f2f"
-                stroke-width="11"
-                stroke-linecap="round"
-                stroke-dasharray="13 200"
-                class="missile"
-                style="animation-delay: {delay}"
-            />
-        </g>
+    <!-- No per-target delay: every target's chevrons pulse together. -->
+    {#each gameSession.attackChoice?.to ?? [] as target (target.q + ',' + target.r)}
+        {@const chevrons = attackChevrons(gameSession.attackChoice!.from, target)}
+        {@render attackPulse(chevrons, 1)}
     {/each}
 
     <!-- Drawn about the origin so BlastAnimator scales each part about the blast. -->
@@ -1309,44 +1278,29 @@
         animation: flow 1.6s linear infinite;
     }
 
-    @keyframes fly-trail {
+    /* Chevrons push toward the target, fade, and start again. */
+    @keyframes attack-pulse-frames {
         0% {
-            stroke-dashoffset: 100;
+            transform: translateX(-5px);
+            opacity: 0.25;
+        }
+        55% {
             opacity: 1;
         }
-        70% {
-            stroke-dashoffset: 0;
-            opacity: 1;
-        }
-        88%,
         100% {
-            stroke-dashoffset: 0;
+            transform: translateX(6px);
             opacity: 0;
         }
     }
 
-    @keyframes fly-missile {
-        0% {
-            stroke-dashoffset: 13;
-            opacity: 1;
-        }
-        70% {
-            stroke-dashoffset: -87;
-            opacity: 1;
-        }
-        75%,
-        100% {
-            stroke-dashoffset: -87;
-            opacity: 0;
-        }
+    .attack-pulse {
+        animation: attack-pulse-frames 1.1s ease-out infinite;
     }
 
-    .missile-trail {
-        animation: fly-trail 1.6s linear infinite;
-    }
-
-    .missile {
-        animation: fly-missile 1.6s linear infinite;
+    @media (prefers-reduced-motion: reduce) {
+        .attack-pulse {
+            animation: none;
+        }
     }
 
     @keyframes point {
