@@ -136,7 +136,7 @@ describe('Railgun', () => {
         expect(turnsUntilReady(game.hydrated, mover, TechnologyEffectKind.Railgun)).toBe(0)
     })
 
-    it('counts down 3, 2, 1 on the owner’s own turns', () => {
+    it('stays full until the owner’s next turn, then counts down as their turns begin', () => {
         // The countdown the player panel shows beside the power's name; readiness is covered
         // above.
         const { game, mover } = scenario()
@@ -158,11 +158,10 @@ describe('Railgun', () => {
             useRailgun: true
         })
 
-        // 2, not 3, and this is the tick rather than an off-by-one: the shot was the last thing
-        // in that turn, so the turn ended and the mover's turnCount advanced before anyone could
-        // read the number. 3 is only ever on screen while the turn that fired is still going -
-        // a drafted turn with another ship still in hand.
-        expect(left()).toBe(2)
+        // Still full after the turn that fired has ended: the count only ticks as the mover's own
+        // turns begin.
+        expect(game.activePlayerId).not.toBe(mover)
+        expect(left()).toBe(3)
 
         const playOn = (q: number) =>
             game.run(PlacePiece, {
@@ -177,8 +176,11 @@ describe('Railgun', () => {
             // Read at the top of each of the mover's own turns, which is when the panel matters.
             playOn(q++) // the other player's turn
             expect(game.activePlayerId).toBe(mover)
-            expect(left(), `on the mover's turn showing ${expected}`).toBe(expected)
-            if (expected > 0) playOn(q++)
+            expect(left(), `at the top of the mover's turn showing ${expected}`).toBe(expected)
+            if (expected > 0) {
+                playOn(q++) // the mover's turn ends; the count holds until their next one begins
+                expect(left(), `between the mover's turns showing ${expected}`).toBe(expected)
+            }
         }
     })
 

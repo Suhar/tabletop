@@ -25,6 +25,8 @@ export function canUseCooldownEffect(
     return since >= COOLDOWN_TURNS
 }
 
+// The countdown the player panel shows. It ticks as each of the owner's turns begins, so it stays
+// full from the use until their next turn starts and empties on the turn the power is ready.
 export function turnsUntilReady(
     state: HydratedEarendelGameState,
     playerId: string,
@@ -32,7 +34,8 @@ export function turnsUntilReady(
 ): number {
     const since = turnsSinceUse(state, playerId, kind)
     if (since === undefined) return 0
-    return Math.max(0, COOLDOWN_TURNS - since)
+    const begunSinceUse = state.activePlayerIds.includes(playerId) ? since : since - 1
+    return Math.min(COOLDOWN_TURNS, Math.max(0, COOLDOWN_TURNS - begunSinceUse))
 }
 
 export function startCooldown(
