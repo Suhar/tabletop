@@ -173,7 +173,10 @@
             x2={trace.end.x}
             y2={trace.end.y}
             stroke={ACCENT}
-            stroke-width="1.25"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-dasharray="7 6"
+            class="claim-link"
         />
         <circle
             cx={target.center.x}
@@ -202,3 +205,22 @@
         {/if}
     </div>
 {/if}
+
+<style>
+    /* The dashes drift slowly from the popup toward the planet. */
+    @keyframes claim-link-frames {
+        to {
+            stroke-dashoffset: -13;
+        }
+    }
+
+    .claim-link {
+        animation: claim-link-frames 2.5s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .claim-link {
+            animation: none;
+        }
+    }
+</style>
