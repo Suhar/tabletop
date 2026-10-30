@@ -4,6 +4,7 @@ import { HexKind, hexKey, neighborsOf } from '../model/board.js'
 import { TILE_HEX_OFFSETS } from '../model/tile.js'
 import {
     buildStartingBoard,
+    MIN_PARTNER_GAP,
     PLANETS_PER_TILE,
     startingTilePlacements,
     TILES_PER_PLAYER
@@ -62,6 +63,53 @@ describe('startingTilePlacements', () => {
                 .sort((a, b) => a - b)
                 .join(',')
         expect(new Set([1, 2, 3, 4].map(layout)).size).toBeGreaterThan(1)
+    })
+})
+
+describe('planet colours', () => {
+    const hexSteps = (a: { q: number; r: number }, b: { q: number; r: number }) =>
+        (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2
+
+    const planetsByColour = (playerCount: number, seed: number) => {
+        const board = buildStartingBoard(playerCount, new Prng({ seed, invocations: 0 }))
+        const byColour = new Map<string, { q: number; r: number }[]>()
+        for (const hex of Object.values(board.hexes)) {
+            if (hex.kind !== HexKind.Planet || !hex.color) continue
+            byColour.set(hex.color, [...(byColour.get(hex.color) ?? []), hex.coords])
+        }
+        return byColour
+    }
+
+    it('deals every colour equally often, give or take one', () => {
+        for (const playerCount of [2, 3, 4, 5]) {
+            for (const seed of [1, 2, 3]) {
+                const counts = [...planetsByColour(playerCount, seed).values()].map(
+                    (planets) => planets.length
+                )
+                const total = playerCount * TILES_PER_PLAYER * PLANETS_PER_TILE
+                expect(counts.reduce((sum, count) => sum + count, 0)).toBe(total)
+                expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
+                // With at least five planets, every colour is on the board.
+                expect(counts).toHaveLength(Math.min(5, total))
+            }
+        }
+    })
+
+    it('keeps planets of one colour at least three hexes apart', () => {
+        for (const playerCount of [2, 3, 4, 5]) {
+            for (const seed of [1, 2, 3, 4, 5]) {
+                for (const planets of planetsByColour(playerCount, seed).values()) {
+                    for (let i = 0; i < planets.length; i++) {
+                        for (let j = i + 1; j < planets.length; j++) {
+                            expect(
+                                hexSteps(planets[i], planets[j]),
+                                `${playerCount} players, seed ${seed}`
+                            ).toBeGreaterThanOrEqual(MIN_PARTNER_GAP)
+                        }
+                    }
+                }
+            }
+        }
     })
 })
 

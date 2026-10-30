@@ -66,8 +66,13 @@ describe('a whole game, played at random', () => {
     it('explores a good share of the planets and pays chains without being swamped by them', () => {
         // Not assertions about balance, which is a playtest question - just a tripwire for a
         // sizing change that quietly turns the game into something else.
-        const summary = playRandomGame(3, 1, { tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER })
-        expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
-        expect(summary.chainsScored).toBeGreaterThan(0)
+        // Chains are an achievement, so any one game may score none; three games should not.
+        const summaries = [1, 2, 3].map((seed) =>
+            playRandomGame(3, seed, { tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER })
+        )
+        for (const summary of summaries) {
+            expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
+        }
+        expect(summaries.reduce((sum, summary) => sum + summary.chainsScored, 0)).toBeGreaterThan(0)
     })
 })

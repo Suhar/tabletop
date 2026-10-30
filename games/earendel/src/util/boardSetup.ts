@@ -7,6 +7,7 @@ import {
     neighborsOf,
     PLANET_COLORS
 } from '../model/board.js'
+import type { PlanetColor } from '../model/planetColor.js'
 import { TILE_HEX_OFFSETS } from '../model/tile.js'
 import {
     legalTilePlacements,
@@ -120,6 +121,22 @@ function holesLeftBy(board: EarendelBoard, footprint: AxialCoordinates[]): numbe
     return [...around.values()].filter((coords) => neighborsOf(coords).every(isFilled)).length
 }
 
+// Planet colours are dealt from an even pool, so each colour turns up equally often, give or
+// take one, and land at random; then planets of one colour that sit within two hexes of each
+// other are pulled apart, and nothing more, so chains between partners stay within reach.
+export const MIN_PARTNER_GAP = 3
+
+function balancedColours(planetCount: number, prng: Prng): PlanetColor[] {
+    const order = [...PLANET_COLORS]
+    shuffle(order, prng.random)
+    const colours = Array.from(
+        { length: planetCount },
+        (_unused, index) => order[index % order.length]
+    )
+    shuffle(colours, prng.random)
+    return colours
+}
+
 export function buildStartingBoard(
     playerCount: number,
     prng: Prng,
@@ -127,33 +144,101 @@ export function buildStartingBoard(
 ): EarendelBoard {
     const board: EarendelBoard = { hexes: {} }
     const tilesPerPlayer = options.tilesPerPlayer ?? TILES_PER_PLAYER
-    const planetsPerTile = options.planetsPerTile ?? PLANETS_PER_TILE
+    const planetsPerTile = Math.min(
+        options.planetsPerTile ?? PLANETS_PER_TILE,
+        TILE_HEX_OFFSETS.length
+    )
 
-    startingTilePlacements(playerCount * tilesPerPlayer, prng).forEach((placement, index) => {
-        const tileId = `tile-${index}`
-        const kinds = shuffledTileKinds(prng, planetsPerTile)
+    const tiles = startingTilePlacements(playerCount * tilesPerPlayer, prng).map((placement) =>
+        tileFootprint(placement.origin, placement.rotation)
+    )
+    const colours = balancedColours(tiles.length * planetsPerTile, prng)
+    const planets: SeededPlanet[] = tiles.flatMap((footprint, tile) => {
+        const hexes = [...footprint]
+        shuffle(hexes, prng.random)
+        return hexes.slice(0, planetsPerTile).map((coords) => ({
+            tile,
+            coords,
+            colour: colours.pop() ?? PLANET_COLORS[0]
+        }))
+    })
 
-        tileFootprint(placement.origin, placement.rotation).forEach((coords, hexIndex) => {
-            const kind = kinds[hexIndex]
-            board.hexes[hexKey(coords)] = {
-                coords,
-                tileId,
-                kind,
-                ...(kind === HexKind.Planet
-                    ? { color: PLANET_COLORS[Math.floor(prng.random() * PLANET_COLORS.length)] }
-                    : {})
-            }
-        })
+    separatePartners(planets, tiles)
+
+    const planetAt = new Map(planets.map((planet) => [hexKey(planet.coords), planet.colour]))
+    tiles.forEach((footprint, tile) => {
+        const tileId = `tile-${tile}`
+        for (const coords of footprint) {
+            const colour = planetAt.get(hexKey(coords))
+            board.hexes[hexKey(coords)] = colour
+                ? { coords, tileId, kind: HexKind.Planet, color: colour }
+                : { coords, tileId, kind: HexKind.Open }
+        }
     })
 
     return board
 }
 
-function shuffledTileKinds(prng: Prng, planetsPerTile: number): HexKind[] {
-    const kinds: HexKind[] = [
-        ...Array.from({ length: planetsPerTile }, () => HexKind.Planet),
-        ...Array.from({ length: TILE_HEX_OFFSETS.length - planetsPerTile }, () => HexKind.Open)
-    ]
-    shuffle(kinds, prng.random)
-    return kinds
+type SeededPlanet = { tile: number; coords: AxialCoordinates; colour: PlanetColor }
+
+const SEPARATE_ROUNDS = 20
+
+export function hexSteps(a: AxialCoordinates, b: AxialCoordinates): number {
+    return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2
+}
+
+// How far same-coloured planets fall short of the gap, summed over every such pair.
+function shortfall(planets: SeededPlanet[]): number {
+    let total = 0
+    for (let i = 0; i < planets.length; i++) {
+        for (let j = i + 1; j < planets.length; j++) {
+            if (planets[i].colour !== planets[j].colour) continue
+            total += Math.max(0, MIN_PARTNER_GAP - hexSteps(planets[i].coords, planets[j].coords))
+        }
+    }
+    return total
+}
+
+// Swaps two planets' colours, or moves a planet within its tile, whenever that shrinks the
+// shortfall, and stops once no partners are too close. Colour counts stay as dealt.
+function separatePartners(planets: SeededPlanet[], tiles: AxialCoordinates[][]) {
+    let current = shortfall(planets)
+    for (let round = 0; round < SEPARATE_ROUNDS && current > 0; round++) {
+        let improved = false
+
+        for (let i = 0; i < planets.length && current > 0; i++) {
+            for (let j = i + 1; j < planets.length && current > 0; j++) {
+                if (planets[i].colour === planets[j].colour) continue
+                ;[planets[i].colour, planets[j].colour] = [planets[j].colour, planets[i].colour]
+                const next = shortfall(planets)
+                if (next < current) {
+                    current = next
+                    improved = true
+                } else {
+                    ;[planets[i].colour, planets[j].colour] = [planets[j].colour, planets[i].colour]
+                }
+            }
+        }
+
+        for (const planet of planets) {
+            if (current === 0) break
+            const taken = new Set(planets.map((other) => hexKey(other.coords)))
+            for (const coords of tiles[planet.tile]) {
+                if (taken.has(hexKey(coords))) continue
+                const before = planet.coords
+                planet.coords = coords
+                const next = shortfall(planets)
+                if (next < current) {
+                    current = next
+                    improved = true
+                    taken.delete(hexKey(before))
+                    taken.add(hexKey(coords))
+                } else {
+                    planet.coords = before
+                }
+            }
+        }
+
+        if (!improved) break
+    }
 }

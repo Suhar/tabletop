@@ -80,8 +80,15 @@ game_) rather than when a bag empties — every one of 32 simulated games ended 
 of 7 tiles per player is where games end on an empty bag instead; the sizing notes below were
 measured there.
 
-Each planet's colour is chosen at random, independently, so a board can hold several planets of
-one colour and none of another.
+Planet colours are **dealt evenly**: each colour is on the board equally often, give or take
+one, and every colour appears once there are five planets or more. They land at random, then
+any two planets of one colour within two hexes of each other are pulled apart (by trading
+colours with another planet, or moving within their tile), so partners are always at least
+three hexes apart.
+
+The gap is a minimum, not a maximum, on purpose. Spreading partners as far apart as possible
+made chains rare: in simulation, under one a game. Breaking up only the tight clumps keeps
+chains an achievement that still happens, about 1 to 2 a game at 3 players.
 
 **Sizing, settled by simulation rather than by feel.** The open space on the board has to be
 matched against the size of the bags, or the game cannot reach its own ending. Two tiles per
