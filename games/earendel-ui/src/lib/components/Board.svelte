@@ -756,13 +756,15 @@
     <!-- A pending probe claim: a beam from the claimed planet into each of the claimant's probes
          beside it, gained on their next turn if their probes still lead (rules.md, Gaining a
          technology). -->
-    <!-- Joined pairs of planets: a pip in each joiner's colour along the bottom of the planet's hex
+    <!-- Joined pairs of planets: a crate in each joiner's colour along the bottom of the planet's hex
          (rules.md, Chains). Hovering a pip, or a joined planet, draws the routes. -->
     {#each routePips as pip (pip.key)}
-        <circle
-            cx={pip.x}
-            cy={pip.y}
-            r="5"
+        <rect
+            x={pip.x - 5}
+            y={pip.y - 5}
+            width="10"
+            height="10"
+            rx="1.5"
             fill={gameSession.colors.getPlayerUiColor(pip.playerId)}
             stroke="#070b16"
             stroke-width="1.5"
