@@ -6,7 +6,8 @@
         ability,
         count = 1,
         turnsLeft,
-        unspent
+        unspent,
+        pending = false
     }: {
         name: string
         ability: string
@@ -15,6 +16,8 @@
         turnsLeft?: number
         // Set for a once-only technology: whether it is still to be used.
         unspent?: boolean
+        // A probe claim on a planet with this technology, not yet researched.
+        pending?: boolean
     } = $props()
 
     const POPUP_WIDTH = 300
@@ -29,6 +32,9 @@
     let open = $derived(hovered || pinned)
 
     let status = $derived.by(() => {
+        if (pending) {
+            return "Pending: researched at this player's next turn if their probes still lead the planet."
+        }
         if (turnsLeft !== undefined) {
             if (turnsLeft === 0) return 'Ready to use.'
             return `Ready in ${turnsLeft} more ${turnsLeft === 1 ? 'round' : 'rounds'}.`
@@ -75,6 +81,7 @@
     type="button"
     class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-tight
         border-current/35 hover:bg-black/20 {pinned ? 'bg-black/25 border-current/70' : 'bg-black/10'}
+        {pending ? 'border-dashed' : ''}
         {unspent === false ? 'opacity-55' : ''}"
     onmouseenter={show}
     onmouseleave={() => (hovered = false)}
@@ -86,6 +93,9 @@
     <span class="font-medium">{name}</span>
     {#if count > 1}
         <span class="opacity-75">×{count}</span>
+    {/if}
+    {#if pending}
+        <span class="text-[10px] font-semibold uppercase tracking-wide opacity-75">Pending</span>
     {/if}
     {#if turnsLeft !== undefined}
         <span class="inline-flex gap-[3px]" aria-label="{turnsLeft} rounds left">

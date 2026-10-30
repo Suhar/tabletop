@@ -226,17 +226,14 @@
         }
     }
 
-    const UPLINK_PIPS = 3
-    const UPLINK_CYCLE = 1.8 // seconds, matching uplink-pip-frames
-
-    // From the edge of the planet's disc to the edge of the probe's hub.
+    // From within the planet's disc, where the light diffuses, to the edge of the probe's hub.
     function uplinkBeam(planet: AxialCoordinates, probe: AxialCoordinates) {
         const from = hexGeometry(planet).center
         const to = hexGeometry(probe).center
         const dx = to.x - from.x
         const dy = to.y - from.y
         const distance = Math.hypot(dx, dy)
-        const startInset = 22
+        const startInset = 14
         const endInset = 8
         return {
             x: from.x + (dx / distance) * startInset,
@@ -752,21 +749,19 @@
     {#each gameSession.claimUplinks as uplink (uplink.planet.q + ',' + uplink.planet.r + '>' + uplink.probe.q + ',' + uplink.probe.r)}
         {@const beam = uplinkBeam(uplink.planet, uplink.probe)}
         {@const color = gameSession.colors.getPlayerUiColor(uplink.playerId)}
-        <g transform="translate({beam.x} {beam.y}) rotate({beam.degrees})" pointer-events="none">
-            <polygon
-                points="0,-15 {beam.length},-5 {beam.length},5 0,15"
-                fill={color}
-                fill-opacity="0.35"
-            />
-            <line x1="0" y1="0" x2={beam.length} y2="0" stroke={color} stroke-opacity="0.6" stroke-width="1.5" />
-            {#each Array.from({ length: UPLINK_PIPS }, (_unused, i) => i) as pip (pip)}
-                <path
-                    d="M-5,0 L0,-5 L5,0 L0,5 Z"
-                    fill="#fff6d8"
-                    class="uplink-pip"
-                    style="--run: {beam.length}px; --rest: {(beam.length * (pip + 0.5)) / UPLINK_PIPS}px; animation-delay: {(pip * UPLINK_CYCLE) / UPLINK_PIPS}s;"
-                />
-            {/each}
+        {@const gradientId = `uplink-${uplink.planet.q}_${uplink.planet.r}-${uplink.probe.q}_${uplink.probe.r}`}
+        <g
+            transform="translate({beam.x} {beam.y}) rotate({beam.degrees})"
+            class="uplink-beam"
+            pointer-events="none"
+        >
+            <!-- Strongest at the probe, fading out over the planet. -->
+            <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color={color} stop-opacity="0" />
+                <stop offset="0.5" stop-color={color} stop-opacity="0.28" />
+                <stop offset="1" stop-color={color} stop-opacity="0.5" />
+            </linearGradient>
+            <polygon points="0,-16 {beam.length},-5 {beam.length},5 0,16" fill="url(#{gradientId})" />
         </g>
     {/each}
 
@@ -1146,30 +1141,23 @@
         outline: none;
     }
 
-    /* Data pips stream from the claimed planet into the probe, each delayed to its own slot. */
-    @keyframes uplink-pip-frames {
-        0% {
-            transform: translateX(0);
-            opacity: 0;
+    /* A pending claim's beam of light breathes gently. */
+    @keyframes uplink-beam-frames {
+        from {
+            opacity: 0.65;
         }
-        15%,
-        80% {
+        to {
             opacity: 1;
-        }
-        100% {
-            transform: translateX(var(--run));
-            opacity: 0;
         }
     }
 
-    .uplink-pip {
-        animation: uplink-pip-frames 1.8s linear infinite backwards;
+    .uplink-beam {
+        animation: uplink-beam-frames 2.2s ease-in-out infinite alternate;
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .uplink-pip {
+        .uplink-beam {
             animation: none;
-            transform: translateX(var(--rest));
         }
     }
 

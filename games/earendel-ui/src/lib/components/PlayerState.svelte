@@ -2,6 +2,8 @@
     import { type Player } from '@tabletop/common'
     import {
         EarendelPlayerState,
+        getHex,
+        hexKey,
         planetPointsByPlayer,
         TECHNOLOGY_EFFECT_INFO,
         technologyCard,
@@ -28,6 +30,17 @@
         turnsLeft?: number
         unspent?: boolean
     }
+
+    // Technologies this player's probes will research at their next turn if they still lead.
+    let pendingTechnologies = $derived(
+        gameSession.gameState.probeClaims.flatMap((claim) => {
+            if (claim.playerId !== playerState.playerId) return []
+            const hex = getHex(gameSession.gameState.board, claim.coords)
+            if (hex?.technologyId !== claim.technologyId) return []
+            if (playerState.technologies.includes(claim.technologyId)) return []
+            return [{ key: hexKey(claim.coords), kind: technologyCard(claim.technologyId).effect }]
+        })
+    )
 
     // One chip per technology, in the order they were gained.
     let technologyEntries: TechnologyEntry[] = $derived.by(() => {
@@ -80,7 +93,7 @@
             <span title="Pieces left in the bag">{playerState.bag.remaining} in bag</span>
         </div>
 
-        {#if technologyEntries.length > 0}
+        {#if technologyEntries.length > 0 || pendingTechnologies.length > 0}
             <div class="mt-1 mb-0.5 flex flex-wrap justify-center gap-1">
                 {#each technologyEntries as entry (entry.kind)}
                     <TechnologyChip
@@ -89,6 +102,13 @@
                         count={entry.count}
                         turnsLeft={entry.turnsLeft}
                         unspent={entry.unspent}
+                    />
+                {/each}
+                {#each pendingTechnologies as claim (claim.key)}
+                    <TechnologyChip
+                        name={TECHNOLOGY_EFFECT_INFO[claim.kind].name}
+                        ability={TECHNOLOGY_EFFECT_INFO[claim.kind].ability}
+                        pending
                     />
                 {/each}
             </div>
