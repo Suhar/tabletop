@@ -9,7 +9,13 @@ export const ORBIT_RADIUS = 33
 export const ORBITER_SCALE = 0.35
 export const ORBIT_PERIOD = 40 // seconds per revolution, matching orbit-spin in Board
 const ORBIT_DURATION = 0.7
+const WITHDRAW_DURATION = 0.3
 const FALLBACK_ORBIT_DURATION = 0.15
+
+// A claim beam's key: the probe shining it, then the planet it shines on.
+export function beamKey(probe: AxialCoordinates, planet: AxialCoordinates): string {
+    return `${hexKey(probe)}>${hexKey(planet)}`
+}
 
 // Where the k-th of n orbiters sits around its planet before the orbit's own rotation.
 export function orbitSlot(planet: AxialCoordinates, index: number, count: number) {
@@ -45,10 +51,12 @@ function currentRotation(element: Element | undefined): number {
     return Math.atan2(matrix.b, matrix.a)
 }
 
-// A probe whose claim paid flies from its hex into the planet's orbit, shrinking as it goes,
-// and lands where its orbiter will be drawn once the new state is shown.
+// A probe whose claim paid first draws its beams back into itself, then flies from its hex into
+// the planet's orbit, shrinking as it goes, and lands where its orbiter will be drawn once the new
+// state is shown.
 export class OrbitAnimator {
     readonly orbits = new ElementRegistry<SVGGElement>()
+    readonly beams = new ElementRegistry<SVGPolygonElement>()
 
     constructor(private pieceNode: (pieceId: string) => SVGGElement | undefined) {}
 
@@ -66,6 +74,9 @@ export class OrbitAnimator {
         if (!from) return
 
         const duration = action ? ORBIT_DURATION : FALLBACK_ORBIT_DURATION
+        // Without an action the whole change stays within the short fallback, so nothing waits.
+        const withdraw = action ? WITHDRAW_DURATION : FALLBACK_ORBIT_DURATION
+        const flightStart = action ? WITHDRAW_DURATION : 0
         for (const orbiter of newOrbiters(from.board, to.board)) {
             const node = this.pieceNode(orbiter.pieceId)
             const fromHex = Object.values(from.board.hexes).find(
@@ -73,10 +84,26 @@ export class OrbitAnimator {
             )
             if (!node || !fromHex) continue
 
+            const probeKey = `${hexKey(fromHex.coords)}>`
+            for (const [key, beam] of this.beams.entries()) {
+                if (!key.startsWith(probeKey)) continue
+                // The beam runs from the planet (x = 0) to the probe, so it shrinks into the probe.
+                animationContext.actionTimeline.to(
+                    beam,
+                    {
+                        scaleX: 0,
+                        transformOrigin: '100% 50%',
+                        duration: withdraw,
+                        ease: 'power2.in'
+                    },
+                    0
+                )
+            }
+
             // The orbit keeps turning while the probe flies, so aim where the slot will be.
             const turned =
                 currentRotation(this.orbits.get(String(hexKey(orbiter.planet)))) +
-                (2 * Math.PI * duration) / ORBIT_PERIOD
+                (2 * Math.PI * (flightStart + duration)) / ORBIT_PERIOD
             const center = hexGeometry(orbiter.planet).center
             const slot = orbitSlot(orbiter.planet, orbiter.index, orbiter.count)
             const angle = slot.angle + turned
@@ -92,7 +119,7 @@ export class OrbitAnimator {
                     duration,
                     ease: 'power2.inOut'
                 },
-                0
+                flightStart
             )
         }
     }

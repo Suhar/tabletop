@@ -30,6 +30,7 @@
     import {
         ORBIT_PERIOD,
         ORBITER_SCALE,
+        beamKey,
         OrbitAnimator,
         orbitSlot
     } from '$lib/animators/orbitAnimator.svelte.js'
@@ -138,7 +139,9 @@
         await gameSession.onBoardClick(coords, touch)
     }
 
-    let ghostPiece = $derived(gameSession.isPlacing ? gameSession.pieceToPlace : undefined)
+    let ghostPiece = $derived(
+        gameSession.previewingPlacement ? gameSession.pieceToPlace : undefined
+    )
     let showGhost = $derived(ghostPiece !== undefined)
 
     let ghostEntry = $derived.by(() => {
@@ -809,7 +812,11 @@
                 <stop offset="0.5" stop-color={color} stop-opacity="0.28" />
                 <stop offset="1" stop-color={color} stop-opacity="0.5" />
             </linearGradient>
-            <polygon points="0,-16 {beam.length},-5 {beam.length},5 0,16" fill="url(#{gradientId})" />
+            <polygon
+                points="0,-16 {beam.length},-5 {beam.length},5 0,16"
+                fill="url(#{gradientId})"
+                use:registerElement={{ registry: orbits.beams, key: beamKey(uplink.probe, uplink.planet) }}
+            />
         </g>
     {/each}
 
@@ -838,7 +845,9 @@
                             center={entry.center}
                             {color}
                             hub={piece.hub}
-                            linkedAngles={linkedAngles(entry.hex.coords, piece.playerId)}
+                            linkedAngles={pieceMoves.undocked.includes(piece.id)
+                                ? []
+                                : linkedAngles(entry.hex.coords, piece.playerId)}
                         />
                     {:else}
                         <FighterShape center={entry.center} {color} level={powerOf(piece)} />
@@ -911,35 +920,6 @@
         </g>
     {/each}
 
-    {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
-        {@const width = 300}
-        {@const lines = wrap(technologyAbility(shown.card), 34)}
-        {@const height = 52 + lines.length * 20}
-        {@const box = popupPosition(shown.center, width, height)}
-        {@const x = box.x}
-        {@const y = box.y}
-        <g pointer-events="none">
-            <rect
-                {x}
-                {y}
-                {width}
-                {height}
-                rx="10"
-                fill="#0d1424"
-                fill-opacity="0.97"
-                stroke="#8fb6ff"
-                stroke-width="2"
-            />
-            <text x={x + 16} y={y + 30} class="fill-white text-[19px] font-bold">
-                {technologyName(shown.card)}
-            </text>
-            {#each lines as line, index (index)}
-                <text x={x + 16} y={y + 56 + index * 20} class="fill-white/80 text-[15px]">
-                    {line}
-                </text>
-            {/each}
-        </g>
-    {/each}
 
     {#each shownRoutes as route (routeKey(route))}
         {@const run = routeRun(route.planets[0], route.planets[1])}
@@ -963,16 +943,6 @@
         </g>
     {/each}
 
-    {#if hoveredPip}
-        {@const at = hexGeometry(hoveredPip.planet).center}
-        {@const label = `${shownRoutes.length > 1 ? `${shownRoutes.length} trade routes` : 'Trade route'} · joined by ${gameSession.getPlayerName(hoveredPip.playerId)}`}
-        {@const width = label.length * 8.6 + 24}
-        {@const box = popupPosition(at, width, 32)}
-        <g pointer-events="none">
-            <rect x={box.x} y={box.y} {width} height="32" rx="8" fill="#0d1424" fill-opacity="0.97" stroke="#8fb6ff" stroke-width="2" />
-            <text x={box.x + 12} y={box.y + 21} class="fill-white text-[15px]">{label}</text>
-        </g>
-    {/if}
 
     <!-- A probe in clear sight of its own station is safe from fighters (rules.md, Relay). -->
     {#each shownRelayLines as relay (relay.station.q + ',' + relay.station.r + '>' + relay.probe.q + ',' + relay.probe.r)}
@@ -1166,6 +1136,48 @@
             stroke-dasharray="14 12"
         />
     {/each}
+
+    <!-- Popups last, so nothing on the board is drawn over them. -->
+    {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
+        {@const width = 300}
+        {@const lines = wrap(technologyAbility(shown.card), 34)}
+        {@const height = 52 + lines.length * 20}
+        {@const box = popupPosition(shown.center, width, height)}
+        {@const x = box.x}
+        {@const y = box.y}
+        <g pointer-events="none">
+            <rect
+                {x}
+                {y}
+                {width}
+                {height}
+                rx="10"
+                fill="#0d1424"
+                fill-opacity="0.9"
+                stroke="#8fb6ff"
+                stroke-width="2"
+            />
+            <text x={x + 16} y={y + 30} class="fill-white text-[19px] font-bold">
+                {technologyName(shown.card)}
+            </text>
+            {#each lines as line, index (index)}
+                <text x={x + 16} y={y + 56 + index * 20} class="fill-white/80 text-[15px]">
+                    {line}
+                </text>
+            {/each}
+        </g>
+    {/each}
+
+    {#if hoveredPip}
+        {@const at = hexGeometry(hoveredPip.planet).center}
+        {@const label = `${shownRoutes.length > 1 ? `${shownRoutes.length} trade routes` : 'Trade route'} · joined by ${gameSession.getPlayerName(hoveredPip.playerId)}`}
+        {@const width = label.length * 8.6 + 24}
+        {@const box = popupPosition(at, width, 32)}
+        <g pointer-events="none">
+            <rect x={box.x} y={box.y} {width} height="32" rx="8" fill="#0d1424" fill-opacity="0.9" stroke="#8fb6ff" stroke-width="2" />
+            <text x={box.x + 12} y={box.y + 21} class="fill-white text-[15px]">{label}</text>
+        </g>
+    {/if}
 </svg>
 
 <style>

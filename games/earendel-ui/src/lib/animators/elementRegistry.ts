@@ -5,6 +5,10 @@ export class ElementRegistry<E extends Element = SVGElement> {
         return this.elements.get(key)
     }
 
+    entries(): [string, E][] {
+        return [...this.elements.entries()]
+    }
+
     set(key: string, element: E) {
         this.elements.set(key, element)
     }

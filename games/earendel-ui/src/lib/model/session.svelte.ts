@@ -250,6 +250,9 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.isMyTurn && this.validActionTypes.includes(ActionType.PlacePiece)
     )
 
+    // A ship may be placed and no technology is being chosen, so hovering previews a placement.
+    previewingPlacement: boolean = $derived(this.isPlacing && this.activePower === undefined)
+
     // Not auto-selected even when only one: skipping is always allowed.
     choosablePlanets: AxialCoordinates[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
@@ -400,7 +403,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     previewTargetsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
-        if (!piece || piece.type !== PieceType.Fighter || !this.isPlacing) return []
+        if (!piece || piece.type !== PieceType.Fighter || !this.previewingPlacement) return []
 
         const board = structuredClone($state.snapshot(this.gameState.board))
         const hex = board.hexes[hexKey(coords)]
@@ -411,7 +414,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     previewProbeDestinationsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
-        if (!piece || piece.type !== PieceType.Probe || !this.isPlacing) return []
+        if (!piece || piece.type !== PieceType.Probe || !this.previewingPlacement) return []
         return probeDestinations(this.gameState, coords, piece)
     }
 
