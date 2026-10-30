@@ -1,12 +1,19 @@
 import { type AxialCoordinates, Prng, shuffle } from '@tabletop/common'
-import { EarendelBoard, HexKind, hexKey, PLANET_COLORS } from '../model/board.js'
-
-export const TILE_HEX_OFFSETS: AxialCoordinates[] = [
-    { q: 0, r: 0 },
-    { q: 1, r: 0 },
-    { q: 0, r: 1 },
-    { q: 1, r: 1 }
-]
+import {
+    EarendelBoard,
+    getHex,
+    HexKind,
+    hexKey,
+    neighborsOf,
+    PLANET_COLORS
+} from '../model/board.js'
+import { TILE_HEX_OFFSETS } from '../model/tile.js'
+import {
+    legalTilePlacements,
+    TILE_ROTATIONS,
+    tileFootprint,
+    type TilePlacement
+} from './tilePlacement.js'
 
 // One planet per tile, settled by simulation (rules.md, Setup).
 export const PLANETS_PER_TILE = 1
@@ -20,44 +27,97 @@ export type BoardSetupOptions = {
     planetsPerTile?: number
 }
 
-// (2,-1) and (0,2) are axis-aligned on screen and span an index-4 lattice, so the four-hex tiles
-// cover the plane with no gaps or overlaps.
-const COLUMN_STEP: AxialCoordinates = { q: 2, r: -1 }
-const ROW_STEP: AxialCoordinates = { q: 0, r: 2 }
+// Growth weights. Contact keeps the board clustered, spread keeps it growing outward from its
+// middle rather than in a line, and an enclosed hole is all but ruled out.
+const CONTACT_WEIGHT = 1
+const SPREAD_WEIGHT = 2.5
+const HOLE_PENALTY = 20
+const JITTER = 2.5
+// Distance across counts for less than distance down, so boards lean wide like the table.
+const WIDTH_BIAS = 1.7
 
-const COLUMN_WIDTH = 150
-const ROW_HEIGHT = 174
-
-const TARGET_ASPECT = 1.6
-
-function bestColumnCount(tileCount: number): number {
-    let best = 1
-    let bestError = Infinity
-
-    for (let columns = 1; columns <= tileCount; columns++) {
-        const rows = Math.ceil(tileCount / columns)
-        const aspect = (columns * COLUMN_WIDTH) / (rows * ROW_HEIGHT)
-        const error = Math.abs(aspect - TARGET_ASPECT)
-        if (error < bestError) {
-            bestError = error
-            best = columns
-        }
-    }
-
-    return best
+// Hex centres in units of the hex size, flat-topped.
+function centreOf({ q, r }: AxialCoordinates): { x: number; y: number } {
+    return { x: 1.5 * q, y: Math.sqrt(3) * (r + q / 2) }
 }
 
-export function startingTileOrigins(tileCount: number): AxialCoordinates[] {
-    const columns = bestColumnCount(tileCount)
+// The starting tiles, grown one at a time from a single tile: each new tile goes where it
+// touches the board most and strays least from its middle, with a seeded nudge so no two boards
+// match.
+export function startingTilePlacements(tileCount: number, prng: Prng): TilePlacement[] {
+    if (tileCount <= 0) return []
 
-    return Array.from({ length: tileCount }, (_unused, index) => {
-        const column = index % columns
-        const row = Math.floor(index / columns)
-        return {
-            q: COLUMN_STEP.q * column + ROW_STEP.q * row,
-            r: COLUMN_STEP.r * column + ROW_STEP.r * row
+    const first: TilePlacement = {
+        origin: { q: 0, r: 0 },
+        rotation: Math.floor(prng.random() * TILE_ROTATIONS)
+    }
+    const placements = [first]
+    const board: EarendelBoard = { hexes: {} }
+    const occupy = (placement: TilePlacement) => {
+        for (const coords of tileFootprint(placement.origin, placement.rotation)) {
+            board.hexes[hexKey(coords)] = { coords, tileId: '', kind: HexKind.Open }
         }
-    })
+    }
+    occupy(first)
+
+    while (placements.length < tileCount) {
+        const hexes = Object.values(board.hexes).map((hex) => centreOf(hex.coords))
+        const middle = {
+            x: hexes.reduce((sum, c) => sum + c.x, 0) / hexes.length,
+            y: hexes.reduce((sum, c) => sum + c.y, 0) / hexes.length
+        }
+        const distance = (c: { x: number; y: number }) =>
+            ((c.x - middle.x) / WIDTH_BIAS) ** 2 + (c.y - middle.y) ** 2
+        const radius = hexes.reduce((sum, c) => sum + distance(c), 0) / hexes.length + 1
+
+        let best: { placement: TilePlacement; score: number } | undefined
+        for (const placement of legalTilePlacements(board)) {
+            const footprint = tileFootprint(placement.origin, placement.rotation)
+            const score =
+                CONTACT_WEIGHT * contactOf(board, footprint) -
+                (SPREAD_WEIGHT * spreadOf(footprint, distance)) / radius -
+                HOLE_PENALTY * holesLeftBy(board, footprint) +
+                JITTER * prng.random()
+            if (!best || score > best.score) best = { placement, score }
+        }
+        if (!best) break
+
+        placements.push(best.placement)
+        occupy(best.placement)
+    }
+
+    return placements
+}
+
+// Sides the tile would share with the board.
+function contactOf(board: EarendelBoard, footprint: AxialCoordinates[]): number {
+    return footprint.reduce(
+        (sum, coords) =>
+            sum + neighborsOf(coords).filter((neighbor) => getHex(board, neighbor)).length,
+        0
+    )
+}
+
+function spreadOf(
+    footprint: AxialCoordinates[],
+    distance: (c: { x: number; y: number }) => number
+): number {
+    return footprint.reduce((sum, coords) => sum + distance(centreOf(coords)), 0) / footprint.length
+}
+
+// Empty hexes the tile would close in on every side.
+function holesLeftBy(board: EarendelBoard, footprint: AxialCoordinates[]): number {
+    const filled = new Set(footprint.map(hexKey))
+    const isFilled = (coords: AxialCoordinates) =>
+        filled.has(hexKey(coords)) || getHex(board, coords) !== undefined
+
+    const around = new Map<number, AxialCoordinates>()
+    for (const coords of footprint) {
+        for (const neighbor of neighborsOf(coords)) {
+            if (!isFilled(neighbor)) around.set(hexKey(neighbor), neighbor)
+        }
+    }
+    return [...around.values()].filter((coords) => neighborsOf(coords).every(isFilled)).length
 }
 
 export function buildStartingBoard(
@@ -69,12 +129,11 @@ export function buildStartingBoard(
     const tilesPerPlayer = options.tilesPerPlayer ?? TILES_PER_PLAYER
     const planetsPerTile = options.planetsPerTile ?? PLANETS_PER_TILE
 
-    startingTileOrigins(playerCount * tilesPerPlayer).forEach((origin, index) => {
+    startingTilePlacements(playerCount * tilesPerPlayer, prng).forEach((placement, index) => {
         const tileId = `tile-${index}`
         const kinds = shuffledTileKinds(prng, planetsPerTile)
 
-        TILE_HEX_OFFSETS.forEach((offset, hexIndex) => {
-            const coords = { q: origin.q + offset.q, r: origin.r + offset.r }
+        tileFootprint(placement.origin, placement.rotation).forEach((coords, hexIndex) => {
             const kind = kinds[hexIndex]
             board.hexes[hexKey(coords)] = {
                 coords,

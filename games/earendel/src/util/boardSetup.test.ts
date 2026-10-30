@@ -1,29 +1,67 @@
 import { describe, expect, it } from 'vitest'
 import { Prng } from '@tabletop/common'
-import { HexKind, hexKey } from '../model/board.js'
+import { HexKind, hexKey, neighborsOf } from '../model/board.js'
+import { TILE_HEX_OFFSETS } from '../model/tile.js'
 import {
     buildStartingBoard,
     PLANETS_PER_TILE,
-    startingTileOrigins,
-    TILE_HEX_OFFSETS,
+    startingTilePlacements,
     TILES_PER_PLAYER
 } from './boardSetup.js'
+import { tileFootprint } from './tilePlacement.js'
 
-describe('startingTileOrigins', () => {
+describe('startingTilePlacements', () => {
+    const footprints = (playerCount: number, seed: number) =>
+        startingTilePlacements(
+            playerCount * TILES_PER_PLAYER,
+            new Prng({ seed, invocations: 0 })
+        ).map((placement) => tileFootprint(placement.origin, placement.rotation))
+
     it('lays the right number of tiles per player, without overlapping', () => {
         for (const playerCount of [2, 3, 4, 5]) {
-            const origins = startingTileOrigins(playerCount * TILES_PER_PLAYER)
-            expect(origins).toHaveLength(playerCount * TILES_PER_PLAYER)
+            const tiles = footprints(playerCount, playerCount)
+            expect(tiles).toHaveLength(playerCount * TILES_PER_PLAYER)
 
-            // Tiles are 2x2 in axial terms, so distinct origins spaced by 2 can't share a hex.
-            const hexes = new Set<number>()
-            for (const origin of origins) {
-                for (const offset of TILE_HEX_OFFSETS) {
-                    hexes.add(hexKey({ q: origin.q + offset.q, r: origin.r + offset.r }))
-                }
-            }
+            const hexes = new Set(tiles.flat().map(hexKey))
             expect(hexes.size).toBe(playerCount * TILES_PER_PLAYER * TILE_HEX_OFFSETS.length)
         }
+    })
+
+    it('grows one connected cluster with no hex closed in on every side', () => {
+        for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+            const hexes = footprints(4, seed).flat()
+            const onBoard = new Set(hexes.map(hexKey))
+
+            // Every tile after the first touches the tiles laid before it.
+            const tiles = footprints(4, seed)
+            const laid = new Set(tiles[0].map(hexKey))
+            for (const tile of tiles.slice(1)) {
+                expect(
+                    tile.some((coords) =>
+                        neighborsOf(coords).some((neighbor) => laid.has(hexKey(neighbor)))
+                    )
+                ).toBe(true)
+                for (const coords of tile) laid.add(hexKey(coords))
+            }
+
+            const holes = hexes
+                .flatMap((coords) => neighborsOf(coords))
+                .filter((coords) => !onBoard.has(hexKey(coords)))
+                .filter((coords) =>
+                    neighborsOf(coords).every((neighbor) => onBoard.has(hexKey(neighbor)))
+                )
+            expect(holes, `seed ${seed}`).toEqual([])
+        }
+    })
+
+    it('differs from seed to seed', () => {
+        const layout = (seed: number) =>
+            footprints(3, seed)
+                .flat()
+                .map(hexKey)
+                .sort((a, b) => a - b)
+                .join(',')
+        expect(new Set([1, 2, 3, 4].map(layout)).size).toBeGreaterThan(1)
     })
 })
 

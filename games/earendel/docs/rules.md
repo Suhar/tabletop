@@ -68,8 +68,11 @@ complex is scored afterwards.
 
 ## Setup
 
-The board starts as **3 tiles per player**, arranged so the map is compact at every player
-count. Each player's bag is shuffled. Scores start at 0.
+The board starts as **3 tiles per player**, grown outward from a single tile: each further tile
+is laid, at any rotation, where it touches the board most and strays least from its middle,
+with a little chance mixed in, so the map is one compact, irregular cluster with no enclosed
+gaps, leaning wider than tall, and different every game. Each player's bag is shuffled. Scores
+start at 0.
 
 At this size the board is small for the bags: 9 open hexes per player against 22 pieces. Games
 are short, and usually end when a player cannot place the piece they drew (see _End of the

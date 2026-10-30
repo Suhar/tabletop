@@ -8,7 +8,7 @@ import {
     PLANET_COLORS
 } from '../model/board.js'
 import type { Tile } from '../model/tile.js'
-import { TILE_HEX_OFFSETS } from './boardSetup.js'
+import { TILE_HEX_OFFSETS } from '../model/tile.js'
 
 export const SPARE_TILES_PER_PLAYER = 2
 

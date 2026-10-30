@@ -17,19 +17,32 @@ import { isChoosePlanet } from '../actions/choosePlanet.js'
 
 const masterSeed = '00112233445566778899aabbccddeeff'
 const players = 3
-const seed = 29
 const visibility = EarendelRuntime.visibility!
 const spectator = { kind: 'spectator' } as const
 
 // A seeded game played to the end at random, then replayed to recover the canonical state after
-// every action - a supply of real positions from the opening to the last move.
-const played = playRandomGame(players, seed, { start: { masterSeed } })
-const table = new TestGame(players, seed, { turnStyle: TurnStyle.DraftThree }, { masterSeed })
-const { game, engine } = table
-const states: EarendelGameState[] = [table.state]
-for (const action of played.actions) {
-    states.push(engine.applyProcessedAction({ action, state: states.at(-1)!, game }))
+// every action - a supply of real positions from the opening to the last move. The first seed
+// whose game draws a technology tile is used, so that position is covered too.
+function playSeed(seed: number) {
+    const played = playRandomGame(players, seed, { start: { masterSeed } })
+    const table = new TestGame(players, seed, { turnStyle: TurnStyle.DraftThree }, { masterSeed })
+    const states: EarendelGameState[] = [table.state]
+    for (const action of played.actions) {
+        states.push(
+            table.engine.applyProcessedAction({ action, state: states.at(-1)!, game: table.game })
+        )
+    }
+    return { played, table, states }
 }
+
+const SEEDS_TRIED = 40
+let chosen = playSeed(1)
+for (let seed = 2; seed <= SEEDS_TRIED; seed++) {
+    if (chosen.states.some((state) => state.pendingTile !== undefined)) break
+    chosen = playSeed(seed)
+}
+const { played, table, states } = chosen
+const { game, engine } = table
 
 const perspectives: Visibility.Perspective[] = [
     spectator,
@@ -127,7 +140,7 @@ describe('Earendel visibility', () => {
     })
 
     it('a pending tile is public once drawn', () => {
-        // Not every seed draws one; this one is chosen so that it does.
+        // Not every seed draws one; the game is chosen so that it does.
         expect(withTile).toBeGreaterThan(0)
         const state = states[withTile]
         expect(project(state, spectator).pendingTile).toEqual(state.pendingTile)
