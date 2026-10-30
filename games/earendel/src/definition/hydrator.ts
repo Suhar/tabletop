@@ -4,6 +4,7 @@ import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { HydratedChooseTechnology, isChooseTechnology } from '../actions/chooseTechnology.js'
 import { HydratedPass, isPass } from '../actions/pass.js'
+import { HydratedEndTurn, isEndTurn } from '../actions/endTurn.js'
 import { HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { HydratedMovePiece, isMovePiece } from '../actions/movePiece.js'
 import { HydratedPlaceTile, isPlaceTile } from '../actions/placeTile.js'
@@ -78,6 +79,9 @@ export class EarendelHydrator implements GameHydrator<
             }
             case isPass(data): {
                 return new HydratedPass(data)
+            }
+            case isEndTurn(data): {
+                return new HydratedEndTurn(data)
             }
             default: {
                 throw new Error(`Unknown action type ${data.type}`)

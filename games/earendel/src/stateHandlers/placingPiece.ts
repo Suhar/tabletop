@@ -19,7 +19,8 @@ import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedPass, isPass, Pass } from '../actions/pass.js'
-import { endPlacement, pendingTechnologyEffectState } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
+import { stateAfterTechnologyUse } from './technologyUse.js'
 import { hasAnyPlacement } from '../util/placement.js'
 
 type PlacingPieceAction =
@@ -90,23 +91,11 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
         const gameState = context.gameState
 
         switch (true) {
-            case isUseUpdatedLogistics(action): {
-                return MachineState.Attacking
-            }
-            case isUseImmediateDownload(action): {
-                const owed = pendingTechnologyEffectState(gameState)
-                if (owed) return owed
-                return endPlacement(gameState, context, action)
-            }
+            case isUseUpdatedLogistics(action):
+            case isUseImmediateDownload(action):
             case isUseTradeRouteWormhole(action):
             case isUseTacticalFeint(action): {
-                if (gameState.pendingExploration) {
-                    return MachineState.Exploring
-                }
-                if (gameState.pendingAttack) {
-                    return MachineState.Attacking
-                }
-                return endPlacement(gameState, context, action)
+                return stateAfterTechnologyUse(action, gameState, context)
             }
             case isPlacePiece(action): {
                 if (gameState.pendingExploration) {

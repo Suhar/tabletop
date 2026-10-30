@@ -6,6 +6,7 @@ import { ChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { AttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
+import { EndTurn } from '../actions/endTurn.js'
 import { assertExists, type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
@@ -166,6 +167,9 @@ export function playRandomGame(
             chainsScored += placed
                 .filter(isPlacePiece)
                 .reduce((total, action) => total + (action.metadata?.chains ?? []).length, 0)
+        } else if (game.state.machineState === MachineState.EndingTurn) {
+            // Random play leaves technologies in reserve rather than reaching for them.
+            game.run(EndTurn, { type: ActionType.EndTurn, playerId })
         } else if (game.state.machineState === MachineState.Exploring) {
             const pending = game.state.pendingExploration
             assertExists(pending, 'Exploring has a pending exploration')

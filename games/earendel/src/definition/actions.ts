@@ -13,5 +13,6 @@ export enum ActionType {
     ChooseTechnology = 'chooseTechnology',
     ChoosePlanet = 'choosePlanet',
     PlacePiece = 'placePiece',
-    Pass = 'pass'
+    Pass = 'pass',
+    EndTurn = 'endTurn'
 }

@@ -8,6 +8,7 @@ import {
     isDiscardPiece,
     isDrawPieces,
     isMovePiece,
+    isEndTurn,
     isPass,
     isPlacePiece,
     isPlaceTile,
@@ -71,7 +72,10 @@ const DESCRIBERS: Record<ActionType, Describer> = {
         isDiscardPiece(action) ? describeDiscard(action) : undefined,
     [ActionType.PlaceTile]: (action) => (isPlaceTile(action) ? describeTile(action) : undefined),
     [ActionType.MovePiece]: (action) => (isMovePiece(action) ? describeMove(action) : undefined),
-    [ActionType.Pass]: (action) => (isPass(action) ? 'could not place, ending the game' : undefined)
+    [ActionType.Pass]: (action) =>
+        isPass(action) ? 'could not place, ending the game' : undefined,
+    [ActionType.EndTurn]: (action) =>
+        isEndTurn(action) ? 'ended their turn, keeping their technology for later' : undefined
 }
 
 function isEarendelActionType(type: string): type is ActionType {

@@ -102,7 +102,8 @@ One planet per tile is settled by the sizing above.
 ## A turn
 
 A turn is a **draft and two placements**, each placement resolving whatever it triggered
-before the next. There is no action phase and nothing to do between turns.
+before the next. There is no separate action phase and nothing to do between turns, though a
+technology may still be used once the ships are down (see Ending a turn).
 
 A turn opens when the player **chooses to draw**. Nothing is revealed until they do — which is
 what leaves the player before them time to take their own turn back, since undo cannot reach
@@ -137,6 +138,20 @@ A ship may be placed on **any open hex** — never on a planet, never on an occu
 Placement is otherwise **unrestricted**: a ship need not connect to, or sit near, anything
 its owner has already placed. The whole board is in play on every turn. Individual rules may
 carve out exceptions later, but there is no general adjacency requirement to build on.
+
+### Ending a turn
+
+Once the turn's ships are placed and everything they triggered is resolved, the turn **ends at
+once** — unless the player holds a technology they could still use and that has something to
+act on: a ready **Updated Logistics** with a fighter in reach of a target, a ready **Tactical
+Feint** with an enemy beside one of their ships, a ready **Trade Route Wormhole** with a ship that
+has a route, or an unspent **Immediate Download** with a technology in sight to take.
+
+Then the turn waits: the player may **use one of them**, or **end the turn**. After a
+technology is used and resolved, the same test is made again, so the turn stays open for as
+long as something could still be done and the player wants to do it.
+
+A technology with nothing to act on does not hold the turn open — there is no point asking.
 
 ### Exploration
 

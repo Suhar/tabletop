@@ -250,6 +250,15 @@
         </button>
     {/if}
 
+    {#if gameSession.canEndTurn}
+        <button
+            class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+            onclick={() => gameSession.endTurn()}
+        >
+            End turn
+        </button>
+    {/if}
+
     {#if gameSession.canSpread}
         <div class="flex items-center gap-2">
             <button

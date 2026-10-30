@@ -3,6 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { drawCountFor, earendelConfig, type EarendelGameConfig } from '../definition/config.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { activateNextTechnologyEffect } from './technologyGrants.js'
+import { usableTechnologies } from './usableTechnology.js'
 
 export function turnStartState(_config?: EarendelGameConfig): MachineState {
     return MachineState.StartOfTurn
@@ -71,6 +72,18 @@ export function endPlacement(
         return MachineState.PlacingPiece
     }
 
+    const playerId = state.turnManager.currentTurn()?.playerId
+    if (playerId && usableTechnologies(state, playerId).length > 0) {
+        return MachineState.EndingTurn
+    }
+
+    return finishTurn(state, context)
+}
+
+export function finishTurn(
+    state: HydratedEarendelGameState,
+    context?: MachineContext<HydratedEarendelGameState>
+): MachineState {
     state.turnManager.endTurn(state.actionCount)
 
     if (isEndOfGame(state)) {

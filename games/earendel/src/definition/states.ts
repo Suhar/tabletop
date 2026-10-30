@@ -7,5 +7,6 @@ export enum MachineState {
     PlacingTile = 'PlacingTile',
     PlacingBonusPiece = 'PlacingBonusPiece',
     Attacking = 'Attacking',
+    EndingTurn = 'EndingTurn',
     EndOfGame = 'EndOfGame'
 }

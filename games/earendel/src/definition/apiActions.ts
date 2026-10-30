@@ -14,6 +14,7 @@ import { UseTradeRouteWormhole } from '../actions/useTradeRouteWormhole.js'
 import { UseImmediateDownload } from '../actions/useImmediateDownload.js'
 import { AttackSpread } from '../actions/attackSpread.js'
 import { DrawPieces } from '../actions/drawPieces.js'
+import { EndTurn } from '../actions/endTurn.js'
 
 export const EarendelApiActions = {
     [ActionType.DrawPieces]: DrawPieces,
@@ -30,5 +31,6 @@ export const EarendelApiActions = {
     [ActionType.ChooseTechnology]: ChooseTechnology,
     [ActionType.ChoosePlanet]: ChoosePlanet,
     [ActionType.PlacePiece]: PlacePiece,
-    [ActionType.Pass]: Pass
+    [ActionType.Pass]: Pass,
+    [ActionType.EndTurn]: EndTurn
 }

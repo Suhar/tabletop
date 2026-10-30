@@ -43,6 +43,7 @@ import {
     UseTacticalFeint,
     UseTradeRouteWormhole,
     UseImmediateDownload,
+    EndTurn,
     downloadAnchorsFor,
     downloadTargetsFrom,
     wormholableShips,
@@ -555,6 +556,19 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
+    // The ships are placed but a technology could still act: the player may end the turn instead.
+    canEndTurn: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.EndTurn)
+    )
+
+    async endTurn() {
+        if (!this.canEndTurn) return
+
+        const action = this.createPlayerAction(EndTurn, {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
     canUseTacticalFeint: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseTacticalFeint)
     )
@@ -772,6 +786,9 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return this.movingFrom
                 ? 'Now choose where it steps, or hold position.'
                 : 'That technology may move one of your pieces — choose which, or hold position.'
+        }
+        if (this.canEndTurn) {
+            return 'Your ships are placed — use a technology while it can still act, or end your turn.'
         }
         if (this.canDraw) {
             return `Your turn — draw ${this.drawCount} ${this.drawCount === 1 ? 'ship' : 'ships'} when you are ready.`

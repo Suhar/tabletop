@@ -10,6 +10,7 @@ import { DraftingPiecesStateHandler } from '../stateHandlers/draftingPieces.js'
 import { StartOfTurnStateHandler } from '../stateHandlers/startOfTurn.js'
 import { PlacingBonusPieceStateHandler } from '../stateHandlers/placingBonusPiece.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
+import { EndingTurnStateHandler } from '../stateHandlers/endingTurn.js'
 
 export const EarendelStateHandlers: Record<
     MachineState,
@@ -20,6 +21,7 @@ export const EarendelStateHandlers: Record<
     [MachineState.PlacingPiece]: new PlacingPieceStateHandler(),
     [MachineState.Exploring]: new ExploringStateHandler(),
     [MachineState.Attacking]: new AttackingStateHandler(),
+    [MachineState.EndingTurn]: new EndingTurnStateHandler(),
     [MachineState.ResolvingTechnology]: new ResolvingTechnologyStateHandler(),
     [MachineState.PlacingTile]: new PlacingTileStateHandler(),
     [MachineState.PlacingBonusPiece]: new PlacingBonusPieceStateHandler(),
