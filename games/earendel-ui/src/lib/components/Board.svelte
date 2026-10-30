@@ -207,16 +207,59 @@
         })
     }
 
-    const ROUTE_SPEED = 45 // board units per second
+    // A route's pip sits on each planet's frame, aimed at the partner planet.
+    const ROUTE_PIP_RADIUS = 37
+    const ROUTE_RING_RADIUS = 36
 
-    // Between the edges of the two planets' discs.
+    type TradeRoute = (typeof gameSession.gameState.tradeRoutes)[number]
+
+    function routePip(planet: AxialCoordinates, partner: AxialCoordinates) {
+        const from = hexGeometry(planet).center
+        const to = hexGeometry(partner).center
+        const angle = Math.atan2(to.y - from.y, to.x - from.x)
+        return {
+            x: from.x + ROUTE_PIP_RADIUS * Math.cos(angle),
+            y: from.y + ROUTE_PIP_RADIUS * Math.sin(angle)
+        }
+    }
+
+    function routeKey(route: TradeRoute): string {
+        return planetPairKey(...route.planets)
+    }
+
+    // The route whose pip is under the pointer, and the planet that pip sits on; hovering a planet
+    // instead shows all of its routes.
+    let hoveredRoute: { key: string; planet: AxialCoordinates } | undefined = $state(undefined)
+
+    let shownRoutes: TradeRoute[] = $derived.by(() => {
+        const routes = gameSession.gameState.tradeRoutes
+        const pipRoute = hoveredRoute
+        if (pipRoute) return routes.filter((route) => routeKey(route) === pipRoute.key)
+        const planet = focused
+        if (!planet) return []
+        return routes.filter((route) =>
+            route.planets.some((end) => sameCoordinates(end, planet))
+        )
+    })
+
+    function onRoutePipEnter(event: PointerEvent, route: TradeRoute, planet: AxialCoordinates) {
+        if (event.pointerType === 'touch') return
+        hoveredRoute = { key: routeKey(route), planet }
+    }
+
+    function onRoutePipLeave(event: PointerEvent) {
+        if (event.pointerType === 'touch') return
+        hoveredRoute = undefined
+    }
+
+    // Between the rings drawn around the two planets.
     function routeRun(a: AxialCoordinates, b: AxialCoordinates) {
         const from = hexGeometry(a).center
         const to = hexGeometry(b).center
         const dx = to.x - from.x
         const dy = to.y - from.y
         const distance = Math.hypot(dx, dy)
-        const inset = 26
+        const inset = ROUTE_RING_RADIUS
         return {
             x1: from.x + (dx / distance) * inset,
             y1: from.y + (dy / distance) * inset,
@@ -691,22 +734,25 @@
     <!-- A pending probe claim: a beam from the claimed planet into each of the claimant's probes
          beside it, gained on their next turn if their probes still lead (rules.md, Gaining a
          technology). -->
-    <!-- Joined pairs of planets: small ships in the joiner's colour ply each route both ways
-         (rules.md, Chains). A pair with no route can still be joined. -->
-    {#each gameSession.gameState.tradeRoutes as route (planetPairKey(...route.planets))}
-        {@const run = routeRun(route.planets[0], route.planets[1])}
+    <!-- Joined pairs of planets: a pip in the joiner's colour on each planet, aimed at its partner
+         (rules.md, Chains). Hovering a pip, or a joined planet, draws the route. -->
+    {#each gameSession.gameState.tradeRoutes as route (routeKey(route))}
         {@const color = gameSession.colors.getPlayerUiColor(route.playerId)}
-        <g pointer-events="none">
-            <line x1={run.x1} y1={run.y1} x2={run.x2} y2={run.y2} stroke={color} stroke-opacity="0.22" stroke-width="2" stroke-linecap="round" />
-            {#each [`M${run.x1} ${run.y1} L${run.x2} ${run.y2}`, `M${run.x2} ${run.y2} L${run.x1} ${run.y1}`] as path, index (index)}
-                <g
-                    class="trade-ship"
-                    style="offset-path: path('{path}'); animation-duration: {run.length / ROUTE_SPEED}s; animation-delay: {-(index * run.length) / (2 * ROUTE_SPEED)}s;"
-                >
-                    <path d="M0,-7 L3,3 L0,1.5 L-3,3 Z" fill={color} />
-                </g>
-            {/each}
-        </g>
+        {#each [route.planets, [route.planets[1], route.planets[0]]] as [planet, partner], end (end)}
+            {@const pip = routePip(planet, partner)}
+            <circle
+                cx={pip.x}
+                cy={pip.y}
+                r="5"
+                fill={color}
+                stroke="#070b16"
+                stroke-width="1.5"
+                role="presentation"
+                onpointerenter={(event) => onRoutePipEnter(event, route, planet)}
+                onpointerleave={onRoutePipLeave}
+                onclick={() => onHexClick(planet)}
+            />
+        {/each}
     {/each}
 
     <!-- Probes spent researching a planet, circling it (rules.md, Gaining a technology). -->
@@ -879,6 +925,41 @@
             {/each}
         </g>
     {/each}
+
+    {#each shownRoutes as route (routeKey(route))}
+        {@const run = routeRun(route.planets[0], route.planets[1])}
+        {@const color = gameSession.colors.getPlayerUiColor(route.playerId)}
+        <g pointer-events="none">
+            <line
+                x1={run.x1}
+                y1={run.y1}
+                x2={run.x2}
+                y2={run.y2}
+                stroke={color}
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-dasharray="9 8"
+                class="route-line"
+            />
+            {#each route.planets as end (end.q + ',' + end.r)}
+                {@const at = hexGeometry(end).center}
+                <circle cx={at.x} cy={at.y} r={ROUTE_RING_RADIUS} fill="none" stroke={color} stroke-width="2.5" />
+            {/each}
+        </g>
+    {/each}
+
+    {#if hoveredRoute}
+        {@const at = hexGeometry(hoveredRoute.planet).center}
+        {#each shownRoutes as route (routeKey(route))}
+            {@const label = `Trade route · joined by ${gameSession.getPlayerName(route.playerId)}`}
+            {@const width = label.length * 8.6 + 24}
+            {@const box = popupPosition(at, width, 32)}
+            <g pointer-events="none">
+                <rect x={box.x} y={box.y} {width} height="32" rx="8" fill="#0d1424" fill-opacity="0.97" stroke="#8fb6ff" stroke-width="2" />
+                <text x={box.x + 12} y={box.y + 21} class="fill-white text-[15px]">{label}</text>
+            </g>
+        {/each}
+    {/if}
 
     <!-- A probe in clear sight of its own station is safe from fighters (rules.md, Relay). -->
     {#each shownRelayLines as relay (relay.station.q + ',' + relay.station.r + '>' + relay.probe.q + ',' + relay.probe.r)}
@@ -1100,31 +1181,20 @@
         }
     }
 
-    /* Ships fade in leaving one planet and out arriving at the other. */
-    @keyframes trade-ship-frames {
-        0% {
-            offset-distance: 0%;
-            opacity: 0;
-        }
-        10%,
-        90% {
-            opacity: 1;
-        }
-        100% {
-            offset-distance: 100%;
-            opacity: 0;
+    /* A hovered route's dashes drift slowly along it. */
+    @keyframes route-line-frames {
+        to {
+            stroke-dashoffset: -17;
         }
     }
 
-    .trade-ship {
-        offset-rotate: auto 90deg;
-        animation: trade-ship-frames 4s linear infinite;
+    .route-line {
+        animation: route-line-frames 2.5s linear infinite;
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .trade-ship {
+        .route-line {
             animation: none;
-            offset-distance: 35%;
         }
     }
 

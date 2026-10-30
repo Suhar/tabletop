@@ -518,8 +518,9 @@ Three further rules:
   everyone. Otherwise the same two planets could be re-joined by a longer route for a bigger
   payout. A spent pair stays spent even when the chain is broken and the ships are gone: the
   record is of the joining, not of a connection still standing.
-  A joined pair becomes a **trade route**, shown on the board as small ships in the joining
-  player's colour travelling back and forth between the two planets. Two same-coloured planets
+  A joined pair becomes a **trade route**, shown on the board as a pip in the joining player's
+  colour on each of the two planets, aimed at the other; hovering one shows the route. Two
+  same-coloured planets
   with no route between them can still be joined.
 - One placement can complete **several pairs at once** (a ship touching three planets of one
   color joins three pairs); each is measured and paid separately.
