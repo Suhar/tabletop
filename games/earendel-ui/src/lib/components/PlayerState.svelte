@@ -2,7 +2,6 @@
     import { type Player } from '@tabletop/common'
     import {
         EarendelPlayerState,
-        getHex,
         hexKey,
         planetPointsByPlayer,
         TECHNOLOGY_EFFECT_INFO,
@@ -33,19 +32,13 @@
 
     // Technologies this player's probes will research at their next turn if they still lead.
     let pendingTechnologies = $derived(
-        gameSession.gameState.probeClaims.flatMap((claim) => {
-            if (claim.playerId !== playerState.playerId) return []
-            const hex = getHex(gameSession.gameState.board, claim.coords)
-            if (hex?.technologyId !== claim.technologyId) return []
-            if (playerState.technologies.includes(claim.technologyId)) return []
-            return [
-                {
-                    key: hexKey(claim.coords),
-                    coords: claim.coords,
-                    kind: technologyCard(claim.technologyId).effect
-                }
-            ]
-        })
+        gameSession.pendingClaims
+            .filter((claim) => claim.playerId === playerState.playerId)
+            .map((claim) => ({
+                key: hexKey(claim.coords),
+                coords: claim.coords,
+                kind: technologyCard(claim.technologyId).effect
+            }))
     )
 
     // One chip per technology, in the order they were gained.

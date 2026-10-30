@@ -105,6 +105,18 @@ describe('probeTechnologiesFor', () => {
         })
     })
 
+    it('lets a claim lapse once its probes are destroyed', () => {
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
+            [at(0, 1), { ship: ['p2', PieceType.Fighter] }]
+        ])
+
+        expect(settle(board, [claim('p1', at(0, 0), 'tech-3')])).toEqual({
+            gained: [],
+            lapsed: ['tech-3']
+        })
+    })
+
     it('weighs probes by level, so one level 3 outweighs a level 2', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
