@@ -353,41 +353,18 @@
         }
     }
 
-    // Two chevrons on the shared edge, pointing from a fighter at a target it can hit.
-    function attackChevrons(from: AxialCoordinates, to: AxialCoordinates) {
+    const ATTACK_RED = '#ff2f2f'
+    const SURVEY_BLUE = '#8fb6ff'
+
+    // Two chevrons on the shared edge, pointing from a ship at a hex it reaches: a fighter's
+    // target in red, a probe's planet in a calm blue.
+    function chevronsBetween(from: AxialCoordinates, to: AxialCoordinates) {
         const start = hexGeometry(from).center
         const end = hexGeometry(to).center
         return {
             x: (start.x + end.x) / 2,
             y: (start.y + end.y) / 2,
             degrees: (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI
-        }
-    }
-
-    function reachPointer(from: AxialCoordinates, to: AxialCoordinates) {
-        const start = hexGeometry(from).center
-        const end = hexGeometry(to).center
-
-        const dx = end.x - start.x
-        const dy = end.y - start.y
-        const length = Math.hypot(dx, dy) || 1
-        const ux = dx / length
-        const uy = dy / length
-
-        const at = { x: start.x + ux * length * 0.58, y: start.y + uy * length * 0.58 }
-        const size = 15
-
-        const tip = { x: at.x + ux * size, y: at.y + uy * size }
-        const base = { x: at.x - ux * size * 0.6, y: at.y - uy * size * 0.6 }
-        const wing = { x: -uy * size * 0.7, y: ux * size * 0.7 }
-
-        return {
-            points: [
-                `${tip.x},${tip.y}`,
-                `${base.x + wing.x},${base.y + wing.y}`,
-                `${base.x - wing.x},${base.y - wing.y}`
-            ].join(' '),
-            nudge: { x: ux * 9, y: uy * 9 }
         }
     }
 
@@ -415,17 +392,21 @@
     }
 </script>
 
-{#snippet attackPulse(at: { x: number; y: number; degrees: number }, strength: number)}
+{#snippet chevronPulse(
+    at: { x: number; y: number; degrees: number },
+    color: string,
+    strength: number
+)}
     <g
         transform="translate({at.x} {at.y}) rotate({at.degrees})"
         opacity={strength}
         pointer-events="none"
     >
-        <g class="attack-pulse">
+        <g class="chevron-pulse">
             {#each [-6, 4] as offset (offset)}
                 <polygon
                     points="{offset - 5},-7 {offset + 4},0 {offset - 5},7 {offset - 2},0"
-                    fill="#ff2f2f"
+                    fill={color}
                 />
             {/each}
         </g>
@@ -952,40 +933,25 @@
 
     {#if ghostEntry}
         {#each previewTargets as target (target.q + ',' + target.r)}
-            {@const chevrons = attackChevrons(ghostEntry.hex.coords, target)}
-            {@render attackPulse(chevrons, 0.55)}
+            {@const chevrons = chevronsBetween(ghostEntry.hex.coords, target)}
+            {@render chevronPulse(chevrons, ATTACK_RED, 0.55)}
         {/each}
 
-        {#each previewProbeDestinations as target, index (target.q + ',' + target.r)}
-            {@const pointer = reachPointer(ghostEntry.hex.coords, target)}
-            <polygon
-                points={pointer.points}
-                fill="#e8f0ff"
-                fill-opacity="0.45"
-                class="reach-pointer"
-                style="--nudge-x: {pointer.nudge.x}px; --nudge-y: {pointer.nudge.y}px; animation-delay: {index *
-                    180}ms"
-                pointer-events="none"
-            />
+        {#each previewProbeDestinations as target (target.q + ',' + target.r)}
+            {@const chevrons = chevronsBetween(ghostEntry.hex.coords, target)}
+            {@render chevronPulse(chevrons, SURVEY_BLUE, 0.7)}
         {/each}
     {/if}
 
-    {#each gameSession.explorationChoice?.to ?? [] as target, index (target.q + ',' + target.r)}
-        {@const pointer = reachPointer(gameSession.explorationChoice!.from, target)}
-        <polygon
-            points={pointer.points}
-            fill="#e8f0ff"
-            class="reach-pointer"
-            style="--nudge-x: {pointer.nudge.x}px; --nudge-y: {pointer.nudge.y}px; animation-delay: {index *
-                180}ms"
-            pointer-events="none"
-        />
+    {#each gameSession.explorationChoice?.to ?? [] as target (target.q + ',' + target.r)}
+        {@const chevrons = chevronsBetween(gameSession.explorationChoice!.from, target)}
+        {@render chevronPulse(chevrons, SURVEY_BLUE, 1)}
     {/each}
 
     <!-- No per-target delay: every target's chevrons pulse together. -->
     {#each gameSession.attackChoice?.to ?? [] as target (target.q + ',' + target.r)}
-        {@const chevrons = attackChevrons(gameSession.attackChoice!.from, target)}
-        {@render attackPulse(chevrons, 1)}
+        {@const chevrons = chevronsBetween(gameSession.attackChoice!.from, target)}
+        {@render chevronPulse(chevrons, ATTACK_RED, 1)}
     {/each}
 
     <!-- Drawn about the origin so BlastAnimator scales each part about the blast. -->
@@ -1283,7 +1249,7 @@
     }
 
     /* Chevrons push toward the target, fade, and start again. */
-    @keyframes attack-pulse-frames {
+    @keyframes chevron-pulse-frames {
         0% {
             transform: translateX(-5px);
             opacity: 0.25;
@@ -1297,29 +1263,13 @@
         }
     }
 
-    .attack-pulse {
-        animation: attack-pulse-frames 1.1s ease-out infinite;
+    .chevron-pulse {
+        animation: chevron-pulse-frames 1.1s ease-out infinite;
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .attack-pulse {
+        .chevron-pulse {
             animation: none;
         }
-    }
-
-    @keyframes point {
-        0%,
-        100% {
-            transform: translate(0, 0);
-            opacity: 0.5;
-        }
-        50% {
-            transform: translate(var(--nudge-x), var(--nudge-y));
-            opacity: 1;
-        }
-    }
-
-    .reach-pointer {
-        animation: point 1.4s ease-in-out infinite;
     }
 </style>
