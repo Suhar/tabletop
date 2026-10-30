@@ -53,15 +53,19 @@
             <TechnologyPiles />
         {/snippet}
         {#snippet gameContent()}
-            <div class="shrink-0">
+            <!-- A fixed height, so nothing shown above the board ever moves or rescales it. Content
+                 that outgrows it scrolls within it. -->
+            <div class="above-board shrink-0 flex flex-col" data-above-board>
                 <Header />
-                {#if gameSession.isViewingHistory}
-                    <HistoryDescription />
-                {:else if gameSession.gameState.result}
-                    <GameEndSummary />
-                {:else}
-                    <InformationPanel />
-                {/if}
+                <div class="min-h-0 flex-1 overflow-y-auto">
+                    {#if gameSession.isViewingHistory}
+                        <HistoryDescription />
+                    {:else if gameSession.gameState.result}
+                        <GameEndSummary />
+                    {:else}
+                        <InformationPanel />
+                    {/if}
+                </div>
             </div>
             <!-- overflow-hidden keeps the height fixed so the wrapper scales to its bounds -->
             <div class="grow-0 overflow-hidden" style="flex:1;">
@@ -72,3 +76,10 @@
         {/snippet}
     </DefaultTableLayout>
 </div>
+
+<style>
+    /* The board's space never depends on what the action area is showing. */
+    .above-board {
+        height: 180px;
+    }
+</style>
