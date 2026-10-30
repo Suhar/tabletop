@@ -448,8 +448,12 @@
             onpointerleave={onHexPointerLeave}
             class={highlighted ? 'cursor-pointer' : ''}
         >
+            <!-- data-planet lets a pending claim in the player panel point at this planet. -->
             <polygon
                 points={entry.points}
+                data-planet={hex.kind === HexKind.Planet
+                    ? `${hex.coords.q},${hex.coords.r}`
+                    : undefined}
                 fill={hex.kind === HexKind.Planet ? planetColor : '#141c2e'}
                 fill-opacity={hex.kind === HexKind.Planet ? 0.42 : 0.5}
                 stroke="#2b3752"

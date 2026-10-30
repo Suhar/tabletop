@@ -38,7 +38,13 @@
             const hex = getHex(gameSession.gameState.board, claim.coords)
             if (hex?.technologyId !== claim.technologyId) return []
             if (playerState.technologies.includes(claim.technologyId)) return []
-            return [{ key: hexKey(claim.coords), kind: technologyCard(claim.technologyId).effect }]
+            return [
+                {
+                    key: hexKey(claim.coords),
+                    coords: claim.coords,
+                    kind: technologyCard(claim.technologyId).effect
+                }
+            ]
         })
     )
 
@@ -109,6 +115,8 @@
                         name={TECHNOLOGY_EFFECT_INFO[claim.kind].name}
                         ability={TECHNOLOGY_EFFECT_INFO[claim.kind].ability}
                         pending
+                        planet={claim.coords}
+                        color={gameSession.colors.getPlayerUiColor(playerState.playerId)}
                     />
                 {/each}
             </div>
