@@ -9,8 +9,7 @@
         turnsLeft,
         unspent,
         pending = false,
-        planet,
-        color = '#8fb6ff'
+        planet
     }: {
         name: string
         ability: string
@@ -23,9 +22,10 @@
         pending?: boolean
         // The planet a pending claim is on, which a line links to while the popup is open.
         planet?: AxialCoordinates
-        color?: string
     } = $props()
 
+    // The popup's border, which the trace to a pending claim's planet continues.
+    const ACCENT = '#8fb6ff'
     const POPUP_WIDTH = 300
     const GAP = 6
     const MARGIN = 8
@@ -176,17 +176,17 @@
         <path
             d={trace.path}
             fill="none"
-            stroke={color}
+            stroke={ACCENT}
             stroke-width="1.25"
             stroke-linejoin="round"
         />
-        <circle cx={trace.junction.x} cy={trace.junction.y} r="2.5" fill={color} />
+        <circle cx={trace.junction.x} cy={trace.junction.y} r="2.5" fill={ACCENT} />
         <circle
             cx={target.center.x}
             cy={target.center.y}
             r={target.radius}
             fill="none"
-            stroke={color}
+            stroke={ACCENT}
             stroke-width="1.5"
         />
     </svg>

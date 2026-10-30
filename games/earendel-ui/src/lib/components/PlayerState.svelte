@@ -109,7 +109,6 @@
                         ability={TECHNOLOGY_EFFECT_INFO[claim.kind].ability}
                         pending
                         planet={claim.coords}
-                        color={gameSession.colors.getPlayerUiColor(playerState.playerId)}
                     />
                 {/each}
             </div>
