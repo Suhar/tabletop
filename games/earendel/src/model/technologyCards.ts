@@ -12,19 +12,19 @@ import {
 // colours, and the category's technologies are dealt onto those four cards in this order. Every
 // pair of colours is therefore on two cards, one from each colour's category.
 export const CATEGORY_CARDS: Record<TechnologyCategory, readonly TechnologyEffectKind[]> = {
-    [TechnologyCategory.FighterCombat]: [
+    [TechnologyCategory.Belligerence]: [
         TechnologyEffectKind.UpdatedLogistics,
         TechnologyEffectKind.Railgun,
         TechnologyEffectKind.UpdatedLogistics,
         TechnologyEffectKind.FullTorpedoSpread
     ],
-    [TechnologyCategory.MovementAndTrickery]: [
+    [TechnologyCategory.Mobility]: [
         TechnologyEffectKind.MoveFriendlyPiece,
         TechnologyEffectKind.TacticalFeint,
         TechnologyEffectKind.MoveFriendlyPiece,
         TechnologyEffectKind.TradeRouteWormhole
     ],
-    [TechnologyCategory.SupplyAndExpansion]: [
+    [TechnologyCategory.Acquisitions]: [
         TechnologyEffectKind.LogisticsUpgrade,
         TechnologyEffectKind.GrowBoard,
         TechnologyEffectKind.LogisticsUpgrade,
@@ -36,7 +36,7 @@ export const CATEGORY_CARDS: Record<TechnologyCategory, readonly TechnologyEffec
         TechnologyEffectKind.ImmediateDownload,
         TechnologyEffectKind.ImmediateDownload
     ],
-    [TechnologyCategory.FleetExpansion]: [
+    [TechnologyCategory.Expansion]: [
         TechnologyEffectKind.StationUpgrade,
         TechnologyEffectKind.StationUpgrade,
         TechnologyEffectKind.StationUpgrade,

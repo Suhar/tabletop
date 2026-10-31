@@ -9,6 +9,7 @@
         PlanetColor,
         TECHNOLOGY_CATEGORY,
         TECHNOLOGY_CATEGORY_INFO,
+        categoryOfColor,
         hexKey,
         planetPairKey,
         powerOf,
@@ -388,6 +389,22 @@
         return {
             key: `${coords.q},${coords.r}`,
             card: technologyCard(entry.hex.technologyId),
+            center: entry.center
+        }
+    })
+
+    // A planet with no technology yet says what kind of planet it is: its colour's category.
+    let shownPlanetKind = $derived.by(() => {
+        const coords = focused
+        if (!coords || shownTechnology) return undefined
+
+        const entry = placed.find((candidate) => sameCoordinates(candidate.hex.coords, coords))
+        const color = entry?.hex.kind === HexKind.Planet ? entry.hex.color : undefined
+        if (!entry || !color) return undefined
+
+        return {
+            key: `${coords.q},${coords.r}`,
+            category: TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)],
             center: entry.center
         }
     })
@@ -1170,6 +1187,36 @@
                     {line}
                 </text>
             {/each}
+        </g>
+    {/each}
+
+    {#each shownPlanetKind ? [shownPlanetKind] : [] as shown (shown.key)}
+        {@const width = 300}
+        {@const height = 64}
+        {@const box = popupPosition(shown.center, width, height)}
+        <g pointer-events="none">
+            <rect
+                x={box.x}
+                y={box.y}
+                {width}
+                {height}
+                rx="10"
+                fill="#0d1424"
+                fill-opacity="0.9"
+                stroke="#8fb6ff"
+                stroke-width="2"
+            />
+            <text
+                x={box.x + 16}
+                y={box.y + 27}
+                fill={PLANET_FILL[shown.category.color]}
+                class="text-[19px] font-bold"
+            >
+                {shown.category.name}
+            </text>
+            <text x={box.x + 16} y={box.y + 50} class="fill-white/80 text-[15px]">
+                {shown.category.description}
+            </text>
         </g>
     {/each}
 

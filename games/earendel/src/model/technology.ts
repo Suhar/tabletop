@@ -1,3 +1,4 @@
+import { assertExists } from '@tabletop/common'
 import { PlanetColor } from './planetColor.js'
 
 export enum TechnologyTier {
@@ -29,41 +30,64 @@ export const COOLDOWN_TURNS = 3
 
 // Each category owns a planet colour (rules.md, Technology deck).
 export enum TechnologyCategory {
-    FighterCombat = 'fighterCombat',
-    MovementAndTrickery = 'movementAndTrickery',
-    SupplyAndExpansion = 'supplyAndExpansion',
+    Belligerence = 'belligerence',
+    Mobility = 'mobility',
+    Acquisitions = 'acquisitions',
     Espionage = 'espionage',
-    FleetExpansion = 'fleetExpansion'
+    Expansion = 'expansion'
 }
 
 export const TECHNOLOGY_CATEGORY_INFO: Record<
     TechnologyCategory,
-    { name: string; color: PlanetColor }
+    { name: string; description: string; color: PlanetColor }
 > = {
-    [TechnologyCategory.FighterCombat]: { name: 'Fighter combat', color: PlanetColor.Violet },
-    [TechnologyCategory.MovementAndTrickery]: {
-        name: 'Movement and trickery',
+    [TechnologyCategory.Belligerence]: {
+        name: 'Belligerence',
+        description: 'Techs that improve combat ability.',
+        color: PlanetColor.Violet
+    },
+    [TechnologyCategory.Mobility]: {
+        name: 'Mobility',
+        description: 'Techs that allow movement.',
         color: PlanetColor.Aqua
     },
-    [TechnologyCategory.SupplyAndExpansion]: {
-        name: 'Supply and expansion',
+    [TechnologyCategory.Acquisitions]: {
+        name: 'Acquisitions',
+        description: 'Techs that expand and control.',
         color: PlanetColor.Mint
     },
-    [TechnologyCategory.Espionage]: { name: 'Espionage', color: PlanetColor.Periwinkle },
-    [TechnologyCategory.FleetExpansion]: { name: 'Fleet expansion', color: PlanetColor.Teal }
+    [TechnologyCategory.Espionage]: {
+        name: 'Espionage',
+        description: 'Techs that mimic and steal.',
+        color: PlanetColor.Periwinkle
+    },
+    [TechnologyCategory.Expansion]: {
+        name: 'Expansion',
+        description: 'Techs that grow the fleet.',
+        color: PlanetColor.Teal
+    }
+}
+
+// The category whose colour a planet has, so its cards mostly come from that category.
+export function categoryOfColor(color: PlanetColor): TechnologyCategory {
+    const found = Object.values(TechnologyCategory).find(
+        (category) => TECHNOLOGY_CATEGORY_INFO[category].color === color
+    )
+    assertExists(found, `No category owns ${color} planets`)
+    return found
 }
 
 export const TECHNOLOGY_CATEGORY: Record<TechnologyEffectKind, TechnologyCategory> = {
-    [TechnologyEffectKind.Railgun]: TechnologyCategory.FighterCombat,
-    [TechnologyEffectKind.FullTorpedoSpread]: TechnologyCategory.FighterCombat,
-    [TechnologyEffectKind.UpdatedLogistics]: TechnologyCategory.FighterCombat,
-    [TechnologyEffectKind.MoveFriendlyPiece]: TechnologyCategory.MovementAndTrickery,
-    [TechnologyEffectKind.TacticalFeint]: TechnologyCategory.MovementAndTrickery,
-    [TechnologyEffectKind.TradeRouteWormhole]: TechnologyCategory.MovementAndTrickery,
-    [TechnologyEffectKind.LogisticsUpgrade]: TechnologyCategory.SupplyAndExpansion,
-    [TechnologyEffectKind.GrowBoard]: TechnologyCategory.SupplyAndExpansion,
+    [TechnologyEffectKind.Railgun]: TechnologyCategory.Belligerence,
+    [TechnologyEffectKind.FullTorpedoSpread]: TechnologyCategory.Belligerence,
+    [TechnologyEffectKind.UpdatedLogistics]: TechnologyCategory.Belligerence,
+    [TechnologyEffectKind.MoveFriendlyPiece]: TechnologyCategory.Mobility,
+    [TechnologyEffectKind.TacticalFeint]: TechnologyCategory.Mobility,
+    [TechnologyEffectKind.TradeRouteWormhole]: TechnologyCategory.Mobility,
+    [TechnologyEffectKind.LogisticsUpgrade]: TechnologyCategory.Acquisitions,
+    [TechnologyEffectKind.GrowBoard]: TechnologyCategory.Acquisitions,
     [TechnologyEffectKind.ImmediateDownload]: TechnologyCategory.Espionage,
-    [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.FleetExpansion
+    [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.Expansion
 }
 
 export type TechnologyCard = {

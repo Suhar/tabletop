@@ -45,22 +45,22 @@ associated with **planet colours**; it can only be housed on a planet of a colou
 
 Every technology belongs to a **category**, and each category owns a planet colour:
 
-| Category              | Colour     | Technologies                                         |
-| --------------------- | ---------- | ---------------------------------------------------- |
-| Fighter combat        | Violet     | Railgun, Full Torpedo Spread, Updated Logistics      |
-| Movement and trickery | Aqua       | Tactical Shift, Tactical Feint, Trade Route Wormhole |
-| Supply and expansion  | Mint       | Logistics Upgrade, Beyond the Frontier               |
-| Espionage             | Periwinkle | Immediate Download                                   |
-| Fleet expansion       | Teal       | Station Upgrade                                      |
+| Category     | Colour     | Kind of planet                     | Technologies                                         |
+| ------------ | ---------- | ---------------------------------- | ---------------------------------------------------- |
+| Belligerence | Violet     | Techs that improve combat ability. | Railgun, Full Torpedo Spread, Updated Logistics      |
+| Mobility     | Aqua       | Techs that allow movement.         | Tactical Shift, Tactical Feint, Trade Route Wormhole |
+| Acquisitions | Mint       | Techs that expand and control.     | Logistics Upgrade, Beyond the Frontier               |
+| Espionage    | Periwinkle | Techs that mimic and steal.        | Immediate Download                                   |
+| Expansion    | Teal       | Techs that grow the fleet.         | Station Upgrade                                      |
 
 The deck has **20 cards**, each of **two colours**: its category's colour and one other. Each
 category's colour is paired once with each of the other four, so a category has four cards:
 
-- Fighter combat: Updated Logistics twice, Railgun, Full Torpedo Spread.
-- Movement and trickery: Tactical Shift twice, Tactical Feint, Trade Route Wormhole.
-- Supply and expansion: Logistics Upgrade twice, Beyond the Frontier twice.
+- Belligerence: Updated Logistics twice, Railgun, Full Torpedo Spread.
+- Mobility: Tactical Shift twice, Tactical Feint, Trade Route Wormhole.
+- Acquisitions: Logistics Upgrade twice, Beyond the Frontier twice.
 - Espionage: Immediate Download four times.
-- Fleet expansion: Station Upgrade four times.
+- Expansion: Station Upgrade four times.
 
 Every pair of colours is therefore on exactly two cards, one from each colour's category, and
 every colour is on eight cards. A planet mostly offers its own category, with a steady
