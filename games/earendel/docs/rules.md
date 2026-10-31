@@ -51,7 +51,7 @@ Every technology belongs to a **category**, and each category owns a planet colo
 | Mobility     | Aqua       | Techs that allow movement.         | Tactical Shift, Tactical Feint, Trade Route Wormhole |
 | Acquisitions | Mint       | Techs that expand and control.     | Logistics Upgrade, Beyond the Frontier               |
 | Espionage    | Periwinkle | Techs that mimic and steal.        | Immediate Download                                   |
-| Expansion    | Teal       | Techs that grow the fleet.         | Station Upgrade, Terraforming                        |
+| Expansion    | Teal       | Techs that grow the fleet.         | Station Upgrade, Terraforming, Relay Network         |
 
 The deck has **20 cards**, each of **two colours**: its category's colour and one other. Each
 category's colour is paired once with each of the other four, so a category has four cards:
@@ -60,7 +60,7 @@ category's colour is paired once with each of the other four, so a category has 
 - Mobility: Tactical Shift twice, Tactical Feint, Trade Route Wormhole.
 - Acquisitions: Logistics Upgrade twice, Beyond the Frontier twice.
 - Espionage: Immediate Download four times.
-- Expansion: Station Upgrade twice, Terraforming twice.
+- Expansion: Station Upgrade twice, Terraforming, Relay Network.
 
 Every pair of colours is therefore on exactly two cards, one from each colour's category, and
 every colour is on eight cards. A planet mostly offers its own category, with a steady
@@ -87,6 +87,14 @@ from then on: which technologies an exploration can turn up, trade routes, a Tra
 Wormhole's reach. An explored planet keeps its technology. Placed as a special piece, it
 returns the drawn ships to the bag like any other. A Tactical Feint or Trade Route Wormhole
 that moves it counts as placing it, so it may terraform again; a Tactical Shift does not.
+
+The third is the **Relay**, from _Relay Network_. It is never in a bag. It counts **1 toward
+control**, like a station, and fighters cannot attack it. For every rule that reads a line of
+sight it acts as one of its owner's stations: a probe that sees it cannot be attacked, it links
+the stations it sees (and touches) into one complex, and an empty hex on a line between it and
+another of its owner's stations or relays is closed to rival probes. Unlike a station, its sight
+is blocked only by planets and the board's edge, never by ships. It is not a station otherwise:
+it scores nothing in a complex, is not linked by girders, and placing it scores nothing.
 
 ---
 
@@ -527,6 +535,10 @@ Probes are too small to find in open space on their own; a station relays and hi
 station gives research a direct job — build where you want to survey — and fighters hunt the
 probes that have strayed out of sight of their stations. Placing a piece across the line is how
 to break a relay, exactly as it breaks a blockade.
+
+A **relay piece** (from _Relay Network_, below) serves as one of its owner's stations for this
+rule, and for station links and blockades, but **only planets, and the board's edge, block its
+sight**: a line with a relay at either end runs past any ships in between.
 
 ### Chains
 

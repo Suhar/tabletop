@@ -486,8 +486,8 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return edges
         })
 
-    // Relay lines touching the piece at `coords`: from each station relaying a probe there, or from
-    // a station there to each probe it relays.
+    // Relay lines touching the piece at `coords`: from each station or relay protecting a probe
+    // there, or from a station or relay there to each probe it protects.
     relayLinesFor(
         coords: AxialCoordinates
     ): { station: AxialCoordinates; probe: AxialCoordinates; playerId: string }[] {
@@ -501,7 +501,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 playerId: piece.playerId
             }))
         }
-        if (piece.type === PieceType.Station) {
+        if (piece.type === PieceType.Station || piece.type === PieceType.Relay) {
             return relayedProbesOf(board, coords).map((probe) => ({
                 station: coords,
                 probe,

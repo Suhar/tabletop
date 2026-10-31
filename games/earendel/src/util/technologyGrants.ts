@@ -102,6 +102,9 @@ function grantedPiece(
             hub: true
         }
     }
+    if (kind === TechnologyEffectKind.RelayNetwork) {
+        return { id: `${playerId}-relay-${technologyId}`, playerId, type: PieceType.Relay }
+    }
     if (kind === TechnologyEffectKind.Terraforming) {
         return {
             id: `${playerId}-terraformer-${technologyId}`,

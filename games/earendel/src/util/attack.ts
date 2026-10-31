@@ -27,8 +27,8 @@ export function attackOutcome(attacker: Piece, target: Piece): AttackOutcome | u
     if (target.type === PieceType.Station && !STATION_KILLERS.includes(attacker.type)) {
         return undefined
     }
-    // Terraformers are out of the fight entirely, like stations.
-    if (target.type === PieceType.Terraformer) return undefined
+    // Terraformers and relays are out of the fight entirely, like stations.
+    if (target.type === PieceType.Terraformer || target.type === PieceType.Relay) return undefined
 
     const level = target.level ?? PIECE_POWER[PieceType.Fighter]
     return target.type === PieceType.Fighter && level > PieceLevel.One

@@ -135,7 +135,9 @@
                             ? '▣ Station Hub'
                             : piece.type === PieceType.Terraformer
                               ? '◈ Terraformer'
-                              : `▢ ${piece.type}`
+                              : piece.type === PieceType.Relay
+                                ? '◇ Relay'
+                                : `▢ ${piece.type}`
                     )
                     .join(', ')}
             </div>

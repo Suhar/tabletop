@@ -1,28 +1,31 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, hexKey, neighborsOf } from '../model/board.js'
 import { isStationHub, PieceType } from '../model/pieces.js'
-import { sightLinkedStations } from './lineOfSight.js'
+import { isSightAnchor, sightLinkedStations } from './lineOfSight.js'
 
+// A player's stations joined to the one at coords by touch or by sight, through their relays as
+// well as their stations; only the stations are returned, since only they score.
 export function stationComplex(
     board: EarendelBoard,
     playerId: string,
     coords: AxialCoordinates
 ): AxialCoordinates[] {
-    const isOwnStation = (at: AxialCoordinates) => {
+    const isOwnAnchor = (at: AxialCoordinates) => {
         const piece = getHex(board, at)?.piece
-        return piece?.playerId === playerId && piece.type === PieceType.Station
+        return piece?.playerId === playerId && isSightAnchor(piece)
     }
+    const isStation = (at: AxialCoordinates) => getHex(board, at)?.piece?.type === PieceType.Station
 
-    if (!isOwnStation(coords)) return []
+    if (!isOwnAnchor(coords) || !isStation(coords)) return []
 
     const seen = new Set<number>([hexKey(coords)])
     const queue: AxialCoordinates[] = [coords]
-    const complex: AxialCoordinates[] = []
+    const joined: AxialCoordinates[] = []
 
     for (let at = queue.shift(); at !== undefined; at = queue.shift()) {
-        complex.push(at)
+        joined.push(at)
 
-        const linked = [...neighborsOf(at).filter(isOwnStation), ...sightLinkedStations(board, at)]
+        const linked = [...neighborsOf(at).filter(isOwnAnchor), ...sightLinkedStations(board, at)]
 
         for (const next of linked) {
             const key = hexKey(next)
@@ -32,7 +35,7 @@ export function stationComplex(
         }
     }
 
-    return complex
+    return joined.filter(isStation)
 }
 
 // Hubs multiply (rules.md, Granted pieces).

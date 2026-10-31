@@ -31,7 +31,8 @@
         [PieceType.Probe]: '◎',
         [PieceType.Station]: '▢',
         [PieceType.Fighter]: '▲',
-        [PieceType.Terraformer]: '◈'
+        [PieceType.Terraformer]: '◈',
+        [PieceType.Relay]: '◇'
     }
 
     const glyph = (piece: { type: string; hub?: boolean }) =>

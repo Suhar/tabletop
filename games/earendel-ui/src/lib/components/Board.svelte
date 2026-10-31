@@ -25,6 +25,7 @@
     import TrussGirder from './TrussGirder.svelte'
     import FighterShape from './FighterShape.svelte'
     import TerraformerShape from './TerraformerShape.svelte'
+    import RelayShape from './RelayShape.svelte'
     import PlanetTile from './PlanetTile.svelte'
     import { TerraformAnimator } from '$lib/animators/terraformAnimator.svelte.js'
     import ProbeShape from './ProbeShape.svelte'
@@ -775,6 +776,8 @@
                         />
                     {:else if piece.type === PieceType.Terraformer}
                         <TerraformerShape center={entry.center} {color} />
+                    {:else if piece.type === PieceType.Relay}
+                        <RelayShape center={entry.center} {color} />
                     {:else}
                         <FighterShape center={entry.center} {color} level={powerOf(piece)} />
                     {/if}
@@ -800,6 +803,8 @@
                 />
             {:else if ghostPiece.type === PieceType.Terraformer}
                 <TerraformerShape center={ghostEntry.center} color={ghostColor} />
+            {:else if ghostPiece.type === PieceType.Relay}
+                <RelayShape center={ghostEntry.center} color={ghostColor} />
             {:else}
                 <FighterShape
                     center={ghostEntry.center}

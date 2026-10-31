@@ -17,7 +17,8 @@ export enum TechnologyEffectKind {
     TacticalFeint = 'tacticalFeint',
     TradeRouteWormhole = 'tradeRouteWormhole',
     StationUpgrade = 'stationUpgrade',
-    Terraforming = 'terraforming'
+    Terraforming = 'terraforming',
+    RelayNetwork = 'relayNetwork'
 }
 
 export enum TechnologyTiming {
@@ -89,7 +90,8 @@ export const TECHNOLOGY_CATEGORY: Record<TechnologyEffectKind, TechnologyCategor
     [TechnologyEffectKind.GrowBoard]: TechnologyCategory.Acquisitions,
     [TechnologyEffectKind.ImmediateDownload]: TechnologyCategory.Espionage,
     [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.Expansion,
-    [TechnologyEffectKind.Terraforming]: TechnologyCategory.Expansion
+    [TechnologyEffectKind.Terraforming]: TechnologyCategory.Expansion,
+    [TechnologyEffectKind.RelayNetwork]: TechnologyCategory.Expansion
 }
 
 export type TechnologyCard = {
@@ -165,6 +167,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         name: 'Terraforming',
         ability:
             'Gain a Terraformer: placed beside a planet no terraformer touches, it may change that planet to another colour. It counts 1 toward control.',
+        timing: TechnologyTiming.Grant
+    },
+    [TechnologyEffectKind.RelayNetwork]: {
+        name: 'Relay Network',
+        ability:
+            'Gain a Relay: it acts as a station for line of sight, protecting your probes, linking your stations and closing hexes to rival probes, and only planets block its sight. It counts 1 toward control.',
         timing: TechnologyTiming.Grant
     }
 }

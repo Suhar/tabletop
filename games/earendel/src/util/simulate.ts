@@ -89,7 +89,8 @@ export function playRandomGame(
             [PieceType.Probe]: overrides.piecesPerType,
             [PieceType.Station]: overrides.piecesPerType,
             [PieceType.Fighter]: overrides.piecesPerType,
-            [PieceType.Terraformer]: 0
+            [PieceType.Terraformer]: 0,
+            [PieceType.Relay]: 0
         }
         game.stackBags((playerId) =>
             buildBag(playerId, new Prng({ seed: seed + 1, invocations: 0 }), perType)
@@ -270,7 +271,7 @@ export function playRandomGame(
 
     // Pieces a technology grants never came out of a bag.
     const granted = (piece: { hub?: boolean; type: PieceType }) =>
-        piece.hub === true || piece.type === PieceType.Terraformer
+        piece.hub === true || piece.type === PieceType.Terraformer || piece.type === PieceType.Relay
     const onBoard = Object.values(game.state.board.hexes)
         .map((hex) => hex.piece)
         .filter((piece) => piece !== undefined && !granted(piece)).length
