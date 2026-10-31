@@ -44,7 +44,7 @@ function card(color: PlanetColor, copy = 0): string {
     return focusedCardId(TechnologyEffectKind.Railgun, color, copy)
 }
 
-const PERIWINKLE_AND_VIOLET = 'tech-10'
+const PERIWINKLE_AND_VIOLET = 'tech-15'
 
 function probe(playerId: string, level = PieceLevel.Two): Piece {
     return { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level }

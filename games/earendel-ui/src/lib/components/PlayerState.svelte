@@ -96,6 +96,7 @@
             <div class="mt-1 mb-0.5 flex flex-wrap justify-center gap-1">
                 {#each technologyEntries as entry (entry.kind)}
                     <TechnologyChip
+                        kind={entry.kind}
                         name={TECHNOLOGY_EFFECT_INFO[entry.kind].name}
                         ability={TECHNOLOGY_EFFECT_INFO[entry.kind].ability}
                         count={entry.count}
@@ -105,6 +106,7 @@
                 {/each}
                 {#each pendingTechnologies as claim (claim.key)}
                     <TechnologyChip
+                        kind={claim.kind}
                         name={TECHNOLOGY_EFFECT_INFO[claim.kind].name}
                         ability={TECHNOLOGY_EFFECT_INFO[claim.kind].ability}
                         pending

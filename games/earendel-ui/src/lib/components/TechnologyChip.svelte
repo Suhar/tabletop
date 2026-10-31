@@ -1,8 +1,15 @@
 <script lang="ts">
     import type { AxialCoordinates, Point } from '@tabletop/common'
-    import { COOLDOWN_TURNS } from '@tabletop/earendel'
+    import {
+        COOLDOWN_TURNS,
+        TECHNOLOGY_CATEGORY,
+        TECHNOLOGY_CATEGORY_INFO,
+        type TechnologyEffectKind
+    } from '@tabletop/earendel'
+    import { PLANET_FILL } from '$lib/utils/planetColors.js'
 
     let {
+        kind,
         name,
         ability,
         count = 1,
@@ -15,6 +22,8 @@
         dimmed = false,
         onchoose
     }: {
+        // The technology, which names its category and the category's colour in the popup.
+        kind?: TechnologyEffectKind
         name: string
         ability: string
         count?: number
@@ -52,6 +61,7 @@
     let popupHeight = $state(0)
 
     let open = $derived(hovered || pinned)
+    let category = $derived(kind ? TECHNOLOGY_CATEGORY_INFO[TECHNOLOGY_CATEGORY[kind]] : undefined)
     let lastPointerType = 'mouse'
 
     let status = $derived.by(() => {
@@ -230,6 +240,14 @@
             : `bottom: ${anchor.bottom}px;`}"
         role="tooltip"
     >
+        {#if category}
+            <div
+                class="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                style="color: {PLANET_FILL[category.color]}"
+            >
+                {category.name}
+            </div>
+        {/if}
         <div class="text-[19px] font-bold">{name}</div>
         <div class="mt-1 text-[15px] leading-snug text-white/80">{ability}</div>
         {#if detail}

@@ -7,6 +7,8 @@
         PieceLevel,
         PieceType,
         PlanetColor,
+        TECHNOLOGY_CATEGORY,
+        TECHNOLOGY_CATEGORY_INFO,
         hexKey,
         planetPairKey,
         powerOf,
@@ -38,17 +40,9 @@
     import { BlastAnimator } from '$lib/animators/blastAnimator.svelte.js'
     import { registerElement } from '$lib/animators/elementRegistry.js'
     import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
+    import { PLANET_FILL } from '$lib/utils/planetColors.js'
 
     let gameSession = getGameSession()
-
-    // Cool colours only: every player colour is warm (see EarendelColors).
-    const PLANET_FILL: Record<PlanetColor, string> = {
-        [PlanetColor.Periwinkle]: '#859bfd',
-        [PlanetColor.Aqua]: '#22d6fd',
-        [PlanetColor.Mint]: '#9aff93',
-        [PlanetColor.Teal]: '#1e948d',
-        [PlanetColor.Violet]: '#9e58da'
-    }
 
     const PADDING = 60
 
@@ -1143,7 +1137,8 @@
     {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
         {@const width = 300}
         {@const lines = wrap(technologyAbility(shown.card), 34)}
-        {@const height = 52 + lines.length * 20}
+        {@const category = TECHNOLOGY_CATEGORY_INFO[TECHNOLOGY_CATEGORY[shown.card.effect]]}
+        {@const height = 66 + lines.length * 20}
         {@const box = popupPosition(shown.center, width, height)}
         {@const x = box.x}
         {@const y = box.y}
@@ -1159,11 +1154,19 @@
                 stroke="#8fb6ff"
                 stroke-width="2"
             />
-            <text x={x + 16} y={y + 30} class="fill-white text-[19px] font-bold">
+            <text
+                x={x + 16}
+                y={y + 22}
+                fill={PLANET_FILL[category.color]}
+                class="text-[11px] font-semibold uppercase tracking-[0.12em]"
+            >
+                {category.name}
+            </text>
+            <text x={x + 16} y={y + 44} class="fill-white text-[19px] font-bold">
                 {technologyName(shown.card)}
             </text>
             {#each lines as line, index (index)}
-                <text x={x + 16} y={y + 56 + index * 20} class="fill-white/80 text-[15px]">
+                <text x={x + 16} y={y + 70 + index * 20} class="fill-white/80 text-[15px]">
                     {line}
                 </text>
             {/each}

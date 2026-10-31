@@ -3,12 +3,15 @@ import { Prng } from '@tabletop/common'
 import { PlanetColor, PLANET_COLORS } from '../model/board.js'
 import {
     choosableFrom,
+    TECHNOLOGY_CATEGORY,
+    TECHNOLOGY_CATEGORY_INFO,
+    TechnologyCategory,
     type TechnologyCard,
     TechnologyEffectKind,
     TechnologyTier
 } from '../model/technology.js'
 import {
-    DEALING_ORDER,
+    CATEGORY_CARDS,
     focusedCardId,
     FOCUSED_COPIES_PER_COLOR,
     focusedTechnologyDeck,
@@ -30,8 +33,8 @@ const card = (color: PlanetColor, copy = 0) =>
     focusedCardId(TechnologyEffectKind.Railgun, color, copy)
 
 // Single- and multi-colour cards from the full deck.
-const PERIWINKLE_TEAL = 'tech-8'
-const MINT_VIOLET = 'tech-21'
+const PERIWINKLE_TEAL = 'tech-14'
+const MINT_VIOLET = 'tech-11'
 
 function piles(drawOrder: string[], discard: string[] = []): TechnologyPiles {
     return { deck: new HydratedTechnologyDeck(stackedBag(drawOrder)), discard }
@@ -108,20 +111,31 @@ describe('revealForExploration', () => {
 })
 
 describe('the full technology deck', () => {
-    it('has one card for every combination of one, two and three colours', () => {
-        const sizes = FULL_TECHNOLOGY_DECK.map((definition) => definition.colors.length)
-
-        expect(sizes.filter((size) => size === 1)).toHaveLength(5)
-        expect(sizes.filter((size) => size === 2)).toHaveLength(10)
-        expect(sizes.filter((size) => size === 3)).toHaveLength(10)
-        const combinations = FULL_TECHNOLOGY_DECK.map((definition) => definition.colors.join('+'))
-        expect(new Set(combinations).size).toBe(25)
+    it('pairs each category colour once with each other colour', () => {
+        expect(FULL_TECHNOLOGY_DECK).toHaveLength(20)
+        for (const card of FULL_TECHNOLOGY_DECK) {
+            expect(card.colors).toHaveLength(2)
+            // The first colour is the card's category colour.
+            expect(card.colors[0]).toBe(
+                TECHNOLOGY_CATEGORY_INFO[TECHNOLOGY_CATEGORY[card.effect]].color
+            )
+        }
+        // Every pair of colours is on two cards, one from each colour's category.
+        const pairs = FULL_TECHNOLOGY_DECK.map((card) => [...card.colors].sort().join('+'))
+        expect(new Set(pairs).size).toBe(10)
+        for (const pair of new Set(pairs)) {
+            expect(pairs.filter((other) => other === pair)).toHaveLength(2)
+        }
     })
 
-    it('deals the technologies across the cards in the rules order', () => {
-        expect(FULL_TECHNOLOGY_DECK.map((definition) => definition.effect)).toEqual(
-            Array.from({ length: 25 }, (_, index) => DEALING_ORDER[index % DEALING_ORDER.length])
-        )
+    it("deals each category's technologies onto its cards", () => {
+        for (const category of Object.values(TechnologyCategory)) {
+            expect(
+                FULL_TECHNOLOGY_DECK.filter(
+                    (card) => TECHNOLOGY_CATEGORY[card.effect] === category
+                ).map((card) => card.effect)
+            ).toEqual(CATEGORY_CARDS[category])
+        }
         expect(FULL_TECHNOLOGY_DECK.every((d) => d.tier === TechnologyTier.Standard)).toBe(true)
     })
 
@@ -133,7 +147,7 @@ describe('the full technology deck', () => {
         expect(new Set(counts).size).toBe(1)
     })
 
-    it('is dealt as the 25 card ids, shuffled deterministically by seed', () => {
+    it('is dealt as the full deck of card ids, shuffled deterministically by seed', () => {
         const deck = buildTechnologyDeck(prng())
 
         expect([...deck].sort()).toEqual(FULL_TECHNOLOGY_DECK.map((d) => d.id).sort())
@@ -161,9 +175,9 @@ describe('technologyCard', () => {
     it('looks a card up by its id', () => {
         expect(technologyCard('tech-0')).toEqual({
             id: 'tech-0',
-            colors: [PlanetColor.Periwinkle],
+            colors: [PlanetColor.Violet, PlanetColor.Periwinkle],
             tier: TechnologyTier.Standard,
-            effect: TechnologyEffectKind.MoveFriendlyPiece
+            effect: TechnologyEffectKind.UpdatedLogistics
         })
     })
 

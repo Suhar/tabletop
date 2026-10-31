@@ -27,6 +27,45 @@ export enum TechnologyTiming {
 
 export const COOLDOWN_TURNS = 3
 
+// Each category owns a planet colour (rules.md, Technology deck).
+export enum TechnologyCategory {
+    FighterCombat = 'fighterCombat',
+    MovementAndTrickery = 'movementAndTrickery',
+    SupplyAndExpansion = 'supplyAndExpansion',
+    Espionage = 'espionage',
+    FleetExpansion = 'fleetExpansion'
+}
+
+export const TECHNOLOGY_CATEGORY_INFO: Record<
+    TechnologyCategory,
+    { name: string; color: PlanetColor }
+> = {
+    [TechnologyCategory.FighterCombat]: { name: 'Fighter combat', color: PlanetColor.Violet },
+    [TechnologyCategory.MovementAndTrickery]: {
+        name: 'Movement and trickery',
+        color: PlanetColor.Aqua
+    },
+    [TechnologyCategory.SupplyAndExpansion]: {
+        name: 'Supply and expansion',
+        color: PlanetColor.Mint
+    },
+    [TechnologyCategory.Espionage]: { name: 'Espionage', color: PlanetColor.Periwinkle },
+    [TechnologyCategory.FleetExpansion]: { name: 'Fleet expansion', color: PlanetColor.Teal }
+}
+
+export const TECHNOLOGY_CATEGORY: Record<TechnologyEffectKind, TechnologyCategory> = {
+    [TechnologyEffectKind.Railgun]: TechnologyCategory.FighterCombat,
+    [TechnologyEffectKind.FullTorpedoSpread]: TechnologyCategory.FighterCombat,
+    [TechnologyEffectKind.UpdatedLogistics]: TechnologyCategory.FighterCombat,
+    [TechnologyEffectKind.MoveFriendlyPiece]: TechnologyCategory.MovementAndTrickery,
+    [TechnologyEffectKind.TacticalFeint]: TechnologyCategory.MovementAndTrickery,
+    [TechnologyEffectKind.TradeRouteWormhole]: TechnologyCategory.MovementAndTrickery,
+    [TechnologyEffectKind.LogisticsUpgrade]: TechnologyCategory.SupplyAndExpansion,
+    [TechnologyEffectKind.GrowBoard]: TechnologyCategory.SupplyAndExpansion,
+    [TechnologyEffectKind.ImmediateDownload]: TechnologyCategory.Espionage,
+    [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.FleetExpansion
+}
+
 export type TechnologyCard = {
     readonly id: string
     readonly colors: readonly PlanetColor[]

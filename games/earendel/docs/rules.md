@@ -41,16 +41,30 @@ its own power.
 everyone, including the owner. Pieces are drawn blind.
 
 **Technology deck** — a shared deck. Each card has a **name**, an **ability**, and is
-associated with **one, two, or three planet colors**; it can only be housed on a planet of a
-color it lists.
+associated with **planet colours**; it can only be housed on a planet of a colour it lists.
 
-The deck has **25 cards**, one for every combination of one, two or three of the five planet
-colours: 5 single-colour, 10 two-colour and 10 three-colour cards. The ten technologies are dealt
-across those cards in turn, in this order: Tactical Shift, Beyond the Frontier, Logistics
-Upgrade, Railgun, Station Upgrade, Updated Logistics, Full Torpedo Spread, Tactical Feint, Trade
-Route Wormhole, Immediate Download. The first five appear three times each and the rest twice.
-Which colours a technology carries follows from that order rather than from design; the real
-card list is still to be designed.
+Every technology belongs to a **category**, and each category owns a planet colour:
+
+| Category              | Colour     | Technologies                                         |
+| --------------------- | ---------- | ---------------------------------------------------- |
+| Fighter combat        | Violet     | Railgun, Full Torpedo Spread, Updated Logistics      |
+| Movement and trickery | Aqua       | Tactical Shift, Tactical Feint, Trade Route Wormhole |
+| Supply and expansion  | Mint       | Logistics Upgrade, Beyond the Frontier               |
+| Espionage             | Periwinkle | Immediate Download                                   |
+| Fleet expansion       | Teal       | Station Upgrade                                      |
+
+The deck has **20 cards**, each of **two colours**: its category's colour and one other. Each
+category's colour is paired once with each of the other four, so a category has four cards:
+
+- Fighter combat: Updated Logistics twice, Railgun, Full Torpedo Spread.
+- Movement and trickery: Tactical Shift twice, Tactical Feint, Trade Route Wormhole.
+- Supply and expansion: Logistics Upgrade twice, Beyond the Frontier twice.
+- Espionage: Immediate Download four times.
+- Fleet expansion: Station Upgrade four times.
+
+Every pair of colours is therefore on exactly two cards, one from each colour's category, and
+every colour is on eight cards. A planet mostly offers its own category, with a steady
+trickle from the others.
 
 Every technology is either **standard** or **elevated**. An elevated technology can't be
 passed over: see _Exploration_ below.

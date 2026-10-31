@@ -92,6 +92,7 @@
         <div class="flex flex-wrap items-center justify-center gap-2">
             {#each gameSession.technologyChoices as card (card.id)}
                 <TechnologyChip
+                    kind={card.effect}
                     name={technologyName(card)}
                     ability={technologyAbility(card)}
                     detail="Matches {card.colors.join(' · ')} planets."
@@ -104,6 +105,7 @@
                 <span class="ml-2 text-xs uppercase tracking-widest opacity-60">Set aside</span>
                 {#each gameSession.setAsideCards as card (card.id)}
                     <TechnologyChip
+                        kind={card.effect}
                         name={technologyName(card)}
                         ability={technologyAbility(card)}
                         detail="Turned over without this planet's colour ({card.colors.join(' · ')}), and discarded."
