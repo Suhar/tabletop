@@ -11,6 +11,7 @@ import { StartOfTurnStateHandler } from '../stateHandlers/startOfTurn.js'
 import { PlacingBonusPieceStateHandler } from '../stateHandlers/placingBonusPiece.js'
 import { EndOfGameStateHandler } from '../stateHandlers/endOfGame.js'
 import { EndingTurnStateHandler } from '../stateHandlers/endingTurn.js'
+import { TerraformingStateHandler } from '../stateHandlers/terraforming.js'
 
 export const EarendelStateHandlers: Record<
     MachineState,
@@ -22,6 +23,7 @@ export const EarendelStateHandlers: Record<
     [MachineState.Exploring]: new ExploringStateHandler(),
     [MachineState.Attacking]: new AttackingStateHandler(),
     [MachineState.EndingTurn]: new EndingTurnStateHandler(),
+    [MachineState.Terraforming]: new TerraformingStateHandler(),
     [MachineState.ResolvingTechnology]: new ResolvingTechnologyStateHandler(),
     [MachineState.PlacingTile]: new PlacingTileStateHandler(),
     [MachineState.PlacingBonusPiece]: new PlacingBonusPieceStateHandler(),

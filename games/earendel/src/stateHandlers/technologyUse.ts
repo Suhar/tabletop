@@ -29,6 +29,7 @@ export function stateAfterTechnologyUse(
     if (isUseImmediateDownload(action)) {
         return pendingTechnologyEffectState(gameState) ?? endPlacement(gameState, context, action)
     }
+    if (gameState.pendingTerraform) return MachineState.Terraforming
     if (gameState.pendingExploration) return MachineState.Exploring
     if (gameState.pendingAttack) return MachineState.Attacking
     return endPlacement(gameState, context, action)

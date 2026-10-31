@@ -34,3 +34,11 @@ export const PendingExploration = Type.Object({
     revealed: Type.Optional(Type.Array(Type.String())),
     candidates: Type.Optional(Type.Array(Type.String()))
 })
+
+// A terraformer just placed beside planets no other terraformer touches: it may recolour one.
+export type PendingTerraform = Type.Static<typeof PendingTerraform>
+export const PendingTerraform = Type.Object({
+    playerId: Type.String(),
+    terraformerCoords: AxialCoordinates,
+    planets: Type.Array(AxialCoordinates)
+})

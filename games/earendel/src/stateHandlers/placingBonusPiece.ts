@@ -40,6 +40,7 @@ export class PlacingBonusPieceStateHandler implements MachineStateHandler<
             case isPlacePiece(action): {
                 gameState.bonusPlacementTileId = undefined
                 gameState.bonusPlacementPieceId = undefined
+                if (gameState.pendingTerraform) return MachineState.Terraforming
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
                 // afterDraw, not endPlacement: this detour can start before the draft discard is made.

@@ -14,5 +14,6 @@ export enum ActionType {
     ChoosePlanet = 'choosePlanet',
     PlacePiece = 'placePiece',
     Pass = 'pass',
-    EndTurn = 'endTurn'
+    EndTurn = 'endTurn',
+    Terraform = 'terraform'
 }

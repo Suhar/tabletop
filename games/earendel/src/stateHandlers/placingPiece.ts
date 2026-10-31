@@ -98,6 +98,7 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 return stateAfterTechnologyUse(action, gameState, context)
             }
             case isPlacePiece(action): {
+                if (gameState.pendingTerraform) return MachineState.Terraforming
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
                 }

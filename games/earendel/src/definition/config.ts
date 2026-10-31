@@ -45,6 +45,7 @@ const technologyDeckOption: ListConfigOption = {
         { name: 'Only: logistics upgrade', value: TechnologyEffectKind.LogisticsUpgrade },
         { name: 'Only: railgun', value: TechnologyEffectKind.Railgun },
         { name: 'Only: station upgrade', value: TechnologyEffectKind.StationUpgrade },
+        { name: 'Only: terraforming', value: TechnologyEffectKind.Terraforming },
         { name: 'Only: updated logistics', value: TechnologyEffectKind.UpdatedLogistics },
         { name: 'Only: full torpedo spread', value: TechnologyEffectKind.FullTorpedoSpread },
         { name: 'Only: tactical feint', value: TechnologyEffectKind.TacticalFeint },

@@ -16,7 +16,8 @@ export enum TechnologyEffectKind {
     FullTorpedoSpread = 'fullTorpedoSpread',
     TacticalFeint = 'tacticalFeint',
     TradeRouteWormhole = 'tradeRouteWormhole',
-    StationUpgrade = 'stationUpgrade'
+    StationUpgrade = 'stationUpgrade',
+    Terraforming = 'terraforming'
 }
 
 export enum TechnologyTiming {
@@ -87,7 +88,8 @@ export const TECHNOLOGY_CATEGORY: Record<TechnologyEffectKind, TechnologyCategor
     [TechnologyEffectKind.LogisticsUpgrade]: TechnologyCategory.Acquisitions,
     [TechnologyEffectKind.GrowBoard]: TechnologyCategory.Acquisitions,
     [TechnologyEffectKind.ImmediateDownload]: TechnologyCategory.Espionage,
-    [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.Expansion
+    [TechnologyEffectKind.StationUpgrade]: TechnologyCategory.Expansion,
+    [TechnologyEffectKind.Terraforming]: TechnologyCategory.Expansion
 }
 
 export type TechnologyCard = {
@@ -157,6 +159,12 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
         name: 'Station Upgrade',
         ability:
             'Gain a Station Hub: a station that doubles the score of its cluster, when placed and thereafter.',
+        timing: TechnologyTiming.Grant
+    },
+    [TechnologyEffectKind.Terraforming]: {
+        name: 'Terraforming',
+        ability:
+            'Gain a Terraformer: placed beside a planet no terraformer touches, it may change that planet to another colour. It counts 1 toward control.',
         timing: TechnologyTiming.Grant
     }
 }

@@ -7,6 +7,7 @@ import { ChooseTechnology } from '../actions/chooseTechnology.js'
 import { AttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { Pass } from '../actions/pass.js'
 import { EndTurn } from '../actions/endTurn.js'
+import { Terraform } from '../actions/terraform.js'
 import { assertExists, type GameAction, type GameStartOptions, Prng } from '@tabletop/common'
 import { PieceType, STARTING_BAG } from '../model/pieces.js'
 import { buildStartingBoard, type BoardSetupOptions } from './boardSetup.js'
@@ -87,7 +88,8 @@ export function playRandomGame(
         const perType = {
             [PieceType.Probe]: overrides.piecesPerType,
             [PieceType.Station]: overrides.piecesPerType,
-            [PieceType.Fighter]: overrides.piecesPerType
+            [PieceType.Fighter]: overrides.piecesPerType,
+            [PieceType.Terraformer]: 0
         }
         game.stackBags((playerId) =>
             buildBag(playerId, new Prng({ seed: seed + 1, invocations: 0 }), perType)
@@ -167,6 +169,9 @@ export function playRandomGame(
             chainsScored += placed
                 .filter(isPlacePiece)
                 .reduce((total, action) => total + (action.metadata?.chains ?? []).length, 0)
+        } else if (game.state.machineState === MachineState.Terraforming) {
+            // Random play leaves the planets as they are.
+            game.run(Terraform, { type: ActionType.Terraform, playerId })
         } else if (game.state.machineState === MachineState.EndingTurn) {
             // Random play leaves technologies in reserve rather than reaching for them.
             game.run(EndTurn, { type: ActionType.EndTurn, playerId })
@@ -263,7 +268,9 @@ export function playRandomGame(
             ? 3 * overrides.piecesPerType
             : Object.values(STARTING_BAG).reduce((total, count) => total + count, 0)
 
-    const granted = (piece: { hub?: boolean }) => piece.hub === true
+    // Pieces a technology grants never came out of a bag.
+    const granted = (piece: { hub?: boolean; type: PieceType }) =>
+        piece.hub === true || piece.type === PieceType.Terraformer
     const onBoard = Object.values(game.state.board.hexes)
         .map((hex) => hex.piece)
         .filter((piece) => piece !== undefined && !granted(piece)).length

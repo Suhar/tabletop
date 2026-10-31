@@ -38,9 +38,9 @@ export const CATEGORY_CARDS: Record<TechnologyCategory, readonly TechnologyEffec
     ],
     [TechnologyCategory.Expansion]: [
         TechnologyEffectKind.StationUpgrade,
+        TechnologyEffectKind.Terraforming,
         TechnologyEffectKind.StationUpgrade,
-        TechnologyEffectKind.StationUpgrade,
-        TechnologyEffectKind.StationUpgrade
+        TechnologyEffectKind.Terraforming
     ]
 }
 

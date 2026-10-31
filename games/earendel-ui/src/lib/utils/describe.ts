@@ -11,6 +11,8 @@ import {
     isDrawPieces,
     isMovePiece,
     isEndTurn,
+    isTerraform,
+    type Terraform,
     isPass,
     isPlacePiece,
     isPlaceTile,
@@ -76,6 +78,8 @@ const DESCRIBERS: Record<ActionType, Describer> = {
     [ActionType.MovePiece]: (action) => (isMovePiece(action) ? describeMove(action) : undefined),
     [ActionType.Pass]: (action) =>
         isPass(action) ? 'could not place, ending the game' : undefined,
+    [ActionType.Terraform]: (action) =>
+        isTerraform(action) ? describeTerraform(action) : undefined,
     [ActionType.EndTurn]: (action) =>
         isEndTurn(action) ? 'ended their turn, keeping their technology for later' : undefined
 }
@@ -245,4 +249,12 @@ function describeMove(moved: MovePiece): string {
 function listOf(items: string[]): string {
     if (items.length <= 1) return items.join('')
     return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+function describeTerraform(terraform: Terraform): string {
+    const { fromColor, toColor } = terraform.metadata ?? {}
+    if (!toColor) return 'left the planets beside their terraformer as they were'
+    return fromColor
+        ? `terraformed the ${fromColor} planet to ${toColor}`
+        : `terraformed a planet to ${toColor}`
 }

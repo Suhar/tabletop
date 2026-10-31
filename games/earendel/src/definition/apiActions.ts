@@ -15,6 +15,7 @@ import { UseImmediateDownload } from '../actions/useImmediateDownload.js'
 import { AttackSpread } from '../actions/attackSpread.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { EndTurn } from '../actions/endTurn.js'
+import { Terraform } from '../actions/terraform.js'
 
 export const EarendelApiActions = {
     [ActionType.DrawPieces]: DrawPieces,
@@ -32,5 +33,6 @@ export const EarendelApiActions = {
     [ActionType.ChoosePlanet]: ChoosePlanet,
     [ActionType.PlacePiece]: PlacePiece,
     [ActionType.Pass]: Pass,
-    [ActionType.EndTurn]: EndTurn
+    [ActionType.EndTurn]: EndTurn,
+    [ActionType.Terraform]: Terraform
 }

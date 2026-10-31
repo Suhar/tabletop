@@ -8,6 +8,7 @@ export const HighlightPrecedence = [
     'tileOrigins',
     'bonusPlacement',
     'technologyMove',
+    'terraform',
     'survey',
     'attack',
     'placement'

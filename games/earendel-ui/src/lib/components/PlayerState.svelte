@@ -8,7 +8,8 @@
         technologyCard,
         TechnologyEffectKind,
         TechnologyTiming,
-        turnsUntilReady
+        turnsUntilReady,
+        PieceType
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import TechnologyChip from './TechnologyChip.svelte'
@@ -129,7 +130,13 @@
         {#if playerState.specialPieces.length > 0}
             <div class="text-xs opacity-90" title="Special pieces waiting to be placed">
                 {playerState.specialPieces
-                    .map((piece) => (piece.hub ? '▣ Station Hub' : `▢ ${piece.type}`))
+                    .map((piece) =>
+                        piece.hub
+                            ? '▣ Station Hub'
+                            : piece.type === PieceType.Terraformer
+                              ? '◈ Terraformer'
+                              : `▢ ${piece.type}`
+                    )
                     .join(', ')}
             </div>
         {/if}

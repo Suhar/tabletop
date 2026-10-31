@@ -1,5 +1,8 @@
 <script lang="ts">
     import {
+        categoryOfColor,
+        PlanetColor,
+        TECHNOLOGY_CATEGORY_INFO,
         isElevated,
         PieceType,
         technologyAbility,
@@ -9,6 +12,14 @@
     import { describePiece } from '$lib/utils/describe.js'
     import { Power } from '$lib/model/stagedSelection.js'
     import TechnologyChip from './TechnologyChip.svelte'
+    import { PLANET_FILL } from '$lib/utils/planetColors.js'
+
+    // Pale planet colours need dark text on their buttons.
+    const DARK_TEXT = new Set<PlanetColor>([
+        PlanetColor.Periwinkle,
+        PlanetColor.Aqua,
+        PlanetColor.Mint
+    ])
 
     let gameSession = getGameSession()
 
@@ -19,7 +30,8 @@
     const SHAPE: Record<string, string> = {
         [PieceType.Probe]: '◎',
         [PieceType.Station]: '▢',
-        [PieceType.Fighter]: '▲'
+        [PieceType.Fighter]: '▲',
+        [PieceType.Terraformer]: '◈'
     }
 
     const glyph = (piece: { type: string; hub?: boolean }) =>
@@ -261,6 +273,30 @@
         >
             {gameSession.railgunArmed ? 'Railgun armed' : 'Arm Railgun'}
         </button>
+    {/if}
+
+    {#if gameSession.canTerraform}
+        <div class="flex flex-wrap items-center justify-center gap-2">
+            {#each gameSession.terraformColors as color (color)}
+                {@const category = TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)]}
+                <button
+                    class="rounded-md px-3 py-1.5 text-sm font-semibold border-2 border-white/70 hover:brightness-110"
+                    style="background-color: {PLANET_FILL[color]}; color: {DARK_TEXT.has(color)
+                        ? '#0b1222'
+                        : '#ffffff'}"
+                    onclick={() => gameSession.terraform(color)}
+                >
+                    <span class="capitalize">{color}</span>
+                    <span class="font-normal opacity-80">· {category.name}</span>
+                </button>
+            {/each}
+            <button
+                class="rounded-md px-4 py-1.5 text-sm font-semibold bg-white/15 hover:bg-white/25 border-2 border-white/70"
+                onclick={() => gameSession.terraform()}
+            >
+                Leave it
+            </button>
+        </div>
     {/if}
 
     {#if gameSession.choosablePlanets.length > 0}

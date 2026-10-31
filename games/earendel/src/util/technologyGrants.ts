@@ -102,6 +102,13 @@ function grantedPiece(
             hub: true
         }
     }
+    if (kind === TechnologyEffectKind.Terraforming) {
+        return {
+            id: `${playerId}-terraformer-${technologyId}`,
+            playerId,
+            type: PieceType.Terraformer
+        }
+    }
     return undefined
 }
 

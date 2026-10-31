@@ -8,5 +8,6 @@ export enum MachineState {
     PlacingBonusPiece = 'PlacingBonusPiece',
     Attacking = 'Attacking',
     EndingTurn = 'EndingTurn',
+    Terraforming = 'Terraforming',
     EndOfGame = 'EndOfGame'
 }

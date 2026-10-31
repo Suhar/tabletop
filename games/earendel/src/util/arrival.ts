@@ -7,6 +7,7 @@ import { chainsCompletedBy, planetPairKey } from './chains.js'
 import { refreshPlanetControl } from './control.js'
 import { probeDestinations } from './exploration.js'
 import { stationGroupPoints } from './stations.js'
+import { terraformablePlanets } from './terraform.js'
 import type { CompletedChain } from './chains.js'
 
 // The ship must already stand at coords: it is read off the board, not passed in.
@@ -52,6 +53,11 @@ export function resolveArrival(
             probeLevel: piece.level ?? PieceLevel.Two,
             candidatePlanets: destinations
         }
+    }
+
+    const terraformable = terraformablePlanets(state.board, coords)
+    if (terraformable.length > 0) {
+        state.pendingTerraform = { playerId, terraformerCoords: coords, planets: terraformable }
     }
 
     refreshPlanetControl(state)

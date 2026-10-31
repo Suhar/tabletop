@@ -24,6 +24,7 @@
     import StationShape from './StationShape.svelte'
     import TrussGirder from './TrussGirder.svelte'
     import FighterShape from './FighterShape.svelte'
+    import TerraformerShape from './TerraformerShape.svelte'
     import ProbeShape from './ProbeShape.svelte'
     import {
         CLIP_OVERREACH,
@@ -862,6 +863,8 @@
                                 ? []
                                 : linkedAngles(entry.hex.coords, piece.playerId)}
                         />
+                    {:else if piece.type === PieceType.Terraformer}
+                        <TerraformerShape center={entry.center} {color} />
                     {:else}
                         <FighterShape center={entry.center} {color} level={powerOf(piece)} />
                     {/if}
@@ -885,6 +888,8 @@
                     color={ghostColor}
                     hub={ghostPiece.hub}
                 />
+            {:else if ghostPiece.type === PieceType.Terraformer}
+                <TerraformerShape center={ghostEntry.center} color={ghostColor} />
             {:else}
                 <FighterShape
                     center={ghostEntry.center}

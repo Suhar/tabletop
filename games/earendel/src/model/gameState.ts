@@ -12,7 +12,12 @@ import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
 import { EarendelBoard } from './board.js'
 import { Piece } from './pieces.js'
-import { PendingExploration, PendingTechnology, ProbeClaim } from './exploration.js'
+import {
+    PendingExploration,
+    PendingTechnology,
+    PendingTerraform,
+    ProbeClaim
+} from './exploration.js'
 import { Tile } from './tile.js'
 import { HydratedTechnologyDeck, HydratedTileSupply, TechnologyDeck, TileSupply } from './bags.js'
 import { PendingAttack } from './attack.js'
@@ -42,6 +47,7 @@ export const EarendelGameState = Type.Evaluate(
             // Control and scoring).
             planetControllers: Type.Record(Type.String(), Type.String()),
             pendingAttack: Type.Optional(PendingAttack),
+            pendingTerraform: Type.Optional(PendingTerraform),
             tradeRoutes: Type.Array(TradeRoute),
             probeClaims: Type.Array(ProbeClaim)
         })
@@ -74,6 +80,7 @@ export class HydratedEarendelGameState
     declare pendingExploration?: PendingExploration
     declare heldPieces: Piece[]
     declare pendingAttack?: PendingAttack
+    declare pendingTerraform?: PendingTerraform
     declare pendingTechnology?: PendingTechnology
     declare queuedTechnologyEffects: PendingTechnology[]
     declare draftPending?: boolean

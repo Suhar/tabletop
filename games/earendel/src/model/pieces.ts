@@ -3,7 +3,9 @@ import * as Type from 'typebox'
 export enum PieceType {
     Probe = 'probe',
     Station = 'station',
-    Fighter = 'fighter'
+    Fighter = 'fighter',
+    // Only ever a special piece, from Terraforming: never in a bag.
+    Terraformer = 'terraformer'
 }
 
 export enum PieceLevel {
@@ -15,7 +17,8 @@ export enum PieceLevel {
 export const PIECE_POWER: Record<PieceType, number> = {
     [PieceType.Probe]: 1,
     [PieceType.Station]: 1,
-    [PieceType.Fighter]: 2
+    [PieceType.Fighter]: 2,
+    [PieceType.Terraformer]: 1
 }
 
 export type Piece = Type.Static<typeof Piece>
@@ -42,7 +45,8 @@ export function powerOf(piece: Piece): number {
 export const STARTING_BAG: Record<PieceType, number> = {
     [PieceType.Probe]: 8,
     [PieceType.Station]: 6,
-    [PieceType.Fighter]: 8
+    [PieceType.Fighter]: 8,
+    [PieceType.Terraformer]: 0
 }
 
 export const LEVELLED_TYPES: PieceType[] = [PieceType.Probe, PieceType.Fighter]

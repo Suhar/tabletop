@@ -44,6 +44,9 @@ import {
     UseTradeRouteWormhole,
     UseImmediateDownload,
     EndTurn,
+    Terraform,
+    PLANET_COLORS,
+    type PlanetColor,
     downloadAnchorsFor,
     downloadTargetsFrom,
     wormholableShips,
@@ -380,6 +383,11 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             tileOrigins: this.isPlacingTile ? this.tileOrigins : undefined,
             bonusPlacement: this.bonusPlacementHexes.length > 0 ? this.placementHexes : undefined,
             technologyMove: this.isMovingForTechnology ? this.movableHexes : undefined,
+            terraform: this.canTerraform
+                ? this.terraformPlanet
+                    ? [this.terraformPlanet]
+                    : this.terraformPlanets
+                : undefined,
             survey: this.choosablePlanets.length > 0 ? this.choosablePlanets : undefined,
             attack: this.attackTargets.length > 0 ? this.attackTargets : undefined,
             placement: this.placementHexes
@@ -549,6 +557,37 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
+    // A terraformer just placed may recolour one planet beside it (rules.md, Terraformer).
+    canTerraform: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.Terraform)
+    )
+
+    terraformPlanets: AxialCoordinates[] = $derived(
+        this.canTerraform ? (this.gameState.pendingTerraform?.planets ?? []) : []
+    )
+
+    // With a single planet in reach there is nothing to pick, so it is chosen without a stage.
+    terraformPlanet: AxialCoordinates | undefined = $derived(
+        this.terraformPlanets.length === 1
+            ? this.terraformPlanets[0]
+            : this.validOrigin(this.terraformPlanets)
+    )
+
+    terraformColors: PlanetColor[] = $derived.by(() => {
+        const planet = this.terraformPlanet
+        if (!planet) return []
+        const current = getHex(this.gameState.board, planet)?.color
+        return PLANET_COLORS.filter((color) => color !== current)
+    })
+
+    async terraform(color?: PlanetColor) {
+        if (!this.canTerraform) return
+        const planet = this.terraformPlanet
+        const action = this.createPlayerAction(Terraform, color && planet ? { planet, color } : {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
     // The ships are placed but a technology could still act: the player may end the turn instead.
     canEndTurn: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.EndTurn)
@@ -710,6 +749,11 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     prompt: string = $derived.by(() => {
         if (!this.isMyTurn) return 'Waiting for the other players.'
+        if (this.canTerraform) {
+            return this.terraformPlanet
+                ? "Your terraformer may change this planet's colour — choose the new colour, or leave it as it is."
+                : 'Your terraformer may change one planet beside it — click the planet, or leave them as they are.'
+        }
         if (this.choosablePlanets.length > 0) {
             return this.choosablePlanets.length > 1
                 ? 'Your probes lead on more than one planet — choose one to survey, or skip.'
@@ -993,6 +1037,11 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             const playerId = this.myPlayer?.id ?? ''
             const origins = legalMovesFor(this.gameState.board, playerId).map((move) => move.from)
             this.toggleOrigin(coords, origins)
+            return
+        }
+
+        if (this.canTerraform) {
+            this.toggleOrigin(coords, this.terraformPlanets.length > 1 ? this.terraformPlanets : [])
             return
         }
 
