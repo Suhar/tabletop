@@ -25,6 +25,8 @@
     import TrussGirder from './TrussGirder.svelte'
     import FighterShape from './FighterShape.svelte'
     import TerraformerShape from './TerraformerShape.svelte'
+    import PlanetTile from './PlanetTile.svelte'
+    import { TerraformAnimator } from '$lib/animators/terraformAnimator.svelte.js'
     import ProbeShape from './ProbeShape.svelte'
     import {
         CLIP_OVERREACH,
@@ -370,9 +372,10 @@
     const scoreFloats = new ScoreFloatAnimator()
     const blasts = new BlastAnimator()
     const orbits = new OrbitAnimator((pieceId) => pieceMoves.nodeOf(pieceId))
+    const terraforms = new TerraformAnimator()
 
     onMount(() => {
-        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats, orbits]
+        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats, orbits, terraforms]
         const listeners = animators.map((animator) => animator.onGameStateChange.bind(animator))
         for (const listener of listeners) gameSession.addGameStateChangeListener(listener)
         return () => {
@@ -494,7 +497,6 @@
     {#each placed as entry (entry.hex.tileId + entry.hex.coords.q + ',' + entry.hex.coords.r)}
         {@const hex = entry.hex}
         {@const highlighted = gameSession.isHighlighted(hex.coords)}
-        {@const planetColor = hex.color ? PLANET_FILL[hex.color] : '#1b2436'}
 
         <g
             role="button"
@@ -506,164 +508,22 @@
             onpointerleave={onHexPointerLeave}
             class={highlighted ? 'cursor-pointer' : ''}
         >
-            <!-- data-planet lets a pending claim in the player panel point at this planet. -->
-            <polygon
-                points={entry.points}
-                data-planet={hex.kind === HexKind.Planet
-                    ? `${hex.coords.q},${hex.coords.r}`
-                    : undefined}
-                fill={hex.kind === HexKind.Planet ? planetColor : '#141c2e'}
-                fill-opacity={hex.kind === HexKind.Planet ? 0.42 : 0.5}
-                stroke="#2b3752"
-                stroke-width="2"
-            />
             {#if hex.kind === HexKind.Planet}
-                <!-- Inset so a neighbour drawn later cannot paint over half of the line. -->
-                <polygon
-                    points={insetPoints(hex.coords, 2.5)}
-                    fill="none"
-                    stroke={planetColor}
-                    stroke-width="3"
-                    stroke-opacity="0.85"
-                    stroke-linejoin="round"
+                <PlanetTile
+                    {hex}
+                    center={entry.center}
+                    points={entry.points}
+                    inset={insetPoints(hex.coords, 2.5)}
+                    marked
                 />
-            {/if}
-
-            {#if hex.kind === HexKind.Planet}
-                {@const bodyOpacity = hex.explored ? 1 : 0.45}
-                {@const dash = hex.explored ? '' : '5 4'}
-                {@const spin = `transform-box: view-box; transform-origin: ${entry.center.x}px ${entry.center.y}px;`}
-
-                {#if hex.color === PlanetColor.Mint}
-                    <!-- Drawn behind the body here and again in front at partial opacity. -->
-                    <ellipse
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        rx="43"
-                        ry="13"
-                        fill="none"
-                        stroke={planetColor}
-                        stroke-width="5"
-                        stroke-opacity={hex.explored ? 0.9 : 0.4}
-                        transform="rotate(-20 {entry.center.x} {entry.center.y})"
-                    />
-                {/if}
-
-                {#if hex.color === PlanetColor.Aqua}
-                    <g class="planet-binary" style={spin}>
-                        <circle
-                            cx={entry.center.x - 15}
-                            cy={entry.center.y}
-                            r="16"
-                            fill={planetColor}
-                            fill-opacity={bodyOpacity}
-                            stroke={planetColor}
-                            stroke-width="3"
-                            stroke-dasharray={dash}
-                        />
-                        <circle
-                            cx={entry.center.x + 15}
-                            cy={entry.center.y}
-                            r="16"
-                            fill={planetColor}
-                            fill-opacity={bodyOpacity}
-                            stroke={planetColor}
-                            stroke-width="3"
-                            stroke-dasharray={dash}
-                        />
-                    </g>
-                {:else}
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="27"
-                        fill={planetColor}
-                        fill-opacity={bodyOpacity}
-                        stroke={planetColor}
-                        stroke-width="3"
-                        stroke-dasharray={dash}
-                    />
-                {/if}
-
-                {#if hex.color === PlanetColor.Teal}
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="27"
-                        fill="none"
-                        stroke={planetColor}
-                        stroke-width="6"
-                        class="planet-aura"
-                        style={spin}
-                    />
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="27"
-                        fill="none"
-                        stroke={planetColor}
-                        stroke-width="3"
-                        class="planet-aura planet-aura-late"
-                        style={spin}
-                    />
-                {/if}
-
-                {#if hex.color === PlanetColor.Periwinkle}
-                    <g class="planet-moon" style={spin}>
-                        <circle
-                            cx={entry.center.x + 40}
-                            cy={entry.center.y}
-                            r="7"
-                            fill={planetColor}
-                            fill-opacity={hex.explored ? 1 : 0.5}
-                        />
-                    </g>
-                {/if}
-
-                {#if hex.color === PlanetColor.Violet}
-                    <clipPath id="planet-clip-{hex.coords.q},{hex.coords.r}">
-                        <circle cx={entry.center.x} cy={entry.center.y} r="27" />
-                    </clipPath>
-                    <g clip-path="url(#planet-clip-{hex.coords.q},{hex.coords.r})">
-                        <g class="planet-phase" style={spin}>
-                            <circle
-                                cx={entry.center.x + 19}
-                                cy={entry.center.y}
-                                r="26"
-                                fill="#0d1424"
-                                fill-opacity={hex.explored ? 0.72 : 0.4}
-                            />
-                        </g>
-                    </g>
-                {/if}
-
-                {#if hex.technologyId}
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="9"
-                        fill="#ffffff"
-                        fill-opacity="0.9"
-                    />
-                    <circle
-                        cx={entry.center.x}
-                        cy={entry.center.y}
-                        r="15"
-                        fill="none"
-                        stroke="#ffffff"
-                        stroke-opacity="0.55"
-                        stroke-width="2"
-                    />
-                {:else if !hex.explored}
-                    <text
-                        x={entry.center.x}
-                        y={entry.center.y + 7}
-                        text-anchor="middle"
-                        class="fill-white/70 text-[20px] font-bold"
-                    >
-                        ?
-                    </text>
-                {/if}
+            {:else}
+                <polygon
+                    points={entry.points}
+                    fill="#141c2e"
+                    fill-opacity="0.5"
+                    stroke="#2b3752"
+                    stroke-width="2"
+                />
             {/if}
 
             {#if gameSession.spreading && gameSession.isSpreadTarget(hex.coords)}
@@ -762,6 +622,56 @@
                     />
                 {/if}
             {/if}
+        </g>
+    {/each}
+
+    <!-- A recoloured planet wipes in from the left behind a white scan line (rules.md, Terraformer). -->
+    {#each terraforms.wipes as wipe (wipe.key)}
+        {@const geometry = hexGeometry(wipe.hex.coords)}
+        {@const box = geometry.boundingBox}
+        {@const outline = verticesToPoints(geometry)}
+        <clipPath id="terraform-wipe-{wipe.key}">
+            <rect
+                use:registerElement={{ registry: terraforms.clips, key: wipe.key }}
+                x={box.x}
+                y={box.y}
+                width="0"
+                height={box.height}
+                data-width={box.width}
+            />
+        </clipPath>
+        <clipPath id="terraform-hex-{wipe.key}">
+            <polygon points={outline} />
+        </clipPath>
+        <g clip-path="url(#terraform-wipe-{wipe.key})" pointer-events="none">
+            <PlanetTile
+                hex={wipe.hex}
+                center={geometry.center}
+                points={outline}
+                inset={insetPoints(wipe.hex.coords, 2.5)}
+                copy="-wipe"
+            />
+        </g>
+        <g clip-path="url(#terraform-hex-{wipe.key})" pointer-events="none">
+            <g use:registerElement={{ registry: terraforms.lines, key: wipe.key }}>
+                <line
+                    x1={box.x}
+                    y1={box.y}
+                    x2={box.x}
+                    y2={box.y + box.height}
+                    stroke="#ffffff"
+                    stroke-opacity="0.3"
+                    stroke-width="10"
+                />
+                <line
+                    x1={box.x}
+                    y1={box.y}
+                    x2={box.x}
+                    y2={box.y + box.height}
+                    stroke="#ffffff"
+                    stroke-width="2.5"
+                />
+            </g>
         </g>
     {/each}
 
@@ -1333,47 +1243,6 @@
     /* `backwards` holds each dot at its dim first keyframe through its staggered delay. */
     .control-dot {
         animation: control-dot-frames 1.5s ease-out infinite backwards;
-    }
-
-    @keyframes planet-revolve {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .planet-binary {
-        animation: planet-revolve 28s linear infinite;
-    }
-
-    .planet-moon {
-        animation: planet-revolve 14s linear infinite;
-    }
-
-    .planet-phase {
-        animation: planet-revolve 44s linear infinite;
-    }
-
-    @keyframes planet-breathe {
-        0%,
-        100% {
-            transform: scale(1);
-            stroke-opacity: 0.5;
-        }
-        50% {
-            transform: scale(1.42);
-            stroke-opacity: 0;
-        }
-    }
-
-    .planet-aura {
-        animation: planet-breathe 4.2s ease-out infinite;
-    }
-
-    .planet-aura-late {
-        animation-delay: 2.1s;
     }
 
     @keyframes glow {
