@@ -801,9 +801,13 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             if (piece.type === PieceType.Probe && this.hexesClosedToMe.length > 0) {
                 return `You drew a ${describePiece(piece)}. The wavy lines are closed to it — anything else may pass.`
             }
-            return this.chosenSpecialId
-                ? `Place your ${describePiece(piece)} — your draw goes back in the bag.`
-                : `You drew a ${describePiece(piece)}. Place it, or play a special piece instead.`
+            if (this.chosenSpecialId) {
+                return `Place your ${describePiece(piece)} — your draw goes back in the bag.`
+            }
+            const hasSpecial = (this.myPlayerState?.specialPieces.length ?? 0) > 0
+            return hasSpecial && this.canPlaySpecial
+                ? `You drew a ${describePiece(piece)}. Place it, or play a special piece instead.`
+                : `You drew a ${describePiece(piece)}. Place it.`
         }
         return ''
     })
