@@ -9,6 +9,7 @@ import { resolveArrival } from '../util/arrival.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 import { returnToBag } from '../model/bags.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 // Not `source`: GameAction already has a `source` (User vs System).
 export enum PieceSource {
@@ -18,6 +19,7 @@ export enum PieceSource {
 
 export type PlacePieceMetadata = Type.Static<typeof PlacePieceMetadata>
 export const PlacePieceMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     returnedToBag: Type.Optional(Piece),
     chains: Type.Optional(Type.Array(ScoredChain)),
@@ -64,6 +66,8 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             throw Error(`Invalid PlacePiece action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         const playerState = state.getPlayerState(this.playerId)
 
         let piece: Piece
@@ -102,6 +106,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
                 : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidPlacePiece(state: HydratedEarendelGameState): boolean {

@@ -14,9 +14,11 @@ import { ActionType } from '../definition/actions.js'
 import { hexKey } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
 import { destinationsFrom, legalMovesFor } from '../util/movement.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type MovePieceMetadata = Type.Static<typeof MovePieceMetadata>
 export const MovePieceMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     piece: Type.Optional(Piece),
     declined: Type.Optional(Type.Boolean()),
     noMoveAvailable: Type.Optional(Type.Boolean())
@@ -59,6 +61,8 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
             throw Error(`Invalid MovePiece action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         if (!this.from || !this.to) {
             const hadOptions = legalMovesFor(state.board, this.playerId).length > 0
             state.pendingTechnology = undefined
@@ -78,6 +82,7 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         this.metadata = {
             piece
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidMovePiece(state: HydratedEarendelGameState): boolean {

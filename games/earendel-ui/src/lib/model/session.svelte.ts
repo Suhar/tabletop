@@ -77,7 +77,7 @@ import {
     type SightLine,
     sightLines,
     type TechnologyCard,
-    probeTechnologiesFor
+    payableClaims
 } from '@tabletop/earendel'
 
 export class EarendelGameSession extends GameSession<EarendelGameState, HydratedEarendelGameState> {
@@ -454,20 +454,10 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
-    // Claims that would pay if settled now: the same test the claimant's next turn applies, so a
-    // claim whose probes were destroyed or outnumbered stops showing until it is regained.
+    // Claims that would pay if settled now, so one whose probes were destroyed or outnumbered
+    // stops showing until it is regained.
     pendingClaims: { coords: AxialCoordinates; playerId: string; technologyId: string }[] =
-        $derived.by(() => {
-            const claimants = new Set(this.gameState.probeClaims.map((claim) => claim.playerId))
-            return [...claimants].flatMap((playerId) => {
-                const { researched } = probeTechnologiesFor(this.gameState, playerId)
-                return this.gameState.probeClaims.filter(
-                    (claim) =>
-                        claim.playerId === playerId &&
-                        researched.some((coords) => sameCoordinates(coords, claim.coords))
-                )
-            })
-        })
+        $derived(payableClaims(this.gameState))
 
     controlEdges: { planet: AxialCoordinates; from: AxialCoordinates; playerId: string }[] =
         $derived.by(() => {

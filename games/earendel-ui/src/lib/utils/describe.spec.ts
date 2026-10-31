@@ -3,6 +3,8 @@ import { ActionSource, type GameAction } from '@tabletop/common'
 import {
     ActionType,
     PieceType,
+    PlanetColor,
+    type AttackPiece,
     type AttackSpread,
     type UseUpdatedLogistics
 } from '@tabletop/earendel'
@@ -51,5 +53,29 @@ describe('describeAction', () => {
         expect(describeAction(woke)).toBe(
             'used Updated Logistics to send a fighter into the attack, with 2 targets in reach'
         )
+    })
+
+    it('says when an action breaks or restores a pending claim, naming whose', () => {
+        const shot: AttackPiece = {
+            ...base,
+            type: ActionType.AttackPiece,
+            coords: { q: 1, r: 0 },
+            metadata: {
+                target: { id: 'q', type: PieceType.Probe, playerId: 'p2', level: 2 },
+                claimsBroken: [
+                    {
+                        playerId: 'p2',
+                        coords: { q: 0, r: 0 },
+                        technologyId: 'tech-3',
+                        color: PlanetColor.Teal
+                    }
+                ],
+                claimsRestored: [{ playerId: 'p1', coords: { q: 2, r: 0 }, technologyId: 'tech-3' }]
+            }
+        }
+        const names: Record<string, string> = { p2: 'Bob' }
+        const description = describeAction(shot, (playerId) => names[playerId] ?? playerId)
+        expect(description).toMatch(/and broke Bob's pending .+ on the teal planet/)
+        expect(description).toMatch(/and restored their own pending .+ on its planet$/)
     })
 })

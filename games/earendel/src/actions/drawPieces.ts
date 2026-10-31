@@ -9,9 +9,11 @@ import { drawCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { earendelConfig } from '../definition/config.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     drawn: Type.Optional(Type.Array(Piece)),
     technologiesClaimed: Type.Optional(Type.Array(Type.String())),
     technologiesLapsed: Type.Optional(Type.Array(Type.String())),
@@ -54,6 +56,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             throw Error(`Invalid DrawPieces action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         // Claimed here rather than in StartOfTurnStateHandler.enter: enter() cannot change the
         // machine state, and an immediate effect may have to redirect the turn.
         refreshPlanetControl(state)
@@ -84,6 +88,7 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {}),
             ...(orbited.length > 0 ? { orbited } : {})
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidDrawPieces(state: HydratedEarendelGameState): boolean {

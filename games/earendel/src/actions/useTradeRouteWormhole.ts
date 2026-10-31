@@ -17,9 +17,11 @@ import { resolveArrival } from '../util/arrival.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { planetsBeside, wormholeDestinations } from '../util/wormhole.js'
 import { ScoredChain } from '../model/chains.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type UseTradeRouteWormholeMetadata = Type.Static<typeof UseTradeRouteWormholeMetadata>
 export const UseTradeRouteWormholeMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
     chains: Type.Optional(Type.Array(ScoredChain)),
@@ -66,6 +68,8 @@ export class HydratedUseTradeRouteWormhole
             throw Error(`Invalid UseTradeRouteWormhole action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         const fromHex = state.board.hexes[hexKey(this.from)]
         const piece = fromHex.piece
         assertExists(piece, 'Trade Route Wormhole moves a piece of yours')
@@ -89,6 +93,7 @@ export class HydratedUseTradeRouteWormhole
                 : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidUseTradeRouteWormhole(state: HydratedEarendelGameState): boolean {

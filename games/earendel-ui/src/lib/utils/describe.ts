@@ -1,6 +1,8 @@
 import type { GameAction } from '@tabletop/common'
 import {
     ActionType,
+    claimChangesOf,
+    type ClaimChange,
     isAttackPiece,
     isAttackSpread,
     isChoosePlanet,
@@ -82,9 +84,29 @@ function isEarendelActionType(type: string): type is ActionType {
     return Object.values<string>(ActionType).includes(type)
 }
 
-export function describeAction(action: GameAction): string {
+export function describeAction(
+    action: GameAction,
+    nameOf: (playerId: string) => string = () => 'a rival'
+): string {
     const describer = isEarendelActionType(action.type) ? DESCRIBERS[action.type] : undefined
-    return describer?.(action) ?? action.type
+    const text = describer?.(action) ?? action.type
+    return [text, ...describeClaimChanges(action, nameOf)].join(' ')
+}
+
+// Pending claims the action broke or restored by changing who leads their planet.
+function describeClaimChanges(action: GameAction, nameOf: (playerId: string) => string): string[] {
+    const { broken, restored } = claimChangesOf('metadata' in action ? action.metadata : undefined)
+    const claim = (change: ClaimChange) => {
+        const whose =
+            change.playerId === action.playerId ? 'their own' : `${nameOf(change.playerId)}'s`
+        const technology = technologyName(technologyCard(change.technologyId))
+        const planet = change.color ? `the ${change.color} planet` : 'its planet'
+        return `${whose} pending ${technology} on ${planet}`
+    }
+    return [
+        ...broken.map((change) => `and broke ${claim(change)}`),
+        ...restored.map((change) => `and restored ${claim(change)}`)
+    ]
 }
 
 function describeChains(chains: ScoredChain[] | undefined): string[] {

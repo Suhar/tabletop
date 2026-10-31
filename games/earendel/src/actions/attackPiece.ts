@@ -16,9 +16,11 @@ import { Piece } from '../model/pieces.js'
 import { AttackOutcome, attackOutcomeAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type AttackPieceMetadata = Type.Static<typeof AttackPieceMetadata>
 export const AttackPieceMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     target: Type.Optional(Piece),
     damaged: Type.Optional(Type.Boolean()),
     railgun: Type.Optional(Type.Boolean()),
@@ -66,6 +68,8 @@ export class HydratedAttackPiece
             throw Error(`Invalid AttackPiece action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         const pending = state.pendingAttack
         assertExists(pending, 'AttackPiece requires a pending attack')
 
@@ -91,6 +95,7 @@ export class HydratedAttackPiece
             ...(result.damaged ? { damaged: true, levelAfter: result.levelAfter } : {}),
             ...(railgun ? { railgun: true } : {})
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidAttackPiece(state: HydratedEarendelGameState): boolean {

@@ -16,9 +16,11 @@ import { Piece } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type AttackSpreadMetadata = Type.Static<typeof AttackSpreadMetadata>
 export const AttackSpreadMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     hits: Type.Optional(
         Type.Array(
             Type.Object({
@@ -68,6 +70,8 @@ export class HydratedAttackSpread
             throw Error(`Invalid AttackSpread action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         const pending = state.pendingAttack
         assertExists(pending, 'AttackSpread requires a pending attack')
         startCooldown(state, this.playerId, TechnologyEffectKind.FullTorpedoSpread)
@@ -87,6 +91,7 @@ export class HydratedAttackSpread
 
         state.pendingAttack = undefined
         this.metadata = { hits }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidAttackSpread(state: HydratedEarendelGameState): boolean {

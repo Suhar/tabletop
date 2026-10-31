@@ -17,9 +17,11 @@ import { resolveArrival } from '../util/arrival.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { feintTargets } from '../util/legality.js'
 import { ScoredChain } from '../model/chains.js'
+import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 
 export type UseTacticalFeintMetadata = Type.Static<typeof UseTacticalFeintMetadata>
 export const UseTacticalFeintMetadata = Type.Object({
+    ...ClaimChangeMetadata,
     movedType: Type.Optional(Type.Enum(PieceType)),
     displacedType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
@@ -67,6 +69,8 @@ export class HydratedUseTacticalFeint
             throw Error(`Invalid UseTacticalFeint action: ${invalidReason}`)
         }
 
+        const claims = snapshotClaims(state)
+
         const fromHex = state.board.hexes[hexKey(this.from)]
         const toHex = state.board.hexes[hexKey(this.to)]
         const mine = fromHex.piece
@@ -94,6 +98,7 @@ export class HydratedUseTacticalFeint
                 : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
+        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
     isValidUseTacticalFeint(state: HydratedEarendelGameState): boolean {
