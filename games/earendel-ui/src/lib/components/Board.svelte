@@ -46,6 +46,7 @@
     import { registerElement } from '$lib/animators/elementRegistry.js'
     import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
     import { PLANET_FILL } from '$lib/utils/planetColors.js'
+    import { isRelayLine, relaySignal } from '$lib/utils/relayPulses.js'
 
     let gameSession = getGameSession()
 
@@ -178,6 +179,30 @@
     }
 
     // Sampled rather than drawn with arcs so the wavelength stays constant at any length or angle.
+    // Station-to-station sight lines are beams; links to a relay are drawn as a signal instead.
+    let beamLines = $derived(
+        gameSession.sightLines.filter((line) => !isRelayLine(gameSession.gameState.board, line))
+    )
+    let relayLines = $derived(
+        gameSession.sightLines.filter((line) => isRelayLine(gameSession.gameState.board, line))
+    )
+    let relaySignals = $derived(relaySignal(gameSession.gameState.board, gameSession.sightLines))
+
+    // A straight run between two hex centres, stopped short of each piece.
+    function insetRun(from: AxialCoordinates, to: AxialCoordinates, inset: number) {
+        const a = hexGeometry(from).center
+        const b = hexGeometry(to).center
+        const length = Math.hypot(b.x - a.x, b.y - a.y) || 1
+        const ux = (b.x - a.x) / length
+        const uy = (b.y - a.y) / length
+        return {
+            x1: a.x + ux * inset,
+            y1: a.y + uy * inset,
+            x2: b.x - ux * inset,
+            y2: b.y - uy * inset
+        }
+    }
+
     function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
         return waveBetween(hexGeometry(from).center, hexGeometry(to).center)
     }
@@ -1049,7 +1074,50 @@
         </g>
     {/each}
 
-    {#each gameSession.sightLines as line, index (line.playerId + index)}
+    <!-- Links to a relay: a faint hairline, and a signal that bursts from a station, runs to the
+         relay and bursts on from it to the rest of the complex (rules.md, Relay). -->
+    {#each relayLines as line, index (line.playerId + index)}
+        {@const run = insetRun(line.from, line.to, 18)}
+        <line
+            {...run}
+            stroke={gameSession.colors.getPlayerUiColor(line.playerId)}
+            stroke-opacity="0.22"
+            stroke-width="1.5"
+            stroke-dasharray="2 6"
+            stroke-linecap="round"
+            pointer-events="none"
+        />
+    {/each}
+    {#each relaySignals.pulses as pulse (pulse.key)}
+        {@const run = insetRun(pulse.from, pulse.to, 18)}
+        <line
+            {...run}
+            pathLength="100"
+            stroke={gameSession.colors.getPlayerUiColor(pulse.playerId)}
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-dasharray="6 200"
+            class="relay-pulse"
+            style="animation-delay: {pulse.delay}s"
+            pointer-events="none"
+        />
+    {/each}
+    {#each relaySignals.bursts as burst (burst.key)}
+        {@const at = hexGeometry(burst.at).center}
+        <circle
+            cx={at.x}
+            cy={at.y}
+            r="16"
+            fill="none"
+            stroke={gameSession.colors.getPlayerUiColor(burst.playerId)}
+            stroke-width="2"
+            class="relay-burst"
+            style="animation-delay: {burst.delay}s; transform-origin: {at.x}px {at.y}px"
+            pointer-events="none"
+        />
+    {/each}
+
+    {#each beamLines as line, index (line.playerId + index)}
         {@const color = gameSession.colors.getPlayerUiColor(line.playerId)}
         <path
             d={wavePath(line.from, line.to)}
@@ -1248,6 +1316,59 @@
     /* `backwards` holds each dot at its dim first keyframe through its staggered delay. */
     .control-dot {
         animation: control-dot-frames 1.5s ease-out infinite backwards;
+    }
+
+    /* A relay signal: one short dash runs the link, then waits out the cycle. */
+    @keyframes relay-pulse-frames {
+        0% {
+            stroke-dashoffset: 6;
+            opacity: 0;
+        }
+        2% {
+            opacity: 1;
+        }
+        15% {
+            stroke-dashoffset: -100;
+            opacity: 1;
+        }
+        16%,
+        100% {
+            stroke-dashoffset: -100;
+            opacity: 0;
+        }
+    }
+
+    .relay-pulse {
+        animation: relay-pulse-frames 4s linear infinite backwards;
+    }
+
+    /* Where the signal starts or is passed on, a ring bursts outward and fades. */
+    @keyframes relay-burst-frames {
+        0% {
+            transform: scale(0.5);
+            opacity: 0.85;
+        }
+        15% {
+            transform: scale(1.7);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1.7);
+            opacity: 0;
+        }
+    }
+
+    .relay-burst {
+        transform-box: view-box;
+        animation: relay-burst-frames 4s ease-out infinite backwards;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .relay-pulse,
+        .relay-burst {
+            animation: none;
+            opacity: 0;
+        }
     }
 
     @keyframes glow {
