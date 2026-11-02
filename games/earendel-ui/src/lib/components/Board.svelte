@@ -47,7 +47,7 @@
     import { registerElement } from '$lib/animators/elementRegistry.js'
     import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
     import { PLANET_FILL } from '$lib/utils/planetColors.js'
-    import { isRelayLine, relaySignal } from '$lib/utils/relayPulses.js'
+    import { sightSignal } from '$lib/utils/sightSignal.js'
     import { onSharedClock } from '$lib/utils/sharedClock.js'
 
     let gameSession = getGameSession()
@@ -181,14 +181,8 @@
     }
 
     // Sampled rather than drawn with arcs so the wavelength stays constant at any length or angle.
-    // Station-to-station sight lines are beams; links to a relay are drawn as a signal instead.
-    let beamLines = $derived(
-        gameSession.sightLines.filter((line) => !isRelayLine(gameSession.gameState.board, line))
-    )
-    let relayLines = $derived(
-        gameSession.sightLines.filter((line) => isRelayLine(gameSession.gameState.board, line))
-    )
-    let relaySignals = $derived(relaySignal(gameSession.gameState.board, gameSession.sightLines))
+    // Every sight link, between stations or through relays, is a faint line carrying a signal.
+    let sightSignals = $derived(sightSignal(gameSession.gameState.board, gameSession.sightLines))
 
     // A straight run between two hex centres, stopped short of each piece.
     function insetRun(from: AxialCoordinates, to: AxialCoordinates, inset: number) {
@@ -205,9 +199,6 @@
         }
     }
 
-    function wavePath(from: AxialCoordinates, to: AxialCoordinates): string {
-        return waveBetween(hexGeometry(from).center, hexGeometry(to).center)
-    }
 
     const SHOW_CONTROL_WAVE = false
     const SHOW_CONTROL_DOTS = true
@@ -1101,9 +1092,9 @@
         </g>
     {/each}
 
-    <!-- Links to a relay: a faint hairline, and a signal that bursts from a station, runs to the
-         relay and bursts on from it to the rest of the complex (rules.md, Relay). -->
-    {#each relayLines as line, index (line.playerId + index)}
+    <!-- Sight links: a faint hairline, and a signal that bursts from a station and runs along each
+         link in turn, bursting again wherever it is passed on (rules.md, Station groups, Relay). -->
+    {#each gameSession.sightLines as line, index (line.playerId + index)}
         {@const run = insetRun(line.from, line.to, 18)}
         <line
             {...run}
@@ -1115,7 +1106,7 @@
             pointer-events="none"
         />
     {/each}
-    {#each relaySignals.pulses as pulse (pulse.key)}
+    {#each sightSignals.pulses as pulse (pulse.key)}
         {@const run = insetRun(pulse.from, pulse.to, 18)}
         <line
             {...run}
@@ -1130,7 +1121,7 @@
             pointer-events="none"
         />
     {/each}
-    {#each relaySignals.bursts as burst (burst.key)}
+    {#each sightSignals.bursts as burst (burst.key)}
         {@const at = hexGeometry(burst.at).center}
         <circle
             cx={at.x}
@@ -1146,26 +1137,6 @@
         />
     {/each}
 
-    {#each beamLines as line, index (line.playerId + index)}
-        {@const color = gameSession.colors.getPlayerUiColor(line.playerId)}
-        <path
-            d={wavePath(line.from, line.to)}
-            fill="none"
-            stroke={color}
-            stroke-opacity="0.35"
-            stroke-width="9"
-            stroke-linecap="round"
-        />
-        <path
-            class="beam"
-            d={wavePath(line.from, line.to)}
-            fill="none"
-            stroke={color}
-            stroke-width="4"
-            stroke-linecap="round"
-            stroke-dasharray="14 12"
-        />
-    {/each}
 
     <!-- Popups last, so nothing on the board is drawn over them. -->
     {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
@@ -1412,16 +1383,6 @@
 
     .pulse {
         animation: glow 2.2s ease-in-out infinite;
-    }
-
-    @keyframes flow {
-        to {
-            stroke-dashoffset: -52;
-        }
-    }
-
-    .beam {
-        animation: flow 1.6s linear infinite;
     }
 
     /* Chevrons push toward the target, fade, and start again. */
