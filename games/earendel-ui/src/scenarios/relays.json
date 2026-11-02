@@ -11,13 +11,13 @@
    {
     "id": "p1",
     "isHuman": true,
-    "name": "Player 2",
+    "name": "Player 1",
     "status": "joined"
    },
    {
     "id": "p2",
     "isHuman": true,
-    "name": "Player 1",
+    "name": "Player 2",
     "status": "joined"
    }
   ],
@@ -25,273 +25,285 @@
    "turnStyle": "draftThree"
   },
   "hotseat": true,
-  "createdAt": "2026-11-01T22:48:04.281Z",
+  "createdAt": "2026-11-02T00:40:39.070Z",
   "winningPlayerIds": [],
-  "seed": 4291676825,
-  "startedAt": "2026-11-01T22:48:04.281Z",
+  "seed": 1946437179,
+  "startedAt": "2026-11-02T00:40:39.071Z",
   "protectedInformation": true,
   "activePlayerIds": [
-   "p2"
+   "p1"
   ]
  },
  "state": {
   "systemVersion": 3,
-  "id": "ru9wH9jZqkpfuNyziINkJ",
+  "id": "PcP-xuCUDEl7wJEpm1FkA",
   "gameId": "scenario-relays",
-  "seed": 4291676825,
+  "seed": 1946437179,
   "prng": {
-   "seed": 4291676825,
-   "invocations": 337
+   "seed": 1946437179,
+   "invocations": 333
   },
   "protectedPrng": {
    "algorithm": "chacha20-v1",
-   "seed": "40bbf7ca55d4f724a5187e29f13627dd9ebca2a9a18815ab5fafe4bc11296797",
+   "seed": "fb357d733f5e89f56a00d6739133f2d350537ed1647e092800e0aae0be4309a9",
    "invocations": 72
   },
-  "masterSeed": "e2cf1e47550a2445e4596ef437dfbf8f",
+  "masterSeed": "d0af81d23c9db3287b048bc2f02c1144",
   "activePlayerIds": [
-   "p2"
+   "p1"
   ],
   "winningPlayerIds": [],
   "actionCount": 0,
   "actionChecksum": 0,
   "players": [
    {
-    "playerId": "p2",
-    "color": "pink",
+    "playerId": "p1",
+    "color": "white",
     "bag": {
      "items": [
       {
-       "id": "p2-fighter-31",
-       "playerId": "p2",
+       "id": "p1-fighter-32",
+       "playerId": "p1",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p2-fighter-30",
-       "playerId": "p2",
+       "id": "p1-fighter-31",
+       "playerId": "p1",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p2-fighter-29",
-       "playerId": "p2",
+       "id": "p1-fighter-30",
+       "playerId": "p1",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p2-fighter-28",
-       "playerId": "p2",
+       "id": "p1-fighter-29",
+       "playerId": "p1",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p2-fighter-27",
-       "playerId": "p2",
+       "id": "p1-fighter-28",
+       "playerId": "p1",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p2-fighter-26",
-       "playerId": "p2",
+       "id": "p1-fighter-27",
+       "playerId": "p1",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p2-probe-25",
-       "playerId": "p2",
+       "id": "p1-probe-26",
+       "playerId": "p1",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p2-probe-24",
-       "playerId": "p2",
+       "id": "p1-probe-25",
+       "playerId": "p1",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p2-probe-23",
-       "playerId": "p2",
+       "id": "p1-probe-24",
+       "playerId": "p1",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p2-probe-22",
-       "playerId": "p2",
+       "id": "p1-probe-23",
+       "playerId": "p1",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p2-probe-21",
-       "playerId": "p2",
+       "id": "p1-probe-22",
+       "playerId": "p1",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p2-probe-20",
-       "playerId": "p2",
+       "id": "p1-probe-21",
+       "playerId": "p1",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p2-station-19",
-       "playerId": "p2",
+       "id": "p1-station-20",
+       "playerId": "p1",
        "type": "station"
       },
       {
-       "id": "p2-station-18",
-       "playerId": "p2",
+       "id": "p1-station-19",
+       "playerId": "p1",
        "type": "station"
       },
       {
-       "id": "p2-station-17",
-       "playerId": "p2",
+       "id": "p1-station-18",
+       "playerId": "p1",
        "type": "station"
       },
       {
-       "id": "p2-station-16",
-       "playerId": "p2",
+       "id": "p1-station-17",
+       "playerId": "p1",
        "type": "station"
       },
       {
-       "id": "p2-station-15",
-       "playerId": "p2",
+       "id": "p1-station-16",
+       "playerId": "p1",
        "type": "station"
       }
      ],
      "remaining": 17
     },
-    "specialPieces": [],
-    "technologies": [],
+    "specialPieces": [
+     {
+      "id": "p1-relay-12",
+      "playerId": "p1",
+      "type": "relay"
+     }
+    ],
+    "technologies": [
+     "relayNetwork-teal-0",
+     "relayNetwork-teal-1"
+    ],
     "storedEffects": [],
     "cooldownEffects": [],
     "cooldowns": {},
     "score": 0
    },
    {
-    "playerId": "p1",
-    "color": "white",
+    "playerId": "p2",
+    "color": "orange",
     "bag": {
      "items": [
       {
-       "id": "p1-fighter-51",
-       "playerId": "p1",
+       "id": "p2-fighter-52",
+       "playerId": "p2",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p1-fighter-50",
-       "playerId": "p1",
+       "id": "p2-fighter-51",
+       "playerId": "p2",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p1-fighter-49",
-       "playerId": "p1",
+       "id": "p2-fighter-50",
+       "playerId": "p2",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p1-fighter-48",
-       "playerId": "p1",
+       "id": "p2-fighter-49",
+       "playerId": "p2",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p1-fighter-47",
-       "playerId": "p1",
+       "id": "p2-fighter-48",
+       "playerId": "p2",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p1-fighter-46",
-       "playerId": "p1",
+       "id": "p2-fighter-47",
+       "playerId": "p2",
        "type": "fighter",
        "level": 2
       },
       {
-       "id": "p1-probe-45",
-       "playerId": "p1",
+       "id": "p2-probe-46",
+       "playerId": "p2",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p1-probe-44",
-       "playerId": "p1",
+       "id": "p2-probe-45",
+       "playerId": "p2",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p1-probe-43",
-       "playerId": "p1",
+       "id": "p2-probe-44",
+       "playerId": "p2",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p1-probe-42",
-       "playerId": "p1",
+       "id": "p2-probe-43",
+       "playerId": "p2",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p1-probe-41",
-       "playerId": "p1",
+       "id": "p2-probe-42",
+       "playerId": "p2",
        "type": "probe",
        "level": 3
       },
       {
-       "id": "p1-probe-40",
-       "playerId": "p1",
+       "id": "p2-probe-41",
+       "playerId": "p2",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p1-station-39",
-       "playerId": "p1",
+       "id": "p2-station-40",
+       "playerId": "p2",
        "type": "station"
       },
       {
-       "id": "p1-station-38",
-       "playerId": "p1",
+       "id": "p2-station-39",
+       "playerId": "p2",
        "type": "station"
       },
       {
-       "id": "p1-station-37",
-       "playerId": "p1",
+       "id": "p2-station-38",
+       "playerId": "p2",
        "type": "station"
       },
       {
-       "id": "p1-station-36",
-       "playerId": "p1",
+       "id": "p2-station-37",
+       "playerId": "p2",
        "type": "station"
       },
       {
-       "id": "p1-station-35",
-       "playerId": "p1",
+       "id": "p2-station-36",
+       "playerId": "p2",
        "type": "station"
       },
       {
-       "id": "p1-fighter-34",
-       "playerId": "p1",
+       "id": "p2-fighter-35",
+       "playerId": "p2",
        "type": "fighter",
        "level": 3
       },
       {
-       "id": "p1-probe-33",
-       "playerId": "p1",
+       "id": "p2-probe-34",
+       "playerId": "p2",
        "type": "probe",
        "level": 2
       },
       {
-       "id": "p1-station-32",
-       "playerId": "p1",
+       "id": "p2-station-33",
+       "playerId": "p2",
        "type": "station"
       }
      ],
      "remaining": 20
     },
     "specialPieces": [],
-    "technologies": [],
+    "technologies": [
+     "relayNetwork-teal-0",
+     "relayNetwork-teal-1"
+    ],
     "storedEffects": [],
     "cooldownEffects": [],
     "cooldowns": {},
@@ -301,19 +313,19 @@
   "machineState": "DraftingPieces",
   "heldPieces": [
    {
-    "id": "p2-station-12",
-    "playerId": "p2",
+    "id": "p1-station-13",
+    "playerId": "p1",
     "type": "station"
    },
    {
-    "id": "p2-probe-13",
-    "playerId": "p2",
+    "id": "p1-probe-14",
+    "playerId": "p1",
     "type": "probe",
     "level": 2
    },
    {
-    "id": "p2-fighter-14",
-    "playerId": "p2",
+    "id": "p1-fighter-15",
+    "playerId": "p1",
     "type": "fighter",
     "level": 3
    }
@@ -322,13 +334,13 @@
    "series": [
     {
      "type": "turn",
-     "playerId": "p2",
+     "playerId": "p1",
      "start": 0
     }
    ],
    "turnOrder": [
-    "p2",
-    "p1"
+    "p1",
+    "p2"
    ],
    "turnCounts": {
     "p1": 0,
@@ -353,8 +365,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-station-0",
-      "playerId": "p2",
+      "id": "p1-station-0",
+      "playerId": "p1",
       "type": "station"
      }
     },
@@ -407,8 +419,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-fighter-1",
-      "playerId": "p1",
+      "id": "p2-fighter-1",
+      "playerId": "p2",
       "type": "fighter",
       "level": 2
      }
@@ -429,8 +441,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-probe-6",
-      "playerId": "p1",
+      "id": "p2-probe-6",
+      "playerId": "p2",
       "type": "probe",
       "level": 2
      }
@@ -451,8 +463,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-station-7",
-      "playerId": "p2",
+      "id": "p1-station-7",
+      "playerId": "p1",
       "type": "station"
      }
     },
@@ -536,8 +548,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-relay-2",
-      "playerId": "p2",
+      "id": "p1-relay-2",
+      "playerId": "p1",
       "type": "relay"
      }
     },
@@ -630,8 +642,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-relay-8",
-      "playerId": "p1",
+      "id": "p2-relay-8",
+      "playerId": "p2",
       "type": "relay"
      }
     },
@@ -675,8 +687,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-probe-3",
-      "playerId": "p1",
+      "id": "p2-probe-3",
+      "playerId": "p2",
       "type": "probe",
       "level": 2
      }
@@ -746,8 +758,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-station-4",
-      "playerId": "p2",
+      "id": "p1-station-4",
+      "playerId": "p1",
       "type": "station"
      }
     },
@@ -783,8 +795,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-relay-11",
-      "playerId": "p1",
+      "id": "p2-relay-11",
+      "playerId": "p2",
       "type": "relay"
      }
     },
@@ -828,8 +840,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-probe-5",
-      "playerId": "p2",
+      "id": "p1-probe-5",
+      "playerId": "p1",
       "type": "probe",
       "level": 2
      }
@@ -948,8 +960,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p1-station-9",
-      "playerId": "p1",
+      "id": "p2-station-9",
+      "playerId": "p2",
       "type": "station"
      }
     },
@@ -969,8 +981,8 @@
      "tileId": "tile-0",
      "kind": "open",
      "piece": {
-      "id": "p2-fighter-10",
-      "playerId": "p2",
+      "id": "p1-fighter-10",
+      "playerId": "p1",
       "type": "fighter",
       "level": 2
      }
@@ -1028,26 +1040,26 @@
   },
   "technologyDeck": {
    "items": [
-    "tech-15",
-    "tech-7",
-    "tech-6",
-    "tech-13",
-    "tech-9",
-    "tech-4",
-    "tech-12",
-    "tech-3",
-    "tech-2",
-    "tech-16",
-    "tech-11",
     "tech-19",
-    "tech-8",
-    "tech-1",
-    "tech-17",
-    "tech-5",
     "tech-18",
+    "tech-1",
+    "tech-6",
+    "tech-9",
+    "tech-14",
+    "tech-16",
+    "tech-5",
+    "tech-4",
+    "tech-13",
+    "tech-11",
     "tech-10",
+    "tech-17",
+    "tech-12",
+    "tech-2",
+    "tech-3",
     "tech-0",
-    "tech-14"
+    "tech-7",
+    "tech-15",
+    "tech-8"
    ],
    "remaining": 20
   },
@@ -1055,34 +1067,34 @@
   "tileSupply": {
    "items": [
     {
-     "id": "spare-tile-0",
-     "planetOffset": 2,
-     "color": "aqua"
-    },
-    {
      "id": "spare-tile-2",
-     "planetOffset": 0,
+     "planetOffset": 1,
      "color": "periwinkle"
     },
     {
-     "id": "spare-tile-3",
-     "planetOffset": 2,
-     "color": "teal"
+     "id": "spare-tile-0",
+     "planetOffset": 1,
+     "color": "aqua"
     },
     {
      "id": "spare-tile-1",
      "planetOffset": 1,
-     "color": "mint"
+     "color": "periwinkle"
+    },
+    {
+     "id": "spare-tile-3",
+     "planetOffset": 3,
+     "color": "periwinkle"
     }
    ],
    "remaining": 4
   },
   "queuedTechnologyEffects": [],
   "planetControllers": {
-   "3": "p2",
-   "80": "p1",
-   "36.5": "p2",
-   "212.5": "p2"
+   "3": "p1",
+   "80": "p2",
+   "36.5": "p1",
+   "212.5": "p1"
   },
   "tradeRoutes": [],
   "probeClaims": [],

@@ -5,12 +5,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { startingPositionFile } from '@tabletop/common/testing'
 import {
+    focusedCardId,
     HexKind,
     hexKey,
     PieceLevel,
     PieceType,
     PlanetColor,
     refreshPlanetControl,
+    TechnologyEffectKind,
     TurnStyle
 } from '@tabletop/earendel'
 import { TestGame } from '@tabletop/earendel/testing'
@@ -42,7 +44,7 @@ function field(planets) {
 }
 
 /** A drafted turn for Player 1 on a hand-made board, with only the pieces given. */
-function draftedTurn({ planets, pieces, hand }) {
+function draftedTurn({ planets, pieces, hand, technologies = {}, specials = {} }) {
     const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
     // Whoever the game seats first moves; in the layout, p1 is that player and p2 their rival.
     const mover = game.activePlayerId
@@ -53,6 +55,16 @@ function draftedTurn({ planets, pieces, hand }) {
     for (const [q, r, owner, type, level] of pieces) {
         game.state.board.hexes[hexKey({ q, r })].piece = piece(owners[owner], type, level)
     }
+    // Technologies come from the single-technology cards, so none is also left in the deck.
+    for (const [owner, kinds] of Object.entries(technologies)) {
+        const player = game.state.players.find((p) => p.playerId === owners[owner])
+        player.technologies = kinds.map((kind, copy) => focusedCardId(kind, PlanetColor.Teal, copy))
+    }
+    for (const [owner, types] of Object.entries(specials)) {
+        const player = game.state.players.find((p) => p.playerId === owners[owner])
+        player.specialPieces = types.map((type) => piece(owners[owner], type))
+    }
+
     const hydrated = game.hydrated
     refreshPlanetControl(hydrated)
     game.state.planetControllers = hydrated.planetControllers
@@ -123,6 +135,12 @@ write(
             [9, -2, 'p1', PieceType.Fighter, PieceLevel.Two],
             [9, 2, 'p2', PieceType.Relay]
         ],
+        // Both players earned their relays the usual way, and Player 1 has one more to place.
+        technologies: {
+            p1: [TechnologyEffectKind.RelayNetwork, TechnologyEffectKind.RelayNetwork],
+            p2: [TechnologyEffectKind.RelayNetwork, TechnologyEffectKind.RelayNetwork]
+        },
+        specials: { p1: [PieceType.Relay] },
         hand: [
             [PieceType.Station],
             [PieceType.Probe, PieceLevel.Two],
