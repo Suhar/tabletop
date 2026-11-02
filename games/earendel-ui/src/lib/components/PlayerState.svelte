@@ -8,11 +8,11 @@
         technologyCard,
         TechnologyEffectKind,
         TechnologyTiming,
-        turnsUntilReady,
-        PieceType
+        turnsUntilReady
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import TechnologyChip from './TechnologyChip.svelte'
+    import { specialPieceInfo, type SpecialPieceInfo } from '$lib/utils/specialPieces.js'
 
     let gameSession = getGameSession()
     let { player, playerState }: { player: Player; playerState: EarendelPlayerState } = $props()
@@ -41,6 +41,18 @@
                 kind: technologyCard(claim.technologyId).effect
             }))
     )
+
+    // The special pieces waiting to be placed, one chip per kind.
+    let specialEntries = $derived.by(() => {
+        const entries = new Map<string, { info: SpecialPieceInfo; count: number }>()
+        for (const piece of playerState.specialPieces) {
+            const info = specialPieceInfo(piece)
+            if (!info) continue
+            const entry = entries.get(info.key)
+            entries.set(info.key, { info, count: (entry?.count ?? 0) + 1 })
+        }
+        return [...entries.values()]
+    })
 
     // One chip per technology, in the order they were gained.
     let technologyEntries: TechnologyEntry[] = $derived.by(() => {
@@ -127,19 +139,17 @@
             </div>
         {/if}
 
-        {#if playerState.specialPieces.length > 0}
-            <div class="text-xs opacity-90" title="Special pieces waiting to be placed">
-                {playerState.specialPieces
-                    .map((piece) =>
-                        piece.hub
-                            ? '▣ Station Hub'
-                            : piece.type === PieceType.Terraformer
-                              ? '◈ Terraformer'
-                              : piece.type === PieceType.Relay
-                                ? '◇ Relay'
-                                : `▢ ${piece.type}`
-                    )
-                    .join(', ')}
+        {#if specialEntries.length > 0}
+            <div class="mb-0.5 flex flex-wrap justify-center gap-1">
+                {#each specialEntries as entry (entry.info.key)}
+                    <TechnologyChip
+                        kind={entry.info.grantedBy}
+                        name="{entry.info.glyph} {entry.info.name}"
+                        ability={entry.info.ability}
+                        count={entry.count}
+                        detail="A special piece, ready to play instead of the ships drawn on a turn."
+                    />
+                {/each}
             </div>
         {/if}
 
