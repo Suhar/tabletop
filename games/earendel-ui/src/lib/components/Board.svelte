@@ -28,6 +28,7 @@
     import RelayShape from './RelayShape.svelte'
     import PlanetTile from './PlanetTile.svelte'
     import { TerraformAnimator } from '$lib/animators/terraformAnimator.svelte.js'
+    import { ArrivalAnimator } from '$lib/animators/arrivalAnimator.svelte.js'
     import ProbeShape from './ProbeShape.svelte'
     import {
         CLIP_OVERREACH,
@@ -399,9 +400,18 @@
     const blasts = new BlastAnimator()
     const orbits = new OrbitAnimator((pieceId) => pieceMoves.nodeOf(pieceId))
     const terraforms = new TerraformAnimator()
+    const arrivals = new ArrivalAnimator()
 
     onMount(() => {
-        const animators = [pieceMoves, trussGrowth, blasts, scoreFloats, orbits, terraforms]
+        const animators = [
+            arrivals,
+            pieceMoves,
+            trussGrowth,
+            blasts,
+            scoreFloats,
+            orbits,
+            terraforms
+        ]
         const listeners = animators.map((animator) => animator.onGameStateChange.bind(animator))
         for (const listener of listeners) gameSession.addGameStateChangeListener(listener)
         return () => {
@@ -811,6 +821,31 @@
         {/if}
     {/each}
 
+    <!-- The visible board holds the state from before an action until its animations end, so the
+         pieces it placed are drawn here until then. -->
+    {#each arrivals.arriving as arrival (arrival.key)}
+        {@const center = hexGeometry(arrival.coords).center}
+        {@const color = gameSession.colors.getPlayerUiColor(arrival.piece.playerId)}
+        <g pointer-events="none">
+            {#if arrival.piece.type === PieceType.Probe}
+                <ProbeShape {center} {color} level={arrival.piece.level ?? PieceLevel.Two} />
+            {:else if arrival.piece.type === PieceType.Station}
+                <StationShape
+                    {center}
+                    {color}
+                    hub={arrival.piece.hub}
+                    linkedAngles={linkedAngles(arrival.coords, arrival.piece.playerId)}
+                />
+            {:else if arrival.piece.type === PieceType.Terraformer}
+                <TerraformerShape {center} {color} />
+            {:else if arrival.piece.type === PieceType.Relay}
+                <RelayShape {center} {color} />
+            {:else}
+                <FighterShape {center} {color} level={powerOf(arrival.piece)} />
+            {/if}
+        </g>
+    {/each}
+
     {#if ghostEntry && ghostPiece}
         {@const ghostColor = gameSession.colors.getPlayerUiColor(ghostPiece.playerId)}
         <g class="place-ghost" style="pointer-events: none;">
@@ -1048,15 +1083,6 @@
         </g>
     {/each}
 
-    <!-- The visible board still holds the state before the action, so these are drawn here. -->
-    {#each trussGrowth.arriving as station (station.coords.q + ',' + station.coords.r)}
-        <StationShape
-            center={hexGeometry(station.coords).center}
-            color={gameSession.colors.getPlayerUiColor(station.playerId)}
-            hub={station.hub}
-            linkedAngles={linkedAngles(station.coords, station.playerId)}
-        />
-    {/each}
     {#each trussGrowth.growing as truss (truss.key)}
         {@const color = gameSession.colors.getPlayerUiColor(truss.playerId)}
         <clipPath id="truss-grow-{truss.key}">

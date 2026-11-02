@@ -1,11 +1,6 @@
 import type { AnimationContext } from '@tabletop/frontend-components'
 import type { AxialCoordinates, GameAction, Point } from '@tabletop/common'
-import {
-    type EarendelBoard,
-    getHex,
-    hexKey,
-    type HydratedEarendelGameState
-} from '@tabletop/earendel'
+import { type EarendelBoard, getHex, type HydratedEarendelGameState } from '@tabletop/earendel'
 import { tick } from 'svelte'
 import { ElementRegistry } from './elementRegistry.js'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
@@ -26,18 +21,11 @@ export type GrowingTruss = {
 // The clip overreaches the girder by this much so the rails' stroke ends aren't trimmed.
 export const CLIP_OVERREACH = 2
 
-export type ArrivingStation = {
-    coords: AxialCoordinates
-    playerId: string
-    hub: boolean
-}
-
 const GROW_DURATION = 0.5
 const FALLBACK_DURATION = 0.15
 
 export class TrussGrowthAnimator {
     growing: GrowingTruss[] = $state([])
-    arriving: ArrivingStation[] = $state([])
     // While girders grow, stations dock as they will on this board, so their stubs drop at once.
     dockingBoard: EarendelBoard | undefined = $state()
 
@@ -74,29 +62,15 @@ export class TrussGrowthAnimator {
         const made = stationTubesOf(to.board).filter((tube) => !before.has(stationTubeKey(tube)))
         if (made.length === 0) return
 
-        const piecesBefore = new Set(
-            Object.values(from.board.hexes).flatMap((hex) => (hex.piece ? [hex.piece.id] : []))
-        )
         const changed = (coords: AxialCoordinates) =>
             getHex(from.board, coords)?.piece?.id !== getHex(to.board, coords)?.piece?.id
 
-        const arrivals = new Map<number, ArrivingStation>()
-        const growing = made.map((tube) => {
-            const oriented = changed(tube.to) && !changed(tube.from) ? reversed(tube) : tube
-            for (const coords of [oriented.from, oriented.to]) {
-                const piece = getHex(to.board, coords)?.piece
-                if (!piece || piecesBefore.has(piece.id) || arrivals.has(hexKey(coords))) continue
-                arrivals.set(hexKey(coords), {
-                    coords,
-                    playerId: piece.playerId,
-                    hub: piece.hub === true
-                })
-            }
-            return growingTruss(tube, oriented)
-        })
+        // A girder grows out from the station that has just arrived.
+        const growing = made.map((tube) =>
+            growingTruss(tube, changed(tube.to) && !changed(tube.from) ? reversed(tube) : tube)
+        )
 
         this.growing = growing
-        this.arriving = [...arrivals.values()]
         this.dockingBoard = to.board
 
         // The transient girders have to be mounted before their clips can be tweened.
@@ -120,7 +94,6 @@ export class TrussGrowthAnimator {
 
         animationContext.afterAnimations(() => {
             this.growing = []
-            this.arriving = []
             this.dockingBoard = undefined
         })
     }
