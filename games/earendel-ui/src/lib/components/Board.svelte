@@ -48,6 +48,7 @@
     import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
     import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import { isRelayLine, relaySignal } from '$lib/utils/relayPulses.js'
+    import { onSharedClock } from '$lib/utils/sharedClock.js'
 
     let gameSession = getGameSession()
 
@@ -1125,6 +1126,7 @@
             stroke-dasharray="6 200"
             class="relay-pulse"
             style="animation-delay: {pulse.delay}s"
+            use:onSharedClock
             pointer-events="none"
         />
     {/each}
@@ -1139,6 +1141,7 @@
             stroke-width="2"
             class="relay-burst"
             style="animation-delay: {burst.delay}s; transform-origin: {at.x}px {at.y}px"
+            use:onSharedClock
             pointer-events="none"
         />
     {/each}
