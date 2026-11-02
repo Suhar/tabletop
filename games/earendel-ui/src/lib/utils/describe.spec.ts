@@ -3,7 +3,9 @@ import { ActionSource, type GameAction } from '@tabletop/common'
 import {
     ActionType,
     PieceType,
+    PieceSource,
     PlanetColor,
+    type PlacePiece,
     type AttackPiece,
     type AttackSpread,
     type UseUpdatedLogistics
@@ -77,5 +79,22 @@ describe('describeAction', () => {
         const description = describeAction(shot, (playerId) => names[playerId] ?? playerId)
         expect(description).toMatch(/and broke Bob's pending .+ on the teal planet/)
         expect(description).toMatch(/and restored their own pending .+ on its planet$/)
+    })
+
+    it('says points, counting the stations from the record when a hub doubled them', () => {
+        const placed = {
+            ...base,
+            type: ActionType.PlacePiece,
+            coords: { q: 0, r: 0 },
+            pieceSource: PieceSource.Bag,
+            metadata: {
+                pieceType: PieceType.Station,
+                stationGroupPoints: 8,
+                stationComplex: { stations: 4, hubs: 1, relays: 0 }
+            }
+        } satisfies PlacePiece
+        expect(describeAction(placed)).toBe(
+            'placed a station joining a group of 4 stations for 8 points'
+        )
     })
 })

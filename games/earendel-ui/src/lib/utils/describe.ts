@@ -118,7 +118,7 @@ function describeChains(chains: ScoredChain[] | undefined): string[] {
         (chain) =>
             `and joined two ${chain.color} planets with ${chain.length} ${
                 chain.length === 1 ? 'ship' : 'ships'
-            } for ${chain.points}`
+            } for ${pointsText(chain.points)}`
     )
 }
 
@@ -127,10 +127,12 @@ function describePlacement(placed: PlacePiece): string {
     if (placed.metadata?.returnedToBag) {
         parts.push(`(putting a ${describePiece(placed.metadata.returnedToBag)} back in the bag)`)
     }
-    if (placed.metadata?.stationGroupPoints) {
-        const points = placed.metadata.stationGroupPoints
-        parts.push(points === 1 ? 'for 1' : `joining a group of ${points} stations for ${points}`)
-    }
+    parts.push(
+        ...describeStationScore(
+            placed.metadata?.stationGroupPoints,
+            placed.metadata?.stationComplex
+        )
+    )
     parts.push(...describeChains(placed.metadata?.chains))
     return parts.join(' ')
 }
@@ -210,7 +212,9 @@ function describeWormhole(hop: UseTradeRouteWormhole): string {
     const parts: string[] = [
         `sent a ${hop.metadata?.pieceType ?? 'ship'} through a trade route wormhole`
     ]
-    if (hop.metadata?.stationGroupPoints) parts.push(`for ${hop.metadata.stationGroupPoints}`)
+    parts.push(
+        ...describeStationScore(hop.metadata?.stationGroupPoints, hop.metadata?.stationComplex)
+    )
     parts.push(...describeChains(hop.metadata?.chains))
     return parts.join(' ')
 }
@@ -219,7 +223,9 @@ function describeFeint(feint: UseTacticalFeint): string {
     const mine = feint.metadata?.movedType ?? 'ship'
     const theirs = feint.metadata?.displacedType ?? 'ship'
     const parts: string[] = [`feinted, swapping their ${mine} with a ${theirs}`]
-    if (feint.metadata?.stationGroupPoints) parts.push(`for ${feint.metadata.stationGroupPoints}`)
+    parts.push(
+        ...describeStationScore(feint.metadata?.stationGroupPoints, feint.metadata?.stationComplex)
+    )
     parts.push(...describeChains(feint.metadata?.chains))
     return parts.join(' ')
 }
@@ -257,4 +263,23 @@ function describeTerraform(terraform: Terraform): string {
     return fromColor
         ? `terraformed the ${fromColor} planet to ${toColor}`
         : `terraformed a planet to ${toColor}`
+}
+
+function pointsText(points: number): string {
+    return `${points} ${points === 1 ? 'point' : 'points'}`
+}
+
+// The station count comes from the recorded complex; older records only have the points, which
+// equal the count unless a hub doubled them.
+function describeStationScore(
+    points: number | undefined,
+    complex: { stations: number } | undefined
+): string[] {
+    if (!points) return []
+    const stations = complex?.stations ?? points
+    return [
+        stations === 1
+            ? `for ${pointsText(points)}`
+            : `joining a group of ${stations} stations for ${pointsText(points)}`
+    ]
 }
