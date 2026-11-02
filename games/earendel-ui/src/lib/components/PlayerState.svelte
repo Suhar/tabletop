@@ -29,6 +29,7 @@
         count: number
         turnsLeft?: number
         unspent?: boolean
+        toPlace?: { info: SpecialPieceInfo; count: number }
     }
 
     // Technologies this player's probes will research at their next turn if they still lead.
@@ -42,16 +43,16 @@
             }))
     )
 
-    // The special pieces waiting to be placed, one chip per kind.
-    let specialEntries = $derived.by(() => {
-        const entries = new Map<string, { info: SpecialPieceInfo; count: number }>()
+    // Special pieces waiting to be placed, counted against the technology that granted them.
+    let waiting = $derived.by(() => {
+        const byKind = new Map<TechnologyEffectKind, { info: SpecialPieceInfo; count: number }>()
         for (const piece of playerState.specialPieces) {
             const info = specialPieceInfo(piece)
             if (!info) continue
-            const entry = entries.get(info.key)
-            entries.set(info.key, { info, count: (entry?.count ?? 0) + 1 })
+            const entry = byKind.get(info.grantedBy)
+            byKind.set(info.grantedBy, { info, count: (entry?.count ?? 0) + 1 })
         }
-        return [...entries.values()]
+        return byKind
     })
 
     // One chip per technology, in the order they were gained.
@@ -60,7 +61,8 @@
         const kinds = [
             ...playerState.technologies.map((technologyId) => technologyCard(technologyId).effect),
             ...playerState.cooldownEffects,
-            ...playerState.storedEffects
+            ...playerState.storedEffects,
+            ...waiting.keys()
         ]
         for (const technologyId of playerState.technologies) {
             const kind = technologyCard(technologyId).effect
@@ -83,7 +85,8 @@
                     : {}),
                 ...(timing === TechnologyTiming.Stored
                     ? { unspent: playerState.storedEffects.includes(kind) }
-                    : {})
+                    : {}),
+                ...(waiting.has(kind) ? { toPlace: waiting.get(kind) } : {})
             }
         })
     })
@@ -115,6 +118,12 @@
                         count={entry.count}
                         turnsLeft={entry.turnsLeft}
                         unspent={entry.unspent}
+                        toPlace={entry.toPlace
+                            ? {
+                                  count: entry.toPlace.count,
+                                  name: entry.toPlace.info.name
+                              }
+                            : undefined}
                     />
                 {/each}
                 {#each pendingTechnologies as claim (claim.key)}
@@ -136,20 +145,6 @@
                 >
                     No technologies currently
                 </button>
-            </div>
-        {/if}
-
-        {#if specialEntries.length > 0}
-            <div class="mb-0.5 flex flex-wrap justify-center gap-1">
-                {#each specialEntries as entry (entry.info.key)}
-                    <TechnologyChip
-                        kind={entry.info.grantedBy}
-                        name="{entry.info.glyph} {entry.info.name}"
-                        ability={entry.info.ability}
-                        count={entry.count}
-                        detail="A special piece, ready to play instead of the ships drawn on a turn."
-                    />
-                {/each}
             </div>
         {/if}
 

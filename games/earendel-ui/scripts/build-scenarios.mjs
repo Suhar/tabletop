@@ -135,9 +135,13 @@ write(
             [9, -2, 'p1', PieceType.Fighter, PieceLevel.Two],
             [9, 2, 'p2', PieceType.Relay]
         ],
-        // Both players earned their relays the usual way, and Player 1 has one more to place.
+        // Each relay came from a Relay Network: two placed each, and Player 1 has a third to place.
         technologies: {
-            p1: [TechnologyEffectKind.RelayNetwork, TechnologyEffectKind.RelayNetwork],
+            p1: [
+                TechnologyEffectKind.RelayNetwork,
+                TechnologyEffectKind.RelayNetwork,
+                TechnologyEffectKind.RelayNetwork
+            ],
             p2: [TechnologyEffectKind.RelayNetwork, TechnologyEffectKind.RelayNetwork]
         },
         specials: { p1: [PieceType.Relay] },

@@ -6,9 +6,9 @@ by `scripts/build-scenarios.mjs`: build the logic package, then run `node script
 ## Relays
 
 Player 1 (always the player to move, whichever seat the game gives them) has drawn three ships (a station, a level 2 probe and a level 3 fighter) on a board laid
-out to show what a relay does. Both players hold Relay Network, and Player 1 has a spare relay to
-place: hover it in their panel to read what a relay does, or choose it instead of the drawn ships
-to place another. Throw out the station to try the rest.
+out to show what a relay does. Both players hold Relay Network, one per relay, and Player 1's has
+one relay still to place: hover Relay Network in their panel to read what a relay does, or
+choose the relay instead of the drawn ships to place it. Throw out the station to try the rest.
 
 - **Relays link stations past ships.** Player 1's relay sits on a line between two of their
   stations, with a Player 2 fighter and probe in the way, and sees a third station on a diagonal.

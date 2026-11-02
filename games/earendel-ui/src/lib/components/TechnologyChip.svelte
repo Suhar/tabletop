@@ -20,6 +20,7 @@
         detail,
         elevated = false,
         dimmed = false,
+        toPlace,
         onchoose
     }: {
         // The technology, which names its category and the category's colour in the popup.
@@ -40,6 +41,8 @@
         // An elevated card, picked out in gold.
         elevated?: boolean
         dimmed?: boolean
+        // Pieces this technology granted that are still waiting to be placed.
+        toPlace?: { count: number; name: string }
         // Makes the chip a choice: a click chooses it. On touch the first tap shows the popup and
         // a second tap chooses.
         onchoose?: () => void
@@ -73,6 +76,10 @@
             return `Ready in ${turnsLeft} more ${turnsLeft === 1 ? 'round' : 'rounds'}.`
         }
         if (unspent !== undefined) return unspent ? 'Not used yet.' : 'Used.'
+        if (toPlace) {
+            const pieces = toPlace.count === 1 ? `a ${toPlace.name}` : `${toPlace.count} ${toPlace.name}s`
+            return `You have ${pieces} to place: play ${toPlace.count === 1 ? 'it' : 'one'} instead of the ships you draw.`
+        }
         if (onchoose) return lastPointerType === 'touch' ? 'Tap again to choose it.' : 'Click to choose it.'
         return undefined
     })
@@ -194,6 +201,13 @@
     {/if}
     {#if pending}
         <span class="text-[10px] font-semibold uppercase tracking-wide opacity-75">Pending</span>
+    {/if}
+    {#if toPlace}
+        <span
+            class="rounded-full bg-current/20 px-1.5 text-[10px] font-semibold uppercase tracking-wide"
+        >
+            {toPlace.count} to place
+        </span>
     {/if}
     {#if turnsLeft !== undefined}
         <span class="inline-flex gap-[3px]" aria-label="{turnsLeft} rounds left">
