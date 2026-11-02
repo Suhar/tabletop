@@ -4,7 +4,7 @@ import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board
 import { type Piece, PieceLevel, PieceType, powerOf } from '../model/pieces.js'
 import { attackOutcome, attackOutcomeAt, AttackOutcome } from './attack.js'
 import { probeBlockedBy, relayStationsOf } from './lineOfSight.js'
-import { stationComplex, stationGroupPoints } from './stations.js'
+import { stationComplex, stationComplexSummary, stationGroupPoints } from './stations.js'
 
 // rules.md, Relay piece: a relay is a station for every line of sight rule, and only planets
 // block its sight.
@@ -94,6 +94,11 @@ describe('relay pieces', () => {
 
         expect(stationComplex(board, 'p1', at(0, 0))).toEqual([at(0, 0), at(8, 0)])
         expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(2)
+        expect(stationComplexSummary(board, 'p1', at(0, 0))).toEqual({
+            stations: 2,
+            hubs: 0,
+            relays: 1
+        })
     })
 
     it('close the hexes between them and a station to rival probes, through ships', () => {

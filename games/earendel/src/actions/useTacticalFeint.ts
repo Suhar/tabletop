@@ -18,6 +18,7 @@ import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { feintTargets } from '../util/legality.js'
 import { ScoredChain } from '../model/chains.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import { StationComplexSummary } from '../model/stationComplex.js'
 
 export type UseTacticalFeintMetadata = Type.Static<typeof UseTacticalFeintMetadata>
 export const UseTacticalFeintMetadata = Type.Object({
@@ -25,6 +26,7 @@ export const UseTacticalFeintMetadata = Type.Object({
     movedType: Type.Optional(Type.Enum(PieceType)),
     displacedType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
+    stationComplex: Type.Optional(StationComplexSummary),
     chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
@@ -83,7 +85,7 @@ export class HydratedUseTacticalFeint
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TacticalFeint)
 
-        const { stationPoints, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.to
@@ -93,6 +95,7 @@ export class HydratedUseTacticalFeint
             movedType: mine.type,
             displacedType: theirs.type,
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
+            ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),

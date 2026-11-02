@@ -10,6 +10,7 @@ import { probeBlockedBy } from '../util/lineOfSight.js'
 import { ScoredChain } from '../model/chains.js'
 import { returnToBag } from '../model/bags.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import { StationComplexSummary } from '../model/stationComplex.js'
 
 // Not `source`: GameAction already has a `source` (User vs System).
 export enum PieceSource {
@@ -24,6 +25,7 @@ export const PlacePieceMetadata = Type.Object({
     returnedToBag: Type.Optional(Piece),
     chains: Type.Optional(Type.Array(ScoredChain)),
     stationGroupPoints: Type.Optional(Type.Number()),
+    stationComplex: Type.Optional(StationComplexSummary),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
@@ -91,7 +93,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
-        const { stationPoints, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.coords
@@ -101,6 +103,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             pieceType: piece.type,
             ...(returnedToBag ? { returnedToBag } : {}),
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
+            ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),

@@ -6,8 +6,18 @@
     import { quartIn } from 'svelte/easing'
     import ActionDescription from './ActionDescription.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { rationaleFor } from '$lib/utils/rationale.js'
 
     const timeAgo = new TimeAgo('en-US')
+
+    // Entries whose rationale is open: why the action came out as it did, for players learning.
+    let expanded: string[] = $state([])
+    function toggle(id: string) {
+        expanded = expanded.includes(id)
+            ? expanded.filter((open) => open !== id)
+            : [...expanded, id]
+    }
+    const nameOf = (playerId: string) => gameSession.getPlayerName(playerId)
 
     let gameSession = getGameSession()
 
@@ -64,6 +74,25 @@
                         <p class="mt-1 text-left text-sm text-base font-normal text-gray-200">
                             <ActionDescription {action} justify="start" />
                         </p>
+                        {@const reasons = rationaleFor(action, nameOf)}
+                        {#if reasons.length > 0}
+                            {@const open = expanded.includes(action.id)}
+                            <button
+                                type="button"
+                                class="mt-1 rounded border border-[#ad9c80]/50 px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-[#ad9c80] hover:bg-[#ad9c80]/15"
+                                aria-expanded={open}
+                                onclick={() => toggle(action.id)}
+                            >
+                                {open ? 'Hide rationale' : 'Rationale'}
+                            </button>
+                            {#if open}
+                                <ul class="mt-1 list-disc space-y-1 pl-4 text-left text-xs text-gray-300">
+                                    {#each reasons as reason, index (index)}
+                                        <li>{reason}</li>
+                                    {/each}
+                                </ul>
+                            {/if}
+                        {/if}
                     </TimelineItem>
                 </div>
             {/each}

@@ -6,13 +6,16 @@ import { attackableTargets } from './attack.js'
 import { chainsCompletedBy, planetPairKey } from './chains.js'
 import { refreshPlanetControl } from './control.js'
 import { probeDestinations } from './exploration.js'
-import { stationGroupPoints } from './stations.js'
+import { stationComplexSummary, stationGroupPoints } from './stations.js'
+import type { StationComplexSummary } from '../model/stationComplex.js'
 import { terraformablePlanets } from './terraform.js'
 import type { CompletedChain } from './chains.js'
 
 // The ship must already stand at coords: it is read off the board, not passed in.
 export type Arrival = {
     stationPoints: number
+    // Set when a station scored: what its complex held.
+    complex?: StationComplexSummary
     // Carries pairKey, which the caller strips before recording in metadata.
     chains: CompletedChain[]
     probeDestinations: AxialCoordinates[]
@@ -32,6 +35,10 @@ export function resolveArrival(
     const stationPoints =
         piece.type === PieceType.Station ? stationGroupPoints(state.board, playerId, coords) : 0
     playerState.score += stationPoints
+    const complex =
+        piece.type === PieceType.Station
+            ? stationComplexSummary(state.board, playerId, coords)
+            : undefined
 
     const joined = state.tradeRoutes.map((route) => planetPairKey(...route.planets))
     const chains = chainsCompletedBy(state.board, playerId, coords, joined)
@@ -62,5 +69,10 @@ export function resolveArrival(
 
     refreshPlanetControl(state)
 
-    return { stationPoints, chains, probeDestinations: destinations }
+    return {
+        stationPoints,
+        ...(complex ? { complex } : {}),
+        chains,
+        probeDestinations: destinations
+    }
 }

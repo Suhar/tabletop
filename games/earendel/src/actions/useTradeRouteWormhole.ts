@@ -18,12 +18,14 @@ import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { planetsBeside, wormholeDestinations } from '../util/wormhole.js'
 import { ScoredChain } from '../model/chains.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import { StationComplexSummary } from '../model/stationComplex.js'
 
 export type UseTradeRouteWormholeMetadata = Type.Static<typeof UseTradeRouteWormholeMetadata>
 export const UseTradeRouteWormholeMetadata = Type.Object({
     ...ClaimChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
+    stationComplex: Type.Optional(StationComplexSummary),
     chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
@@ -79,7 +81,7 @@ export class HydratedUseTradeRouteWormhole
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TradeRouteWormhole)
 
-        const { stationPoints, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.to
@@ -88,6 +90,7 @@ export class HydratedUseTradeRouteWormhole
         this.metadata = {
             pieceType: piece.type,
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
+            ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
             ...(chains.length > 0
                 ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
                 : {}),
