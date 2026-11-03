@@ -2,13 +2,15 @@ import { PrivateCatalog, type PrivateDefinition } from '@tabletop/18xx'
 import { TwoCrownsLocationNames } from './generated/map.js'
 import { TwoCrownsPrivateData } from './generated/data.js'
 import { TwoCrownsPhases } from './trains.js'
-import { BondIds } from './holdings.js'
+import { BondIds, isBond } from './holdings.js'
 
-// Public Line Bonds and Ganz are created by setup and the charter, not dealt.
-const UndealtPrivateIds = ['BD', 'G']
+// Public Line Bonds and Ganz are created by setup and the Hungarian Bank, not dealt.
+const UndealtPrivateIds = ['G']
 // Powers the copied 1871 rules do not yet provide; these pay revenue only.
 const PendingPowerIds: string[] = []
-const StationRightsCities: Readonly<Record<string, string>> = { P3: 'Zadar', P4: 'Vukovar' }
+const StationRightsCities: Readonly<Record<string, string>> = { P3: 'Zadar', P4: 'Virovitica' }
+// Sold to companies for half to full face: the Station Rights and the Ancona Steamship Line.
+const HalfToFaceSaleIds = [...Object.keys(StationRightsCities), 'P17']
 
 function locationNamed(name: string): string {
     const entry = Object.entries(TwoCrownsLocationNames).find(([, value]) => value === name)
@@ -29,7 +31,7 @@ function privateDefinition(item: (typeof TwoCrownsPrivateData)[number]): Private
         sale:
             item.id === 'P10'
                 ? { minimum: 1, maximum: 200 }
-                : city
+                : HalfToFaceSaleIds.includes(item.id)
                   ? { minimum: item.faceValue / 2, maximum: item.faceValue }
                   : 'never',
         ...(item.id === 'P12' || item.id === 'P14' ? { closure: 'never' as const } : {}),
@@ -43,15 +45,15 @@ export const TwoCrownsPrivateCatalog = new PrivateCatalog(
     {
         closurePhaseId: '4+',
         privates: [
-            ...TwoCrownsPrivateData.filter((item) => !UndealtPrivateIds.includes(item.id)).map(
-                privateDefinition
-            ),
+            ...TwoCrownsPrivateData.filter(
+                (item) => !UndealtPrivateIds.includes(item.id) && !isBond(item.id)
+            ).map(privateDefinition),
             {
                 ...privateDefinition(TwoCrownsPrivateData.find((item) => item.id === 'G')!),
                 sale: { minimum: 1, maximum: 100 }
             },
             ...BondIds.map((id): PrivateDefinition => {
-                const bond = TwoCrownsPrivateData.find((item) => item.id === 'BD')!
+                const bond = TwoCrownsPrivateData.find((item) => item.id === id)!
                 return {
                     id,
                     name: bond.name,
@@ -73,6 +75,7 @@ export function privatesForPlayerCount(playerCount: number) {
     return TwoCrownsPrivateData.filter(
         (item) =>
             !UndealtPrivateIds.includes(item.id) &&
+            !isBond(item.id) &&
             playerCount >= (counts(item).minPlayers ?? 0) &&
             playerCount <= (counts(item).maxPlayers ?? Infinity)
     ).map((item) => item.id)

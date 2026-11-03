@@ -302,12 +302,18 @@ function dataModule() {
     const luka = game.companies.filter((company) => company.subtext === 'Luka')
     const branches = game.companies.filter((company) => company.subtext === 'Branch')
     const color = (company) => colors[company.color] ?? company.color
-    const companies = luka.map((company, index) => ({
-        companyId: company.abbrev,
-        name: company.name,
-        number: index + 1,
-        color: color(company)
-    }))
+    // Luka share numbers come from the share labels ("#1 Split"), as on 1871's PEIR shares.
+    const lukaNumbers = new Map(
+        game.companies
+            .find((company) => company.abbrev === 'LUKA')
+            .shares.map((share) => /^#(\d+) (.+)$/.exec(share.label))
+            .map((match) => [match[2], Number(match[1])])
+    )
+    const companies = luka.map((company) => {
+        const number = lukaNumbers.get(company.name)
+        if (!number) throw new Error(`No Luka share is labelled for ${company.name}`)
+        return { companyId: company.abbrev, name: company.name, number, color: color(company) }
+    })
     const branchData = branches.map((company) => ({
         id: `branch:${ascii(company.abbrev)}`,
         name: company.name,

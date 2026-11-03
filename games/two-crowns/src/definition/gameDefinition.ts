@@ -1,10 +1,5 @@
 import { TwoCrownsNames } from '../names.js'
-import {
-    createEighteenXXRuntime,
-    defineAction,
-    type EighteenXXStateHandler,
-    type EighteenXXTitleRules
-} from '@tabletop/18xx'
+import { createEighteenXXRuntime, defineAction, type EighteenXXTitleRules } from '@tabletop/18xx'
 import type { GameDefinition } from '@tabletop/common'
 import { TwoCrownsCompanyRules } from '../companyRules.js'
 import { TwoCrownsEarningsRules } from '../earningsRules.js'
@@ -30,16 +25,6 @@ import { TwoCrownsTrainFundingRules } from '../trainFundingRules.js'
 import { TwoCrownsPhases, TwoCrownsTrainRules } from '../trains.js'
 import { TwoCrownsTransferRules } from '../transferRules.js'
 import { TwoCrownsInfo } from './info.js'
-import {
-    AssignAncona,
-    BuyBerth,
-    HydratedAssignAncona,
-    HydratedBuyBerth,
-    OperatingTitleStates,
-    isAssignAncona,
-    isBuyBerth
-} from '../berths.js'
-import { TwoCrownsOperatingTitleHandler } from '../operatingTitleHandler.js'
 
 export const TwoCrownsTitleRules: EighteenXXTitleRules<
     typeof TwoCrownsState,
@@ -49,19 +34,10 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
     endingRules: TwoCrownsEndingRules,
     names: TwoCrownsNames,
     decisionHandlers: {
-        StockRound: (family) => new TwoCrownsStockRoundHandler(family),
-        ...Object.fromEntries(
-            OperatingTitleStates.map((state) => [
-                state,
-                (family: EighteenXXStateHandler<HydratedTwoCrownsState>) =>
-                    new TwoCrownsOperatingTitleHandler(family)
-            ])
-        )
+        StockRound: (family) => new TwoCrownsStockRoundHandler(family)
     },
     titleActions: [
         defineAction(SplitCompany, isSplitCompany, (action) => new HydratedSplitCompany(action)),
-        defineAction(BuyBerth, isBuyBerth, (action) => new HydratedBuyBerth(action)),
-        defineAction(AssignAncona, isAssignAncona, (action) => new HydratedAssignAncona(action)),
         defineAction(
             ConvertCharter,
             isConvertCharter,

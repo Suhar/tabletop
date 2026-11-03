@@ -2,6 +2,7 @@ import { TwoCrownsCharters } from './charters.js'
 import { EighteenXXTransferTiming, privateOwner, type TransferRules } from '@tabletop/18xx'
 import { TwoCrownsPhases } from './trains.js'
 import { TwoCrownsPrivateCatalog } from './privates.js'
+import { AnconaLineId, afterAnconaPurchase } from './ancona.js'
 export const TwoCrownsTransferRules: TransferRules = {
     ...EighteenXXTransferTiming,
     charters: TwoCrownsCharters,
@@ -13,11 +14,14 @@ export const TwoCrownsTransferRules: TransferRules = {
         if (TwoCrownsPhases.isAtLeast(state.phaseId, '4+')) return undefined
         // Ganz may go to any company at any time (1874design.md, Ganz Locomotive Works).
         if (id === 'G') return TwoCrownsPrivateCatalog.priceRange(id)
+        // The Ancona Steamship Line to a non-Luka company from the first OR (P17).
+        if (id === AnconaLineId)
+            return companyId === 'LUKA' ? undefined : TwoCrownsPrivateCatalog.priceRange(id)
         // From 4H: the Station Rights to any company, Wiener Neustadt to a non-Luka one.
         if (!TwoCrownsPhases.isAtLeast(state.phaseId, '4H')) return undefined
         if (id === 'P3' || id === 'P4' || (id === 'P10' && companyId !== 'LUKA'))
             return TwoCrownsPrivateCatalog.priceRange(id)
         return undefined
     },
-    afterPurchase: () => {}
+    afterPurchase: afterAnconaPurchase
 }

@@ -12,29 +12,29 @@ import {
 
 export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     B8: 'Trieste',
-    E7: 'Ljubljana',
-    F6: 'Ljubljana',
-    O1: 'Budapest',
-    S5: 'Budapest',
-    V12: 'Belgrade',
-    M17: 'Bosnia',
-    Q17: 'Bosnia',
-    R16: 'Bosnia',
-    Q27: 'Dubrovnik',
-    L28: 'Malta',
+    E5: 'Ljubljana',
+    Q1: 'Budapest',
+    V16: 'Belgrade',
+    M17: 'Banja Luka',
+    S19: 'Sarajevo',
+    P24: 'Dubrovnik',
+    K25: 'Malta',
     B16: 'Ancona',
     C13: 'Rovinj',
-    E11: 'Opatija',
+    E11: 'Opatija & Lovran',
     F14: 'Krk',
     F16: 'Rab',
     G19: 'Pag',
-    N28: 'Makarska',
+    T12: 'Vukovar',
+    M25: 'Makarska',
+    S5: 'Beli Manastir',
+    O1: 'Legrad',
     K7: 'Zagreb',
     F12: 'Rijeka',
     C15: 'Pula',
     G15: 'Senj',
     H12: 'Ogulin',
-    I19: 'Gospić',
+    I17: 'Gospić',
     I11: 'Karlovac',
     L4: 'Varaždin',
     L10: 'Sisak',
@@ -45,11 +45,10 @@ export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     Q13: 'Slavonski Brod',
     S9: 'Osijek',
     S11: 'Vinkovci',
-    T10: 'Vukovar',
-    H22: 'Zadar',
-    L22: 'Knin',
-    K25: 'Šibenik',
-    M27: 'Split',
+    H20: 'Zadar',
+    L20: 'Knin',
+    K23: 'Šibenik',
+    L24: 'Split',
     D12: 'Pazin',
     G11: 'Delnice',
     H16: 'Otočac',
@@ -60,22 +59,23 @@ export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     L8: 'Dugo Selo & Vrbovec',
     M5: 'Križevci',
     N10: 'Kutina & Popovača',
-    N12: 'Novska & Lipovljani',
+    N12: 'Novska',
+    M13: 'Lipovljani',
     Q11: 'Našice & Orahovica',
-    I23: 'Vrana',
-    J22: 'Benkovac & Obrovac',
-    M25: 'Sinj'
+    I21: 'Vrana',
+    J20: 'Benkovac & Obrovac',
+    L22: 'Sinj'
 }
 
 export const TwoCrownsHomes: Readonly<Record<string, string>> = {
     C15: 'IST',
-    I19: 'LIK',
+    I17: 'LIK',
     I11: 'KAR',
     L4: 'ZAG',
     L10: 'POS',
     N6: 'POD',
     S9: 'SLA',
-    M27: 'SPL'
+    L24: 'SPL'
 }
 
 export function twoCrownsLocations(
@@ -93,122 +93,76 @@ export function twoCrownsLocations(
         ...locations(
             'B8',
             offboard(
-                [5, 0],
+                [0],
                 revenue([
-                    ['yellow', 30],
-                    ['green', 40],
+                    ['yellow', 20],
                     ['brown', 60]
                 ])
             )
         ),
         ...locations(
-            'E7',
-            offboard(
-                [0],
-                revenue([
-                    ['yellow', 30],
-                    ['green', 50],
-                    ['brown', 70]
-                ])
-            ),
-            { stopGroup: 'ljubljana' }
-        ),
-        ...locations(
-            'F6',
+            'E5',
             offboard(
                 [5],
                 revenue([
-                    ['yellow', 30],
-                    ['green', 50],
+                    ['yellow', 20],
+                    ['green', 30],
+                    ['brown', 60]
+                ])
+            )
+        ),
+        ...locations(
+            'Q1',
+            offboard(
+                [0, 5],
+                revenue([
+                    ['yellow', 40],
                     ['brown', 70]
                 ])
-            ),
-            { stopGroup: 'ljubljana' }
+            )
         ),
         ...locations(
-            'O1',
+            'V16',
             offboard(
-                [1],
-                revenue([
-                    ['yellow', 40],
-                    ['green', 60],
-                    ['brown', 80]
-                ])
-            ),
-            { stopGroup: 'budapest' }
-        ),
-        ...locations(
-            'S5',
-            offboard(
-                [0],
-                revenue([
-                    ['yellow', 40],
-                    ['green', 60],
-                    ['brown', 80]
-                ])
-            ),
-            { stopGroup: 'budapest' }
-        ),
-        ...locations(
-            'V12',
-            offboard(
-                [2, 1],
+                [2],
                 revenue([
                     ['yellow', 20],
-                    ['green', 40],
-                    ['brown', 60]
+                    ['brown', 50]
                 ])
             )
         ),
         ...locations(
             'M17',
             offboard(
-                [3],
+                [3, 2],
                 revenue([
                     ['yellow', 20],
-                    ['green', 40],
                     ['brown', 60]
-                ])
-            ),
-            { stopGroup: 'bosnia' }
-        ),
-        ...locations(
-            'Q17',
-            offboard(
-                [3],
-                revenue([
-                    ['yellow', 20],
-                    ['green', 40],
-                    ['brown', 60]
-                ])
-            ),
-            { stopGroup: 'bosnia' }
-        ),
-        ...locations(
-            'R16',
-            offboard(
-                [3],
-                revenue([
-                    ['yellow', 20],
-                    ['green', 40],
-                    ['brown', 60]
-                ])
-            ),
-            { stopGroup: 'bosnia' }
-        ),
-        ...locations(
-            'Q27',
-            offboard(
-                [1],
-                revenue([
-                    ['yellow', 10],
-                    ['green', 30],
-                    ['brown', 50]
                 ])
             )
         ),
         ...locations(
-            'L28',
+            'S19',
+            offboard(
+                [3],
+                revenue([
+                    ['yellow', 20],
+                    ['brown', 60]
+                ])
+            )
+        ),
+        ...locations(
+            'P24',
+            offboard(
+                [1],
+                revenue([
+                    ['yellow', 40],
+                    ['brown', 60]
+                ])
+            )
+        ),
+        ...locations(
+            'K25',
             offboard(
                 [4],
                 revenue([
@@ -225,29 +179,15 @@ export function twoCrownsLocations(
                 [4],
                 revenue([
                     ['yellow', 30],
-                    ['green', 50],
                     ['brown', 70]
                 ]),
                 0
             )
         ),
+        ...locations('F6', track('gray', [[2, 5]])),
         ...locations('B10', track('gray', [[3, 5]])),
-        ...locations(
-            'C9',
-            track('gray', [
-                [2, 5],
-                [0, 2]
-            ])
-        ),
         ...locations('C13', town('gray', [[3, 0, 4]], 10)),
-        ...locations(
-            'E9',
-            track('gray', [
-                [3, 0],
-                [1, 3]
-            ])
-        ),
-        ...locations('E11', town('gray', [[3, 5, 1]], 10)),
+        ...locations('E11', town('white', [[], []], 0)),
         ...locations(
             'G7',
             track('gray', [
@@ -255,30 +195,28 @@ export function twoCrownsLocations(
                 [2, 5]
             ])
         ),
-        ...locations('H6', track('gray', [[5, 1]])),
-        ...locations('H8', track('gray', [[2, 5]])),
         ...locations('F14', town('gray', [[3, 0]], 20)),
-        ...locations('F16', town('gray', [[3, 5]], 10)),
+        ...locations('F16', town('gray', [[3, 5, 4]], 10)),
         ...locations('G17', track('gray', [[0, 2]])),
-        ...locations('G19', town('gray', [[3, 0]], 10)),
-        ...locations('M1', track('gray', [[5, 1]])),
-        ...locations(
-            'N2',
-            track('gray', [
-                [2, 4],
-                [4, 0]
-            ])
-        ),
-        ...locations('S7', track('gray', [[0, 3]])),
-        ...locations('U11', track('gray', [[2, 5]])),
-        ...locations('T12', track('gray', [[2, 5]])),
-        ...locations('U13', track('gray', [[2, 4]])),
-        ...locations('Q15', track('gray', [[3, 0]])),
-        ...locations('R14', track('gray', [[4, 0]])),
-        ...locations('M15', track('gray', [[0, 2]])),
-        ...locations('N28', town('gray', [[2, 4]], 10)),
-        ...locations('O27', track('gray', [[5, 1]])),
-        ...locations('P28', track('gray', [[2, 4]])),
+        ...locations('G19', town('gray', [[3, 5]], 10)),
+        ...locations('N2', track('gray', [[4, 0]])),
+        ...locations('T12', town('gray', [[3, 5, 2]], 10)),
+        ...locations('U13', track('gray', [[0, 2]])),
+        ...locations('Q15', track('gray', [[3, 5]])),
+        ...locations('R14', track('white', [])),
+        ...locations('M15', track('gray', [[0, 3]])),
+        ...locations('M25', town('gray', [[2, 4]], 10)),
+        ...locations('N24', track('gray', [[5, 1]])),
+        ...locations('O25', track('gray', [[2, 4]])),
+        ...locations('U15', track('gray', [[3, 5]])),
+        ...locations('R16', track('gray', [[2, 5]])),
+        ...locations('S17', track('gray', [[0, 2]])),
+        ...locations('S5', town('gray', [[0, 2]], 10)),
+        ...locations('R4', track('gray', [[3, 5]])),
+        ...locations('O1', town('gray', [[5, 1]], 20)),
+        ...locations('P2', track('gray', [[2, 5]])),
+        ...locations('Q3', track('gray', [[2, 3]])),
+        ...locations('R2', track('gray', [[0, 2]])),
         ...locations('K7', city('yellow', [1, 5], 30, 1, ['Z'])),
         ...locations('F12', city('yellow', [2, 4], 30, 1, ['R'])),
         ...locations('C15', city('white', [], 0, 1, ['P']), {
@@ -287,13 +225,11 @@ export function twoCrownsLocations(
                 { color: 'brown', label: 'P' }
             ]
         }),
-        ...locations('G15', city('white', [], 0, 1, ['S']), {
-            upgradeLabels: [{ color: 'green', label: 'S' }]
-        }),
+        ...locations('G15', city('white', [], 0, 1)),
         ...locations('H12', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('I19', city('white', [], 0, 1, ['X']), {
+        ...locations('I17', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('I11', city('white', [], 0, 1, ['CX']), {
@@ -316,7 +252,7 @@ export function twoCrownsLocations(
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('P8', city('white', [], 0, 1)),
-        ...locations('P12', city('white', [], 0, 1)),
+        ...locations('P12', town('white', [[]], 0)),
         ...locations('Q13', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
@@ -326,15 +262,14 @@ export function twoCrownsLocations(
         ...locations('S11', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('T10', city('white', [], 0, 1)),
-        ...locations('H22', city('white', [], 0, 1)),
-        ...locations('L22', city('white', [], 0, 1, ['S']), {
+        ...locations('H20', city('white', [], 0, 1)),
+        ...locations('L20', city('white', [], 0, 1, ['S']), {
             upgradeLabels: [{ color: 'green', label: 'S' }]
         }),
-        ...locations('K25', city('white', [], 0, 1, ['S']), {
+        ...locations('K23', city('white', [], 0, 1, ['S']), {
             upgradeLabels: [{ color: 'green', label: 'S' }]
         }),
-        ...locations('M27', city('white', [], 0, 1, ['X']), {
+        ...locations('L24', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('D12', town('white', [[]], 0)),
@@ -347,17 +282,21 @@ export function twoCrownsLocations(
         ...locations('L8', town('white', [[], []], 0), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('M5', town('white', [[]], 0)),
         ...locations('N10', town('white', [[], []], 0)),
-        ...locations('N12', town('white', [[], []], 0), {
-            terrain: { cost: 80, kinds: ['water'] }
+        ...locations('N12', city('white', [], 0, 1, ['J']), {
+            terrain: { cost: 80, kinds: ['water'] },
+            upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
+        ...locations('M13', town('white', [[]], 0)),
         ...locations('Q11', town('white', [[], []], 0)),
-        ...locations('I23', town('white', [[]], 0)),
-        ...locations('J22', town('white', [[], []], 0)),
-        ...locations('M25', town('white', [[]], 0)),
-        ...locations('F10 G9 H10 H14 H18 P10 H20 J20 N26 K21', track('white', []), {
+        ...locations('I21', town('white', [[]], 0)),
+        ...locations('J20', town('white', [[], []], 0)),
+        ...locations('L22', town('white', [[]], 0)),
+        ...locations('F10 G9 H10 H14 P10 H18 J18 M23 K19 E9', track('white', []), {
             terrain: { cost: 80, kinds: ['mountain'] }
         }),
-        ...locations('J10 J12 I9', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
+        ...locations('J10 J12 I9 H8', track('white', []), {
+            terrain: { cost: 80, kinds: ['water'] }
+        }),
         ...locations('M11 O13 S13 J4 L6 M9 R12', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),
@@ -365,9 +304,12 @@ export function twoCrownsLocations(
             terrain: { cost: 80, kinds: ['water'] }
         }),
         ...locations(
-            'C11 D10 D14 F8 G13 I13 I15 I17 J14 J16 J18 I5 I7 J6 K3 K9 K13 L12 L14 M7 M13 N8 O7 O9 O11 P4 P6 Q9 R8 T8 G21 I21 L24 L26 O3 Q5 R6 P14',
+            'C11 D10 D14 F8 G13 I13 I15 J14 J16 I5 I7 J6 K3 K9 K13 L12 L14 M7 N8 O7 O9 O11 P4 P6 Q9 R8 T8 I19 O3 Q5 R6 P14 S7 M1 H6 T10',
             track('white', [])
         ),
-        ...locations('K23', track('white', []))
+        ...locations('K21', track('white', [])),
+        ...locations('L16', track('gray', [[2, 5]])),
+        ...locations('K17', track('gray', [[2, 3]])),
+        ...locations('K15', track('gray', [[5, 0]]))
     ]
 }

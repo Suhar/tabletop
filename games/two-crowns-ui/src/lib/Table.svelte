@@ -1,14 +1,10 @@
 <script lang="ts">
     import {
-        berthPrice,
-        isAssignAncona,
-        isBuyBerth,
         isConvertCharter,
         isSplitCompany,
         TwoCrownsCompanies,
         TwoCrownsMap
     } from '@tabletop/two-crowns'
-    import { EighteenXXTransferTiming } from '@tabletop/18xx'
     import OpeningAuction from './OpeningAuction.svelte'
     import type { GameSession } from '@tabletop/frontend-components'
     import type { TwoCrownsState, HydratedTwoCrownsState } from '@tabletop/two-crowns'
@@ -71,7 +67,7 @@
         ...(session.titleActionAvailable('ConvertCharter')
             ? [
                   {
-                      label: 'Convert charter to Ganz',
+                      label: 'Convert the Hungarian Bank to Ganz',
                       selected: false,
                       onSelect: () => session.convertCharter()
                   }
@@ -86,20 +82,9 @@
                   detail: 'Branch capital',
                   important: true
               }
-            : isBuyBerth(action)
-              ? {
-                    text: `${companyName(action.companyId)} bought a Berth`,
-                    value: session.presentation.money(action.metadata?.price ?? 0),
-                    important: true
-                }
-              : isAssignAncona(action)
-                ? {
-                      text: `Ancona Steamship Line assigned to ${companyName(action.companyId)}`,
-                      important: true
-                  }
-                : isConvertCharter(action)
-                  ? { text: 'Ungaro-Croata Charter converted to Ganz', important: true }
-                  : undefined}
+            : isConvertCharter(action)
+              ? { text: 'Hungarian Bank converted to Ganz', important: true }
+              : undefined}
     {numberedShareLocation}
     auctionLotDescription={(id) => lotInfo(id).description}
     {session}
@@ -118,23 +103,6 @@
         {:else if session.splitInProgress}
             <BranchSplitPreview {session} showUndo={false} onFocusLocation={focusLocation} />
         {:else}
-            {@const operating = EighteenXXTransferTiming.operatingCompany(session.gameState)}
-            {#if operating && (session.titleActionAvailable('BuyBerth') || session.titleActionAvailable('AssignAncona'))}
-                <div class="title-actions">
-                    {#if session.titleActionAvailable('BuyBerth')}
-                        <button type="button" onclick={() => session.buyBerth()}>
-                            Buy a Berth ({session.presentation.money(
-                                berthPrice(session.gameState, operating)
-                            )})
-                        </button>
-                    {/if}
-                    {#if session.titleActionAvailable('AssignAncona')}
-                        <button type="button" onclick={() => session.assignAncona()}>
-                            Assign the Ancona Steamship Line
-                        </button>
-                    {/if}
-                </div>
-            {/if}
             <OperatingActions
                 {privateOperationDescription}
                 onFocusRoute={focusRoute}
@@ -165,19 +133,6 @@
 </GameTable>
 
 <style>
-    .title-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        padding: 6px 8px;
-    }
-    .title-actions button {
-        padding: 4px 10px;
-        border: 1px solid var(--rail-border, #b8a995);
-        border-radius: 4px;
-        background: var(--rail-surface, #fffaf0);
-        cursor: pointer;
-    }
     .tranches {
         display: flex;
         align-items: center;

@@ -25,7 +25,7 @@ export const TwoCrownsStockRules: StockRules = {
     buyers(state, playerId) {
         const player: Owner = { kind: 'player', playerId }
         const buyers: Owner[] = [player]
-        // The Štedionica and the Ungaro-Croata Charter each buy once per stock round.
+        // The Austrian Bank and the Hungarian Bank each buy once per stock round.
         for (const charterId of ShareHoldingCharterIds) {
             const charter = state.companies.find((company) => company.id === charterId)
             const owner = charter && !charter.closed ? privateOwner(state, charterId) : undefined
@@ -85,6 +85,6 @@ export const TwoCrownsStockRules: StockRules = {
 export function twoCrownsPurchasePayers(state: StockState, buyer: Owner): Owner[] {
     if (buyer.kind !== 'company') return [buyer]
     const owner = privateOwner(state, buyer.companyId)
-    assertExists(owner, 'Štedionica requires an owner')
+    assertExists(owner, 'Austrian Bank requires an owner')
     return [buyer, owner]
 }

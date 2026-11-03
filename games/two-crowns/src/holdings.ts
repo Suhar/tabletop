@@ -1,6 +1,6 @@
 import type { Certificate, Owner } from '@tabletop/18xx'
 
-// Charters that hold shares for their owner (1874design.md, Štedionica and Ungaro-Croata Charter).
+// Charters that hold shares for their owner (1874design.md, Austrian Bank and Hungarian Bank).
 export const ShareHoldingCharterIds = ['P12', 'P14'] as const
 export function isShareHoldingCharter(owner: Owner): boolean {
     return (
@@ -27,5 +27,5 @@ export function isBond(privateCompanyId: string): boolean {
 export function bondShareNumber(privateCompanyId: string): number {
     return BondIds.indexOf(privateCompanyId) + 1
 }
-// The Ungaro-Croata Charter's Public Line share is the last ordinary share.
+// The Hungarian Bank's Public Line share is the last ordinary share.
 export const CharterPublicShareNumber = 8

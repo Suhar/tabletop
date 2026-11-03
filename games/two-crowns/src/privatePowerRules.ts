@@ -6,9 +6,9 @@ import {
 } from '@tabletop/18xx'
 import { TwoCrownsTiles } from './tiles.js'
 
-// Zadar and Vukovar Station Rights (1874design.md, P3 and P4): the owning company may lay or
+// Zadar and Virovitica Station Rights (1874design.md, P3 and P4): the owning company may lay or
 // upgrade the city without a connection as its first lay, then place its cheapest station free.
-const StationRightsLocations: Readonly<Record<string, string>> = { P3: 'H22', P4: 'T10' }
+const StationRightsLocations: Readonly<Record<string, string>> = { P3: 'H20', P4: 'P8' }
 const PlainCityTileIds = TwoCrownsTiles.filter(
     (tile) =>
         ['yellow', 'green'].includes(tile.face.color) &&

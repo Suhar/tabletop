@@ -25,7 +25,7 @@ import {
 import { TwoCrownsStockRules } from './stockRules.js'
 import { TwoCrownsPhases } from './trains.js'
 
-// 1874design.md, Ungaro-Croata Charter: "Converting to Ganz".
+// 1874design.md, Hungarian Bank: "Converting to Ganz".
 export const CharterId = 'P14'
 export const GanzId = 'G'
 const charterOwner: Owner = { kind: 'company', companyId: CharterId }
@@ -58,21 +58,21 @@ export function isConvertCharter(action: GameAction): action is ConvertCharter {
 
 type ConversionState = StockState & { machineState: string; activePlayerIds: string[] }
 
-/** Why the player can't convert the charter now, or undefined when they can. */
+/** Why the player can't convert the Hungarian Bank now, or undefined when they can. */
 export function charterConversionReason(
     state: ConversionState,
     playerId: string
 ): string | undefined {
     if (state.machineState !== 'StockRound' || state.stockRound.completed)
-        return 'The charter converts during a stock round.'
+        return 'The Hungarian Bank converts only during a stock round.'
     if (!state.activePlayerIds.includes(playerId)) return 'It is not your stock turn.'
     const charter = state.companies.find((company) => company.id === CharterId)
-    if (!charter || charter.closed) return 'The Ungaro-Croata Charter is not open.'
+    if (!charter || charter.closed) return 'The Hungarian Bank is not open.'
     const owner = privateOwner(state, CharterId)
     const player: Owner = { kind: 'player', playerId }
-    if (!owner || !sameOwner(owner, player)) return 'You do not own the charter.'
+    if (!owner || !sameOwner(owner, player)) return 'You do not own the Hungarian Bank.'
     if (TwoCrownsPhases.isAtLeast(state.phaseId, '2+'))
-        return 'The charter can no longer convert once a 2+ is bought.'
+        return 'The Hungarian Bank can no longer convert once a 2+ is bought.'
     // The owner must be able to sell back within 60% and the certificate limit.
     const held = certificatesOwnedBy(state, charterOwner).filter((item) => item.kind === 'share')
     for (const companyId of new Set(held.map((item) => item.companyId))) {
@@ -121,10 +121,10 @@ export class HydratedConvertCharter
         )
     }
     apply(state: HydratedGameState & ConversionState): void {
-        assert(this.isValid(state), 'The charter cannot convert now')
+        assert(this.isValid(state), 'The Hungarian Bank cannot convert now')
         const player: Owner = { kind: 'player', playerId: this.playerId }
         const cash = cashOwnedBy(state, charterOwner)
-        assert(typeof cash === 'number', 'The charter holds finite cash')
+        assert(typeof cash === 'number', 'The Hungarian Bank holds finite cash')
         if (cash > 0) settleCashPayments(state, [{ from: charterOwner, to: player, amount: cash }])
         const shares = certificatesOwnedBy(state, charterOwner).filter(
             (item) => item.kind === 'share'

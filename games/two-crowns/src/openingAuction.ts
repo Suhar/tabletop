@@ -102,7 +102,7 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
 export function twoCrownsStartingCash({ playerCount }: StartingCashSetup): number {
     return twoCrownsPlayerSetup(playerCount).startingCash
 }
-// At 4–5 players one of the Zadar and Vukovar Station Rights is removed at random.
+// At 4–5 players one of the Zadar and Virovitica Station Rights is removed at random.
 function dealtPrivateIds(playerCount: number, random: () => number): string[] {
     const ids = privatesForPlayerCount(playerCount)
     if (playerCount < 4) return ids
@@ -130,7 +130,7 @@ export function createTwoCrownsOpening({
     const union = { owner: { kind: 'company' as const, companyId: 'P12' } }
     const charter = { owner: { kind: 'company' as const, companyId: 'P14' } }
     const bonds = BondIds.slice(0, players.length)
-    // Public Line shares 1..players are the Bonds' reserved shares; the last is the charter's.
+    // Public Line shares 1..players are the Bonds' reserved shares; the last is the Hungarian Bank's.
     const publicLinePool = (index: number) =>
         index < bonds.length ? reserved : index + 1 === CharterPublicShareNumber ? charter : market
     const lotIds = [

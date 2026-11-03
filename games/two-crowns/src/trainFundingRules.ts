@@ -20,7 +20,7 @@ export const TwoCrownsTrainFundingRules: TrainFundingRules = {
         assertExists(president, 'A railway requires its president')
         if (president.kind === 'player') return [president]
         const owner = privateOwner(state, president.companyId)
-        assertExists(owner, 'Štedionica requires its owner')
+        assertExists(owner, 'Austrian Bank requires its owner')
         return [president, owner]
     },
     issuanceTerms(state, companyId, shares) {

@@ -31,8 +31,8 @@ describe('1874 junction and gray tiles', () => {
         // Ogulin (J) and Senj (S): plain yellow; Ogulin plain green; Senj's green must be S.
         expect(relabels('H12', '18xx:6')).toBe(true)
         expect(relabels('H12', 'two-crowns:C1')).toBe(true)
-        expect(relabels('G15', '18xx:5')).toBe(true)
-        expect(relabels('G15', 'two-crowns:C1')).toBe(false)
+        expect(relabels('K23', '18xx:5')).toBe(true)
+        expect(relabels('K23', 'two-crowns:C1')).toBe(false)
         expect(relabels('H12', 'two-crowns:5X')).toBe(false)
     })
 })

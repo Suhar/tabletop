@@ -27,17 +27,17 @@ Implemented on 1871 rules, with 1874 data:
 
 - Map, terrain, offboards (multi-hex offboards share a stop group), labels X, CX, P, J, S, Z, R.
 - Tile manifest from 18xx Maker, plus unlimited yellow 5X/6X for X cities.
-- 8 Luka companies, 5 Branch companies, the Luka, the Štedionica.
+- 8 Luka companies, 5 Branch companies, the Luka, the Austrian Bank.
 - Starting cash and certificate limits by player count; Mainline at 92, Shortline at 86.
 - Three Luka companies drawn; the third is the Narodna Line, which cannot start yet.
 - Privates P1–P17 with their 1871 counterparts' powers: Shortline exchanges (P1, P2, P7),
   Station Rights blocking (P3, P4; one removed at random at 4 players), Lika Survey straight
-  tile (P8), Mainline shares (P9, P11), Wiener Neustadt (P10), Štedionica (P12), concessions
+  tile (P8), Mainline shares (P9, P11), Wiener Neustadt (P10), Austrian Bank (P12), concessions
   (P15, P16), k.u.k. Post.
 - Tranches: Mainline and Shortline, then rows of 2, 2 and 3.
 
 Not yet implemented: 5 players, Narodna Line and Bonds, trade-ins, Lazarettos (P5, P6), Berths
-and sea offboards, Ungaro-Croata charter (P14), Ancona Steamship Line (P17), the Late space,
+and sea offboards, Hungarian Bank (P14), Ancona Steamship Line (P17), the Late space,
 companies buying Station Rights, junction (J) upgrades, the gray-tile endgame. P5, P6, P13, P14
 and P17 pay revenue only.
 

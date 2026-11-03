@@ -10,7 +10,7 @@ import {
 import { TwoCrownsPrivateCatalog } from './privates.js'
 import { bondShareNumber, isBond } from './holdings.js'
 import { twoCrownsRole } from './companies.js'
-const HolderLabels: Record<string, string> = { P12: 'Štedionica', P14: 'Ungaro-Croata Charter' }
+const HolderLabels: Record<string, string> = { P12: 'Austrian Bank', P14: 'Hungarian Bank' }
 export const TwoCrownsEndingRules: EndingRules = {
     trigger(state) {
         if (state.bankruptcy) return { reason: 'Bankruptcy' }

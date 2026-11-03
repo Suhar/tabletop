@@ -7,12 +7,12 @@ import {
 } from '@tabletop/18xx'
 
 export const TwoCrownsSharedTileCounts: Readonly<Record<string, TileManifestEntry['count']>> = {
-    '1': 1,
+    '1': 2,
     '3': 8,
     '5': 13,
     '6': 14,
     '7': 18,
-    '8': 39,
+    '8': 33,
     '9': 1,
     '16': 5,
     '17': 4,
@@ -37,7 +37,7 @@ export const TwoCrownsSharedTileCounts: Readonly<Record<string, TileManifestEntr
     '70': 2,
     '143': 2,
     '144': 2,
-    '611': 1,
+    '611': 3,
     '624': 3,
     '625': 3,
     '626': 3,
@@ -149,21 +149,21 @@ export const TwoCrownsSpecialTiles: readonly TileDefinition[] = [
         printedNumber: 'Z1',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 1, 2, 3], 50, 2, ['Z'])
+        face: createCityTileFace('green', [0, 1, 2, 3], 30, 2, ['Z'])
     },
     {
         id: 'two-crowns:Z2',
         printedNumber: 'Z2',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 1, 3, 4], 50, 2, ['Z'])
+        face: createCityTileFace('green', [0, 1, 3, 4], 30, 2, ['Z'])
     },
     {
         id: 'two-crowns:Z3',
         printedNumber: 'Z3',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 2, 3, 4], 50, 2, ['Z'])
+        face: createCityTileFace('green', [0, 2, 3, 4], 30, 2, ['Z'])
     },
     {
         id: 'two-crowns:Z4',
@@ -184,21 +184,21 @@ export const TwoCrownsSpecialTiles: readonly TileDefinition[] = [
         printedNumber: 'R1',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 1, 2, 3], 40, 2, ['R'])
+        face: createCityTileFace('green', [0, 1, 2, 3], 30, 2, ['R'])
     },
     {
         id: 'two-crowns:R2',
         printedNumber: 'R2',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 1, 3, 4], 40, 2, ['R'])
+        face: createCityTileFace('green', [0, 1, 3, 4], 30, 2, ['R'])
     },
     {
         id: 'two-crowns:R3',
         printedNumber: 'R3',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 2, 3, 4], 40, 2, ['R'])
+        face: createCityTileFace('green', [0, 2, 3, 4], 30, 2, ['R'])
     },
     {
         id: 'two-crowns:R4',
@@ -345,7 +345,7 @@ export const TwoCrownsSpecialTiles: readonly TileDefinition[] = [
         printedNumber: 'CX',
         aliases: [],
         scope: 'The Two Crowns 1874',
-        face: createCityTileFace('gray', [0, 1, 2, 3, 4, 5], 80, 3, ['CX'])
+        face: createCityTileFace('gray', [0, 1, 2, 3, 4, 5], 70, 3, ['CX'])
     },
     {
         id: 'two-crowns:G1',
@@ -361,15 +361,15 @@ export const TwoCrownsSpecialTileCounts: Readonly<Record<string, TileManifestEnt
     X2: 3,
     X3: 2,
     X4: 2,
-    X5: 2,
-    X6: 2,
-    X7: 2,
+    X5: 3,
+    X6: 3,
+    X7: 3,
     X8: 2,
     P1: 1,
     C1: 4,
     C2: 4,
     C3: 4,
-    S1: 3,
+    S1: 2,
     Z1: 1,
     Z2: 1,
     Z3: 1,
@@ -382,13 +382,13 @@ export const TwoCrownsSpecialTileCounts: Readonly<Record<string, TileManifestEnt
     R5: 1,
     J1: 1,
     J2: 1,
-    J3: 1,
+    J3: 2,
     J4: 1,
     J5: 1,
     J6: 1,
-    J7: 1,
+    J7: 2,
     J8: 1,
-    J9: 1,
+    J9: 2,
     CX: 1,
     G1: 1
 }

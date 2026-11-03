@@ -3,21 +3,21 @@
 export const TwoCrownsTitle = { name: 'The Two Crowns 1874', designer: 'Stephan Suhar' }
 
 export const TwoCrownsLukaCompanies = [
-    { companyId: 'IST', name: 'Istrian', number: 1, color: '#ffd331' },
+    { companyId: 'IST', name: 'Istrian', number: 6, color: '#ffd331' },
     { companyId: 'ZAG', name: 'Zagorje', number: 2, color: '#b9875f' },
-    { companyId: 'POS', name: 'Posavina', number: 3, color: '#68b34a' },
-    { companyId: 'SLA', name: 'Slavonian', number: 4, color: '#a3122f' },
-    { companyId: 'LIK', name: 'Lika', number: 5, color: '#8c8c8c' },
-    { companyId: 'POD', name: 'Podravina', number: 6, color: '#2b2b2b' },
-    { companyId: 'KAR', name: 'Karlovac', number: 7, color: '#7fc6e8' },
-    { companyId: 'SPL', name: 'Split', number: 8, color: '#1f6f8b' }
+    { companyId: 'POS', name: 'Posavina', number: 4, color: '#68b34a' },
+    { companyId: 'SLA', name: 'Slavonian', number: 7, color: '#a3122f' },
+    { companyId: 'LIK', name: 'Lika', number: 3, color: '#8c8c8c' },
+    { companyId: 'POD', name: 'Podravina', number: 5, color: '#2b2b2b' },
+    { companyId: 'KAR', name: 'Karlovac', number: 8, color: '#7fc6e8' },
+    { companyId: 'SPL', name: 'Split', number: 1, color: '#1f6f8b' }
 ] as const
 
 export const TwoCrownsBranchCompanies = [
-    { id: 'branch:KV', name: 'Kvarner', label: 'KV', color: '#b39ddb' },
-    { id: 'branch:GK', name: 'Gorski Kotar', label: 'GK', color: '#c2187e' },
-    { id: 'branch:MD', name: 'Međimurje', label: 'MĐ', color: '#0189d1' },
-    { id: 'branch:SR', name: 'Srijem', label: 'SR', color: '#f48221' },
+    { id: 'branch:KB', name: 'Kvarner', label: 'KB', color: '#b39ddb' },
+    { id: 'branch:GB', name: 'Gorski Kotar', label: 'GB', color: '#c2187e' },
+    { id: 'branch:MB', name: 'Međimurje', label: 'MB', color: '#0189d1' },
+    { id: 'branch:BB', name: 'Banija', label: 'BB', color: '#f48221' },
     { id: 'branch:VB', name: 'Velebit', label: 'VB', color: '#b5d334' }
 ] as const
 
@@ -31,10 +31,42 @@ export const TwoCrownsPrivateData = [
             'Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+.'
     },
     {
-        id: 'BD',
+        id: 'BD1',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 10,
+        revenue: 5,
+        description:
+            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+        id: 'BD2',
+        name: 'Public Line Bond',
+        faceValue: 0,
+        revenue: 5,
+        description:
+            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+        id: 'BD3',
+        name: 'Public Line Bond',
+        faceValue: 0,
+        revenue: 5,
+        description:
+            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+        id: 'BD4',
+        name: 'Public Line Bond',
+        faceValue: 0,
+        revenue: 5,
+        description:
+            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+        id: 'BD5',
+        name: 'Public Line Bond',
+        faceValue: 0,
+        revenue: 5,
         description:
             "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
     },
@@ -72,16 +104,16 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'P4',
-        name: 'Vukovar Station Rights',
+        name: 'Virovitica Station Rights',
         faceValue: 50,
         revenue: 10,
         description:
-            'Blocks Vukovar. The owning company may lay or upgrade Vukovar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
+            'Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
     },
     {
         id: 'P5',
         name: 'Rijeka Lazaretto',
-        faceValue: 60,
+        faceValue: 40,
         revenue: 10,
         description:
             "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+."
@@ -126,8 +158,8 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'P12',
-        name: 'Štedionica',
-        faceValue: 120,
+        name: 'Austrian Bank',
+        faceValue: 140,
         revenue: 0,
         description:
             "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
@@ -142,16 +174,16 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'P14',
-        name: 'Ungaro-Croata Charter',
+        name: 'Hungarian Bank',
         faceValue: 90,
         revenue: 0,
         description:
-            'No income. Comes with a Public Line share; works as a second Štedionica. Until the first 2+, may convert as a free action into Ganz: its cash and shares go to the owner, who sells down to 60% and the cert limit.'
+            "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
     },
     {
         id: 'P15',
         name: 'MÁV Concession',
-        faceValue: 160,
+        faceValue: 150,
         revenue: 20,
         description:
             "Comes with the 20% president's certificate of the Mainline (first Luka company drawn). Closes when the Mainline operates."
@@ -159,7 +191,7 @@ export const TwoCrownsPrivateData = [
     {
         id: 'P16',
         name: 'Südbahn Concession',
-        faceValue: 160,
+        faceValue: 145,
         revenue: 30,
         description:
             "Comes with the 20% president's certificate of the Shortline (second Luka company drawn). Closes when the Shortline operates."
@@ -170,7 +202,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 15,
         description:
-            "Can't be sold. Once, assign it to a company you preside: its cheapest station on Ancona, free (no connection or Berth needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop; its Berth costs $40. Closes when assigned or on the first 4+."
+            'From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+.'
     }
 ] as const
 
@@ -216,7 +248,7 @@ export const TwoCrownsPhaseData = [
 ] as const
 
 export const TwoCrownsPlayerData = [
-    { count: 3, certificateLimit: 25, startingCash: 940 },
-    { count: 4, certificateLimit: 20, startingCash: 700 },
-    { count: 5, certificateLimit: 16, startingCash: 580 }
+    { count: 3, certificateLimit: 25, startingCash: 840 },
+    { count: 4, certificateLimit: 20, startingCash: 600 },
+    { count: 5, certificateLimit: 16, startingCash: 480 }
 ] as const

@@ -4,7 +4,7 @@
         "designer": "Stephan Suhar",
         "background": "shortline",
         "orientation": "horizontal",
-        "titleY": 1900,
+        "titleY": 1650,
         "titleX": 60,
         "titleFontSize": 100,
         "designerFontSize": 60,
@@ -36,17 +36,17 @@
         {
             "number": 3,
             "certLimit": 25,
-            "capital": 940
+            "capital": 840
         },
         {
             "number": 4,
             "certLimit": 20,
-            "capital": 700
+            "capital": 600
         },
         {
             "number": 5,
             "certLimit": 16,
-            "capital": 580
+            "capital": 480
         }
     ],
     "privates": [
@@ -60,8 +60,48 @@
         },
         {
             "name": "Public Line Bond",
-            "id": "BD",
-            "revenue": 10,
+            "id": "BD1",
+            "revenue": 5,
+            "token": {
+                "label": "NAR",
+                "color": "narodna"
+            },
+            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+        },
+        {
+            "name": "Public Line Bond",
+            "id": "BD2",
+            "revenue": 5,
+            "token": {
+                "label": "NAR",
+                "color": "narodna"
+            },
+            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+        },
+        {
+            "name": "Public Line Bond",
+            "id": "BD3",
+            "revenue": 5,
+            "token": {
+                "label": "NAR",
+                "color": "narodna"
+            },
+            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+        },
+        {
+            "name": "Public Line Bond",
+            "id": "BD4",
+            "revenue": 5,
+            "token": {
+                "label": "NAR",
+                "color": "narodna"
+            },
+            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+        },
+        {
+            "name": "Public Line Bond",
+            "id": "BD5",
+            "revenue": 5,
             "token": {
                 "label": "NAR",
                 "color": "narodna"
@@ -70,7 +110,7 @@
         },
         {
             "name": "Ganz Locomotive Works",
-            "note": "Ungaro-Croata conversion",
+            "note": "Hungarian Bank conversion",
             "id": "G",
             "revenue": 20,
             "icon": "train",
@@ -103,16 +143,16 @@
             "description": "Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
         },
         {
-            "name": "Vukovar Station Rights",
+            "name": "Virovitica Station Rights",
             "id": "P4",
             "price": 50,
             "revenue": 10,
-            "description": "Blocks Vukovar. The owning company may lay or upgrade Vukovar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+            "description": "Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
         },
         {
             "name": "Rijeka Lazaretto",
             "id": "P5",
-            "price": 60,
+            "price": 40,
             "revenue": 10,
             "description": "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
             "icon": "train",
@@ -161,11 +201,11 @@
             "description": "Comes with a 10% Mainline share. Closes on the first 4+."
         },
         {
-            "name": "Štedionica",
+            "name": "Austrian Bank",
             "id": "P12",
-            "price": 120,
+            "price": 140,
             "revenue": 0,
-            "company": "ŠT",
+            "company": "AB",
             "description": "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
         },
         {
@@ -180,20 +220,20 @@
             "description": "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
         },
         {
-            "name": "Ungaro-Croata Charter",
+            "name": "Hungarian Bank",
             "id": "P14",
             "price": 90,
             "revenue": 0,
             "token": {
-                "label": "U-C",
+                "label": "HB",
                 "color": "cherry"
             },
-            "description": "No income. Comes with a Public Line share; works as a second Štedionica. Until the first 2+, may convert as a free action into Ganz: its cash and shares go to the owner, who sells down to 60% and the cert limit."
+            "description": "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
         },
         {
             "name": "MÁV Concession",
             "id": "P15",
-            "price": 160,
+            "price": 150,
             "revenue": 20,
             "token": {
                 "label": "MÁV",
@@ -204,7 +244,7 @@
         {
             "name": "Südbahn Concession",
             "id": "P16",
-            "price": 160,
+            "price": 145,
             "revenue": 30,
             "token": {
                 "label": "SB",
@@ -219,16 +259,16 @@
             "revenue": 15,
             "icon": "boat",
             "iconColor": "navyBlue",
-            "description": "Can't be sold. Once, assign it to a company you preside: its cheapest station on Ancona, free (no connection or Berth needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop; its Berth costs $40. Closes when assigned or on the first 4+."
+            "description": "From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+."
         }
     ],
     "tiles": {
-        "1": 1,
+        "1": 2,
         "3": 8,
         "5": 13,
         "6": 14,
         "7": 18,
-        "8": 39,
+        "8": 33,
         "9": 1,
         "16": 5,
         "17": 4,
@@ -253,7 +293,7 @@
         "70": 2,
         "143": 2,
         "144": 2,
-        "611": 1,
+        "611": 3,
         "624": 3,
         "625": 3,
         "626": 3,
@@ -404,7 +444,7 @@
         },
         "X5": {
             "color": "brown",
-            "quantity": 2,
+            "quantity": 3,
             "values": [
                 {
                     "angle": 210,
@@ -441,7 +481,7 @@
         },
         "X6": {
             "color": "brown",
-            "quantity": 2,
+            "quantity": 3,
             "values": [
                 {
                     "angle": 210,
@@ -478,7 +518,7 @@
         },
         "X7": {
             "color": "brown",
-            "quantity": 2,
+            "quantity": 3,
             "values": [
                 {
                     "angle": 210,
@@ -679,7 +719,7 @@
             ]
         },
         "S1": {
-            "quantity": 3,
+            "quantity": 2,
             "color": "green",
             "values": [
                 {
@@ -719,7 +759,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 50
+                    "value": 30
                 }
             ],
             "labels": [
@@ -756,7 +796,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 50
+                    "value": 30
                 }
             ],
             "labels": [
@@ -793,7 +833,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 50
+                    "value": 30
                 }
             ],
             "labels": [
@@ -913,7 +953,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 40
+                    "value": 30
                 }
             ],
             "labels": [
@@ -950,7 +990,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 40
+                    "value": 30
                 }
             ],
             "labels": [
@@ -987,7 +1027,7 @@
                 {
                     "angle": 210,
                     "percent": 0.8,
-                    "value": 40
+                    "value": 30
                 }
             ],
             "labels": [
@@ -1184,7 +1224,7 @@
             ]
         },
         "J3": {
-            "quantity": 1,
+            "quantity": 2,
             "color": "brown",
             "values": [
                 {
@@ -1354,7 +1394,7 @@
             ]
         },
         "J7": {
-            "quantity": 1,
+            "quantity": 2,
             "color": "brown",
             "values": [
                 {
@@ -1442,7 +1482,7 @@
             ]
         },
         "J9": {
-            "quantity": 1,
+            "quantity": 2,
             "color": "brown",
             "values": [
                 {
@@ -1491,7 +1531,7 @@
             "color": "gray",
             "values": [
                 {
-                    "value": 80,
+                    "value": 70,
                     "angle": 210,
                     "percent": 0.8
                 }
@@ -1902,9 +1942,9 @@
             "name": "Stock Round",
             "steps": [
                 "Sell (at most 30% of one company per turn)",
-                "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Štedionica or Ungaro-Croata Charter"
+                "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Austrian Bank or Hungarian Bank"
             ],
-            "optional": ["Free: private exchanges, Ungaro-Croata conversion (until 2+)"],
+            "optional": ["Free: private exchanges, Hungarian Bank conversion (until 2+)"],
             "ordered": true
         },
         {
@@ -1940,7 +1980,7 @@
             "rounds": 2,
             "buyCompanies": true,
             "notes": [
-                "Companies may buy Zadar and Vukovar Station Rights (½×–1× face) until the first 4+",
+                "Companies may buy Zadar and Virovitica Station Rights (½×–1× face) until the first 4+",
                 "Wiener Neustadt can be sold to companies"
             ]
         },
@@ -1962,7 +2002,7 @@
             "limit": 3,
             "tiles": "green",
             "rounds": 2,
-            "notes": "Ungaro-Croata Charter can no longer convert"
+            "notes": "Hungarian Bank can no longer convert"
         },
         {
             "train": "3+",
@@ -1979,7 +2019,7 @@
             "events": {
                 "closeCompanies": true
             },
-            "notes": ["Privates close, except the Štedionica", "Junction upgrades open"]
+            "notes": ["Privates close, except the Austrian Bank", "Junction upgrades open"]
         },
         {
             "train": "7",
@@ -2038,10 +2078,13 @@
             "abbrev": "ZAG",
             "color": "lightBrown",
             "token": {
+                "bar": false,
+                "barHeight": 18,
                 "fontSize": 20,
-                "color": "natural",
-                "star5": "lightBrown",
-                "labelColor": "black"
+                "stripes": "lightBrown",
+                "stripesDistance": 12,
+                "shapeAngle": 90,
+                "color": "natural"
             }
         },
         {
@@ -2119,15 +2162,17 @@
                 "color": "split",
                 "halves": ["split", "gold"],
                 "stripe": "white",
-                "stripeWidth": 4,
+                "stripeWidth": 8,
                 "shapeAngle": 45,
-                "labelColor": "black"
+                "labelColor": "black",
+                "bar": true,
+                "barHeight": 18
             }
         },
         {
             "name": "Kvarner",
             "subtext": "Branch",
-            "abbrev": "KV",
+            "abbrev": "KB",
             "color": "lavender",
             "token": {
                 "fontSize": 18,
@@ -2138,7 +2183,7 @@
         {
             "name": "Gorski Kotar",
             "subtext": "Branch",
-            "abbrev": "GK",
+            "abbrev": "GB",
             "color": "fuchsia",
             "token": {
                 "bar": true,
@@ -2150,7 +2195,7 @@
         {
             "name": "Međimurje",
             "subtext": "Branch",
-            "abbrev": "MĐ",
+            "abbrev": "MB",
             "color": "blue",
             "token": {
                 "bar": true,
@@ -2162,9 +2207,9 @@
             }
         },
         {
-            "name": "Srijem",
+            "name": "Banija",
             "subtext": "Branch",
-            "abbrev": "SR",
+            "abbrev": "BB",
             "color": "orange",
             "token": {
                 "bar": true,
@@ -2195,21 +2240,21 @@
             "name": "Luka",
             "abbrev": "LUKA",
             "marketTokens": 1,
-            "extraStationTokens": 5,
+            "extraStationTokens": 6,
             "tokens": [],
             "color": "pink",
             "minor": true,
             "token": {
                 "bar": true,
-                "barHeight": 20,
-                "fontSize": 20,
+                "barHeight": 18,
+                "fontSize": 15,
                 "target": "white",
                 "color": "pink"
             },
             "shares": [
                 {
                     "quantity": 1,
-                    "label": "#1 Istrian",
+                    "label": "#1 Split",
                     "shares": 1
                 },
                 {
@@ -2219,32 +2264,32 @@
                 },
                 {
                     "quantity": 1,
-                    "label": "#3 Posavina",
+                    "label": "#3 Lika",
                     "shares": 1
                 },
                 {
                     "quantity": 1,
-                    "label": "#4 Slavonian",
+                    "label": "#4 Posavina",
                     "shares": 1
                 },
                 {
                     "quantity": 1,
-                    "label": "#5 Lika",
+                    "label": "#5 Podravina",
                     "shares": 1
                 },
                 {
                     "quantity": 1,
-                    "label": "#6 Podravina",
+                    "label": "#6 Istrian",
                     "shares": 1
                 },
                 {
                     "quantity": 1,
-                    "label": "#7 Karlovac",
+                    "label": "#7 Slavonian",
                     "shares": 1
                 },
                 {
                     "quantity": 1,
-                    "label": "#8 Split",
+                    "label": "#8 Karlovac",
                     "shares": 1
                 }
             ],
@@ -2252,8 +2297,8 @@
             "capital": 200
         },
         {
-            "name": "Štedionica",
-            "abbrev": "ŠT",
+            "name": "Austrian Bank",
+            "abbrev": "AB",
             "token": {
                 "label": "$"
             },
@@ -2266,11 +2311,11 @@
             "subtext": "Union Bank"
         },
         {
-            "name": "Ungaro-Croata Charter",
-            "subtext": "Ungaro-Croata bank",
-            "abbrev": "UC",
+            "name": "Hungarian Bank",
+            "subtext": "Second Union Bank",
+            "abbrev": "HB",
             "token": {
-                "label": "UC"
+                "label": "HB"
             },
             "marketTokens": 0,
             "tokens": [],
@@ -2296,10 +2341,6 @@
                 "track": [
                     {
                         "type": "offboard",
-                        "side": 6
-                    },
-                    {
-                        "type": "offboard",
                         "side": 1
                     }
                 ],
@@ -2310,11 +2351,7 @@
                     "revenues": [
                         {
                             "color": "phase2h",
-                            "cost": "30"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "40"
+                            "cost": "20"
                         },
                         {
                             "color": "phase4+",
@@ -2329,35 +2366,6 @@
                 "track": [
                     {
                         "type": "offboard",
-                        "side": 1
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Ljubljana"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "30"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "50"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "70"
-                        }
-                    ]
-                },
-                "hexes": ["E7"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
                         "side": 6
                     }
                 ],
@@ -2368,48 +2376,19 @@
                     "revenues": [
                         {
                             "color": "phase2h",
+                            "cost": "20"
+                        },
+                        {
+                            "color": "phase4h",
                             "cost": "30"
                         },
                         {
-                            "color": "phase4h",
-                            "cost": "50"
-                        },
-                        {
                             "color": "phase4+",
-                            "cost": "70"
-                        }
-                    ]
-                },
-                "hexes": ["F6"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 2
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Budapest"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "40"
-                        },
-                        {
-                            "color": "phase4h",
                             "cost": "60"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "80"
                         }
                     ]
                 },
-                "hexes": ["O1"]
+                "hexes": ["E5"]
             },
             {
                 "color": "offboard",
@@ -2417,6 +2396,10 @@
                     {
                         "type": "offboard",
                         "side": 1
+                    },
+                    {
+                        "type": "offboard",
+                        "side": 6
                     }
                 ],
                 "offBoardRevenue": {
@@ -2429,16 +2412,12 @@
                             "cost": "40"
                         },
                         {
-                            "color": "phase4h",
-                            "cost": "60"
-                        },
-                        {
                             "color": "phase4+",
-                            "cost": "80"
+                            "cost": "70"
                         }
                     ]
                 },
-                "hexes": ["S5"]
+                "hexes": ["Q1"]
             },
             {
                 "color": "offboard",
@@ -2446,10 +2425,6 @@
                     {
                         "type": "offboard",
                         "side": 3
-                    },
-                    {
-                        "type": "offboard",
-                        "side": 2
                     }
                 ],
                 "offBoardRevenue": {
@@ -2462,37 +2437,33 @@
                             "cost": "20"
                         },
                         {
-                            "color": "phase4h",
-                            "cost": "40"
-                        },
-                        {
                             "color": "phase4+",
-                            "cost": "60"
+                            "cost": "50"
                         }
                     ]
                 },
-                "hexes": ["V12"]
+                "hexes": ["V16"]
             },
             {
                 "color": "offboard",
                 "track": [
                     {
+                        "side": 4,
+                        "type": "offboard"
+                    },
+                    {
                         "type": "offboard",
-                        "side": 4
+                        "side": 3
                     }
                 ],
                 "offBoardRevenue": {
                     "name": {
-                        "name": "Bosnia"
+                        "name": "Banja Luka"
                     },
                     "revenues": [
                         {
                             "color": "phase2h",
                             "cost": "20"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "40"
                         },
                         {
                             "color": "phase4+",
@@ -2512,7 +2483,7 @@
                 ],
                 "offBoardRevenue": {
                     "name": {
-                        "name": "Bosnia"
+                        "name": "Sarajevo"
                     },
                     "revenues": [
                         {
@@ -2520,45 +2491,12 @@
                             "cost": "20"
                         },
                         {
-                            "color": "phase4h",
-                            "cost": "40"
-                        },
-                        {
                             "color": "phase4+",
                             "cost": "60"
                         }
                     ]
                 },
-                "hexes": ["Q17"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 4
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Bosnia"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "40"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["R16"]
+                "hexes": ["S19"]
             },
             {
                 "color": "offboard",
@@ -2575,27 +2513,15 @@
                     "revenues": [
                         {
                             "color": "phase2h",
-                            "cost": "10"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "30"
+                            "cost": "40"
                         },
                         {
                             "color": "phase4+",
-                            "cost": "50"
+                            "cost": "60"
                         }
                     ]
                 },
-                "labels": [
-                    {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 270,
-                        "percent": 0.7
-                    }
-                ],
-                "hexes": ["Q27"]
+                "hexes": ["P24"]
             },
             {
                 "color": "offboard",
@@ -2624,15 +2550,7 @@
                         }
                     ]
                 },
-                "labels": [
-                    {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 150,
-                        "percent": 0.7
-                    }
-                ],
-                "hexes": ["L28"]
+                "hexes": ["K25"]
             },
             {
                 "color": "offboard",
@@ -2649,7 +2567,7 @@
                     }
                 ],
                 "offBoardRevenue": {
-                    "angle": 180,
+                    "angle": 0,
                     "percent": 0.6,
                     "revenues": [
                         {
@@ -2657,24 +2575,22 @@
                             "cost": "30"
                         },
                         {
-                            "color": "phase4h",
-                            "cost": "50"
-                        },
-                        {
                             "color": "phase4+",
                             "cost": "70"
                         }
                     ]
                 },
-                "labels": [
+                "hexes": ["B16"]
+            },
+            {
+                "color": "gray",
+                "track": [
                     {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 30,
-                        "percent": 0.7
+                        "type": "straight",
+                        "side": 3
                     }
                 ],
-                "hexes": ["B16"]
+                "hexes": ["F6"]
             },
             {
                 "color": "gray",
@@ -2688,24 +2604,13 @@
             },
             {
                 "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 3
-                    },
-                    {
-                        "type": "gentle",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["C9"]
-            },
-            {
-                "color": "gray",
                 "centerTowns": [
                     {
                         "name": {
-                            "name": "Rovinj"
+                            "name": "Rovinj",
+                            "x": -30,
+                            "percent": 0.6,
+                            "rotate": -2
                         }
                     }
                 ],
@@ -2730,44 +2635,20 @@
                 "hexes": ["C13"]
             },
             {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 4
-                    },
-                    {
-                        "type": "gentle",
-                        "side": 2
-                    }
-                ],
-                "hexes": ["E9"]
-            },
-            {
-                "color": "gray",
+                "color": "plain",
                 "centerTowns": [
                     {
                         "name": {
                             "name": "Opatija"
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
+                        },
+                        "y": -25
                     },
                     {
-                        "side": 6
-                    },
-                    {
-                        "side": 2
+                        "name": {
+                            "name": "Lovran",
+                            "reverse": true
+                        },
+                        "y": 25
                     }
                 ],
                 "hexes": ["E11"]
@@ -2788,30 +2669,12 @@
             },
             {
                 "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 6
-                    }
-                ],
-                "hexes": ["H6"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["H8"]
-            },
-            {
-                "color": "gray",
                 "centerTowns": [
                     {
                         "name": {
-                            "name": "Krk"
+                            "name": "Krk",
+                            "x": -25,
+                            "percent": 0.6
                         }
                     }
                 ],
@@ -2830,14 +2693,6 @@
                         "side": 1
                     }
                 ],
-                "labels": [
-                    {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 90,
-                        "percent": 0.7
-                    }
-                ],
                 "hexes": ["F14"]
             },
             {
@@ -2846,7 +2701,8 @@
                     {
                         "name": {
                             "name": "Rab",
-                            "rotate": 0
+                            "x": -25,
+                            "percent": 0.6
                         }
                     }
                 ],
@@ -2863,14 +2719,9 @@
                     },
                     {
                         "side": 6
-                    }
-                ],
-                "labels": [
+                    },
                     {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 90,
-                        "percent": 0.7
+                        "side": 5
                     }
                 ],
                 "hexes": ["F16"]
@@ -2890,7 +2741,9 @@
                 "centerTowns": [
                     {
                         "name": {
-                            "name": "Pag"
+                            "name": "Pag",
+                            "x": -25,
+                            "percent": 0.6
                         }
                     }
                 ],
@@ -2906,15 +2759,7 @@
                         "side": 4
                     },
                     {
-                        "side": 1
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 90,
-                        "percent": 0.7
+                        "side": 6
                     }
                 ],
                 "hexes": ["G19"]
@@ -2924,20 +2769,6 @@
                 "track": [
                     {
                         "type": "gentle",
-                        "side": 6
-                    }
-                ],
-                "hexes": ["M1"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 3
-                    },
-                    {
-                        "type": "gentle",
                         "side": 5
                     }
                 ],
@@ -2945,40 +2776,38 @@
             },
             {
                 "color": "gray",
-                "track": [
+                "hexes": ["T12"],
+                "centerTowns": [
                     {
-                        "type": "straight",
-                        "side": 1
+                        "name": {
+                            "name": "Vukovar",
+                            "y": 30
+                        }
                     }
                 ],
-                "hexes": ["S7"]
-            },
-            {
-                "color": "gray",
+                "values": [
+                    {
+                        "value": 10
+                    }
+                ],
                 "track": [
                     {
-                        "type": "straight",
+                        "side": 4
+                    },
+                    {
+                        "side": 6
+                    },
+                    {
                         "side": 3
                     }
-                ],
-                "hexes": ["U11"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["T12"]
+                ]
             },
             {
                 "color": "gray",
                 "track": [
                     {
                         "type": "gentle",
-                        "side": 3
+                        "side": 1
                     }
                 ],
                 "hexes": ["U13"]
@@ -2987,27 +2816,21 @@
                 "color": "gray",
                 "track": [
                     {
-                        "type": "straight",
-                        "side": 4
+                        "side": 4,
+                        "type": "gentle"
                     }
                 ],
                 "hexes": ["Q15"]
             },
             {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 5
-                    }
-                ],
+                "color": "plain",
                 "hexes": ["R14"]
             },
             {
                 "color": "gray",
                 "track": [
                     {
-                        "type": "gentle",
+                        "type": "straight",
                         "side": 1
                     }
                 ],
@@ -3018,7 +2841,8 @@
                 "centerTowns": [
                     {
                         "name": {
-                            "name": "Makarska"
+                            "name": "Makarska",
+                            "y": -30
                         }
                     }
                 ],
@@ -3037,7 +2861,7 @@
                         "side": 5
                     }
                 ],
-                "hexes": ["N28"]
+                "hexes": ["M25"]
             },
             {
                 "color": "gray",
@@ -3047,7 +2871,7 @@
                         "side": 6
                     }
                 ],
-                "hexes": ["O27"]
+                "hexes": ["N24"]
             },
             {
                 "color": "gray",
@@ -3057,7 +2881,125 @@
                         "side": 3
                     }
                 ],
-                "hexes": ["P28"]
+                "hexes": ["O25"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "gentle",
+                        "side": 4
+                    }
+                ],
+                "hexes": ["U15"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "side": 3,
+                        "type": "straight"
+                    }
+                ],
+                "hexes": ["R16"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "gentle",
+                        "side": 1
+                    }
+                ],
+                "hexes": ["S17"]
+            },
+            {
+                "color": "gray",
+                "hexes": ["S5"],
+                "centerTowns": [
+                    {
+                        "name": {
+                            "name": "Beli Manastir"
+                        }
+                    }
+                ],
+                "track": [
+                    {
+                        "side": 1
+                    },
+                    {
+                        "side": 3
+                    }
+                ],
+                "values": [
+                    {
+                        "value": 10
+                    }
+                ]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "gentle",
+                        "side": 4
+                    }
+                ],
+                "hexes": ["R4"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "side": 6
+                    },
+                    {
+                        "side": 2
+                    }
+                ],
+                "hexes": ["O1"],
+                "centerTowns": [
+                    {
+                        "name": {
+                            "name": "Legrad"
+                        }
+                    }
+                ],
+                "values": [
+                    {
+                        "value": 20
+                    }
+                ]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "straight",
+                        "side": 3
+                    }
+                ],
+                "hexes": ["P2"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "sharp",
+                        "side": 3
+                    }
+                ],
+                "hexes": ["Q3"]
+            },
+            {
+                "color": "gray",
+                "track": [
+                    {
+                        "type": "gentle",
+                        "side": 1
+                    }
+                ],
+                "hexes": ["R2"]
             },
             {
                 "color": "yellow",
@@ -3099,12 +3041,6 @@
                         "label": "R",
                         "angle": 30,
                         "percent": 0.75
-                    },
-                    {
-                        "label": "Berth",
-                        "fontSize": 14,
-                        "angle": 90,
-                        "percent": 0.7
                     }
                 ],
                 "cities": [
@@ -3159,14 +3095,7 @@
                         }
                     }
                 ],
-                "hexes": ["G15"],
-                "labels": [
-                    {
-                        "label": "S",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ]
+                "hexes": ["G15"]
             },
             {
                 "color": "plain",
@@ -3203,7 +3132,7 @@
                         "percent": 0.8
                     }
                 ],
-                "hexes": ["I19"]
+                "hexes": ["I17"]
             },
             {
                 "color": "plain",
@@ -3316,11 +3245,19 @@
                         }
                     }
                 ],
-                "hexes": ["P8"]
+                "hexes": ["P8"],
+                "companies": [
+                    {
+                        "label": "P4",
+                        "color": "red",
+                        "angle": 120,
+                        "percent": 0.65
+                    }
+                ]
             },
             {
                 "color": "plain",
-                "cities": [
+                "centerTowns": [
                     {
                         "name": {
                             "name": "Požega"
@@ -3389,25 +3326,6 @@
                 "cities": [
                     {
                         "name": {
-                            "name": "Vukovar"
-                        }
-                    }
-                ],
-                "companies": [
-                    {
-                        "label": "P4",
-                        "color": "red",
-                        "angle": 120,
-                        "percent": 0.65
-                    }
-                ],
-                "hexes": ["T10"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
                             "name": "Zadar"
                         }
                     }
@@ -3420,7 +3338,7 @@
                         "percent": 0.65
                     }
                 ],
-                "hexes": ["H22"]
+                "hexes": ["H20"]
             },
             {
                 "color": "plain",
@@ -3438,7 +3356,7 @@
                         "percent": 0.8
                     }
                 ],
-                "hexes": ["L22"]
+                "hexes": ["L20"]
             },
             {
                 "color": "plain",
@@ -3449,7 +3367,7 @@
                         }
                     }
                 ],
-                "hexes": ["K25"],
+                "hexes": ["K23"],
                 "labels": [
                     {
                         "label": "S",
@@ -3475,7 +3393,7 @@
                         "percent": 0.8
                     }
                 ],
-                "hexes": ["M27"]
+                "hexes": ["L24"]
             },
             {
                 "color": "plain",
@@ -3661,30 +3579,40 @@
             },
             {
                 "color": "plain",
-                "centerTowns": [
+                "cities": [
                     {
                         "name": {
                             "name": "Novska"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Lipovljani",
-                            "reverse": true
-                        },
-                        "y": 25
+                        }
                     }
                 ],
+                "labels": [
+                    {
+                        "label": "J",
+                        "angle": 30,
+                        "percent": 0.8
+                    }
+                ],
+                "hexes": ["N12"],
                 "terrain": [
                     {
                         "type": "water",
                         "cost": 80,
-                        "angle": 210,
+                        "angle": 240,
                         "percent": 0.6
                     }
+                ]
+            },
+            {
+                "color": "plain",
+                "centerTowns": [
+                    {
+                        "name": {
+                            "name": "Lipovljani"
+                        }
+                    }
                 ],
-                "hexes": ["N12"]
+                "hexes": ["M13"]
             },
             {
                 "color": "plain",
@@ -3714,7 +3642,7 @@
                         }
                     }
                 ],
-                "hexes": ["I23"]
+                "hexes": ["I21"]
             },
             {
                 "color": "plain",
@@ -3733,7 +3661,7 @@
                         "y": 25
                     }
                 ],
-                "hexes": ["J22"]
+                "hexes": ["J20"]
             },
             {
                 "color": "plain",
@@ -3744,7 +3672,7 @@
                         }
                     }
                 ],
-                "hexes": ["M25"]
+                "hexes": ["L22"]
             },
             {
                 "color": "plain",
@@ -3754,7 +3682,7 @@
                         "cost": 80
                     }
                 ],
-                "hexes": ["F10", "G9", "H10", "H14", "H18", "P10", "H20", "J20", "N26", "K21"]
+                "hexes": ["F10", "G9", "H10", "H14", "P10", "H18", "J18", "M23", "K19", "E9"]
             },
             {
                 "color": "plain",
@@ -3772,7 +3700,7 @@
                         "percent": 0.55
                     }
                 ],
-                "hexes": ["J10", "J12", "I9"]
+                "hexes": ["J10", "J12", "I9", "H8"]
             },
             {
                 "color": "plain",
@@ -3820,10 +3748,8 @@
                     "G13",
                     "I13",
                     "I15",
-                    "I17",
                     "J14",
                     "J16",
-                    "J18",
                     "I5",
                     "I7",
                     "J6",
@@ -3833,7 +3759,6 @@
                     "L12",
                     "L14",
                     "M7",
-                    "M13",
                     "N8",
                     "O7",
                     "O9",
@@ -3843,20 +3768,52 @@
                     "Q9",
                     "R8",
                     "T8",
-                    "G21",
-                    "I21",
-                    "L24",
-                    "L26",
+                    "I19",
                     "O3",
                     "Q5",
                     "R6",
-                    "P14"
+                    "P14",
+                    "S7",
+                    "M1",
+                    "H6",
+                    "T10"
                 ]
             },
             {
                 "color": "plain",
-                "hexes": ["K23"]
+                "hexes": ["K21"]
+            },
+            {
+                "color": "gray",
+                "hexes": ["L16"],
+                "track": [
+                    {
+                        "side": 3,
+                        "type": "straight"
+                    }
+                ]
+            },
+            {
+                "color": "gray",
+                "hexes": ["K17"],
+                "track": [
+                    {
+                        "side": 3,
+                        "type": "sharp"
+                    }
+                ]
+            },
+            {
+                "color": "gray",
+                "hexes": ["K15"],
+                "track": [
+                    {
+                        "side": 6,
+                        "type": "sharp"
+                    }
+                ]
             }
         ]
-    }
+    },
+    "wip": true
 }

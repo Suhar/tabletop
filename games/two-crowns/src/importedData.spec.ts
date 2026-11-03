@@ -14,7 +14,7 @@ describe('The Two Crowns imported from 18xx Maker', () => {
 
     it('counts the tileable hexes of the trimmed map', () => {
         const buildable = TwoCrownsMap.definition.locations.filter((location) => location.buildable)
-        expect(buildable).toHaveLength(99)
+        expect(buildable).toHaveLength(100)
     })
 
     it('labels the X, junction and edge cities for their upgrades', () => {
@@ -24,7 +24,7 @@ describe('The Two Crowns imported from 18xx Maker', () => {
             { color: 'gray', label: 'CX' }
         ])
         expect(labels('H12')).toEqual([{ color: 'brown', label: 'J' }])
-        expect(labels('G15')).toEqual([{ color: 'green', label: 'S' }])
+        expect(labels('K23')).toEqual([{ color: 'green', label: 'S' }])
     })
 
     it('resolves every tile in the manifest', () => {
