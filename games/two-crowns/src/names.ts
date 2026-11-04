@@ -2,6 +2,7 @@ import { titleNames, isTreasuryPoolId } from '@tabletop/18xx'
 import { TwoCrownsBranches } from './branches.js'
 import { TwoCrownsCompanies } from './companies.js'
 import { TwoCrownsPrivates } from './privates.js'
+import { AnconaLineId } from './ancona.js'
 
 const PoolNames: Readonly<Record<string, string>> = {
     market: 'Market',
@@ -16,5 +17,6 @@ export const TwoCrownsNames = titleNames(
         ['LUKA', 'Luka'],
         ...TwoCrownsPrivates.map((company) => [company.id, company.name])
     ]),
-    (poolId) => (isTreasuryPoolId(poolId) ? 'Treasury shares' : PoolNames[poolId])
+    (poolId) => (isTreasuryPoolId(poolId) ? 'Treasury shares' : PoolNames[poolId]),
+    { [AnconaLineId]: 'Ancona Steamship Line' }
 )
