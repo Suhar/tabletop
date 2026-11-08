@@ -1592,6 +1592,10 @@ impl Compatibility {
         let fill = |compatible: &mut Vec<u64>, resource_candidates: &ResourceCandidates| {
             compatible.clear();
             compatible.resize(self.words - start, u64::MAX);
+            // No candidates from `start` on (the later trains have no routes), so no rows exist.
+            if compatible.is_empty() {
+                return;
+            }
             for resource in resources {
                 for (bits, conflicts) in compatible
                     .iter_mut()
@@ -2359,6 +2363,20 @@ mod tests {
             reversed: false,
             extension,
         });
+    }
+
+    #[test]
+    fn a_train_with_routes_runs_beside_identical_trains_without_any() {
+        let tracks = Tracks::new();
+        let network = tracks.network();
+        let mut routed = Candidates::new(network);
+        add(&mut routed, 100, &[0], &[]);
+        // Identical trains share one candidate list; here no route is short enough for them.
+        let unrouted = Rc::new(Candidates::new(network));
+        let candidates = [Rc::new(routed), Rc::clone(&unrouted), unrouted];
+        let mut selection = Selection::new(&candidates, network, f64::INFINITY, usize::MAX);
+        selection.walk(0, 0, 0);
+        assert_eq!(selection.revenue, 100);
     }
 
     #[test]
