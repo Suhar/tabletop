@@ -10,7 +10,6 @@ import {
 } from '@tabletop/18xx'
 import { TwoCrownsStockRules } from './stockRules.js'
 export const TwoCrownsTrainFundingRules: TrainFundingRules = {
-    sellInBlocks: true,
     afterShareSale(state) {
         reorderPendingOperatingCompanies(state, TwoCrownsOperatingRules.companyOrder(state))
     },

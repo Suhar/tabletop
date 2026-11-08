@@ -1,3 +1,4 @@
+import { isTreasuryPoolId } from '@tabletop/18xx'
 import { moneyFormat, type TitlePresentation } from '@tabletop/18xx-ui'
 import { TwoCrownsCompanies, TwoCrownsNames } from '@tabletop/two-crowns'
 import { TwoCrownsCompanyNames } from './companyPresentation.js'
@@ -25,12 +26,12 @@ export const TwoCrownsPresentation: TitlePresentation = {
     mapFocusExcludedCompanyIds: ['LUKA'],
     portfolioCompanyIds: ['P12', 'P14'],
     includedPortfolioCompanyIds: ['P12', 'P14'],
-    poolName: (pool) =>
-        pool.id === 'reserved'
+    poolName: (poolId) =>
+        poolId === 'reserved'
             ? 'Exchange'
-            : pool.owner.kind === 'company'
+            : isTreasuryPoolId(poolId)
               ? 'Treasury'
-              : TwoCrownsNames.pool(pool.id),
+              : TwoCrownsNames.pool(poolId),
     privatePurchaseLabel: 'Buy Wiener Neustadt',
     privatePurchaseEmpty: 'You don’t own Wiener Neustadt'
 }

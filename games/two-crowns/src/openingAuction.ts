@@ -10,7 +10,6 @@ import {
     treasuryPool,
     type StockMarket,
     privateIncomePayments,
-    settleCashPayments,
     type InitialPosition,
     type MapStateData,
     type OfferPileAuctionRules,
@@ -76,12 +75,9 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
         if (concession)
             getCompany(state, concession).president = { kind: 'player', playerId: award.playerId }
     },
-    payIncome(state) {
-        settleCashPayments(
-            state,
-            privateIncomePayments(state, { charters: TwoCrownsCharters }).filter(
-                (payment) => payment.to.kind === 'player'
-            )
+    incomePayments(state) {
+        return privateIncomePayments(state, { charters: TwoCrownsCharters }).filter(
+            (payment) => payment.to.kind === 'player'
         )
     },
     firstStockOrder(state) {

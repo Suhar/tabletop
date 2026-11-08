@@ -50,6 +50,7 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
     privatePowerRules: TwoCrownsPrivatePowerRules,
     createOpening: createTwoCrownsOpening,
     startingCash: twoCrownsStartingCash,
+    currencySymbol: '$',
     stockRules: TwoCrownsStockRules,
     companyRules: TwoCrownsCompanyRules,
     operatingRules: TwoCrownsOperatingRules,
