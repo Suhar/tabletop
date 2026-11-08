@@ -24,3 +24,6 @@ yarn.lock
 *-lock.json
 .agents/skills/
 **/scenarios/*.json
+
+# Byte copies of the private design repo; the sync records their hashes
+games/two-crowns/design/

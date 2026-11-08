@@ -1,3806 +1,4037 @@
 {
-    "info": {
-        "title": "The Two Crowns 1874",
-        "designer": "Stephan Suhar",
-        "background": "shortline",
-        "orientation": "horizontal",
-        "titleY": 1650,
-        "titleX": 150,
-        "titleFontSize": 100,
-        "designerFontSize": 60,
-        "currency": "$#",
-        "publisher": "self"
+  "info": {
+    "title": "The Two Crowns 1874",
+    "designer": "Stephan Suhar",
+    "background": "shortline",
+    "orientation": "horizontal",
+    "titleY": 1650,
+    "titleX": 150,
+    "titleFontSize": 100,
+    "designerFontSize": 60,
+    "currency": "$#",
+    "publisher": "self"
+  },
+  "prototype": true,
+  "bank": "∞",
+  "tokens": [
+    "Round"
+  ],
+  "numberCards": [
+    "mainline",
+    "shortline",
+    "narodna"
+  ],
+  "colors": {
+    "mainline": "#4d2674",
+    "shortline": "#004d95",
+    "phase2h": "#ffe599",
+    "phase3h": "#f1c232",
+    "phase4h": "#b6d7a8",
+    "phase5h": "#6aa84f",
+    "phase6h": "#38761d",
+    "phase2+": "#3c78d8",
+    "phase3+": "#46bdc6",
+    "phase4+": "#9b4b3b",
+    "phase7": "#e06666",
+    "phaseD": "#cccccc",
+    "narodna": "#8a1538",
+    "split": "#1f6f8b",
+    "latepar": "#c9a227"
+  },
+  "players": [
+    {
+      "number": 3,
+      "certLimit": 25,
+      "capital": 840
     },
-    "prototype": true,
-    "bank": "∞",
-    "tokens": ["Round"],
-    "numberCards": ["mainline", "shortline", "narodna"],
-    "colors": {
-        "mainline": "#4d2674",
-        "shortline": "#004d95",
-        "phase2h": "#ffe599",
-        "phase3h": "#f1c232",
-        "phase4h": "#b6d7a8",
-        "phase5h": "#6aa84f",
-        "phase6h": "#38761d",
-        "phase2+": "#3c78d8",
-        "phase3+": "#46bdc6",
-        "phase4+": "#9b4b3b",
-        "phase7": "#e06666",
-        "phaseD": "#cccccc",
-        "narodna": "#8a1538",
-        "split": "#1f6f8b",
-        "latepar": "#c9a227"
+    {
+      "number": 4,
+      "certLimit": 20,
+      "capital": 600
     },
-    "players": [
-        {
-            "number": 3,
-            "certLimit": 25,
-            "capital": 840
-        },
-        {
-            "number": 4,
-            "certLimit": 20,
-            "capital": 600
-        },
-        {
-            "number": 5,
-            "certLimit": 16,
-            "capital": 480
-        }
-    ],
-    "privates": [
-        {
-            "name": "k.u.k. Post",
-            "id": "P",
-            "revenue": 80,
-            "icon": "mail",
-            "iconColor": "pink",
-            "description": "Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+."
-        },
-        {
-            "name": "Public Line Bond",
-            "id": "BD1",
-            "revenue": 5,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
-        },
-        {
-            "name": "Public Line Bond",
-            "id": "BD2",
-            "revenue": 5,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
-        },
-        {
-            "name": "Public Line Bond",
-            "id": "BD3",
-            "revenue": 5,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
-        },
-        {
-            "name": "Public Line Bond",
-            "id": "BD4",
-            "revenue": 5,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
-        },
-        {
-            "name": "Public Line Bond",
-            "id": "BD5",
-            "revenue": 5,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
-        },
-        {
-            "name": "Ganz Locomotive Works",
-            "note": "Hungarian Bank conversion",
-            "id": "G",
-            "revenue": 20,
-            "icon": "train",
-            "iconColor": "red",
-            "description": "Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+."
-        },
-        {
-            "name": "Kupa River Bridge",
-            "id": "P1",
-            "price": 40,
-            "revenue": 5,
-            "icon": "bridge",
-            "iconColor": "navyBlue",
-            "description": "Blocks one Kupa hex (owner's choice). May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
-        },
-        {
-            "name": "Pazin Tunnel Company",
-            "id": "P2",
-            "price": 40,
-            "revenue": 5,
-            "icon": "token",
-            "iconColor": "yellow",
-            "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
-        },
-        {
-            "name": "Zadar Station Rights",
-            "id": "P3",
-            "price": 50,
-            "revenue": 10,
-            "description": "Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
-        },
-        {
-            "name": "Virovitica Station Rights",
-            "id": "P4",
-            "price": 50,
-            "revenue": 10,
-            "description": "Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
-        },
-        {
-            "name": "Rijeka Lazaretto",
-            "id": "P5",
-            "price": 40,
-            "revenue": 10,
-            "description": "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
-            "icon": "train",
-            "iconColor": "lightBlue"
-        },
-        {
-            "name": "Kvarner Shipbuilding",
-            "id": "P7",
-            "price": 90,
-            "revenue": 15,
-            "icon": "tree",
-            "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
-        },
-        {
-            "name": "Lika Survey Office",
-            "id": "P8",
-            "price": 100,
-            "revenue": 30,
-            "tile": "9",
-            "description": "Holds the only straight yellow tile. Any company the owner presides may lay it as a normal tile lay. Closes on the first 4+."
-        },
-        {
-            "name": "Slavonian Agricultural Society",
-            "id": "P9",
-            "price": 110,
-            "revenue": 10,
-            "icon": "wheat",
-            "description": "Comes with a 10% Mainline share. Closes on the first 4+."
-        },
-        {
-            "name": "Wiener Neustadt Locomotive Works",
-            "id": "P10",
-            "price": 110,
-            "revenue": 20,
-            "icon": "train",
-            "iconColor": "red",
-            "description": "From 4H, may be sold to a non-Luka company for $1–200. The owning company may close this to buy a train from the supply at any point in its turn. Closes on the first 4+."
-        },
-        {
-            "name": "Sava Steam Ferry",
-            "id": "P11",
-            "price": 120,
-            "revenue": 15,
-            "icon": "ferry",
-            "iconColor": "violet",
-            "description": "Comes with a 10% Mainline share. Closes on the first 4+."
-        },
-        {
-            "name": "Austrian Bank",
-            "id": "P12",
-            "price": 140,
-            "revenue": 0,
-            "company": "AB",
-            "description": "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
-        },
-        {
-            "name": "Narodna Concession",
-            "id": "P13",
-            "price": 140,
-            "revenue": 25,
-            "token": {
-                "label": "NAR",
-                "color": "narodna"
-            },
-            "description": "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
-        },
-        {
-            "name": "Hungarian Bank",
-            "id": "P14",
-            "price": 90,
-            "revenue": 0,
-            "token": {
-                "label": "HB",
-                "color": "cherry"
-            },
-            "description": "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
-        },
-        {
-            "name": "MÁV Concession",
-            "id": "P15",
-            "price": 150,
-            "revenue": 20,
-            "token": {
-                "label": "MÁV",
-                "color": "navyBlue"
-            },
-            "description": "Comes with the 20% president's certificate of the Mainline (first Luka company drawn). Closes when the Mainline operates."
-        },
-        {
-            "name": "Südbahn Concession",
-            "id": "P16",
-            "price": 145,
-            "revenue": 30,
-            "token": {
-                "label": "SB",
-                "color": "violet"
-            },
-            "description": "Comes with the 20% president's certificate of the Shortline (second Luka company drawn). Closes when the Shortline operates."
-        },
-        {
-            "name": "Ancona Steamship Line",
-            "id": "P17",
-            "price": 90,
-            "revenue": 15,
-            "icon": "boat",
-            "iconColor": "navyBlue",
-            "description": "From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+."
-        }
-    ],
-    "tiles": {
-        "1": 2,
-        "3": 8,
-        "5": 10,
-        "6": 10,
-        "7": 10,
-        "8": 16,
-        "9": 1,
-        "16": 5,
-        "17": 4,
-        "21": 3,
-        "22": 3,
-        "25": 6,
-        "28": 6,
-        "29": 6,
-        "30": 5,
-        "31": 5,
-        "39": 2,
-        "40": 1,
-        "41": 1,
-        "42": 1,
-        "43": 2,
-        "44": 1,
-        "45": 2,
-        "46": 2,
-        "47": 1,
-        "56": 2,
-        "58": 6,
-        "70": 2,
-        "143": 2,
-        "144": 2,
-        "611": 3,
-        "624": 3,
-        "625": 3,
-        "626": 3,
-        "627": 1,
-        "628": 2,
-        "629": 2,
-        "630": 2,
-        "631": 2,
-        "632": 2,
-        "633": 2,
-        "767": 1,
-        "769": 1,
-        "X1": {
-            "quantity": 2,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "X"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 4
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 6
-                }
-            ]
-        },
-        "X2": {
-            "quantity": 3,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "X"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 3
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 6
-                }
-            ]
-        },
-        "X3": {
-            "quantity": 2,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "X"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 3
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 1
-                }
-            ]
-        },
-        "X4": {
-            "quantity": 2,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "X"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 3
-                },
-                {
-                    "side": 6
-                },
-                {
-                    "side": 1
-                }
-            ]
-        },
-        "X5": {
-            "color": "brown",
-            "quantity": 3,
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "label": "X",
-                    "angle": 150,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "X6": {
-            "color": "brown",
-            "quantity": 3,
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "label": "X",
-                    "angle": 150,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 6
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "X7": {
-            "color": "brown",
-            "quantity": 3,
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "label": "X",
-                    "angle": 150,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 5
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "X8": {
-            "color": "brown",
-            "quantity": 2,
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 50
-                }
-            ],
-            "labels": [
-                {
-                    "label": "X",
-                    "angle": 90,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 3
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 5
-                },
-                {
-                    "side": 6
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "P1": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "P"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 3
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 6
-                }
-            ]
-        },
-        "C1": {
-            "quantity": 4,
-            "color": "green",
-            "rotations": 3,
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 20
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "C2": {
-            "quantity": 4,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 20
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "C3": {
-            "quantity": 4,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 20
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "S1": {
-            "quantity": 2,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 20
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "S"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                }
-            ]
-        },
-        "Z1": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "Z"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "Z2": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "Z"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "Z3": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "Z"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "Z4": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 70
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.8,
-                    "label": "Z"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "Z5": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.8,
-                    "label": "Z"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 3
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                },
-                {
-                    "side": 6
-                }
-            ]
-        },
-        "R1": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "R"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                }
-            ]
-        },
-        "R2": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "R"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "R3": {
-            "quantity": 1,
-            "color": "green",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 30
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "label": "R"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "R4": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 50
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.8,
-                    "label": "R"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 3
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "R5": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 60
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.8,
-                    "label": "R"
-                }
-            ],
-            "cities": [
-                {
-                    "size": 2
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                }
-            ]
-        },
-        "J1": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 275,
-                    "percent": 0.667,
-                    "value": 40
-                },
-                {
-                    "angle": 95,
-                    "percent": 0.667,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "angle": 30,
-                    "percent": 0.5
-                },
-                {
-                    "angle": 210,
-                    "percent": 0.5
-                }
-            ],
-            "track": [
-                {
-                    "type": "sharp",
-                    "side": 1
-                },
-                {
-                    "type": "sharp",
-                    "side": 4
-                }
-            ]
-        },
-        "J2": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 325,
-                    "percent": 0.6,
-                    "value": 40
-                },
-                {
-                    "angle": 215,
-                    "percent": 0.6,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "angle": 30,
-                    "percent": 0.5
-                },
-                {
-                    "angle": 150,
-                    "percent": 0.5
-                }
-            ],
-            "track": [
-                {
-                    "type": "sharp",
-                    "side": 1
-                },
-                {
-                    "type": "sharp",
-                    "side": 3
-                }
-            ]
-        },
-        "J3": {
-            "quantity": 2,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 300,
-                    "percent": 0.68,
-                    "value": 40
-                },
-                {
-                    "angle": 150,
-                    "percent": 0.68,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 240,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "percent": 0.6
-                },
-                {
-                    "angle": 90,
-                    "percent": 0.5
-                }
-            ],
-            "track": [
-                {
-                    "type": "straight",
-                    "side": 1
-                },
-                {
-                    "type": "sharp",
-                    "side": 2
-                }
-            ]
-        },
-        "J4": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 300,
-                    "percent": 0.7,
-                    "value": 40
-                },
-                {
-                    "angle": 210,
-                    "percent": 0.8,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "percent": 0.57735
-                },
-                {
-                    "angle": 150,
-                    "percent": 0.5
-                }
-            ],
-            "track": [
-                {
-                    "type": "gentle",
-                    "side": 5
-                },
-                {
-                    "type": "sharp",
-                    "side": 3
-                }
-            ]
-        },
-        "J5": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 60,
-                    "percent": 0.7,
-                    "value": 40
-                },
-                {
-                    "angle": 150,
-                    "percent": 0.8,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 270,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "percent": 0.57735
-                },
-                {
-                    "angle": 210,
-                    "percent": 0.5
-                }
-            ],
-            "track": [
-                {
-                    "type": "gentle",
-                    "side": 1
-                },
-                {
-                    "type": "sharp",
-                    "side": 4
-                }
-            ]
-        },
-        "J6": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 300,
-                    "percent": 0.7,
-                    "value": 40
-                },
-                {
-                    "angle": 120,
-                    "percent": 0.7,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 150,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "percent": 0.53
-                },
-                {
-                    "angle": 240,
-                    "percent": 0.6
-                }
-            ],
-            "track": [
-                {
-                    "type": "straight",
-                    "side": 1,
-                    "cross": "over"
-                },
-                {
-                    "type": "straight",
-                    "side": 2,
-                    "cross": "under"
-                }
-            ]
-        },
-        "J7": {
-            "quantity": 2,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 120,
-                    "percent": 0.75,
-                    "value": 40
-                },
-                {
-                    "angle": 300,
-                    "percent": 0.75,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 90,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "angle": 0,
-                    "percent": 0.57735
-                },
-                {
-                    "angle": 180,
-                    "percent": 0.57735
-                }
-            ],
-            "track": [
-                {
-                    "type": "gentle",
-                    "side": 2
-                },
-                {
-                    "type": "gentle",
-                    "side": 5
-                }
-            ]
-        },
-        "J8": {
-            "quantity": 1,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 230,
-                    "percent": 0.72,
-                    "value": 40
-                },
-                {
-                    "angle": 310,
-                    "percent": 0.72,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 270,
-                    "percent": 0.88,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "angle": 4,
-                    "percent": 0.57735
-                },
-                {
-                    "angle": 174,
-                    "percent": 0.57735
-                }
-            ],
-            "track": [
-                {
-                    "type": "gentle",
-                    "side": 1,
-                    "cross": "over"
-                },
-                {
-                    "type": "gentle",
-                    "side": 2,
-                    "cross": "under"
-                }
-            ]
-        },
-        "J9": {
-            "quantity": 2,
-            "color": "brown",
-            "values": [
-                {
-                    "angle": 60,
-                    "percent": 0.7,
-                    "value": 40
-                },
-                {
-                    "angle": 300,
-                    "percent": 0.7,
-                    "value": 40
-                }
-            ],
-            "labels": [
-                {
-                    "angle": 270,
-                    "percent": 0.85,
-                    "label": "J"
-                }
-            ],
-            "cities": [
-                {
-                    "angle": 0,
-                    "percent": 0.5
-                },
-                {
-                    "angle": 120,
-                    "percent": 0.57735
-                }
-            ],
-            "track": [
-                {
-                    "type": "straight",
-                    "side": 1,
-                    "cross": "over"
-                },
-                {
-                    "type": "gentle",
-                    "side": 3,
-                    "cross": "under"
-                }
-            ]
-        },
-        "CX": {
-            "quantity": 1,
-            "color": "gray",
-            "values": [
-                {
-                    "value": 70,
-                    "angle": 210,
-                    "percent": 0.8
-                }
-            ],
-            "labels": [
-                {
-                    "fontSize": 18,
-                    "label": "CX",
-                    "angle": 90,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 3
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                },
-                {
-                    "side": 6
-                }
-            ]
-        },
-        "G1": {
-            "quantity": 1,
-            "color": "gray",
-            "values": [
-                {
-                    "value": 70,
-                    "angle": 210,
-                    "percent": 0.8
-                }
-            ],
-            "cities": [
-                {
-                    "size": 3
-                }
-            ],
-            "track": [
-                {
-                    "side": 1
-                },
-                {
-                    "side": 2
-                },
-                {
-                    "side": 3
-                },
-                {
-                    "side": 4
-                },
-                {
-                    "side": 5
-                },
-                {
-                    "side": 6
-                }
-            ]
-        }
+    {
+      "number": 5,
+      "certLimit": 16,
+      "capital": 480
+    }
+  ],
+  "privates": [
+    {
+      "name": "k.u.k. Post",
+      "id": "P",
+      "revenue": 80,
+      "icon": "mail",
+      "iconColor": "pink",
+      "description": "Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+."
     },
-    "rounds": [
-        {
-            "name": "OR4",
-            "color": "white"
-        },
-        {
-            "name": "OR3",
-            "color": "phase4+"
-        },
-        {
-            "name": "OR2",
-            "color": "phase4h"
-        },
-        {
-            "name": "OR1",
-            "color": "phase2h"
-        },
-        {
-            "name": "SR",
-            "color": "white"
-        }
-    ],
-    "stock": {
-        "type": "2D",
-        "market": [
-            [
-                null,
-                null,
-                {
-                    "label": 111,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                122,
-                136,
-                152,
-                170,
-                190,
-                215,
-                240,
-                270,
-                300,
-                330,
-                360,
-                {
-                    "subLabel": "+40",
-                    "value": 400,
-                    "width": 2
-                }
-            ],
-            [
-                {
-                    "value": 88,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                {
-                    "value": 92,
-                    "par": true,
-                    "color": "mainline"
-                },
-                100,
-                110,
-                121,
-                133,
-                146,
-                160,
-                180,
-                200,
-                225,
-                250,
-                {
-                    "value": 280,
-                    "legend": 1,
-                    "arrow": "up"
-                }
-            ],
-            [
-                {
-                    "value": 82,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                {
-                    "value": 86,
-                    "par": true,
-                    "color": "shortline"
-                },
-                93,
-                101,
-                111,
-                123,
-                137,
-                152,
-                167,
-                185,
-                {
-                    "value": 203,
-                    "legend": 1,
-                    "arrow": "up"
-                }
-            ],
-            [
-                {
-                    "value": 78,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                {
-                    "value": 80,
-                    "color": "phase2h"
-                },
-                86,
-                94,
-                102,
-                112,
-                {
-                    "value": 122,
-                    "legend": 1,
-                    "arrow": "up"
-                },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                {
-                    "width": 1,
-                    "label": "Main",
-                    "color": "mainline"
-                },
-                {
-                    "width": 1,
-                    "label": "Short",
-                    "color": "shortline"
-                },
-                {
-                    "width": 1,
-                    "label": "Public",
-                    "color": "narodna"
-                }
-            ],
-            [
-                {
-                    "value": 71,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                {
-                    "value": 74,
-                    "color": "phase5h"
-                },
-                79,
-                84,
-                89,
-                {
-                    "value": 94,
-                    "legend": 1,
-                    "arrow": "up"
-                },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                {
-                    "width": 1,
-                    "label": "One"
-                },
-                {
-                    "width": 1,
-                    "label": "One"
-                }
-            ],
-            [
-                {
-                    "value": 60,
-                    "legend": 1,
-                    "arrow": "down"
-                },
-                {
-                    "value": 65,
-                    "color": "phase3+"
-                },
-                69,
-                73,
-                {
-                    "value": 78,
-                    "legend": 1,
-                    "arrow": "up"
-                },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                {
-                    "width": 1,
-                    "label": "Two"
-                },
-                {
-                    "width": 1,
-                    "label": "Two"
-                }
-            ],
-            [
-                55,
-                {
-                    "value": 58,
-                    "color": "phase7"
-                },
-                61,
-                {
-                    "value": 65,
-                    "legend": 1,
-                    "arrow": "up"
-                },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                {
-                    "width": 1,
-                    "label": "Three"
-                },
-                {
-                    "width": 1,
-                    "label": "Three"
-                },
-                {
-                    "width": 1,
-                    "label": "Late",
-                    "color": "latepar"
-                }
-            ]
-        ],
-        "legend": []
+    {
+      "name": "Public Line Bond",
+      "id": "BD1",
+      "revenue": 5,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
     },
-    "trains": [
-        {
-            "name": "2H",
-            "image": "2T",
-            "quantity": 4,
-            "price": 80,
-            "color": "phase2h",
-            "rust": "5H"
-        },
-        {
-            "name": "3H",
-            "image": "2T",
-            "quantity": 4,
-            "price": 100,
-            "color": "phase3h",
-            "rust": "6H"
-        },
-        {
-            "name": "4H",
-            "image": "3T",
-            "quantity": 4,
-            "price": 120,
-            "color": "phase4h",
-            "rust": "2+"
-        },
-        {
-            "name": "5H",
-            "image": "3T",
-            "quantity": 4,
-            "price": 160,
-            "color": "phase5h",
-            "rust": "3+"
-        },
-        {
-            "name": "6H",
-            "image": "3T",
-            "quantity": 3,
-            "price": 180,
-            "color": "phase6h",
-            "rust": "4+"
-        },
-        {
-            "name": "2+",
-            "image": "4T",
-            "quantity": 4,
-            "price": 220,
-            "color": "phase2+",
-            "rust": "7"
-        },
-        {
-            "name": "3+",
-            "image": "4T",
-            "quantity": 4,
-            "price": 240,
-            "color": "phase3+",
-            "rust": "D"
-        },
-        {
-            "name": "4+",
-            "image": "6T",
-            "quantity": 3,
-            "price": 200,
-            "color": "phase4+",
-            "rust": "D",
-            "description": "Runs once more after the Diesel"
-        },
-        {
-            "name": "7",
-            "image": "6T",
-            "quantity": 5,
-            "price": 500,
-            "color": "phase7"
-        },
-        {
-            "name": "D",
-            "image": "Diesel",
-            "quantity": 7,
-            "price": 600,
-            "color": "phaseD"
-        }
-    ],
-    "turns": [
-        {
-            "name": "Stock Round",
-            "steps": [
-                "Sell (at most 30% of one company per turn)",
-                "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Austrian Bank or Hungarian Bank"
-            ],
-            "optional": ["Free: private exchanges, Hungarian Bank conversion (until 2+)"],
-            "ordered": true
-        },
-        {
-            "name": "Operating Round",
-            "steps": [
-                "Lay track",
-                "Place one station",
-                "Run trains",
-                "Pay or withhold",
-                "Buy trains (trade-ins)"
-            ],
-            "ordered": true
-        }
-    ],
-    "phases": [
-        {
-            "train": "2H",
-            "limit": 4,
-            "tiles": "yellow",
-            "rounds": 1
-        },
-        {
-            "train": "3H",
-            "limit": 4,
-            "tiles": "yellow",
-            "rounds": 1
-        },
-        {
-            "train": "4H",
-            "limit": 4,
-            "tiles": "green",
-            "rounds": 2,
-            "buyCompanies": true,
-            "notes": "Public Line Bonds may be exchanged"
-        },
-        {
-            "train": "5H",
-            "limit": 4,
-            "tiles": "green",
-            "rounds": 2
-        },
-        {
-            "train": "6H",
-            "limit": 4,
-            "tiles": "green",
-            "rounds": 2
-        },
-        {
-            "train": "2+",
-            "limit": 3,
-            "tiles": "green",
-            "rounds": 2,
-            "notes": "Hungarian Bank can no longer convert"
-        },
-        {
-            "train": "3+",
-            "limit": 3,
-            "tiles": "green",
-            "rounds": 2
-        },
-        {
-            "train": "4+",
-            "limit": 3,
-            "tiles": "brown",
-            "rounds": 3,
-            "events": {
-                "closeCompanies": true
-            }
-        },
-        {
-            "train": "7",
-            "limit": 2,
-            "tiles": "brown",
-            "rounds": 3
-        },
-        {
-            "train": "D",
-            "limit": 2,
-            "tiles": "gray",
-            "rounds": 3,
-            "notes": "Triggers game end"
-        }
-    ],
-    "tokenTypes": {
-        "default": ["Free", 80, 80, 80]
+    {
+      "name": "Public Line Bond",
+      "id": "BD2",
+      "revenue": 5,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
     },
-    "shareTypes": {
-        "default": [
-            {
-                "quantity": 1,
-                "label": "Director's Share",
-                "percent": 20,
-                "shares": 2
-            },
-            {
-                "quantity": 8,
-                "percent": 10,
-                "shares": 1
-            }
+    {
+      "name": "Public Line Bond",
+      "id": "BD3",
+      "revenue": 5,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+      "name": "Public Line Bond",
+      "id": "BD4",
+      "revenue": 5,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+      "name": "Public Line Bond",
+      "id": "BD5",
+      "revenue": 5,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+    },
+    {
+      "name": "Ganz Locomotive Works",
+      "note": "Hungarian Bank conversion",
+      "id": "G",
+      "revenue": 20,
+      "icon": "train",
+      "iconColor": "red",
+      "description": "Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+."
+    },
+    {
+      "name": "Kupa River Bridge",
+      "id": "P1",
+      "price": 40,
+      "revenue": 5,
+      "icon": "bridge",
+      "iconColor": "navyBlue",
+      "description": "Blocks one Kupa hex (owner's choice). May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+    },
+    {
+      "name": "Pazin Tunnel Company",
+      "id": "P2",
+      "price": 40,
+      "revenue": 5,
+      "icon": "token",
+      "iconColor": "yellow",
+      "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+    },
+    {
+      "name": "Zadar Station Rights",
+      "id": "P3",
+      "price": 50,
+      "revenue": 10,
+      "description": "Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+    },
+    {
+      "name": "Virovitica Station Rights",
+      "id": "P4",
+      "price": 50,
+      "revenue": 10,
+      "description": "Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+    },
+    {
+      "name": "Rijeka Lazaretto",
+      "id": "P5",
+      "price": 40,
+      "revenue": 10,
+      "description": "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
+      "icon": "train",
+      "iconColor": "lightBlue"
+    },
+    {
+      "name": "Kvarner Shipbuilding",
+      "id": "P7",
+      "price": 90,
+      "revenue": 15,
+      "icon": "tree",
+      "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+    },
+    {
+      "name": "Lika Survey Office",
+      "id": "P8",
+      "price": 100,
+      "revenue": 30,
+      "tile": "9",
+      "description": "Holds the only straight yellow tile. Any company the owner presides may lay it as a normal tile lay. Closes on the first 4+."
+    },
+    {
+      "name": "Slavonian Agricultural Society",
+      "id": "P9",
+      "price": 110,
+      "revenue": 10,
+      "icon": "wheat",
+      "description": "Comes with a 10% Mainline share. Closes on the first 4+."
+    },
+    {
+      "name": "Wiener Neustadt Locomotive Works",
+      "id": "P10",
+      "price": 110,
+      "revenue": 20,
+      "icon": "train",
+      "iconColor": "red",
+      "description": "From 4H, may be sold to a non-Luka company for $1–200. The owning company may close this to buy a train from the supply at any point in its turn. Closes on the first 4+."
+    },
+    {
+      "name": "Sava Steam Ferry",
+      "id": "P11",
+      "price": 120,
+      "revenue": 15,
+      "icon": "ferry",
+      "iconColor": "violet",
+      "description": "Comes with a 10% Mainline share. Closes on the first 4+."
+    },
+    {
+      "name": "Austrian Bank",
+      "id": "P12",
+      "price": 140,
+      "revenue": 0,
+      "company": "AB",
+      "description": "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
+    },
+    {
+      "name": "Narodna Concession",
+      "id": "P13",
+      "price": 140,
+      "revenue": 25,
+      "token": {
+        "label": "NAR",
+        "color": "narodna"
+      },
+      "description": "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
+    },
+    {
+      "name": "Hungarian Bank",
+      "id": "P14",
+      "price": 90,
+      "revenue": 0,
+      "token": {
+        "label": "HB",
+        "color": "cherry"
+      },
+      "description": "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
+    },
+    {
+      "name": "MÁV Concession",
+      "id": "P15",
+      "price": 150,
+      "revenue": 20,
+      "token": {
+        "label": "MÁV",
+        "color": "navyBlue"
+      },
+      "description": "Comes with the 20% president's certificate of the Mainline (first Luka company drawn). Closes when the Mainline operates."
+    },
+    {
+      "name": "Südbahn Concession",
+      "id": "P16",
+      "price": 145,
+      "revenue": 30,
+      "token": {
+        "label": "SB",
+        "color": "violet"
+      },
+      "description": "Comes with the 20% president's certificate of the Shortline (second Luka company drawn). Closes when the Shortline operates."
+    },
+    {
+      "name": "Ancona Steamship Line",
+      "id": "P17",
+      "price": 90,
+      "revenue": 15,
+      "icon": "boat",
+      "iconColor": "navyBlue",
+      "description": "From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+."
+    }
+  ],
+  "tiles": {
+    "1": 2,
+    "3": 8,
+    "5": 10,
+    "6": 10,
+    "7": 10,
+    "8": 16,
+    "9": 1,
+    "16": 5,
+    "17": 4,
+    "21": 3,
+    "22": 3,
+    "25": 6,
+    "28": 6,
+    "29": 6,
+    "30": 5,
+    "31": 5,
+    "39": 2,
+    "40": 1,
+    "41": 1,
+    "42": 1,
+    "43": 2,
+    "44": 1,
+    "45": 2,
+    "46": 2,
+    "47": 1,
+    "56": 2,
+    "58": 6,
+    "70": 2,
+    "143": 2,
+    "144": 2,
+    "611": 3,
+    "624": 3,
+    "625": 3,
+    "626": 3,
+    "627": 1,
+    "628": 2,
+    "629": 2,
+    "630": 2,
+    "631": 2,
+    "632": 2,
+    "633": 2,
+    "767": 1,
+    "769": 1,
+    "X1": {
+      "quantity": 2,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "X"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 4
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 6
+        }
+      ]
+    },
+    "X2": {
+      "quantity": 3,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "X"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 3
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 6
+        }
+      ]
+    },
+    "X3": {
+      "quantity": 2,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "X"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 3
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 1
+        }
+      ]
+    },
+    "X4": {
+      "quantity": 2,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "X"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 3
+        },
+        {
+          "side": 6
+        },
+        {
+          "side": 1
+        }
+      ]
+    },
+    "X5": {
+      "color": "brown",
+      "quantity": 3,
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "label": "X",
+          "angle": 150,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "X6": {
+      "color": "brown",
+      "quantity": 3,
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "label": "X",
+          "angle": 150,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 6
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "X7": {
+      "color": "brown",
+      "quantity": 3,
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "label": "X",
+          "angle": 150,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "X8": {
+      "color": "brown",
+      "quantity": 2,
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 50
+        }
+      ],
+      "labels": [
+        {
+          "label": "X",
+          "angle": 90,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 6
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "P1": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "P"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 3
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 6
+        }
+      ]
+    },
+    "C1": {
+      "quantity": 4,
+      "color": "green",
+      "rotations": 3,
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 20
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "C2": {
+      "quantity": 4,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 20
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "C3": {
+      "quantity": 4,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 20
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "S1": {
+      "quantity": 2,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 20
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "S"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        }
+      ]
+    },
+    "Z1": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "Z"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "Z2": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "Z"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "Z3": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "Z"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "Z4": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 70
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.8,
+          "label": "Z"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "Z5": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.8,
+          "label": "Z"
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 6
+        }
+      ]
+    },
+    "R1": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "R"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        }
+      ]
+    },
+    "R2": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "R"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "R3": {
+      "quantity": 1,
+      "color": "green",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 30
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "label": "R"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "R4": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 50
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.8,
+          "label": "R"
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "R5": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 60
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.8,
+          "label": "R"
+        }
+      ],
+      "cities": [
+        {
+          "size": 2
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        }
+      ]
+    },
+    "J1": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 275,
+          "percent": 0.667,
+          "value": 40
+        },
+        {
+          "angle": 95,
+          "percent": 0.667,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "angle": 30,
+          "percent": 0.5
+        },
+        {
+          "angle": 210,
+          "percent": 0.5
+        }
+      ],
+      "track": [
+        {
+          "type": "sharp",
+          "side": 1
+        },
+        {
+          "type": "sharp",
+          "side": 4
+        }
+      ]
+    },
+    "J2": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 325,
+          "percent": 0.6,
+          "value": 40
+        },
+        {
+          "angle": 215,
+          "percent": 0.6,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "angle": 30,
+          "percent": 0.5
+        },
+        {
+          "angle": 150,
+          "percent": 0.5
+        }
+      ],
+      "track": [
+        {
+          "type": "sharp",
+          "side": 1
+        },
+        {
+          "type": "sharp",
+          "side": 3
+        }
+      ]
+    },
+    "J3": {
+      "quantity": 2,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 300,
+          "percent": 0.68,
+          "value": 40
+        },
+        {
+          "angle": 150,
+          "percent": 0.68,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 240,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "percent": 0.6
+        },
+        {
+          "angle": 90,
+          "percent": 0.5
+        }
+      ],
+      "track": [
+        {
+          "type": "straight",
+          "side": 1
+        },
+        {
+          "type": "sharp",
+          "side": 2
+        }
+      ]
+    },
+    "J4": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 300,
+          "percent": 0.7,
+          "value": 40
+        },
+        {
+          "angle": 210,
+          "percent": 0.8,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "percent": 0.57735
+        },
+        {
+          "angle": 150,
+          "percent": 0.5
+        }
+      ],
+      "track": [
+        {
+          "type": "gentle",
+          "side": 5
+        },
+        {
+          "type": "sharp",
+          "side": 3
+        }
+      ]
+    },
+    "J5": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 60,
+          "percent": 0.7,
+          "value": 40
+        },
+        {
+          "angle": 150,
+          "percent": 0.8,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 270,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "percent": 0.57735
+        },
+        {
+          "angle": 210,
+          "percent": 0.5
+        }
+      ],
+      "track": [
+        {
+          "type": "gentle",
+          "side": 1
+        },
+        {
+          "type": "sharp",
+          "side": 4
+        }
+      ]
+    },
+    "J6": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 300,
+          "percent": 0.7,
+          "value": 40
+        },
+        {
+          "angle": 120,
+          "percent": 0.7,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 150,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "percent": 0.53
+        },
+        {
+          "angle": 240,
+          "percent": 0.6
+        }
+      ],
+      "track": [
+        {
+          "type": "straight",
+          "side": 1,
+          "cross": "over"
+        },
+        {
+          "type": "straight",
+          "side": 2,
+          "cross": "under"
+        }
+      ]
+    },
+    "J7": {
+      "quantity": 2,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 120,
+          "percent": 0.75,
+          "value": 40
+        },
+        {
+          "angle": 300,
+          "percent": 0.75,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 90,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "angle": 0,
+          "percent": 0.57735
+        },
+        {
+          "angle": 180,
+          "percent": 0.57735
+        }
+      ],
+      "track": [
+        {
+          "type": "gentle",
+          "side": 2
+        },
+        {
+          "type": "gentle",
+          "side": 5
+        }
+      ]
+    },
+    "J8": {
+      "quantity": 1,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 230,
+          "percent": 0.72,
+          "value": 40
+        },
+        {
+          "angle": 310,
+          "percent": 0.72,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 270,
+          "percent": 0.88,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "angle": 4,
+          "percent": 0.57735
+        },
+        {
+          "angle": 174,
+          "percent": 0.57735
+        }
+      ],
+      "track": [
+        {
+          "type": "gentle",
+          "side": 1,
+          "cross": "over"
+        },
+        {
+          "type": "gentle",
+          "side": 2,
+          "cross": "under"
+        }
+      ]
+    },
+    "J9": {
+      "quantity": 2,
+      "color": "brown",
+      "values": [
+        {
+          "angle": 60,
+          "percent": 0.7,
+          "value": 40
+        },
+        {
+          "angle": 300,
+          "percent": 0.7,
+          "value": 40
+        }
+      ],
+      "labels": [
+        {
+          "angle": 270,
+          "percent": 0.85,
+          "label": "J"
+        }
+      ],
+      "cities": [
+        {
+          "angle": 0,
+          "percent": 0.5
+        },
+        {
+          "angle": 120,
+          "percent": 0.57735
+        }
+      ],
+      "track": [
+        {
+          "type": "straight",
+          "side": 1,
+          "cross": "over"
+        },
+        {
+          "type": "gentle",
+          "side": 3,
+          "cross": "under"
+        }
+      ]
+    },
+    "CX": {
+      "quantity": 1,
+      "color": "gray",
+      "values": [
+        {
+          "value": 70,
+          "angle": 210,
+          "percent": 0.8
+        }
+      ],
+      "labels": [
+        {
+          "fontSize": 18,
+          "label": "CX",
+          "angle": 90,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 6
+        }
+      ]
+    },
+    "G1": {
+      "quantity": 1,
+      "color": "gray",
+      "values": [
+        {
+          "value": 70,
+          "angle": 210,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 6
+        }
+      ]
+    }
+  },
+  "rounds": [
+    {
+      "name": "OR4",
+      "color": "white"
+    },
+    {
+      "name": "OR3",
+      "color": "phase4+"
+    },
+    {
+      "name": "OR2",
+      "color": "phase4h"
+    },
+    {
+      "name": "OR1",
+      "color": "phase2h"
+    },
+    {
+      "name": "SR",
+      "color": "white"
+    }
+  ],
+  "stock": {
+    "type": "2D",
+    "market": [
+      [
+        null,
+        null,
+        {
+          "label": 111,
+          "legend": 1,
+          "arrow": "down"
+        },
+        122,
+        136,
+        152,
+        170,
+        190,
+        215,
+        240,
+        270,
+        300,
+        330,
+        360,
+        {
+          "subLabel": "+40",
+          "value": 400,
+          "width": 2
+        }
+      ],
+      [
+        {
+          "value": 88,
+          "legend": 1,
+          "arrow": "down"
+        },
+        {
+          "value": 92,
+          "par": true,
+          "color": "mainline"
+        },
+        100,
+        110,
+        121,
+        133,
+        146,
+        160,
+        180,
+        200,
+        225,
+        250,
+        {
+          "value": 280,
+          "legend": 1,
+          "arrow": "up"
+        }
+      ],
+      [
+        {
+          "value": 82,
+          "legend": 1,
+          "arrow": "down"
+        },
+        {
+          "value": 86,
+          "par": true,
+          "color": "shortline"
+        },
+        93,
+        101,
+        111,
+        123,
+        137,
+        152,
+        167,
+        185,
+        {
+          "value": 203,
+          "legend": 1,
+          "arrow": "up"
+        }
+      ],
+      [
+        {
+          "value": 78,
+          "legend": 1,
+          "arrow": "down"
+        },
+        {
+          "value": 80,
+          "color": "phase2h"
+        },
+        86,
+        94,
+        102,
+        112,
+        {
+          "value": 122,
+          "legend": 1,
+          "arrow": "up"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "width": 1,
+          "label": "Main",
+          "color": "mainline"
+        },
+        {
+          "width": 1,
+          "label": "Short",
+          "color": "shortline"
+        },
+        {
+          "width": 1,
+          "label": "Public",
+          "color": "narodna"
+        }
+      ],
+      [
+        {
+          "value": 71,
+          "legend": 1,
+          "arrow": "down"
+        },
+        {
+          "value": 74,
+          "color": "phase5h"
+        },
+        79,
+        84,
+        89,
+        {
+          "value": 94,
+          "legend": 1,
+          "arrow": "up"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "width": 1,
+          "label": "One"
+        },
+        {
+          "width": 1,
+          "label": "One"
+        }
+      ],
+      [
+        {
+          "value": 60,
+          "legend": 1,
+          "arrow": "down"
+        },
+        {
+          "value": 65,
+          "color": "phase3+"
+        },
+        69,
+        73,
+        {
+          "value": 78,
+          "legend": 1,
+          "arrow": "up"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "width": 1,
+          "label": "Two"
+        },
+        {
+          "width": 1,
+          "label": "Two"
+        }
+      ],
+      [
+        55,
+        {
+          "value": 58,
+          "color": "phase7"
+        },
+        61,
+        {
+          "value": 65,
+          "legend": 1,
+          "arrow": "up"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "width": 1,
+          "label": "Three"
+        },
+        {
+          "width": 1,
+          "label": "Three"
+        },
+        {
+          "width": 1,
+          "label": "Late",
+          "color": "latepar"
+        }
+      ]
+    ],
+    "legend": []
+  },
+  "trains": [
+    {
+      "name": "2H",
+      "image": "2T",
+      "quantity": 4,
+      "price": 80,
+      "color": "phase2h",
+      "rust": "5H"
+    },
+    {
+      "name": "3H",
+      "image": "2T",
+      "quantity": 4,
+      "price": 100,
+      "color": "phase3h",
+      "rust": "6H"
+    },
+    {
+      "name": "4H",
+      "image": "3T",
+      "quantity": 4,
+      "price": 120,
+      "color": "phase4h",
+      "rust": "2+"
+    },
+    {
+      "name": "5H",
+      "image": "3T",
+      "quantity": 4,
+      "price": 160,
+      "color": "phase5h",
+      "rust": "3+"
+    },
+    {
+      "name": "6H",
+      "image": "3T",
+      "quantity": 3,
+      "price": 180,
+      "color": "phase6h",
+      "rust": "4+"
+    },
+    {
+      "name": "2+",
+      "image": "4T",
+      "quantity": 4,
+      "price": 220,
+      "color": "phase2+",
+      "rust": "7"
+    },
+    {
+      "name": "3+",
+      "image": "4T",
+      "quantity": 4,
+      "price": 240,
+      "color": "phase3+",
+      "rust": "D"
+    },
+    {
+      "name": "4+",
+      "image": "6T",
+      "quantity": 3,
+      "price": 200,
+      "color": "phase4+",
+      "rust": "D",
+      "description": "Runs once more after the Diesel"
+    },
+    {
+      "name": "7",
+      "image": "6T",
+      "quantity": 5,
+      "price": 500,
+      "color": "phase7"
+    },
+    {
+      "name": "D",
+      "image": "Diesel",
+      "quantity": 7,
+      "price": 600,
+      "color": "phaseD"
+    }
+  ],
+  "turns": [
+    {
+      "name": "Stock Round",
+      "steps": [
+        "Sell (at most 30% of one company per turn)",
+        "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Austrian Bank or Hungarian Bank"
+      ],
+      "optional": [
+        "Free: private exchanges, Hungarian Bank conversion (until 2+)"
+      ],
+      "ordered": true
+    },
+    {
+      "name": "Operating Round",
+      "steps": [
+        "Lay track",
+        "Place one station",
+        "Run trains",
+        "Pay or withhold",
+        "Buy trains (trade-ins)"
+      ],
+      "ordered": true
+    }
+  ],
+  "phases": [
+    {
+      "train": "2H",
+      "limit": 4,
+      "tiles": "yellow",
+      "rounds": 1
+    },
+    {
+      "train": "3H",
+      "limit": 4,
+      "tiles": "yellow",
+      "rounds": 1
+    },
+    {
+      "train": "4H",
+      "limit": 4,
+      "tiles": "green",
+      "rounds": 2,
+      "buyCompanies": true,
+      "notes": "Public Line Bonds may be exchanged"
+    },
+    {
+      "train": "5H",
+      "limit": 4,
+      "tiles": "green",
+      "rounds": 2
+    },
+    {
+      "train": "6H",
+      "limit": 4,
+      "tiles": "green",
+      "rounds": 2
+    },
+    {
+      "train": "2+",
+      "limit": 3,
+      "tiles": "green",
+      "rounds": 2,
+      "notes": "Hungarian Bank can no longer convert"
+    },
+    {
+      "train": "3+",
+      "limit": 3,
+      "tiles": "green",
+      "rounds": 2
+    },
+    {
+      "train": "4+",
+      "limit": 3,
+      "tiles": "brown",
+      "rounds": 3,
+      "events": {
+        "closeCompanies": true
+      }
+    },
+    {
+      "train": "7",
+      "limit": 2,
+      "tiles": "brown",
+      "rounds": 3
+    },
+    {
+      "train": "D",
+      "limit": 2,
+      "tiles": "gray",
+      "rounds": 3,
+      "notes": "Triggers game end"
+    }
+  ],
+  "tokenTypes": {
+    "default": [
+      "Free",
+      80,
+      80,
+      80
+    ]
+  },
+  "shareTypes": {
+    "default": [
+      {
+        "quantity": 1,
+        "label": "Director's Share",
+        "percent": 20,
+        "shares": 2
+      },
+      {
+        "quantity": 8,
+        "percent": 10,
+        "shares": 1
+      }
+    ]
+  },
+  "companies": [
+    {
+      "name": "Istrian",
+      "subtext": "Luka",
+      "abbrev": "IST",
+      "color": "yellow",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "sunrise": [
+          "lightBlue",
+          "yellow",
+          "orange"
         ]
+      }
     },
-    "companies": [
+    {
+      "name": "Zagorje",
+      "subtext": "Luka",
+      "abbrev": "ZAG",
+      "color": "lightBrown",
+      "token": {
+        "bar": false,
+        "barHeight": 18,
+        "fontSize": 20,
+        "stripes": "lightBrown",
+        "stripesDistance": 12,
+        "shapeAngle": 90,
+        "color": "natural"
+      }
+    },
+    {
+      "name": "Posavina",
+      "subtext": "Luka",
+      "abbrev": "POS",
+      "color": "brightGreen",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "sexies": [
+          "green",
+          "brightGreen"
+        ]
+      }
+    },
+    {
+      "name": "Slavonian",
+      "subtext": "Luka",
+      "abbrev": "SLA",
+      "color": "cherry",
+      "token": {
+        "color": "white",
+        "square": "cherry",
+        "shapeAngle": 45,
+        "fontSize": 20,
+        "labelColor": "white",
+        "inverseLabelColor": "red"
+      }
+    },
+    {
+      "name": "Lika",
+      "subtext": "Luka",
+      "abbrev": "LIK",
+      "color": "gray",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "stripes": "black",
+        "halves": [
+          "white",
+          "gray"
+        ],
+        "stripesWidth": 6
+      }
+    },
+    {
+      "name": "Podravina",
+      "subtext": "Luka",
+      "abbrev": "POD",
+      "color": "black",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "stripe": "yellow",
+        "shapeAngle": 45
+      }
+    },
+    {
+      "name": "Karlovac",
+      "subtext": "Luka",
+      "abbrev": "KAR",
+      "color": "lightBlue",
+      "token": {
+        "fontSize": 20,
+        "labelColor": "black",
+        "bar": false,
+        "barHeight": 18
+      }
+    },
+    {
+      "name": "Split",
+      "subtext": "Luka",
+      "abbrev": "SPL",
+      "color": "split",
+      "token": {
+        "fontSize": 20,
+        "color": "split",
+        "halves": [
+          "split",
+          "gold"
+        ],
+        "stripe": "white",
+        "stripeWidth": 8,
+        "shapeAngle": 45,
+        "labelColor": "black",
+        "bar": true,
+        "barHeight": 18
+      }
+    },
+    {
+      "name": "Kvarner",
+      "subtext": "Branch",
+      "abbrev": "KB",
+      "color": "lavender",
+      "token": {
+        "fontSize": 18,
+        "labelColor": "black",
+        "hexagram": [
+          "gray",
+          "violet"
+        ]
+      }
+    },
+    {
+      "name": "Gorski Kotar",
+      "subtext": "Branch",
+      "abbrev": "GB",
+      "color": "fuchsia",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "quarters": [
+          "fuchsia",
+          "natural",
+          "natural",
+          "fuchsia"
+        ]
+      }
+    },
+    {
+      "name": "Međimurje",
+      "subtext": "Branch",
+      "abbrev": "MB",
+      "color": "blue",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "color": "blue",
+        "stripe": "white",
+        "labelColor": "black"
+      }
+    },
+    {
+      "name": "Banija",
+      "subtext": "Branch",
+      "abbrev": "BB",
+      "color": "orange",
+      "token": {
+        "bar": true,
+        "barHeight": 20,
+        "fontSize": 20,
+        "color": "orange",
+        "curvedStripes": "black",
+        "curvedStripesDistance": 19,
+        "stripe": "black",
+        "stripeWidth": "6.25",
+        "labelColor": "black"
+      }
+    },
+    {
+      "name": "Velebit",
+      "subtext": "Branch",
+      "abbrev": "VB",
+      "color": "lime",
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 20,
+        "color": "lime",
+        "stripe": "yellow"
+      }
+    },
+    {
+      "name": "Luka",
+      "abbrev": "LUKA",
+      "marketTokens": 1,
+      "extraStationTokens": 6,
+      "tokens": [],
+      "color": "pink",
+      "minor": true,
+      "token": {
+        "bar": true,
+        "barHeight": 18,
+        "fontSize": 15,
+        "target": "white",
+        "color": "pink"
+      },
+      "shares": [
         {
-            "name": "Istrian",
-            "subtext": "Luka",
-            "abbrev": "IST",
-            "color": "yellow",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "sunrise": ["lightBlue", "yellow", "orange"]
-            }
+          "quantity": 1,
+          "label": "#1 Split",
+          "shares": 1
         },
         {
-            "name": "Zagorje",
-            "subtext": "Luka",
-            "abbrev": "ZAG",
-            "color": "lightBrown",
-            "token": {
-                "bar": false,
-                "barHeight": 18,
-                "fontSize": 20,
-                "stripes": "lightBrown",
-                "stripesDistance": 12,
-                "shapeAngle": 90,
-                "color": "natural"
-            }
+          "quantity": 1,
+          "label": "#2 Zagorje",
+          "shares": 1
         },
         {
-            "name": "Posavina",
-            "subtext": "Luka",
-            "abbrev": "POS",
-            "color": "brightGreen",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "sexies": ["green", "brightGreen"]
-            }
+          "quantity": 1,
+          "label": "#3 Lika",
+          "shares": 1
         },
         {
-            "name": "Slavonian",
-            "subtext": "Luka",
-            "abbrev": "SLA",
-            "color": "cherry",
-            "token": {
-                "color": "white",
-                "square": "cherry",
-                "shapeAngle": 45,
-                "fontSize": 20,
-                "labelColor": "white",
-                "inverseLabelColor": "red"
-            }
+          "quantity": 1,
+          "label": "#4 Posavina",
+          "shares": 1
         },
         {
-            "name": "Lika",
-            "subtext": "Luka",
-            "abbrev": "LIK",
-            "color": "gray",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "stripes": "black",
-                "halves": ["white", "gray"],
-                "stripesWidth": 6
-            }
+          "quantity": 1,
+          "label": "#5 Podravina",
+          "shares": 1
         },
         {
-            "name": "Podravina",
-            "subtext": "Luka",
-            "abbrev": "POD",
-            "color": "black",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "stripe": "yellow",
-                "shapeAngle": 45
-            }
+          "quantity": 1,
+          "label": "#6 Istrian",
+          "shares": 1
         },
         {
-            "name": "Karlovac",
-            "subtext": "Luka",
-            "abbrev": "KAR",
-            "color": "lightBlue",
-            "token": {
-                "fontSize": 20,
-                "labelColor": "black",
-                "bar": false,
-                "barHeight": 18
-            }
+          "quantity": 1,
+          "label": "#7 Slavonian",
+          "shares": 1
         },
         {
-            "name": "Split",
-            "subtext": "Luka",
-            "abbrev": "SPL",
-            "color": "split",
-            "token": {
-                "fontSize": 20,
-                "color": "split",
-                "halves": ["split", "gold"],
-                "stripe": "white",
-                "stripeWidth": 8,
-                "shapeAngle": 45,
-                "labelColor": "black",
-                "bar": true,
-                "barHeight": 18
-            }
-        },
-        {
-            "name": "Kvarner",
-            "subtext": "Branch",
-            "abbrev": "KB",
-            "color": "lavender",
-            "token": {
-                "fontSize": 18,
-                "labelColor": "black",
-                "hexagram": ["gray", "violet"]
-            }
-        },
-        {
-            "name": "Gorski Kotar",
-            "subtext": "Branch",
-            "abbrev": "GB",
-            "color": "fuchsia",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "quarters": ["fuchsia", "natural", "natural", "fuchsia"]
-            }
-        },
-        {
-            "name": "Međimurje",
-            "subtext": "Branch",
-            "abbrev": "MB",
-            "color": "blue",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "color": "blue",
-                "stripe": "white",
-                "labelColor": "black"
-            }
-        },
-        {
-            "name": "Banija",
-            "subtext": "Branch",
-            "abbrev": "BB",
-            "color": "orange",
-            "token": {
-                "bar": true,
-                "barHeight": 20,
-                "fontSize": 20,
-                "color": "orange",
-                "curvedStripes": "black",
-                "curvedStripesDistance": 19,
-                "stripe": "black",
-                "stripeWidth": "6.25",
-                "labelColor": "black"
-            }
-        },
-        {
-            "name": "Velebit",
-            "subtext": "Branch",
-            "abbrev": "VB",
-            "color": "lime",
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 20,
-                "color": "lime",
-                "stripe": "yellow"
-            }
-        },
-        {
-            "name": "Luka",
-            "abbrev": "LUKA",
-            "marketTokens": 1,
-            "extraStationTokens": 6,
-            "tokens": [],
-            "color": "pink",
-            "minor": true,
-            "token": {
-                "bar": true,
-                "barHeight": 18,
-                "fontSize": 15,
-                "target": "white",
-                "color": "pink"
-            },
-            "shares": [
-                {
-                    "quantity": 1,
-                    "label": "#1 Split",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#2 Zagorje",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#3 Lika",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#4 Posavina",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#5 Podravina",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#6 Istrian",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#7 Slavonian",
-                    "shares": 1
-                },
-                {
-                    "quantity": 1,
-                    "label": "#8 Karlovac",
-                    "shares": 1
-                }
-            ],
-            "subtext": "Pier",
-            "capital": 200
-        },
-        {
-            "name": "Austrian Bank",
-            "abbrev": "AB",
-            "token": {
-                "label": "$"
-            },
-            "marketTokens": 0,
-            "tokens": [],
-            "shares": [],
-            "minor": true,
-            "color": "gold",
-            "trains": false,
-            "subtext": "Union Bank"
-        },
-        {
-            "name": "Hungarian Bank",
-            "subtext": "Second Union Bank",
-            "abbrev": "HB",
-            "token": {
-                "label": "HB"
-            },
-            "marketTokens": 0,
-            "tokens": [],
-            "shares": [],
-            "minor": true,
-            "color": "red",
-            "trains": false
+          "quantity": 1,
+          "label": "#8 Karlovac",
+          "shares": 1
         }
-    ],
-    "map": {
-        "players": {
-            "x": 150,
-            "y": 1450
-        },
-        "roundTracker": {
-            "type": "row-reverse",
-            "x": 150,
-            "y": 1650
+      ],
+      "subtext": "Pier",
+      "capital": 200
+    },
+    {
+      "name": "Austrian Bank",
+      "abbrev": "AB",
+      "token": {
+        "label": "$"
+      },
+      "marketTokens": 0,
+      "tokens": [],
+      "shares": [],
+      "minor": true,
+      "color": "gold",
+      "trains": false,
+      "subtext": "Union Bank"
+    },
+    {
+      "name": "Hungarian Bank",
+      "subtext": "Second Union Bank",
+      "abbrev": "HB",
+      "token": {
+        "label": "HB"
+      },
+      "marketTokens": 0,
+      "tokens": [],
+      "shares": [],
+      "minor": true,
+      "color": "red",
+      "trains": false
+    }
+  ],
+  "map": {
+    "players": {
+      "x": 150,
+      "y": 1450
+    },
+    "roundTracker": {
+      "type": "row-reverse",
+      "x": 150,
+      "y": 1650
+    },
+    "hexes": [
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 1
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Trieste"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
         },
         "hexes": [
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 1
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Trieste"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["B8"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 6
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Ljubljana"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "30"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["E5"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 1
-                    },
-                    {
-                        "type": "offboard",
-                        "side": 6
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Budapest"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "40"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "70"
-                        }
-                    ]
-                },
-                "hexes": ["Q1"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 3
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Belgrade"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "50"
-                        }
-                    ]
-                },
-                "hexes": ["V16"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "side": 4,
-                        "type": "offboard"
-                    },
-                    {
-                        "type": "offboard",
-                        "side": 3
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Banja Luka"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["M17"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 4
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Sarajevo"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["S19"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 2
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Dubrovnik"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "40"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "60"
-                        }
-                    ]
-                },
-                "hexes": ["P24"]
-            },
-            {
-                "color": "offboard",
-                "track": [
-                    {
-                        "type": "offboard",
-                        "side": 5
-                    }
-                ],
-                "offBoardRevenue": {
-                    "name": {
-                        "name": "Malta"
-                    },
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "20"
-                        },
-                        {
-                            "color": "phase4h",
-                            "cost": "40"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "70"
-                        }
-                    ]
-                },
-                "hexes": ["K25"]
-            },
-            {
-                "color": "offboard",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Ancona"
-                        }
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 5
-                    }
-                ],
-                "offBoardRevenue": {
-                    "angle": 0,
-                    "percent": 0.6,
-                    "revenues": [
-                        {
-                            "color": "phase2h",
-                            "cost": "30"
-                        },
-                        {
-                            "color": "phase4+",
-                            "cost": "70"
-                        }
-                    ]
-                },
-                "hexes": ["B16"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["F6"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 4
-                    }
-                ],
-                "hexes": ["B10"]
-            },
-            {
-                "color": "gray",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Rovinj",
-                            "x": -30,
-                            "percent": 0.6,
-                            "rotate": -2
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
-                    },
-                    {
-                        "side": 1
-                    },
-                    {
-                        "side": 5
-                    }
-                ],
-                "hexes": ["C13"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Opatija"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Lovran",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["E11"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 3
-                    },
-                    {
-                        "type": "straight",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["G7"]
-            },
-            {
-                "color": "gray",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Krk",
-                            "x": -25,
-                            "percent": 0.6
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 20,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
-                    },
-                    {
-                        "side": 1
-                    }
-                ],
-                "hexes": ["F14"]
-            },
-            {
-                "color": "gray",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Rab",
-                            "x": -25,
-                            "percent": 0.6
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
-                    },
-                    {
-                        "side": 6
-                    },
-                    {
-                        "side": 5
-                    }
-                ],
-                "hexes": ["F16"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["G17"]
-            },
-            {
-                "color": "gray",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Pag",
-                            "x": -25,
-                            "percent": 0.6
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
-                    },
-                    {
-                        "side": 6
-                    }
-                ],
-                "hexes": ["G19"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 5
-                    }
-                ],
-                "hexes": ["N2"]
-            },
-            {
-                "color": "gray",
-                "hexes": ["T12"],
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Vukovar",
-                            "y": 30
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 4
-                    },
-                    {
-                        "side": 6
-                    },
-                    {
-                        "side": 3
-                    }
-                ]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["U13"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "side": 4,
-                        "type": "gentle"
-                    }
-                ],
-                "hexes": ["Q15"]
-            },
-            {
-                "color": "plain",
-                "hexes": ["R14"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["M15"]
-            },
-            {
-                "color": "gray",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Makarska",
-                            "y": -30
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10,
-                        "angle": 300,
-                        "percent": 0.6
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 3
-                    },
-                    {
-                        "side": 5
-                    }
-                ],
-                "hexes": ["M25"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 6
-                    }
-                ],
-                "hexes": ["N24"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["O25"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 4
-                    }
-                ],
-                "hexes": ["U15"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "side": 3,
-                        "type": "straight"
-                    }
-                ],
-                "hexes": ["R16"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["S17"]
-            },
-            {
-                "color": "gray",
-                "hexes": ["S5"],
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Beli Manastir"
-                        }
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 1
-                    },
-                    {
-                        "side": 3
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 10
-                    }
-                ]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 4
-                    }
-                ],
-                "hexes": ["R4"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "side": 6
-                    },
-                    {
-                        "side": 2
-                    }
-                ],
-                "hexes": ["O1"],
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Legrad"
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 20
-                    }
-                ]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "straight",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["P2"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "sharp",
-                        "side": 3
-                    }
-                ],
-                "hexes": ["Q3"]
-            },
-            {
-                "color": "gray",
-                "track": [
-                    {
-                        "type": "gentle",
-                        "side": 1
-                    }
-                ],
-                "hexes": ["R2"]
-            },
-            {
-                "color": "yellow",
-                "labels": [
-                    {
-                        "label": "Z",
-                        "angle": 30,
-                        "percent": 0.75
-                    }
-                ],
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Zagreb"
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 30,
-                        "angle": 150,
-                        "percent": 0.75
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 2
-                    },
-                    {
-                        "side": 6
-                    }
-                ],
-                "hexes": ["K7"]
-            },
-            {
-                "color": "yellow",
-                "labels": [
-                    {
-                        "label": "R",
-                        "angle": 30,
-                        "percent": 0.75
-                    }
-                ],
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Rijeka"
-                        }
-                    }
-                ],
-                "values": [
-                    {
-                        "value": 30,
-                        "angle": 210,
-                        "percent": 0.75
-                    }
-                ],
-                "track": [
-                    {
-                        "side": 3
-                    },
-                    {
-                        "side": 5
-                    }
-                ],
-                "hexes": ["F12"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Pula"
-                        },
-                        "companies": ["IST"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "P",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["C15"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Senj"
-                        }
-                    }
-                ],
-                "hexes": ["G15"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Ogulin"
-                        }
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "J",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["H12"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Gospić"
-                        },
-                        "companies": ["LIK"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["I17"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Karlovac"
-                        },
-                        "companies": ["KAR"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "CX",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["I11"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Varaždin"
-                        },
-                        "companies": ["ZAG"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["L4"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Sisak"
-                        },
-                        "companies": ["POS"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["L10"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Koprivnica"
-                        }
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "J",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["N4"],
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Bjelovar"
-                        },
-                        "companies": ["POD"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["N6"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Virovitica"
-                        }
-                    }
-                ],
-                "hexes": ["P8"],
-                "companies": [
-                    {
-                        "label": "P4",
-                        "color": "red",
-                        "angle": 120,
-                        "percent": 0.65
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Požega"
-                        }
-                    }
-                ],
-                "hexes": ["P12"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Slavonski Brod"
-                        }
-                    }
-                ],
-                "hexes": ["Q13"],
-                "labels": [
-                    {
-                        "label": "J",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Osijek"
-                        },
-                        "companies": ["SLA"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["S9"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Vinkovci"
-                        }
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "J",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["S11"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Zadar"
-                        }
-                    }
-                ],
-                "companies": [
-                    {
-                        "label": "P3",
-                        "color": "red",
-                        "angle": 120,
-                        "percent": 0.65
-                    }
-                ],
-                "hexes": ["H20"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Knin"
-                        }
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "S",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["L20"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Šibenik"
-                        }
-                    }
-                ],
-                "hexes": ["K23"],
-                "labels": [
-                    {
-                        "label": "S",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Split"
-                        },
-                        "companies": ["SPL"]
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "X",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["L24"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Pazin"
-                        }
-                    }
-                ],
-                "hexes": ["D12"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Delnice"
-                        }
-                    }
-                ],
-                "terrain": [
-                    {
-                        "type": "mountain",
-                        "cost": 80,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ],
-                "hexes": ["G11"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Otočac"
-                        }
-                    }
-                ],
-                "hexes": ["H16"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Samobor"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Zaprešić",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["J8"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Krapina"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Zabok",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["K5"],
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Glina"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Petrinja",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["K11"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Čakovec"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Prelog",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["L2"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Dugo Selo"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Vrbovec",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["L8"],
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80,
-                        "angle": 210,
-                        "percent": 0.6
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Križevci"
-                        }
-                    }
-                ],
-                "hexes": ["M5"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Kutina"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Popovača",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["N10"]
-            },
-            {
-                "color": "plain",
-                "cities": [
-                    {
-                        "name": {
-                            "name": "Novska"
-                        }
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "J",
-                        "angle": 30,
-                        "percent": 0.8
-                    }
-                ],
-                "hexes": ["N12"],
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80,
-                        "angle": 240,
-                        "percent": 0.6
-                    }
-                ]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Lipovljani"
-                        }
-                    }
-                ],
-                "hexes": ["M13"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Našice"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Orahovica",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["Q11"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Vrana"
-                        }
-                    }
-                ],
-                "hexes": ["I21"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Benkovac"
-                        },
-                        "y": -25
-                    },
-                    {
-                        "name": {
-                            "name": "Obrovac",
-                            "reverse": true
-                        },
-                        "y": 25
-                    }
-                ],
-                "hexes": ["J20"]
-            },
-            {
-                "color": "plain",
-                "centerTowns": [
-                    {
-                        "name": {
-                            "name": "Sinj"
-                        }
-                    }
-                ],
-                "hexes": ["L22"]
-            },
-            {
-                "color": "plain",
-                "terrain": [
-                    {
-                        "type": "mountain",
-                        "cost": 80
-                    }
-                ],
-                "hexes": ["F10", "G9", "H10", "H14", "P10", "H18", "J18", "M23", "K19", "E9"]
-            },
-            {
-                "color": "plain",
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "Kupa",
-                        "fontSize": 14,
-                        "angle": 0,
-                        "percent": 0.55
-                    }
-                ],
-                "hexes": ["J10", "J12", "I9", "H8"]
-            },
-            {
-                "color": "plain",
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "Sava",
-                        "fontSize": 14,
-                        "angle": 0,
-                        "percent": 0.55
-                    }
-                ],
-                "hexes": ["M11", "O13", "S13", "J4", "L6", "M9", "R12"]
-            },
-            {
-                "color": "plain",
-                "terrain": [
-                    {
-                        "type": "water",
-                        "cost": 80
-                    }
-                ],
-                "labels": [
-                    {
-                        "label": "Drava",
-                        "fontSize": 14,
-                        "angle": 0,
-                        "percent": 0.55
-                    }
-                ],
-                "hexes": ["M3", "O5", "Q7", "R10"]
-            },
-            {
-                "color": "plain",
-                "hexes": [
-                    "C11",
-                    "D10",
-                    "D14",
-                    "F8",
-                    "G13",
-                    "I13",
-                    "I15",
-                    "J14",
-                    "J16",
-                    "I5",
-                    "I7",
-                    "J6",
-                    "K3",
-                    "K9",
-                    "K13",
-                    "L12",
-                    "L14",
-                    "M7",
-                    "N8",
-                    "O7",
-                    "O9",
-                    "O11",
-                    "P4",
-                    "P6",
-                    "Q9",
-                    "R8",
-                    "T8",
-                    "I19",
-                    "O3",
-                    "Q5",
-                    "R6",
-                    "P14",
-                    "S7",
-                    "M1",
-                    "H6",
-                    "T10"
-                ]
-            },
-            {
-                "color": "plain",
-                "hexes": ["K21"]
-            },
-            {
-                "color": "gray",
-                "hexes": ["L16"],
-                "track": [
-                    {
-                        "side": 3,
-                        "type": "straight"
-                    }
-                ]
-            },
-            {
-                "color": "gray",
-                "hexes": ["K17"],
-                "track": [
-                    {
-                        "side": 3,
-                        "type": "sharp"
-                    }
-                ]
-            },
-            {
-                "color": "gray",
-                "hexes": ["K15"],
-                "track": [
-                    {
-                        "side": 6,
-                        "type": "sharp"
-                    }
-                ]
-            }
+          "B8"
         ]
-    },
-    "wip": true
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 6
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Ljubljana"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4h",
+              "cost": "30"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
+        },
+        "hexes": [
+          "E5"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 1
+          },
+          {
+            "type": "offboard",
+            "side": 6
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Budapest"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "40"
+            },
+            {
+              "color": "phase4+",
+              "cost": "70"
+            }
+          ]
+        },
+        "hexes": [
+          "Q1"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 3
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Belgrade"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4+",
+              "cost": "50"
+            }
+          ]
+        },
+        "hexes": [
+          "V16"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "side": 4,
+            "type": "offboard"
+          },
+          {
+            "type": "offboard",
+            "side": 3
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Banja Luka"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
+        },
+        "hexes": [
+          "M17"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 4
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Sarajevo"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
+        },
+        "hexes": [
+          "S19"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 2
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Dubrovnik"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "40"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
+        },
+        "hexes": [
+          "P24"
+        ]
+      },
+      {
+        "color": "offboard",
+        "track": [
+          {
+            "type": "offboard",
+            "side": 5
+          }
+        ],
+        "offBoardRevenue": {
+          "name": {
+            "name": "Malta"
+          },
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4h",
+              "cost": "40"
+            },
+            {
+              "color": "phase4+",
+              "cost": "70"
+            }
+          ]
+        },
+        "hexes": [
+          "K25"
+        ]
+      },
+      {
+        "color": "offboard",
+        "cities": [
+          {
+            "name": {
+              "name": "Ancona"
+            }
+          }
+        ],
+        "track": [
+          {
+            "side": 5
+          }
+        ],
+        "offBoardRevenue": {
+          "angle": 0,
+          "percent": 0.6,
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "30"
+            },
+            {
+              "color": "phase4+",
+              "cost": "70"
+            }
+          ]
+        },
+        "hexes": [
+          "B16"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "straight",
+            "side": 3
+          }
+        ],
+        "hexes": [
+          "F6"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 4
+          }
+        ],
+        "hexes": [
+          "B10"
+        ]
+      },
+      {
+        "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Rovinj",
+              "x": -30,
+              "percent": 0.6,
+              "rotate": -2
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 10,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
+        "track": [
+          {
+            "side": 4
+          },
+          {
+            "side": 1
+          },
+          {
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "C13"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Opatija"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Lovran",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "E11"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 3
+          },
+          {
+            "type": "straight",
+            "side": 3
+          }
+        ],
+        "hexes": [
+          "G7"
+        ]
+      },
+      {
+        "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Krk",
+              "x": -25,
+              "percent": 0.6
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 20,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
+        "track": [
+          {
+            "side": 4
+          },
+          {
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "F14"
+        ]
+      },
+      {
+        "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Rab",
+              "x": -25,
+              "percent": 0.6
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 10,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
+        "track": [
+          {
+            "side": 4
+          },
+          {
+            "side": 6
+          },
+          {
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "F16"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "G17"
+        ]
+      },
+      {
+        "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Pag",
+              "x": -25,
+              "percent": 0.6
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 10,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
+        "track": [
+          {
+            "side": 4
+          },
+          {
+            "side": 6
+          }
+        ],
+        "hexes": [
+          "G19"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "N2"
+        ]
+      },
+      {
+        "color": "gray",
+        "hexes": [
+          "T12"
+        ],
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Vukovar",
+              "y": 30
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 10
+          }
+        ],
+        "track": [
+          {
+            "side": 4
+          },
+          {
+            "side": 6
+          },
+          {
+            "side": 3
+          }
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "U13"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "side": 4,
+            "type": "gentle"
+          }
+        ],
+        "hexes": [
+          "Q15"
+        ]
+      },
+      {
+        "color": "plain",
+        "hexes": [
+          "R14"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "straight",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "M15"
+        ]
+      },
+      {
+        "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Makarska",
+              "y": -30
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 10,
+            "angle": 300,
+            "percent": 0.6
+          }
+        ],
+        "track": [
+          {
+            "side": 3
+          },
+          {
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "M25"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 6
+          }
+        ],
+        "hexes": [
+          "N24"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 3
+          }
+        ],
+        "hexes": [
+          "O25"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 4
+          }
+        ],
+        "hexes": [
+          "U15"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "side": 3,
+            "type": "straight"
+          }
+        ],
+        "hexes": [
+          "R16"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "S17"
+        ]
+      },
+      {
+        "color": "gray",
+        "hexes": [
+          "S5"
+        ],
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Beli Manastir"
+            }
+          }
+        ],
+        "track": [
+          {
+            "side": 1
+          },
+          {
+            "side": 3
+          }
+        ],
+        "values": [
+          {
+            "value": 10
+          }
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 4
+          }
+        ],
+        "hexes": [
+          "R4"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "side": 6
+          },
+          {
+            "side": 2
+          }
+        ],
+        "hexes": [
+          "O1"
+        ],
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Legrad"
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 20
+          }
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "straight",
+            "side": 3
+          }
+        ],
+        "hexes": [
+          "P2"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "sharp",
+            "side": 3
+          }
+        ],
+        "hexes": [
+          "Q3"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "R2"
+        ]
+      },
+      {
+        "color": "yellow",
+        "labels": [
+          {
+            "label": "Z",
+            "angle": 30,
+            "percent": 0.75
+          }
+        ],
+        "cities": [
+          {
+            "name": {
+              "name": "Zagreb"
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 30,
+            "angle": 150,
+            "percent": 0.75
+          }
+        ],
+        "track": [
+          {
+            "side": 2
+          },
+          {
+            "side": 6
+          }
+        ],
+        "hexes": [
+          "K7"
+        ]
+      },
+      {
+        "color": "yellow",
+        "labels": [
+          {
+            "label": "R",
+            "angle": 30,
+            "percent": 0.75
+          }
+        ],
+        "cities": [
+          {
+            "name": {
+              "name": "Rijeka"
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 30,
+            "angle": 210,
+            "percent": 0.75
+          }
+        ],
+        "track": [
+          {
+            "side": 3
+          },
+          {
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "F12"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Pula"
+            },
+            "companies": [
+              "IST"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "P",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "C15"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Senj"
+            }
+          }
+        ],
+        "hexes": [
+          "G15"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Ogulin"
+            }
+          }
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "H12"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Gospić"
+            },
+            "companies": [
+              "LIK"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "I17"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Karlovac"
+            },
+            "companies": [
+              "KAR"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "CX",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "I11"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Varaždin"
+            },
+            "companies": [
+              "ZAG"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "L4"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Sisak"
+            },
+            "companies": [
+              "POS"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "L10"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Koprivnica"
+            }
+          }
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "N4"
+        ],
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Bjelovar"
+            },
+            "companies": [
+              "POD"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "N6"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Virovitica"
+            }
+          }
+        ],
+        "hexes": [
+          "P8"
+        ],
+        "companies": [
+          {
+            "label": "P4",
+            "color": "red",
+            "angle": 120,
+            "percent": 0.65
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Požega"
+            }
+          }
+        ],
+        "hexes": [
+          "P12"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Slavonski Brod"
+            }
+          }
+        ],
+        "hexes": [
+          "Q13"
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Osijek"
+            },
+            "companies": [
+              "SLA"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "S9"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Vinkovci"
+            }
+          }
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "S11"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Zadar"
+            }
+          }
+        ],
+        "companies": [
+          {
+            "label": "P3",
+            "color": "red",
+            "angle": 120,
+            "percent": 0.65
+          }
+        ],
+        "hexes": [
+          "H20"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Knin"
+            }
+          }
+        ],
+        "labels": [
+          {
+            "label": "S",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "L20"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Šibenik"
+            }
+          }
+        ],
+        "hexes": [
+          "K23"
+        ],
+        "labels": [
+          {
+            "label": "S",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Split"
+            },
+            "companies": [
+              "SPL"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "label": "X",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "L24"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Pazin"
+            }
+          }
+        ],
+        "hexes": [
+          "D12"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Delnice"
+            }
+          }
+        ],
+        "terrain": [
+          {
+            "type": "mountain",
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
+        "hexes": [
+          "G11"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Otočac"
+            }
+          }
+        ],
+        "hexes": [
+          "H16"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Samobor"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Zaprešić",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "J8"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Krapina"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Zabok",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "K5"
+        ],
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Glina"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Petrinja",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "K11"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Čakovec"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Prelog",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "L2"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Dugo Selo"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Vrbovec",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "L8"
+        ],
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Križevci"
+            }
+          }
+        ],
+        "hexes": [
+          "M5"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Kutina"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Popovača",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "N10"
+        ]
+      },
+      {
+        "color": "plain",
+        "cities": [
+          {
+            "name": {
+              "name": "Novska"
+            }
+          }
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
+        ],
+        "hexes": [
+          "N12"
+        ],
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80,
+            "angle": 240,
+            "percent": 0.6
+          }
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Lipovljani"
+            }
+          }
+        ],
+        "hexes": [
+          "M13"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Našice"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Orahovica",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "Q11"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Vrana"
+            }
+          }
+        ],
+        "hexes": [
+          "I21"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Benkovac"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Obrovac",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "J20"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Sinj"
+            }
+          }
+        ],
+        "hexes": [
+          "L22"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "mountain",
+            "cost": 80
+          }
+        ],
+        "hexes": [
+          "F10",
+          "G9",
+          "H10",
+          "H14",
+          "P10",
+          "H18",
+          "J18",
+          "M23",
+          "K19",
+          "E9"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Kupa",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
+        ],
+        "hexes": [
+          "J10",
+          "J12",
+          "I9",
+          "H8"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Sava",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
+        ],
+        "hexes": [
+          "M11",
+          "O13",
+          "S13",
+          "J4",
+          "L6",
+          "M9",
+          "R12"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Drava",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
+        ],
+        "hexes": [
+          "M3",
+          "O5",
+          "Q7",
+          "R10"
+        ]
+      },
+      {
+        "color": "plain",
+        "hexes": [
+          "C11",
+          "D10",
+          "D14",
+          "F8",
+          "G13",
+          "I13",
+          "I15",
+          "J14",
+          "J16",
+          "I5",
+          "I7",
+          "J6",
+          "K3",
+          "K9",
+          "K13",
+          "L12",
+          "L14",
+          "M7",
+          "N8",
+          "O7",
+          "O9",
+          "O11",
+          "P4",
+          "P6",
+          "Q9",
+          "R8",
+          "T8",
+          "I19",
+          "O3",
+          "Q5",
+          "R6",
+          "P14",
+          "S7",
+          "M1",
+          "H6",
+          "T10"
+        ]
+      },
+      {
+        "color": "plain",
+        "hexes": [
+          "K21"
+        ]
+      },
+      {
+        "color": "gray",
+        "hexes": [
+          "L16"
+        ],
+        "track": [
+          {
+            "side": 3,
+            "type": "straight"
+          }
+        ]
+      },
+      {
+        "color": "gray",
+        "hexes": [
+          "K17"
+        ],
+        "track": [
+          {
+            "side": 3,
+            "type": "sharp"
+          }
+        ]
+      },
+      {
+        "color": "gray",
+        "hexes": [
+          "K15"
+        ],
+        "track": [
+          {
+            "side": 6,
+            "type": "sharp"
+          }
+        ]
+      }
+    ]
+  },
+  "wip": true
 }
