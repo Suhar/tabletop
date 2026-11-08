@@ -23,8 +23,8 @@ export const TwoCrownsPresentation: TitlePresentation = {
     },
     includedCompanyIds: ['LUKA'],
     mapFocusExcludedCompanyIds: ['LUKA'],
-    portfolioCompanyIds: ['P12'],
-    includedPortfolioCompanyIds: ['P12'],
+    portfolioCompanyIds: ['P12', 'P14'],
+    includedPortfolioCompanyIds: ['P12', 'P14'],
     poolName: (pool) =>
         pool.id === 'reserved'
             ? 'Exchange'
