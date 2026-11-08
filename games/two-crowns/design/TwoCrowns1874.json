@@ -5,7 +5,7 @@
         "background": "shortline",
         "orientation": "horizontal",
         "titleY": 1650,
-        "titleX": 60,
+        "titleX": 150,
         "titleFontSize": 100,
         "designerFontSize": 60,
         "currency": "$#",
@@ -265,10 +265,10 @@
     "tiles": {
         "1": 2,
         "3": 8,
-        "5": 13,
-        "6": 14,
-        "7": 18,
-        "8": 33,
+        "5": 10,
+        "6": 10,
+        "7": 10,
+        "8": 16,
         "9": 1,
         "16": 5,
         "17": 4,
@@ -1964,8 +1964,7 @@
             "train": "2H",
             "limit": 4,
             "tiles": "yellow",
-            "rounds": 1,
-            "notes": "Start prices 80–58; the Late space may start one space higher (86)"
+            "rounds": 1
         },
         {
             "train": "3H",
@@ -1979,17 +1978,13 @@
             "tiles": "green",
             "rounds": 2,
             "buyCompanies": true,
-            "notes": [
-                "Companies may buy Zadar and Virovitica Station Rights (½×–1× face) until the first 4+",
-                "Wiener Neustadt can be sold to companies"
-            ]
+            "notes": "Public Line Bonds may be exchanged"
         },
         {
             "train": "5H",
             "limit": 4,
             "tiles": "green",
-            "rounds": 2,
-            "notes": "Start price 80 gone (Late space: 80)"
+            "rounds": 2
         },
         {
             "train": "6H",
@@ -2008,8 +2003,7 @@
             "train": "3+",
             "limit": 3,
             "tiles": "green",
-            "rounds": 2,
-            "notes": "Start prices 65–58 only (Late space: 74)"
+            "rounds": 2
         },
         {
             "train": "4+",
@@ -2018,27 +2012,20 @@
             "rounds": 3,
             "events": {
                 "closeCompanies": true
-            },
-            "notes": ["Privates close, except the Austrian Bank", "Junction upgrades open"]
+            }
         },
         {
             "train": "7",
             "limit": 2,
             "tiles": "brown",
-            "rounds": 3,
-            "notes": "Start price 58 only (Late space: 65)"
+            "rounds": 3
         },
         {
             "train": "D",
             "limit": 2,
             "tiles": "gray",
             "rounds": 3,
-            "notes": [
-                "Game end: finish the set, one final SR, then 3 ORs",
-                "Each 4+ still runs once after the Diesel and can't be sold",
-                "Diesels are unlimited",
-                "Final 3 ORs: the only tiles that may be laid are the CX (Karlovac) and the one other gray tile"
-            ]
+            "notes": "Triggers game end"
         }
     ],
     "tokenTypes": {
@@ -2327,12 +2314,12 @@
     ],
     "map": {
         "players": {
-            "x": 60,
+            "x": 150,
             "y": 1450
         },
         "roundTracker": {
             "type": "row-reverse",
-            "x": 50,
+            "x": 150,
             "y": 1650
         },
         "hexes": [

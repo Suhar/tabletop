@@ -2,7 +2,8 @@
 // Run with `pnpm import`; `pnpm import:watch` reruns it and rebuilds the package whenever the
 // design folder changes, so a running harness picks up the new data on reload.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -367,8 +368,39 @@ export const TwoCrownsPlayerData = ${literal(players)} as const
 `
 }
 
+// design.ts stamps the build with the design version (from design/SOURCE.json, written by
+// scripts/sync-design.mjs) and short hashes of the generated modules, so bot runs can record
+// which map, tiles and data they played.
+function designModule(modules) {
+    const sourcePath = join(root, 'design', 'SOURCE.json')
+    const source = existsSync(sourcePath)
+        ? JSON.parse(readFileSync(sourcePath, 'utf8'))
+        : { version: 'unsynced', commit: '', dirty: true }
+    const hash = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8)
+    // A copy changed since the last sync (by hand, or by sync-to-tabletop.ps1) no longer matches
+    // its recorded commit, so the build is marked dirty.
+    const copied = Object.entries(source.files ?? {}).every(
+        ([file, sha]) =>
+            createHash('sha256')
+                .update(readFileSync(join(root, 'design', file)))
+                .digest('hex')
+                .slice(0, 12) === sha
+    )
+    const design = {
+        version: source.version,
+        commit: source.commit,
+        dirty: source.dirty || !source.files || !copied,
+        mapHash: hash(modules['map.ts']),
+        tilesHash: hash(modules['tiles.ts']),
+        dataHash: hash(modules['data.ts'])
+    }
+    return `${header}export const TwoCrownsDesign = ${literal(design)} as const
+`
+}
+
 mkdirSync(outDir, { recursive: true })
 const outputs = { 'map.ts': mapModule(), 'tiles.ts': tilesModule(), 'data.ts': dataModule() }
+outputs['design.ts'] = designModule(outputs)
 for (const [file, contents] of Object.entries(outputs)) writeFileSync(join(outDir, file), contents)
 execFileSync('pnpm', ['exec', 'prettier', '--write', '--log-level', 'warn', outDir], {
     cwd: root,

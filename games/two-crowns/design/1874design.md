@@ -54,17 +54,17 @@ Both are available from the Diesel. In the final 3 ORs they are the only tiles t
 
 ### Tile manifest
 
-Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and one straight yellow track (9, the Lika Survey Office's). Z, R, J, S and P tiles have no 1871 counterpart. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown.
+Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and one straight yellow track (9, the Lika Survey Office's). Z, R, J, S and P tiles have no 1871 counterpart. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown. Yellow track and yellow cities are cut below that scaling (0.5.0; they were 52 and 27).
 
 | Tiles                 | 1871                                       | 1874 spots                      | 1874 tiles                                                                                                              |
 | --------------------- | ------------------------------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Yellow track          | 38 for 41 blank hexes                      | 63                              | 52: 18 of 7, 33 of 8, 1 of 9                                                                                            |
+| Yellow track          | 38 for 41 blank hexes                      | 63                              | 27: 10 of 7, 16 of 8, 1 of 9                                                                                            |
 | Green track           | 34                                         | 63                              | 52                                                                                                                      |
 | Brown track           | 13, one of each                            | 63                              | 20: a second 39, 43, 45, 46, 70, 628 and 629, the most-needed upgrades                                                  |
 | Yellow single towns   | 14 for 6 hexes                             | 8                               | 14: 8 of 3, 6 of 58                                                                                                     |
 | Yellow double towns   | 12 for 10 hexes                            | 9                               | 12: 2 of tile 1, 2 each of 56 and 630 to 633 (Čakovec/Prelog can only take 56 or 632, Benkovac/Obrovac only 630 or 631) |
 | Green and brown towns | 4 and 2                                    | 17 town hexes                   | 4 (143, 144) and 2 (767, 769)                                                                                           |
-| Yellow cities         | 14 for 10 hexes                            | 18                              | 27: 13 of 5, 14 of 6                                                                                                    |
+| Yellow cities         | 14 for 10 hexes                            | 18                              | 20: 10 of 5, 10 of 6                                                                                                    |
 | Green cities          | 9 for 6 hexes                              | 8 (3 cities, 5 junctions)       | 12                                                                                                                      |
 | Brown cities          | 2 for 7 hexes                              | 4, 2 with room for brown        | 3 (611): most cities stop at green, as in 1871                                                                          |
 | Green and brown X     | 8 each for 7 hexes                         | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, the only one that fits Pula), 11 brown (3 each of X5 to X7, 2 of X8)                                  |
@@ -326,7 +326,7 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 | 6H     | $180 | 3     | 3H     | 2           | 4           | Green            | —                                                                                                                     |
 | 2+     | $220 | 4     | 4H     | 2           | 3           | Green            | Hungarian Bank can no longer convert                                                                                  |
 | 3+     | $240 | 4     | 5H     | 2           | 3           | Green            | Start prices 65–58 only (Late space: 74)                                                                              |
-| 4+     | $200 | 3     | 6H     | 3           | 3           | + Brown          | Privates close (except the Austrian Bank); junction upgrades open                                                     |
+| 4+     | $200 | 3     | 6H     | 3           | 3           | + Brown          | Privates close (except the Austrian and Hungarian Banks); junction upgrades open                                      |
 | 7      | $500 | 5     | 2+     | 3           | 2           | Brown            | Start price 58 only (Late space: 65)                                                                                  |
 | Diesel | $600 | 7     | 3+, 4+ | 3           | 2           | + Gray (2 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the two gray tiles may be laid |
 

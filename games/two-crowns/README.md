@@ -5,16 +5,25 @@
 
 ## Sources
 
-- `design/TwoCrowns1874.json`: the 18xx Maker prototype (map, tiles, companies, privates, market,
-  trains, phases, player counts).
-- `design/1874design.md`: the design document and source of truth for rules and numbers.
+The design lives in its own private repo, [Suhar/two-crowns-1874](https://github.com/Suhar/two-crowns-1874),
+which is the single source for both authorities:
 
-Both are copied in from the designer's working folder. `scripts/import-maker.mjs` turns the JSON
-into `src/generated/`; never edit those files by hand.
+- `TwoCrowns1874.json`: the 18xx Maker prototype (map, tiles, companies, privates, market,
+  trains, phases, player counts).
+- `1874design.md`: the design document and source of truth for rules and numbers.
+
+`design/` holds copies; edit the design repo, never these. `scripts/sync-design.mjs` pulls the
+clone at `<main checkout>/design/two-crowns-1874` (or `$TWO_CROWNS_DESIGN`), copies both files
+in, records the design version and commit in `design/SOURCE.json`, and runs the import.
+`scripts/import-maker.mjs` turns the JSON into `src/generated/`; never edit those files by hand.
+`src/generated/design.ts` exports `TwoCrownsDesign`: the design version and commit, plus short
+hashes of the generated map, tiles and data.
 
 ```
-pnpm --filter @tabletop/two-crowns import        # regenerate src/generated
-pnpm --filter @tabletop/two-crowns import:watch  # regenerate and rebuild on every design change
+pnpm --filter @tabletop/two-crowns run sync            # pull the design repo, copy, regenerate
+pnpm --filter @tabletop/two-crowns run sync --build    # the same, then rebuild esm
+pnpm --filter @tabletop/two-crowns run import          # regenerate src/generated from design/
+pnpm --filter @tabletop/two-crowns run import:watch    # regenerate and rebuild on every design change
 ```
 
 ## Current scope

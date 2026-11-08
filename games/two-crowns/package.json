@@ -25,7 +25,8 @@
         "bundle": "rimraf bundle && node ../../tools/scripts/write-game-version.cjs && rolldown -c ./rolldown.config.ts",
         "lint": "eslint .",
         "import": "node scripts/import-maker.mjs",
-        "import:watch": "node --watch-path=design --watch-preserve-output scripts/import-maker.mjs --build"
+        "import:watch": "node --watch-path=design --watch-preserve-output scripts/import-maker.mjs --build",
+        "sync": "node scripts/sync-design.mjs"
     },
     "dependencies": {
         "@tabletop/18xx": "workspace:*",
