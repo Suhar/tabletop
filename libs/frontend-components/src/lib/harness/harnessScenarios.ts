@@ -48,7 +48,7 @@ function scenarioFile() {
 }
 
 // Files hold JSON, so the dates of the game and its actions are read back from strings.
-function scenarioData(file: unknown): ScenarioData {
+export function scenarioData(file: unknown): ScenarioData {
     Value.Assert(scenarioFile(), file)
     const game = Value.Convert(Game, file.game)
     Value.Assert(Game, game)

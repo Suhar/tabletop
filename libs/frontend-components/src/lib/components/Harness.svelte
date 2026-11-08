@@ -36,8 +36,15 @@
         type Scenario
     } from '$lib/harness/harnessScenarios.js'
     import { saveToDevice } from '$lib/utils/saveToDevice.js'
+    import type { HarnessTools } from '$lib/harness/harnessTools.js'
 
-    let { definition }: { definition: GameUiDefinition<GameState, HydratedGameState> } = $props()
+    let {
+        definition,
+        tools
+    }: {
+        definition: GameUiDefinition<GameState, HydratedGameState>
+        tools?: Snippet<[HarnessTools]>
+    } = $props()
     const appContext = createHarnessAppContext(definition)
     setAppContext(appContext)
 
@@ -454,6 +461,12 @@
                         <option value="host">Host View</option>
                     </select>
                 </label>
+            {/if}
+            {#if tools}
+                {@render tools({
+                    session: sessions.loading ? undefined : gameSession,
+                    openScenario: loadScenario
+                })}
             {/if}
         </div>
     </Navbar>
