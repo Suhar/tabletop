@@ -77,7 +77,7 @@
 </script>
 
 <svelte:head>
-    <title>{game ? `Join ${game.name}` : 'Game invitation'} · Board Together</title>
+    <title>{game ? `Join ${game.name}` : 'Game invitation'} · __SITE_NAME__</title>
 </svelte:head>
 
 <main class="mx-auto flex max-w-lg flex-col items-center gap-4 px-4 py-10">

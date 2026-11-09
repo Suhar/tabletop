@@ -38,7 +38,7 @@
     }
 </script>
 
-<svelte:head><title>My games — Board Together</title></svelte:head>
+<svelte:head><title>My games — __SITE_NAME__</title></svelte:head>
 <main class="dashboard collection-page">
     <header class="page-heading collection-header">
         <h1 class="collection-heading">Your games.</h1>

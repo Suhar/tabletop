@@ -45,7 +45,7 @@ export const TournamentResults = ({
             subline={`${title} · ${standings.length} players`}
             footer={
                 <>
-                    You played in this tournament on Board Together. <ButtonFallback url={url} />
+                    You played in this tournament on __SITE_NAME__. <ButtonFallback url={url} />
                 </>
             }
         >

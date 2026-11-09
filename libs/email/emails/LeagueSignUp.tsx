@@ -48,8 +48,7 @@ export const LeagueSignUp = ({
             subline={`${title} · Season ${seasonNumber}`}
             footer={
                 <>
-                    You have a place held in this league on Board Together.{' '}
-                    <ButtonFallback url={url} />
+                    You have a place held in this league on __SITE_NAME__. <ButtonFallback url={url} />
                 </>
             }
         >

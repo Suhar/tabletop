@@ -14,7 +14,8 @@ import {
 } from '@react-email/components'
 import type { CSSProperties, ReactNode } from 'react'
 
-const SITE_URL = 'https://boardtogether.games'
+const SITE_URL = '__SITE_URL__'
+const SITE_NAME = '__SITE_NAME__'
 
 export const darkPalette = {
     canvas: '#111827',
@@ -116,23 +117,12 @@ const wordmarkStyles = {
         color: darkPalette.brandBlue,
         textDecoration: 'none',
     },
-    together: {
-        fontSize: '18px',
-        fontWeight: 300,
-        letterSpacing: '0.04em',
-        color: darkPalette.muted,
-        textDecoration: 'none',
-    },
 } satisfies Record<string, CSSProperties>
 
 const Wordmark = ({ href }: { href: string }) => (
     <Section style={wordmarkStyles.section}>
         <Link href={href} style={wordmarkStyles.board} data-wordmark="true">
-            BOARD
-        </Link>
-        <Link href={href} style={wordmarkStyles.together} data-wordmark="true">
-            {' '}
-            TOGETHER
+            {SITE_NAME.toUpperCase()}
         </Link>
     </Section>
 )

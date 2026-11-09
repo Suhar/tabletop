@@ -13,7 +13,7 @@
         return () => {
             // Pages without their own title would keep this one; skip if the next page set its own
             if (document.title === title) {
-                document.title = 'Board Together'
+                document.title = '__SITE_NAME__'
             }
         }
     })

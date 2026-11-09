@@ -73,7 +73,7 @@ export const LeagueSeasonResults = (props: LeagueSeasonResultsProps) => {
             subline={`${title} · Group ${groupName}`}
             footer={
                 <>
-                    You played in this league season on Board Together. <ButtonFallback url={url} />
+                    You played in this league season on __SITE_NAME__. <ButtonFallback url={url} />
                 </>
             }
         >

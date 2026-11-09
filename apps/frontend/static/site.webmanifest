@@ -1,6 +1,6 @@
 {
-    "name": "BoardTogether",
-    "short_name": "BoardTogether",
+    "name": "__SITE_NAME__",
+    "short_name": "__SITE_NAME__",
     "description": "Play board games together online.",
     "id": "/",
     "start_url": "/?standalone=true",

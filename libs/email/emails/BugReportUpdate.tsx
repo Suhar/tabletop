@@ -104,7 +104,7 @@ BugReportUpdate.PreviewProps = {
     gameUrl: 'https://boardtogether.games/game/qidEk1NjzIRBEioOpoCGD',
     postUrl: 'https://discord.com/channels/1272765028621353041/1560030519620542515',
     inviteUrl: 'https://discord.gg/5ggK5VGGvA',
-    footer: 'You reported this bug on BoardTogether.',
+    footer: 'You reported this bug on __SITE_NAME__.',
 } satisfies BugReportUpdateProps
 
 export default BugReportUpdate
