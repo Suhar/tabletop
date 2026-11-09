@@ -30,7 +30,7 @@ export const TwoCrownsState = composeEighteenXXState(
         fourPlusTrainIdsWithOperatingOpportunity: Type.Optional(
             Type.Array(Type.String(), { uniqueItems: true })
         ),
-        // The company that bought the Ancona Steamship Line.
+        // The company that bought the Ancona Steamship.
         anconaCompanyId: Type.Optional(Type.String({ minLength: 1 })),
         // Trade-ins this operating round, as "set.round:companyId" (once per OR, 1874design.md).
         tradeIns: Type.Optional(Type.Array(Type.String(), { uniqueItems: true })),

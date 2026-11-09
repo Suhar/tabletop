@@ -197,7 +197,7 @@ export const TwoCrownsPrivateData = [
     },
     {
         id: 'P17',
-        name: 'Ancona Steamship Line',
+        name: 'Ancona Steamship',
         faceValue: 90,
         revenue: 15,
         description:

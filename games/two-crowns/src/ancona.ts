@@ -11,7 +11,7 @@ import { TwoCrownsTileSet } from './tiles.js'
 import { TwoCrownsPhases } from './trains.js'
 import type { TwoCrownsState } from './state.js'
 
-// 1874design.md, Ancona Steamship Line (P17).
+// 1874design.md, Ancona Steamship (P17).
 export const AnconaId = 'B16'
 export const AnconaLineId = 'P17'
 

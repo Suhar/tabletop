@@ -13,7 +13,7 @@ const StationRightsCities: Readonly<Record<string, string>> = { P3: 'Zadar', P4:
 const BlockedHexes: Readonly<Record<string, string>> = { P1: 'L6' }
 // The Austrian Bank, the Hungarian Bank and the Lika Survey Office survive the 4+.
 const NeverClosingIds = ['P8', 'P12', 'P14']
-// Sold to companies for half to full face: the Station Rights and the Ancona Steamship Line.
+// Sold to companies for half to full face: the Station Rights and the Ancona Steamship.
 const HalfToFaceSaleIds = [...Object.keys(StationRightsCities), 'P17']
 
 function locationNamed(name: string): string {

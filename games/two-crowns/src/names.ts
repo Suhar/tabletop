@@ -18,5 +18,5 @@ export const TwoCrownsNames = titleNames(
         ...TwoCrownsPrivates.map((company) => [company.id, company.name])
     ]),
     (poolId) => (isTreasuryPoolId(poolId) ? 'Treasury shares' : PoolNames[poolId]),
-    { [AnconaLineId]: 'Ancona Steamship Line' }
+    { [AnconaLineId]: 'Ancona Steamship' }
 )

@@ -39,7 +39,7 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Trieste | Offboard | 20 / 20 / 60 | Rijeka's rival port |
 | Belgrade | Offboard | 20 / 20 / 50 | The eastern exit, past Vukovar |
 | Banja Luka, Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exits |
-| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship Line, which also boosts it |
+| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
 | Dubrovnik | Sea offboard | 40 / 40 / 60 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 70 | The Malta steamer out of Split |
 
@@ -163,7 +163,7 @@ The round structure is 1871's: dealt auction, then stock rounds alternating with
 2. Then one action: buy one share, start a Luka company, start a Branch company in the Late space, split a company, act for the Austrian Bank, or act for the Hungarian Bank (until it converts).
 3. Free actions any time on your turn: private exchanges, and converting the Hungarian Bank (until the first 2+; stock rounds only). Doing only a free action does not count as a pass.
 
-**Selling privates to companies (1894).** From the 4H phase until the first 4+, a company may buy Zadar or Virovitica Station Rights (P3, P4) from a player for ½× to 1× face, Wiener Neustadt (P10) for $1–200, or the Ancona Steamship Line (P17) for ½× to 1× face. The Luka may buy only the Station Rights. Both sides must agree. This is the main liquidity valve.
+**Selling privates to companies (1894).** From the 4H phase until the first 4+, a company may buy Zadar or Virovitica Station Rights (P3, P4) from a player for ½× to 1× face, Wiener Neustadt (P10) for $1–200, or the Ancona Steamship (P17) for ½× to 1× face. The Luka may buy only the Station Rights. Both sides must agree. This is the main liquidity valve.
 
 **Operating round, per company**
 
@@ -310,7 +310,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 
 - **Major shareholdings.** Concessions carry presidencies. Here, the MÁV, Südbahn and Narodna Concessions.
 - **Starting stake for everyone.** 1894 deals each player shares of its starting companies. 1874 deals a Public Line Bond instead, so the stake can't be dumped before the line is strong.
-- **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights and the Ancona Steamship Line (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+.
+- **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights and the Ancona Steamship (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+.
 - **Blocking privates.** A private that blocks a hex stops blocking it once a company buys the private.
 - **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players, and one is removed at random at 4–5 players, like Liège and Antwerpen in 1894.
 
@@ -322,7 +322,7 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2H | $80 | 4 | — | 1 | 4 | Yellow | Start prices 80–58 (Late space: 86) |
 | 3H | $100 | 4 | — | 1 | 4 | Yellow | — |
-| 4H | $120 | 4 | — | 2 | 4 | + Green | Companies may buy the Station Rights, Wiener Neustadt and the Ancona Steamship Line |
+| 4H | $120 | 4 | — | 2 | 4 | + Green | Companies may buy the Station Rights, Wiener Neustadt and the Ancona Steamship |
 | 5H | $160 | 4 | 2H | 2 | 4 | Green | Start price 80 gone (Late space: 80) |
 | 6H | $180 | 3 | 3H | 2 | 4 | Green | — |
 | 2+ | $220 | 4 | 4H | 2 | 3 | Green | Hungarian Bank can no longer convert |
@@ -340,7 +340,7 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 
 ## Private companies
 
-There are 16 privates, numbered P1 to P17 by face value in the first draft, so the Rijeka Lazaretto (P5), the Hungarian Bank (P14), the Südbahn Concession (P16) and the Ancona Steamship Line (P17) are out of order. P6 is unused: the Dubrovnik Lazaretto was cut. All 16 are in play at 3 players and 15 at 4–5. The concessions, the Austrian Bank and the Hungarian Bank are privates like any other. Privates that work like an 1871 private keep its price, apart from the Austrian Bank ($140, 1871 $120) and the MÁV and Südbahn Concessions ($150 and $145, 1871 $160). All work like 1871's privates: they pay at the start of each OR, are public, and close on the first 4+ unless they say otherwise.
+There are 16 privates, numbered P1 to P17 by face value in the first draft, so the Rijeka Lazaretto (P5), the Hungarian Bank (P14), the Südbahn Concession (P16) and the Ancona Steamship (P17) are out of order. P6 is unused: the Dubrovnik Lazaretto was cut. All 16 are in play at 3 players and 15 at 4–5. The concessions, the Austrian Bank and the Hungarian Bank are privates like any other. Privates that work like an 1871 private keep its price, apart from the Austrian Bank ($140, 1871 $120) and the MÁV and Südbahn Concessions ($150 and $145, 1871 $160). All work like 1871's privates: they pay at the start of each OR, are public, and close on the first 4+ unless they say otherwise.
 
 | # | Name | Face | Revenue | Power | Closes |
 | --- | --- | --- | --- | --- | --- |
@@ -359,7 +359,7 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 | P14 | Hungarian Bank | $90 | $0 | Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz (holdings go to the owner). | Never, unless converted |
 | P15 | MÁV Concession | $150 | $20 | MÁV president's certificate. | When MÁV operates |
 | P16 | Südbahn Concession | $145 | $30 | Südbahn president's certificate. | When the Südbahn operates |
-| P17 | Ancona Steamship Line | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the 4H phase until the first 4+. The buying company places its cheapest station on Ancona's reserved space, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |
+| P17 | Ancona Steamship | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the 4H phase until the first 4+. The buying company places its cheapest station on Ancona's reserved space, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |
 
 **Lika Survey Office pricing (0.6.0).** Until 0.5.0 it paid $30 per OR and closed on the first 4+. In 650 bot games under 0.4.0 and 0.5.0 (v19 bots), a game ran 15.6 ORs, 7.9 of them up to and including the OR of the first 4+ and 7.7 after it; at 4–5 players 16.1, 8.3 and 7.8. That paid its owner about $30 × 8.3 = $248 at 4–5 players. Never closing, it pays for every OR, so $248 / 16.1 = $15.4 per OR keeps the same total; it pays $15 ($242 at 4–5 players, $234 overall). The money now comes later in the game, which the G2 tile makes up for.
 
@@ -396,7 +396,7 @@ The main question is whether short and long games both stay open: players should
 | Winner's main holdings | No private or company should be a must-buy |
 | Whether and when the Hungarian Bank converts | Whether Ganz is worth giving up a bank for |
 | Trade-ins: how often, and on which ranks | Whether once per OR, rank-below only, is too tight to move the game |
-| When the Ancona Steamship Line is sold, to whom and for how much | Whether ½×–1× face is the right price for the Ancona station |
+| When the Ancona Steamship is sold, to whom and for how much | Whether ½×–1× face is the right price for the Ancona station |
 | Prices paid when companies buy privates | Whether the liquidity valve gets used, and at what multiple |
 
 **Open questions**

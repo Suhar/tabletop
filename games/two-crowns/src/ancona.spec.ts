@@ -4,8 +4,8 @@ import { TwoCrownsTransferRules } from './transferRules.js'
 import { twoCrownsRole } from './companies.js'
 import { AnconaLineId, afterAnconaPurchase } from './ancona.js'
 
-// 1874design.md, Ancona Steamship Line (P17): sold to a non-Luka company for ½×–1× face.
-describe('1874 Ancona Steamship Line', () => {
+// 1874design.md, Ancona Steamship (P17): sold to a non-Luka company for ½×–1× face.
+describe('1874 Ancona Steamship', () => {
     const asset = { kind: 'private' as const, privateCompanyId: AnconaLineId }
     function withLineHeldBy(playerId: string) {
         const state = startTwoCrowns(4)

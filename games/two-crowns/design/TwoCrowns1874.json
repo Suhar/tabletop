@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.7.0"
+    "subtitle": "Prototype 0.7.1"
   },
   "prototype": true,
   "bank": "∞",
@@ -116,7 +116,6 @@
     },
     {
       "name": "Ganz Locomotive Works",
-      "note": "Hungarian Bank conversion",
       "id": "G",
       "revenue": 20,
       "icon": "train",
@@ -231,8 +230,8 @@
       "price": 90,
       "revenue": 0,
       "token": {
-        "label": "HB",
-        "color": "cherry"
+        "label": "$",
+        "color": "red"
       },
       "description": "Comes with a Public Line share; works like the Austrian Bank. Until the first 2+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits."
     },
@@ -253,13 +252,13 @@
       "price": 145,
       "revenue": 30,
       "token": {
-        "label": "SB",
+        "label": "SUD",
         "color": "violet"
       },
       "description": "Comes with the Shortline president's certificate. Closes when the Shortline first operates."
     },
     {
-      "name": "Ancona Steamship Line",
+      "name": "Ancona Steamship",
       "id": "P17",
       "price": 90,
       "revenue": 15,
@@ -2349,7 +2348,6 @@
           "shares": 1
         }
       ],
-      "subtext": "Pier",
       "capital": 200
     },
     {
@@ -2363,12 +2361,10 @@
       "shares": [],
       "minor": true,
       "color": "gold",
-      "trains": false,
-      "subtext": "Union Bank"
+      "trains": false
     },
     {
       "name": "Hungarian Bank",
-      "subtext": "Second Union Bank",
       "abbrev": "HB",
       "token": {
         "label": "HB"
