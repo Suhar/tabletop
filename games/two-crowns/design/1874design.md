@@ -39,40 +39,41 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Trieste | Offboard | 20 / 20 / 60 | Rijeka's rival port |
 | Belgrade | Offboard | 20 / 20 / 50 | The eastern exit, past Vukovar |
 | Banja Luka, Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exits |
-| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula; the Ancona Steamship Line boosts it |
+| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship Line, which also boosts it |
 | Dubrovnik | Sea offboard | 40 / 40 / 60 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 70 | The Malta steamer out of Split |
 
 **Terrain.** Mountains and rivers both cost $80. The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at K19 links Knin to the Lika line.
 
-**Gray tiles: only two.** Cities stop at brown, apart from the two that get one of these:
+**Gray tiles: only three.** Cities stop at brown, apart from the three that get one of these:
 
 - **CX ($70, 3 slots).** Karlovac only. It is the choke point between Zagreb and Rijeka. Karlovac takes X tiles in green and brown, as Charlottetown does in 1871.
-- **Gray city ($70, 3 slots).** Any one other brown city, labelled or junction included. There is one copy, so the first company to lay it takes it.
+- **Gray city G1 ($70, 3 slots).** Any one other brown city, labelled or junction included. There is one copy, so the first company to lay it takes it.
+- **Gray city G2 ($70, 3 slots).** The same tile, held by the Lika Survey Office (P8): only a company the Lika Survey Office's owner presides may lay it.
 
-Both are available from the Diesel. In the final 3 ORs they are the only tiles that may be laid.
+All three are available from the Diesel. In the final 3 ORs they are the only tiles that may be laid.
 
 ### Tile manifest
 
-Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and one straight yellow track (9, the Lika Survey Office's). Z, R, J, S and P tiles have no 1871 counterpart. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown. Yellow track and yellow cities are cut below that scaling (0.5.0; they were 52 and 27).
+Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and no straight yellow track (9; 0.6.0 removed the Lika Survey Office's one). Z, R, J, S and P tiles have no 1871 counterpart. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown. Yellow cities, green and brown track and brown X cities are cut below that scaling (0.5.0 and 0.6.0).
 
 | Tiles | 1871 | 1874 spots | 1874 tiles |
 | --- | --- | --- | --- |
-| Yellow track | 38 for 41 blank hexes | 63 | 27: 10 of 7, 16 of 8, 1 of 9 |
-| Green track | 34 | 63 | 52 |
-| Brown track | 13, one of each | 63 | 20: a second 39, 43, 45, 46, 70, 628 and 629, the most-needed upgrades |
+| Yellow track | 38 for 41 blank hexes | 63 | 37: 12 of 7, 25 of 8 |
+| Green track | 34 | 63 | 40 |
+| Brown track | 13, one of each | 63 | 15: a second 39 and 40 |
 | Yellow single towns | 14 for 6 hexes | 8 | 14: 8 of 3, 6 of 58 |
 | Yellow double towns | 12 for 10 hexes | 9 | 12: 2 of tile 1, 2 each of 56 and 630 to 633 (Čakovec/Prelog can only take 56 or 632, Benkovac/Obrovac only 630 or 631) |
 | Green and brown towns | 4 and 2 | 17 town hexes | 4 (143, 144) and 2 (767, 769) |
-| Yellow cities | 14 for 10 hexes | 18 | 20: 10 of 5, 10 of 6 |
+| Yellow cities | 14 for 10 hexes | 18 | 18: 9 of 5, 9 of 6 |
 | Green cities | 9 for 6 hexes | 8 (3 cities, 5 junctions) | 12 |
 | Brown cities | 2 for 7 hexes | 4, 2 with room for brown | 3 (611): most cities stop at green, as in 1871 |
-| Green and brown X | 8 each for 7 hexes | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, the only one that fits Pula), 11 brown (3 each of X5 to X7, 2 of X8) |
+| Green and brown X | 8 each for 7 hexes | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, the only one that fits Pula), 9 brown (2 of X5, 3 of X6, 2 of X7, 2 of X8) |
 | Brown J | — | 5 | 12: one of each pairing, and a second J3, J7 and J9 |
 | S (Šibenik, Knin) | — | 2 | 2 green, three-sided |
 | P (Pula) | — | 1 | 1 brown, three-sided |
 | Z and R | — (1871's T: 2 green, 2 brown for 2 hexes) | 1 each | 3 green and 2 brown each |
-| Gray | CX and X | — | CX and one any-city |
+| Gray | CX and X | — | CX and two any-city: G1, and G2 for the Lika Survey Office |
 
 ### Map size against other 18xx
 
@@ -128,7 +129,7 @@ Every private is in play at 3 players, both Station Rights included, which keeps
 | Mainline | First Luka share drawn; leased by MÁV | That company's Luka home |
 | Shortline | Second Luka share drawn; leased by the Südbahn | That company's Luka home |
 | Public Line | Third Luka share drawn; every player holds a Bond for one of its shares | That company's Luka home |
-| Branch companies (split, or started late) | Kvarner, Gorski Kotar, Međimurje, Srijem, Velebit | Assigned at split; a late start picks an untiled city |
+| Branch companies (split, or started late) | Kukoč (KB), Stojaković (SB), Modrić (MB), Petrović (PB), Nikola (NB) | Assigned at split; a late start picks an untiled city |
 
 The tranche chart allows 10 started companies at most: a top row (Mainline, Shortline, Public Line), then rows of 2, 2 and 3. Each row opens when the one above is full and every company in it has operated or is sold out, as in 1871.
 
@@ -142,14 +143,14 @@ The tranche chart allows 10 started companies at most: a top row (Mainline, Shor
 **Setup steps**
 
 1. Luka draw (1871): shuffle the eight Luka shares. The first drawn names the Mainline, the second the Shortline and the third the Public Line. All three drawn Luka shares leave the game. Each company keeps its Luka name and home, and gets the matching card (MÁV lease, Südbahn lease or Narodna) on its charter.
-2. Mainline: stock token on 92, $920 in treasury, station on its home, floated. Its president's certificate goes on the MÁV Concession. One 10% share goes to the Austrian Bank, one with the Slavonian Agricultural Society and one with the Sava Steam Ferry; the rest go to the bank pool.
-3. Shortline: stock token on 86; its home is reserved, and its station goes there when it floats. Its president's certificate goes on the Südbahn Concession. Reserve three 10% shares as exchange shares for the Kupa River Bridge, Pazin Tunnel Company and Kvarner Shipbuilding privates; the rest go to the bank pool. The Shortline floats once 60% of its shares are out of the bank, the reserved shares included, so one more share must be bought. It then takes $860 (10 × 86) from the bank, as in 1871.
+2. Mainline: stock token on 92, $920 in treasury, station on its home, floated. Its president's certificate goes on the MÁV Concession. One 10% share goes to the Austrian Bank, one with the Slavonian Agricultural Society and one with the Kupa Steam Ferry; the rest go to the bank pool.
+3. Shortline: stock token on 86; its home is reserved, and its station goes there when it floats. Its president's certificate goes on the Südbahn Concession. Reserve three 10% shares as exchange shares for the Sava River Bridge, Pazin Tunnel Company and Kvarner Shipbuilding privates; the rest go to the bank pool. The Shortline floats once 60% of its shares are out of the bank, the reserved shares included, so one more share must be bought. It then takes $860 (10 × 86) from the bank, as in 1871.
 4. Public Line: works like the Shortline. Stock token on 86; its home is reserved, and its station goes there when it floats. Its president's certificate goes on the Narodna Concession. Reserve one 10% share per player and deal each player a Public Line Bond, at every player count; the rest go to the bank pool. It floats once 60% of its shares are out of the bank, the Bond shares and the Hungarian Bank's share included, so at every player count it floats when the concession is sold. It then takes $860 (10 × 86) from the bank, the same as the Shortline.
 5. Luka: put Luka station markers on the five remaining homes. The five remaining Luka shares go into the auction deck. The Luka gets $200 and the k.u.k. Post private ($80 per OR, closes on the first 4+).
 6. Austrian Bank: add a 10% share of one random remaining Luka company to its Mainline share. It takes the share when that company is started.
 7. Hungarian Bank: put one Public Line share from the bank pool on it.
 8. Privates: at 3 players all 16 are used. At 4–5 players, remove one of Zadar or Virovitica Station Rights at random, leaving 15.
-9. Shuffle the privates and the five Luka shares. Deal them face up: 7 per player at 3 players, 5 at 4, 4 at 5.
+9. Deal face up, one item at a time around the table: 7 per player at 3 players, 5 at 4, 4 at 5. First shuffle the MÁV Concession, Narodna Concession, Südbahn Concession, Austrian Bank and Hungarian Bank and deal those five. Then shuffle the remaining privates with the five Luka shares and deal them, continuing around the table from the next player. At 3 and 4 players some players get two of the first five.
 10. Run the 1871 initial auction. First stock round order goes from least cash to most.
 
 ## Turn structure and changes from 1871
@@ -162,7 +163,7 @@ The round structure is 1871's: dealt auction, then stock rounds alternating with
 2. Then one action: buy one share, start a Luka company, start a Branch company in the Late space, split a company, act for the Austrian Bank, or act for the Hungarian Bank (until it converts).
 3. Free actions any time on your turn: private exchanges, and converting the Hungarian Bank (until the first 2+; stock rounds only). Doing only a free action does not count as a pass.
 
-**Selling privates to companies (1894).** From the 4H phase until the first 4+, a company may buy Zadar or Virovitica Station Rights (P3, P4) from a player for ½× to 1× face, or Wiener Neustadt (P10) for $1–200 if it isn't the Luka. The Ancona Steamship Line (P17) may be sold earlier: to any company but the Luka, for ½× to 1× face, from the first OR until the first 4+. Both sides must agree. This is the main liquidity valve.
+**Selling privates to companies (1894).** From the 4H phase until the first 4+, a company may buy Zadar or Virovitica Station Rights (P3, P4) from a player for ½× to 1× face, Wiener Neustadt (P10) for $1–200, or the Ancona Steamship Line (P17) for ½× to 1× face. The Luka may buy only the Station Rights. Both sides must agree. This is the main liquidity valve.
 
 **Operating round, per company**
 
@@ -256,7 +257,7 @@ Game length is set by train purchases, and the trade-in is how presidents push i
 
 - **Supply only.** Trade-ins apply only to new trains from the supply, never to trains bought from the bank pool or another company.
 - **Once per OR.** A company buying two trains in one step may trade in against only one of them.
-- **Never a rusting train.** The rank just below is never one the purchase rusts, so a trade-in always gives up a train that could still run. Only the Rijeka Lazaretto saves a rusting train.
+- **Never a rusting train.** The rank just below is never one the purchase rusts, so a trade-in always gives up a train that could still run. Only the Rijeka Lazaretto's quarantine marker saves a rusting train.
 - **Train limit.** The handed-in train is gone before the new one arrives, so a company at its limit can trade in to buy.
 - **Forced purchases.** A company forced to buy a train may trade in; the credit reduces what the president must pay.
 - **Locomotive works.** A train bought with Wiener Neustadt or Ganz may include a trade-in.
@@ -275,12 +276,12 @@ Game length is set by train purchases, and the trade-in is how presidents push i
 | 7 | $500 | $250 | Diesel | Never |
 | Diesel | $600 | — | — | Never |
 
-**Quarantine (the Rijeka Lazaretto).** The Rijeka Lazaretto (P5) lets its owner save one train from one rust. Once, when a rust would remove a train of a company the owner presides, that train is quarantined instead: it runs in that company's next run step, then is removed. A quarantined train still counts against the train limit and can't be traded in or sold. It may be used on the rust the first 4+ causes, then closes; otherwise it closes when used. Quarantine softens a rush rather than speeding one up.
+**Quarantine (the Rijeka Lazaretto).** The Rijeka Lazaretto (P5) lets its owner save one train from one rust. At any point in the operating turn of a company the owner presides, the owner may close the Lazaretto to put its quarantine marker on one of that company's trains. The marker stays on that train for the rest of the game. When the train would rust, it runs for one more OR instead, in that company's next run step, and is then discarded; until then it counts against the train limit. An unused Lazaretto closes on the first 4+, so the marker must be placed before then, but a marker already placed still saves a 6H from the 4+'s rust. A marked train that is traded in or sold keeps its marker. Quarantine softens a rush rather than speeding one up.
 
 **How they get played (examples)**
 
 1. **Rush.** In the 5H phase the Südbahn owns a 5H. It buys the first 6H and trades in the 5H: $80 off the $180 price, so the rush costs it only $100. Every 3H rusts at once.
-2. **Quarantine.** MÁV owns a 4H when the Südbahn buys the first 2+. MÁV's president uses the Rijeka Lazaretto: the 4H runs once more in MÁV's next run step, then is removed, giving MÁV an OR to raise cash for a new train.
+2. **Quarantine.** In the 6H phase MÁV owns a 4H, which the first 2+ will rust. In MÁV's operating turn its president closes the Rijeka Lazaretto and puts the quarantine marker on the 4H. When the Südbahn buys the first 2+, MÁV's 4H runs once more in MÁV's next run step, then is discarded, giving MÁV an OR to raise cash for a new train.
 3. **At the limit.** In the 3+ phase the limit is 3. A company with two 2+ trains and a 3+ trades in a 2+ to buy another 3+: $110 off the $240 price, and it never goes over the limit.
 
 **Alternate to test.** If trade-ins are too weak to move the game, allow any lower train, not only the rank just below.
@@ -294,7 +295,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 - **Who can split.** The president of a floated company with at least two stations on the map, who owns at least four of its shares, may split it during a stock round if the tranche chart has an open space.
 - **Shares.** Every holder, the Austrian Bank and the Hungarian Bank included, swaps half their parent shares (rounded down) for child shares. The swapped parent shares go to the parent's treasury.
 - **Assets.** The splitter gives the child at least one non-home station and divides cash, trains and saleable privates freely. The child receives market value × its bank-pool shares, and floats at 60%.
-- **New in 1874.** Children are the five Branch companies: Kvarner, Gorski Kotar, Međimurje, Srijem and Velebit.
+- **New in 1874.** Children are the five Branch companies: Kukoč, Stojaković, Modrić, Petrović and Nikola.
 
 **Junction cities (1894's disconnecting brown upgrade)**
 
@@ -309,7 +310,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 
 - **Major shareholdings.** Concessions carry presidencies. Here, the MÁV, Südbahn and Narodna Concessions.
 - **Starting stake for everyone.** 1894 deals each player shares of its starting companies. 1874 deals a Public Line Bond instead, so the stake can't be dumped before the line is strong.
-- **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+, and the Ancona Steamship Line (at ½× to 1× face) from the first OR.
+- **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights and the Ancona Steamship Line (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+.
 - **Blocking privates.** A private that blocks a hex stops blocking it once a company buys the private.
 - **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players, and one is removed at random at 4–5 players, like Liège and Antwerpen in 1894.
 
@@ -321,14 +322,14 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2H | $80 | 4 | — | 1 | 4 | Yellow | Start prices 80–58 (Late space: 86) |
 | 3H | $100 | 4 | — | 1 | 4 | Yellow | — |
-| 4H | $120 | 4 | — | 2 | 4 | + Green | Companies may buy the Station Rights and Wiener Neustadt |
+| 4H | $120 | 4 | — | 2 | 4 | + Green | Companies may buy the Station Rights, Wiener Neustadt and the Ancona Steamship Line |
 | 5H | $160 | 4 | 2H | 2 | 4 | Green | Start price 80 gone (Late space: 80) |
 | 6H | $180 | 3 | 3H | 2 | 4 | Green | — |
 | 2+ | $220 | 4 | 4H | 2 | 3 | Green | Hungarian Bank can no longer convert |
 | 3+ | $240 | 4 | 5H | 2 | 3 | Green | Start prices 65–58 only (Late space: 74) |
-| 4+ | $200 | 3 | 6H | 3 | 3 | + Brown | Privates close (except the Austrian and Hungarian Banks); junction upgrades open |
+| 4+ | $200 | 3 | 6H | 3 | 3 | + Brown | Privates close (except the Austrian Bank, the Hungarian Bank and the Lika Survey Office); junction upgrades open |
 | 7 | $500 | 5 | 2+ | 3 | 2 | Brown | Start price 58 only (Late space: 65) |
-| Diesel | $600 | 7 | 3+, 4+ | 3 | 2 | + Gray (2 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the two gray tiles may be laid |
+| Diesel | $600 | 7 | 3+, 4+ | 3 | 2 | + Gray (3 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the gray tiles may be laid |
 
 **Train types (1871)**
 
@@ -343,22 +344,24 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 
 | # | Name | Face | Revenue | Power | Closes |
 | --- | --- | --- | --- | --- | --- |
-| P1 | Kupa River Bridge | $40 | $5 | Blocks one Kupa hex of the owner's choice. Exchange for a reserved Südbahn share during a stock round. | On exchange; forced exchange at first 4+ |
+| P1 | Sava River Bridge | $40 | $5 | Blocks the Sava hex L6, north-east of Zagreb (marked P1 on the map). Exchange for a reserved Südbahn share during a stock round. | On exchange; forced exchange at first 4+ |
 | P2 | Pazin Tunnel Company | $40 | $5 | Exchange for a reserved Südbahn share. | As P1 |
 | P3 | Zadar Station Rights | $50 | $10 | Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade that turn (not both on Zadar in one turn). If it does, it may place its cheapest station there free, as its station for that OR. From 4H, may be sold to a company for ½×–1× face. | First 4+ |
 | P4 | Virovitica Station Rights | $50 | $10 | As P3, for Virovitica. Both are in play at 3 players; one is removed at random at 4–5 players. | First 4+ |
-| P5 | Rijeka Lazaretto | $40 | $10 | Quarantine: once, when a rust would remove a train of a company you preside, it runs once more, then is removed. It can't be traded in or sold. | When used; first 4+ (may be used on its rust) |
+| P5 | Rijeka Lazaretto | $40 | $10 | In the operating turn of a company you preside, close it to put the quarantine marker on one of that company's trains. When that train would rust, it runs one more OR, then is discarded. | When used; first 4+ |
 | P7 | Kvarner Shipbuilding | $90 | $15 | Exchange for a reserved Südbahn share. | As P1 |
-| P8 | Lika Survey Office | $100 | $30 | Holds the game's only straight yellow tile. Any company the owner presides may lay it. | First 4+ |
+| P8 | Lika Survey Office | $100 | $15 | Holds gray city tile G2. From the Diesel, any company the owner presides may lay it as its upgrade, on any brown city but Karlovac. | Never |
 | P9 | Slavonian Agricultural Society | $110 | $10 | Comes with a 10% MÁV share (1871's Royal Agricultural Society). | First 4+ |
 | P10 | Wiener Neustadt Locomotive Works | $110 | $20 | 1871's Hunslet: sell to a non-Luka company for $1–200 from 4H; close it to buy a train at any point in that company's turn. | First 4+, unused |
-| P11 | Sava Steam Ferry | $120 | $15 | Comes with a 10% MÁV share. | First 4+ |
+| P11 | Kupa Steam Ferry | $120 | $15 | Comes with a 10% MÁV share. | First 4+ |
 | P12 | Austrian Bank | $140 | — | Union Bank charter (see Austrian Bank). | Never |
 | P13 | Narodna Concession | $140 | $25 | Public Line president's certificate. Priced below the other concessions because its shares will be sold off after 4H. | When the Public Line operates |
 | P14 | Hungarian Bank | $90 | $0 | Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz (holdings go to the owner). | Never, unless converted |
 | P15 | MÁV Concession | $150 | $20 | MÁV president's certificate. | When MÁV operates |
 | P16 | Südbahn Concession | $145 | $30 | Südbahn president's certificate. | When the Südbahn operates |
-| P17 | Ancona Steamship Line | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the first OR. The buying company places its cheapest station on Ancona, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |
+| P17 | Ancona Steamship Line | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the 4H phase until the first 4+. The buying company places its cheapest station on Ancona's reserved space, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |
+
+**Lika Survey Office pricing (0.6.0).** Until 0.5.0 it paid $30 per OR and closed on the first 4+. In 650 bot games under 0.4.0 and 0.5.0 (v19 bots), a game ran 15.6 ORs, 7.9 of them up to and including the OR of the first 4+ and 7.7 after it; at 4–5 players 16.1, 8.3 and 7.8. That paid its owner about $30 × 8.3 = $248 at 4–5 players. Never closing, it pays for every OR, so $248 / 16.1 = $15.4 per OR keeps the same total; it pays $15 ($242 at 4–5 players, $234 overall). The money now comes later in the game, which the G2 tile makes up for.
 
 **Public Line Bond (not dealt; one per player)**
 

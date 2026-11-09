@@ -34,7 +34,7 @@ export const TwoCrownsState = composeEighteenXXState(
         anconaCompanyId: Type.Optional(Type.String({ minLength: 1 })),
         // Trade-ins this operating round, as "set.round:companyId" (once per OR, 1874design.md).
         tradeIns: Type.Optional(Type.Array(Type.String(), { uniqueItems: true })),
-        // The train the Rijeka Lazaretto saved from its rust, which runs once more.
+        // The train with the Rijeka Lazaretto's quarantine marker, which runs once more on its rust.
         quarantinedTrainId: Type.Optional(Type.String({ minLength: 1 })),
         // Optional because games set up before it was recorded lack it.
         unionBankDrawnCompanyId: Type.Optional(Type.String({ minLength: 1 }))

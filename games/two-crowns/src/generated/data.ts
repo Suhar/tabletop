@@ -14,11 +14,11 @@ export const TwoCrownsLukaCompanies = [
 ] as const
 
 export const TwoCrownsBranchCompanies = [
-    { id: 'branch:KB', name: 'Kvarner', label: 'KB', color: '#b39ddb' },
-    { id: 'branch:GB', name: 'Gorski Kotar', label: 'GB', color: '#c2187e' },
-    { id: 'branch:MB', name: 'Međimurje', label: 'MB', color: '#0189d1' },
-    { id: 'branch:BB', name: 'Banija', label: 'BB', color: '#f48221' },
-    { id: 'branch:VB', name: 'Velebit', label: 'VB', color: '#b5d334' }
+    { id: 'branch:KB', name: 'Kukoč', label: 'KB', color: '#b39ddb' },
+    { id: 'branch:SB', name: 'Stojaković', label: 'SB', color: '#c2187e' },
+    { id: 'branch:MB', name: 'Modrić', label: 'MB', color: '#0189d1' },
+    { id: 'branch:PB', name: 'Petrović', label: 'PB', color: '#f48221' },
+    { id: 'branch:NB', name: 'Nikola', label: 'NB', color: '#b5d334' }
 ] as const
 
 export const TwoCrownsPrivateData = [
@@ -27,8 +27,7 @@ export const TwoCrownsPrivateData = [
         name: 'k.u.k. Post',
         faceValue: 0,
         revenue: 80,
-        description:
-            'Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+.'
+        description: 'Owned by the Luka, which starts with $200. Closes at the first 4+.'
     },
     {
         id: 'BD1',
@@ -36,7 +35,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 5,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
         id: 'BD2',
@@ -44,7 +43,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 5,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
         id: 'BD3',
@@ -52,7 +51,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 5,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
         id: 'BD4',
@@ -60,7 +59,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 5,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
         id: 'BD5',
@@ -68,7 +67,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 5,
         description:
-            "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
         id: 'G',
@@ -76,15 +75,15 @@ export const TwoCrownsPrivateData = [
         faceValue: 0,
         revenue: 20,
         description:
-            'Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+.'
+            'May be sold to any company for $1–100. That company may close it during its turn to buy a train from the supply. Closes at the first 4+.'
     },
     {
         id: 'P1',
-        name: 'Kupa River Bridge',
+        name: 'Sava River Bridge',
         faceValue: 40,
         revenue: 5,
         description:
-            "Blocks one Kupa hex (owner's choice). May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+            'Blocks L6. May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+.'
     },
     {
         id: 'P2',
@@ -92,7 +91,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 40,
         revenue: 5,
         description:
-            'May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+.'
+            'May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+.'
     },
     {
         id: 'P3',
@@ -100,7 +99,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 50,
         revenue: 10,
         description:
-            'Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
+            'Blocks Zadar. From 4H, may be sold to a company for $25–50. That company may lay or upgrade Zadar as its first tile lay, with no connection, then place a station there free. Closes at the first 4+.'
     },
     {
         id: 'P4',
@@ -108,7 +107,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 50,
         revenue: 10,
         description:
-            'Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face.'
+            'Blocks Virovitica. From 4H, may be sold to a company for $25–50. That company may lay or upgrade Virovitica as its first tile lay, with no connection, then place a station there free. Closes at the first 4+.'
     },
     {
         id: 'P5',
@@ -116,7 +115,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 40,
         revenue: 10,
         description:
-            "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+."
+            'During the OR of a company you preside, close this to put a quarantine marker on one of its trains. When that train would rust, it runs one more OR, then is discarded. Closes at the first 4+.'
     },
     {
         id: 'P7',
@@ -124,22 +123,22 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 15,
         description:
-            'May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+.'
+            'May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+.'
     },
     {
         id: 'P8',
         name: 'Lika Survey Office',
         faceValue: 100,
-        revenue: 30,
+        revenue: 15,
         description:
-            'Holds the only straight yellow tile. Any company the owner presides may lay it as a normal tile lay. Closes on the first 4+.'
+            'Holds tile G2, a gray city. From the Diesel, a company you preside may lay it on any brown city but Karlovac as its upgrade. Never closes.'
     },
     {
         id: 'P9',
         name: 'Slavonian Agricultural Society',
         faceValue: 110,
         revenue: 10,
-        description: 'Comes with a 10% Mainline share. Closes on the first 4+.'
+        description: 'Comes with a Mainline share. Closes at the first 4+.'
     },
     {
         id: 'P10',
@@ -147,14 +146,14 @@ export const TwoCrownsPrivateData = [
         faceValue: 110,
         revenue: 20,
         description:
-            'From 4H, may be sold to a non-Luka company for $1–200. The owning company may close this to buy a train from the supply at any point in its turn. Closes on the first 4+.'
+            'From 4H, may be sold to a non-Luka company for $1–200. That company may close it during its turn to buy a train from the supply. Closes at the first 4+.'
     },
     {
         id: 'P11',
-        name: 'Sava Steam Ferry',
+        name: 'Kupa Steam Ferry',
         faceValue: 120,
         revenue: 15,
-        description: 'Comes with a 10% Mainline share. Closes on the first 4+.'
+        description: 'Comes with a Mainline share. Closes at the first 4+.'
     },
     {
         id: 'P12',
@@ -162,7 +161,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 140,
         revenue: 0,
         description:
-            "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
+            "Comes with a Mainline share and a random Luka-company share. Once per SR, the owner may buy one certificate or start a company for it, paying what it can't. Never sells or closes."
     },
     {
         id: 'P13',
@@ -170,7 +169,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 140,
         revenue: 25,
         description:
-            "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
+            "Comes with the Public Line president's certificate. Closes when the Public Line first operates."
     },
     {
         id: 'P14',
@@ -178,7 +177,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 0,
         description:
-            "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
+            'Comes with a Public Line share; works like the Austrian Bank. Until the first 2+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits.'
     },
     {
         id: 'P15',
@@ -186,7 +185,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 150,
         revenue: 20,
         description:
-            "Comes with the 20% president's certificate of the Mainline (first Luka company drawn). Closes when the Mainline operates."
+            "Comes with the Mainline president's certificate. Closes when the Mainline first operates."
     },
     {
         id: 'P16',
@@ -194,7 +193,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 145,
         revenue: 30,
         description:
-            "Comes with the 20% president's certificate of the Shortline (second Luka company drawn). Closes when the Shortline operates."
+            "Comes with the Shortline president's certificate. Closes when the Shortline first operates."
     },
     {
         id: 'P17',
@@ -202,7 +201,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 15,
         description:
-            'From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+.'
+            'From 4H, may be sold to a non-Luka company for $45–90. That company places a free extra station on Ancona, and its routes to Ancona add the largest other stop for the rest of the game. Closes when sold or at the first 4+.'
     }
 ] as const
 

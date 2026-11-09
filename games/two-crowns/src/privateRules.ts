@@ -1,6 +1,5 @@
 import { TwoCrownsNames } from './names.js'
 import { twoCrownsRole } from './companies.js'
-import { TwoCrownsTileSet } from './tiles.js'
 import { assert, assertExists } from '@tabletop/common'
 import {
     certificatesOwnedBy,
@@ -71,19 +70,7 @@ export const TwoCrownsPrivateRules: PrivateRules = {
         ].map((effect): PrivateEffect => {
             const company = { id: effect.privateCompanyId }
             const certificateId = shortlineExchange(state, company.id)
-            if (!certificateId)
-                return {
-                    kind: 'close',
-                    privateCompanyId: company.id,
-                    ...(company.id === 'P8'
-                        ? {
-                              retireUnplacedPieceIds: TwoCrownsTileSet.availablePieces(
-                                  state.tileInventory,
-                                  '18xx:9'
-                              ).map((piece) => piece.id)
-                          }
-                        : {})
-                }
+            if (!certificateId) return { kind: 'close', privateCompanyId: company.id }
             const share = state.certificates.find(
                 (item) =>
                     item.id === certificateId &&
@@ -120,29 +107,30 @@ export const TwoCrownsPrivateRules: PrivateRules = {
             const company = TwoCrownsNames.company(twoCrownsRole(state, 'narodna'))
             return (
                 `**Includes one reserved share of ${company}.**\n\n` +
-                "Pays $10 per OR. Can't be sold. From 4H, exchange for the reserved share during your stock turn, in addition to selling and buying.\n\nForced exchange at 4+."
+                "Can't be sold. From 4H, may be exchanged for the share on your stock turn, in addition to your action.\n\nExchanged at the first 4+."
             )
         }
         if (id === 'P13') {
             const company = TwoCrownsNames.company(twoCrownsRole(state, 'narodna'))
-            return `**Includes the president's cert for ${company}.**\n\nCloses when its railway first operates, or at 4+.`
+            return `**Includes the president's certificate of ${company}.**\n\nCloses when it first operates.`
         }
         if (ShortlineExchanges[id]) {
             const company = TwoCrownsNames.company(twoCrownsRole(state, 'shortline'))
             return (
                 `**Includes one reserved share of ${company}.**\n\n` +
-                'Exchange for a reserved Shortline share during your stock turn, in addition to selling and buying. Cancels your pass. Ownership limit exemption applies.\n\nForced exchange at 4+.'
+                (id === 'P1' ? 'Blocks L6. ' : '') +
+                'May be exchanged for the share on your stock turn, in addition to your action; exempt from the 60% limit.\n\nExchanged at the first 4+.'
             )
         }
         if (id === 'P9' || id === 'P11') {
             const company = TwoCrownsNames.company(twoCrownsRole(state, 'mainline'))
-            return `**Includes one share of ${company}.**\n\nCloses at 4+.`
+            return `**Includes one share of ${company}.**\n\nCloses at the first 4+.`
         }
         if (id === 'P15' || id === 'P16') {
             const company = TwoCrownsNames.company(
                 twoCrownsRole(state, id === 'P15' ? 'mainline' : 'shortline')
             )
-            return `**Includes the president's cert for ${company}.**\n\nCloses when its railway first operates, or at 4+.`
+            return `**Includes the president's certificate of ${company}.**\n\nCloses when it first operates.`
         }
         const description = TwoCrownsPrivateCatalog.definition(id).description ?? 'Closes at 4+.'
         if (id === 'P14')

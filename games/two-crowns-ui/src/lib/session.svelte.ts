@@ -7,13 +7,15 @@ import {
     twoCrownsRole,
     unionBankStartingCompanyIds
 } from '@tabletop/two-crowns'
-import StraightTile from './images/tokens/straight-tile.svg'
+import GrayCityTile from './images/tokens/gray-city-tile.svg'
 import { TwoCrownsMapView } from './mapView.js'
 import { TwoCrownsPresentation } from './presentation.js'
 
 import { assert } from '@tabletop/common'
 import {
     ConvertCharter,
+    QuarantineTrain,
+    quarantineTrainIds,
     SplitCompany,
     TwoCrownsBranchSplit,
     isSplitCompany,
@@ -42,7 +44,7 @@ export class TwoCrownsSession extends BaseSession {
         P1: this.mapView.stations[twoCrownsRole(this.gameState, 'shortline')],
         P2: this.mapView.stations[twoCrownsRole(this.gameState, 'shortline')],
         P7: this.mapView.stations[twoCrownsRole(this.gameState, 'shortline')],
-        P8: { label: '9', color: 'transparent', imageUrl: StraightTile },
+        P8: { label: 'G2', color: 'transparent', imageUrl: GrayCityTile },
         P9: this.mapView.stations[twoCrownsRole(this.gameState, 'mainline')],
         P11: this.mapView.stations[twoCrownsRole(this.gameState, 'mainline')],
         P15: this.mapView.stations[twoCrownsRole(this.gameState, 'mainline')],
@@ -193,6 +195,26 @@ export class TwoCrownsSession extends BaseSession {
     }
     async convertCharter() {
         await this.applyAction(this.createPlayerAction(ConvertCharter, {}))
+    }
+    // The Rijeka Lazaretto: the trains its owner may put the quarantine marker on now.
+    quarantineTrains = $derived.by(() => {
+        if (
+            this.busy ||
+            this.updatingVisibleState ||
+            this.isViewingHistory ||
+            !this.validActionTypes.includes('QuarantineTrain')
+        )
+            return []
+        return this.gameState.activePlayerIds
+            .flatMap((playerId) => quarantineTrainIds(this.gameState, playerId))
+            .map((trainId) => ({
+                trainId,
+                name: this.gameState.trainInventory.trains.find((train) => train.id === trainId)!
+                    .definitionId
+            }))
+    })
+    async quarantineTrain(trainId: string) {
+        await this.applyAction(this.createPlayerAction(QuarantineTrain, { trainId }))
     }
     async confirmSplit() {
         const preview = this.splitPreview?.details

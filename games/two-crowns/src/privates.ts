@@ -9,6 +9,10 @@ const UndealtPrivateIds = ['G']
 // Powers the copied 1871 rules do not yet provide; these pay revenue only.
 const PendingPowerIds: string[] = []
 const StationRightsCities: Readonly<Record<string, string>> = { P3: 'Zadar', P4: 'Virovitica' }
+// The Sava River Bridge blocks the Sava hex L6 until it is exchanged or closes.
+const BlockedHexes: Readonly<Record<string, string>> = { P1: 'L6' }
+// The Austrian Bank, the Hungarian Bank and the Lika Survey Office survive the 4+.
+const NeverClosingIds = ['P8', 'P12', 'P14']
 // Sold to companies for half to full face: the Station Rights and the Ancona Steamship Line.
 const HalfToFaceSaleIds = [...Object.keys(StationRightsCities), 'P17']
 
@@ -34,9 +38,12 @@ function privateDefinition(item: (typeof TwoCrownsPrivateData)[number]): Private
                 : HalfToFaceSaleIds.includes(item.id)
                   ? { minimum: item.faceValue / 2, maximum: item.faceValue }
                   : 'never',
-        ...(item.id === 'P12' || item.id === 'P14' ? { closure: 'never' as const } : {}),
+        ...(NeverClosingIds.includes(item.id) ? { closure: 'never' as const } : {}),
         ...(city
             ? { blocks: { locationIds: [locationNamed(city)], until: 'company-owned' as const } }
+            : {}),
+        ...(BlockedHexes[item.id]
+            ? { blocks: { locationIds: [BlockedHexes[item.id]], until: 'closed' as const } }
             : {})
     }
 }

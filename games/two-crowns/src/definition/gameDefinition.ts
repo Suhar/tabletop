@@ -16,6 +16,12 @@ import { TwoCrownsOperatingRules } from '../roundRules.js'
 import { TwoCrownsRouteRules } from '../routeRules.js'
 import { HydratedSplitCompany, SplitCompany, isSplitCompany } from '../splitCompany.js'
 import { ConvertCharter, HydratedConvertCharter, isConvertCharter } from '../charterConversion.js'
+import {
+    HydratedQuarantineTrain,
+    QuarantineTrain,
+    isQuarantineTrain,
+    offersQuarantine
+} from '../lazaretto.js'
 import { TwoCrownsState, TwoCrownsStateDefinition, type HydratedTwoCrownsState } from '../state.js'
 import { TwoCrownsStationRules } from '../stationRules.js'
 import { TwoCrownsStockRoundHandler } from '../stockRoundHandler.js'
@@ -34,7 +40,11 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
     endingRules: TwoCrownsEndingRules,
     names: TwoCrownsNames,
     decisionHandlers: {
-        StockRound: (family) => new TwoCrownsStockRoundHandler(family)
+        StockRound: (family) => new TwoCrownsStockRoundHandler(family),
+        // The Rijeka Lazaretto's marker, at any step of the operating company's turn.
+        LayingTrack: offersQuarantine,
+        PlacingStation: offersQuarantine,
+        BuyingTrains: offersQuarantine
     },
     titleActions: [
         defineAction(SplitCompany, isSplitCompany, (action) => new HydratedSplitCompany(action)),
@@ -42,6 +52,11 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
             ConvertCharter,
             isConvertCharter,
             (action) => new HydratedConvertCharter(action)
+        ),
+        defineAction(
+            QuarantineTrain,
+            isQuarantineTrain,
+            (action) => new HydratedQuarantineTrain(action)
         )
     ],
     offerAuctionRules: TwoCrownsAuctionRules,

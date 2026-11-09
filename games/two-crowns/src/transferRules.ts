@@ -14,12 +14,14 @@ export const TwoCrownsTransferRules: TransferRules = {
         if (TwoCrownsPhases.isAtLeast(state.phaseId, '4+')) return undefined
         // Ganz may go to any company at any time (1874design.md, Ganz Locomotive Works).
         if (id === 'G') return TwoCrownsPrivateCatalog.priceRange(id)
-        // The Ancona Steamship Line to a non-Luka company from the first OR (P17).
-        if (id === AnconaLineId)
-            return companyId === 'LUKA' ? undefined : TwoCrownsPrivateCatalog.priceRange(id)
-        // From 4H: the Station Rights to any company, Wiener Neustadt to a non-Luka one.
+        // From 4H: the Station Rights to any company; Wiener Neustadt and the Ancona Steamship
+        // Line (P17) to a non-Luka one.
         if (!TwoCrownsPhases.isAtLeast(state.phaseId, '4H')) return undefined
-        if (id === 'P3' || id === 'P4' || (id === 'P10' && companyId !== 'LUKA'))
+        if (
+            id === 'P3' ||
+            id === 'P4' ||
+            ((id === 'P10' || id === AnconaLineId) && companyId !== 'LUKA')
+        )
             return TwoCrownsPrivateCatalog.priceRange(id)
         return undefined
     },

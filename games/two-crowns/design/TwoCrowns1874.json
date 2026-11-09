@@ -9,7 +9,8 @@
     "titleFontSize": 100,
     "designerFontSize": 60,
     "currency": "$#",
-    "publisher": "self"
+    "publisher": "self",
+    "subtitle": "Prototype 0.6.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -17,7 +18,6 @@
     "Round"
   ],
   "numberCards": [
-    "mainline",
     "shortline",
     "narodna"
   ],
@@ -62,7 +62,7 @@
       "revenue": 80,
       "icon": "mail",
       "iconColor": "pink",
-      "description": "Always assigned to the Luka. The Luka starts with $200 in its treasury. Closes on the first 4+."
+      "description": "Owned by the Luka, which starts with $200. Closes at the first 4+."
     },
     {
       "name": "Public Line Bond",
@@ -72,7 +72,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
@@ -82,7 +82,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
@@ -92,7 +92,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
@@ -102,7 +102,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
@@ -112,7 +112,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "One per player, dealt at setup; not auctioned. Can't be sold. From the 4H phase, exchange in a stock round for a reserved 10% Public Line share; forced exchange on the first 4+. Reserved shares pay the Public Line's treasury."
+      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Ganz Locomotive Works",
@@ -121,16 +121,16 @@
       "revenue": 20,
       "icon": "train",
       "iconColor": "red",
-      "description": "Sell to any company for $1–100. The owning company may close it at any point in its turn to buy one train from the supply at full price, like Wiener Neustadt. Closes when used or on the first 4+."
+      "description": "May be sold to any company for $1–100. That company may close it during its turn to buy a train from the supply. Closes at the first 4+."
     },
     {
-      "name": "Kupa River Bridge",
+      "name": "Sava River Bridge",
       "id": "P1",
       "price": 40,
       "revenue": 5,
       "icon": "bridge",
       "iconColor": "navyBlue",
-      "description": "Blocks one Kupa hex (owner's choice). May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+      "description": "Blocks L6. May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Pazin Tunnel Company",
@@ -139,28 +139,28 @@
       "revenue": 5,
       "icon": "token",
       "iconColor": "yellow",
-      "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+      "description": "May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Zadar Station Rights",
       "id": "P3",
       "price": 50,
       "revenue": 10,
-      "description": "Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+      "description": "Blocks Zadar. From 4H, may be sold to a company for $25–50. That company may lay or upgrade Zadar as its first tile lay, with no connection, then place a station there free. Closes at the first 4+."
     },
     {
       "name": "Virovitica Station Rights",
       "id": "P4",
       "price": 50,
       "revenue": 10,
-      "description": "Blocks Virovitica. The owning company may lay or upgrade Virovitica without a connection, as one of its tile lays or its upgrade (not both in one turn); if it does, it may place its cheapest station there free, as its station for that OR. At 4–5 players one of P3/P4 is removed at random. Closes on the first 4+. From 4H, may be sold to a company for ½×–1× face."
+      "description": "Blocks Virovitica. From 4H, may be sold to a company for $25–50. That company may lay or upgrade Virovitica as its first tile lay, with no connection, then place a station there free. Closes at the first 4+."
     },
     {
       "name": "Rijeka Lazaretto",
       "id": "P5",
       "price": 40,
       "revenue": 10,
-      "description": "Quarantine: once, when a rust would remove a train of a company you preside, that train runs once more, then is removed. It can't be traded in or sold. May be used on the first 4+'s rust. Closes when used or on the first 4+.",
+      "description": "During the OR of a company you preside, close this to put a quarantine marker on one of its trains. When that train would rust, it runs one more OR, then is discarded. Closes at the first 4+.",
       "icon": "train",
       "iconColor": "lightBlue"
     },
@@ -170,15 +170,15 @@
       "price": 90,
       "revenue": 15,
       "icon": "tree",
-      "description": "May be exchanged for a reserved Shortline share in a stock round. Forced exchange on the first 4+."
+      "description": "May be exchanged for a Shortline share in a stock round. Exchanged at the first 4+."
     },
     {
       "name": "Lika Survey Office",
       "id": "P8",
       "price": 100,
-      "revenue": 30,
-      "tile": "9",
-      "description": "Holds the only straight yellow tile. Any company the owner presides may lay it as a normal tile lay. Closes on the first 4+."
+      "revenue": 15,
+      "tile": "G2",
+      "description": "Holds tile G2, a gray city. From the Diesel, a company you preside may lay it on any brown city but Karlovac as its upgrade. Never closes."
     },
     {
       "name": "Slavonian Agricultural Society",
@@ -186,7 +186,7 @@
       "price": 110,
       "revenue": 10,
       "icon": "wheat",
-      "description": "Comes with a 10% Mainline share. Closes on the first 4+."
+      "description": "Comes with a Mainline share. Closes at the first 4+."
     },
     {
       "name": "Wiener Neustadt Locomotive Works",
@@ -195,16 +195,16 @@
       "revenue": 20,
       "icon": "train",
       "iconColor": "red",
-      "description": "From 4H, may be sold to a non-Luka company for $1–200. The owning company may close this to buy a train from the supply at any point in its turn. Closes on the first 4+."
+      "description": "From 4H, may be sold to a non-Luka company for $1–200. That company may close it during its turn to buy a train from the supply. Closes at the first 4+."
     },
     {
-      "name": "Sava Steam Ferry",
+      "name": "Kupa Steam Ferry",
       "id": "P11",
       "price": 120,
       "revenue": 15,
       "icon": "ferry",
       "iconColor": "violet",
-      "description": "Comes with a 10% Mainline share. Closes on the first 4+."
+      "description": "Comes with a Mainline share. Closes at the first 4+."
     },
     {
       "name": "Austrian Bank",
@@ -212,7 +212,7 @@
       "price": 140,
       "revenue": 0,
       "company": "AB",
-      "description": "Comes with one Mainline share and one random Luka-company share. Never closes or sells. Once per SR the owner buys one certificate or starts a company for it, paying what it can't."
+      "description": "Comes with a Mainline share and a random Luka-company share. Once per SR, the owner may buy one certificate or start a company for it, paying what it can't. Never sells or closes."
     },
     {
       "name": "Narodna Concession",
@@ -223,7 +223,7 @@
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Comes with the 20% president's certificate of the Public Line (third Luka company drawn), which starts at 86 like the Shortline. Every player starts with a Public Line Bond. The Public Line floats when 60% is out of the bank, reserved Bond shares included, and then takes $860 (10 × 86) from the bank. Closes when the Public Line operates."
+      "description": "Comes with the Public Line president's certificate. Closes when the Public Line first operates."
     },
     {
       "name": "Hungarian Bank",
@@ -234,7 +234,7 @@
         "label": "HB",
         "color": "cherry"
       },
-      "description": "No income. Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz during a stock round, as a free action on the owner's turn: its cash and shares go to the owner, who sells down to 60% and the cert limit."
+      "description": "Comes with a Public Line share; works like the Austrian Bank. Until the first 2+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits."
     },
     {
       "name": "MÁV Concession",
@@ -245,7 +245,7 @@
         "label": "MÁV",
         "color": "navyBlue"
       },
-      "description": "Comes with the 20% president's certificate of the Mainline (first Luka company drawn). Closes when the Mainline operates."
+      "description": "Comes with the Mainline president's certificate. Closes when the Mainline first operates."
     },
     {
       "name": "Südbahn Concession",
@@ -256,7 +256,7 @@
         "label": "SB",
         "color": "violet"
       },
-      "description": "Comes with the 20% president's certificate of the Shortline (second Luka company drawn). Closes when the Shortline operates."
+      "description": "Comes with the Shortline president's certificate. Closes when the Shortline first operates."
     },
     {
       "name": "Ancona Steamship Line",
@@ -265,47 +265,46 @@
       "revenue": 15,
       "icon": "boat",
       "iconColor": "navyBlue",
-      "description": "From the first OR, may be sold to a non-Luka company for ½×–1× face. The buying company places its cheapest station on Ancona, free (no connection needed, not its station for the OR); for the rest of the game its routes to Ancona add the largest other stop. Closes when sold or on the first 4+."
+      "description": "From 4H, may be sold to a non-Luka company for $45–90. That company places a free extra station on Ancona, and its routes to Ancona add the largest other stop for the rest of the game. Closes when sold or at the first 4+."
     }
   ],
   "tiles": {
     "1": 2,
     "3": 8,
-    "5": 10,
-    "6": 10,
-    "7": 10,
-    "8": 16,
-    "9": 1,
-    "16": 5,
+    "5": 9,
+    "6": 9,
+    "7": 12,
+    "8": 25,
+    "16": 4,
     "17": 4,
-    "21": 3,
-    "22": 3,
-    "25": 6,
-    "28": 6,
-    "29": 6,
-    "30": 5,
-    "31": 5,
+    "21": 2,
+    "22": 2,
+    "25": 5,
+    "28": 4,
+    "29": 4,
+    "30": 4,
+    "31": 4,
     "39": 2,
-    "40": 1,
+    "40": 2,
     "41": 1,
     "42": 1,
-    "43": 2,
+    "43": 1,
     "44": 1,
-    "45": 2,
-    "46": 2,
+    "45": 1,
+    "46": 1,
     "47": 1,
     "56": 2,
     "58": 6,
-    "70": 2,
+    "70": 1,
     "143": 2,
     "144": 2,
     "611": 3,
     "624": 3,
-    "625": 3,
-    "626": 3,
+    "625": 2,
+    "626": 2,
     "627": 1,
-    "628": 2,
-    "629": 2,
+    "628": 1,
+    "629": 1,
     "630": 2,
     "631": 2,
     "632": 2,
@@ -450,7 +449,7 @@
     },
     "X5": {
       "color": "brown",
-      "quantity": 3,
+      "quantity": 2,
       "values": [
         {
           "angle": 210,
@@ -524,7 +523,7 @@
     },
     "X7": {
       "color": "brown",
-      "quantity": 3,
+      "quantity": 2,
       "values": [
         {
           "angle": 210,
@@ -1611,6 +1610,42 @@
           "side": 6
         }
       ]
+    },
+    "G2": {
+      "quantity": 1,
+      "color": "gray",
+      "values": [
+        {
+          "value": 70,
+          "angle": 210,
+          "percent": 0.8
+        }
+      ],
+      "cities": [
+        {
+          "size": 3
+        }
+      ],
+      "track": [
+        {
+          "side": 1
+        },
+        {
+          "side": 2
+        },
+        {
+          "side": 3
+        },
+        {
+          "side": 4
+        },
+        {
+          "side": 5
+        },
+        {
+          "side": 6
+        }
+      ]
     }
   },
   "rounds": [
@@ -2183,7 +2218,7 @@
       }
     },
     {
-      "name": "Kvarner",
+      "name": "Kukoč",
       "subtext": "Branch",
       "abbrev": "KB",
       "color": "lavender",
@@ -2197,9 +2232,9 @@
       }
     },
     {
-      "name": "Gorski Kotar",
+      "name": "Stojaković",
       "subtext": "Branch",
-      "abbrev": "GB",
+      "abbrev": "SB",
       "color": "fuchsia",
       "token": {
         "bar": true,
@@ -2214,7 +2249,7 @@
       }
     },
     {
-      "name": "Međimurje",
+      "name": "Modrić",
       "subtext": "Branch",
       "abbrev": "MB",
       "color": "blue",
@@ -2228,9 +2263,9 @@
       }
     },
     {
-      "name": "Banija",
+      "name": "Petrović",
       "subtext": "Branch",
-      "abbrev": "BB",
+      "abbrev": "PB",
       "color": "orange",
       "token": {
         "bar": true,
@@ -2245,9 +2280,9 @@
       }
     },
     {
-      "name": "Velebit",
+      "name": "Nikola",
       "subtext": "Branch",
-      "abbrev": "VB",
+      "abbrev": "NB",
       "color": "lime",
       "token": {
         "bar": true,
@@ -2595,7 +2630,13 @@
           {
             "name": {
               "name": "Ancona"
-            }
+            },
+            "companies": [
+              {
+                "label": "P17",
+                "color": "navyBlue"
+              }
+            ]
           }
         ],
         "track": [
@@ -2705,7 +2746,7 @@
         "track": [
           {
             "type": "gentle",
-            "side": 3
+            "side": 1
           },
           {
             "type": "straight",
@@ -3920,9 +3961,36 @@
           "O13",
           "S13",
           "J4",
-          "L6",
           "M9",
           "R12"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Sava",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
+        ],
+        "hexes": [
+          "L6"
+        ],
+        "companies": [
+          {
+            "label": "P1",
+            "color": "red",
+            "angle": 120,
+            "percent": 0.65
+          }
         ]
       },
       {
@@ -4033,5 +4101,16 @@
       }
     ]
   },
-  "wip": true
+  "wip": true,
+  "exports": {
+    "formats": [
+      "pdf"
+    ],
+    "docs": [
+      "cards",
+      "charters",
+      "map",
+      "market"
+    ]
+  }
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
     import {
         isConvertCharter,
+        isQuarantineTrain,
         isSplitCompany,
         TwoCrownsCompanies,
         TwoCrownsMap
@@ -84,7 +85,16 @@
               }
             : isConvertCharter(action)
               ? { text: 'Hungarian Bank converted to Ganz', important: true }
-              : undefined}
+              : isQuarantineTrain(action)
+                ? {
+                      text: `Rijeka Lazaretto: quarantine marker on a ${
+                          session.gameState.trainInventory.trains.find(
+                              (train) => train.id === action.trainId
+                          )?.definitionId ?? 'train'
+                      }`,
+                      important: true
+                  }
+                : undefined}
     {numberedShareLocation}
     auctionLotDescription={(id) => lotInfo(id).description}
     {session}
@@ -103,6 +113,24 @@
         {:else if session.splitInProgress}
             <BranchSplitPreview {session} showUndo={false} onFocusLocation={focusLocation} />
         {:else}
+            {#if session.quarantineTrains.length}
+                <div class="lazaretto" aria-label="Rijeka Lazaretto">
+                    <span class="lazaretto-label"
+                        >Rijeka Lazaretto: close it to mark a train, which runs one more OR when it
+                        would rust</span
+                    >
+                    <div class="lazaretto-trains">
+                        {#each session.quarantineTrains as train (train.trainId)}
+                            <button
+                                class="lazaretto-train"
+                                aria-label={`Quarantine the ${train.name}`}
+                                onclick={() => session.quarantineTrain(train.trainId)}
+                                >Mark {train.name}</button
+                            >
+                        {/each}
+                    </div>
+                </div>
+            {/if}
             <OperatingActions
                 {privateOperationDescription}
                 onFocusRoute={focusRoute}
@@ -133,6 +161,28 @@
 </GameTable>
 
 <style>
+    .lazaretto {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--rail-border, #b8a995);
+    }
+    .lazaretto-label {
+        color: var(--rail-muted, #887969);
+        font-size: 12px;
+    }
+    .lazaretto-trains {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .lazaretto-train {
+        padding: 2px 10px;
+        border: 1px solid var(--rail-border, #b8a995);
+        border-radius: 4px;
+        font-weight: 600;
+    }
     .tranches {
         display: flex;
         align-items: center;

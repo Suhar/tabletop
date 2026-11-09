@@ -15,14 +15,18 @@ describe('1874 Ancona Steamship Line', () => {
         return state
     }
 
-    it('sells to a company other than the Luka from the first OR', () => {
+    it('sells to a company other than the Luka from 4H until the first 4+', () => {
         const state = withLineHeldBy('p1')
         const mainline = twoCrownsRole(state, 'mainline')
+        expect(TwoCrownsTransferRules.priceRange(state, mainline, asset)).toBeUndefined()
+        state.phaseId = '4H'
         expect(TwoCrownsTransferRules.priceRange(state, mainline, asset)).toEqual({
             minimum: 45,
             maximum: 90
         })
         expect(TwoCrownsTransferRules.priceRange(state, 'LUKA', asset)).toBeUndefined()
+        state.phaseId = '4+'
+        expect(TwoCrownsTransferRules.priceRange(state, mainline, asset)).toBeUndefined()
     })
 
     it('gives the buyer the Ancona bonus and closes', () => {

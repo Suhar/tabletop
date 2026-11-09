@@ -191,7 +191,7 @@ export function twoCrownsLocations(
         ...locations(
             'G7',
             track('gray', [
-                [2, 4],
+                [0, 2],
                 [2, 5]
             ])
         ),
@@ -297,9 +297,10 @@ export function twoCrownsLocations(
         ...locations('J10 J12 I9 H8', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),
-        ...locations('M11 O13 S13 J4 L6 M9 R12', track('white', []), {
+        ...locations('M11 O13 S13 J4 M9 R12', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),
+        ...locations('L6', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('M3 O5 Q7 R10', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),

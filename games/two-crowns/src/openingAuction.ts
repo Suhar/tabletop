@@ -98,6 +98,25 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
 export function twoCrownsStartingCash({ playerCount }: StartingCashSetup): number {
     return twoCrownsPlayerSetup(playerCount).startingCash
 }
+// Dealt first, before the other privates and the Luka shares (1874design.md, Setup step 9).
+export const FirstDealtPrivateIds = ['P15', 'P13', 'P16', 'P12', 'P14']
+/**
+ * The players' auction piles: the concessions and the banks shuffled and dealt one at a time
+ * around the table, then the other lots shuffled and dealt on from the next player.
+ */
+export function dealAuctionPiles(
+    lotIds: readonly string[],
+    playerCount: number,
+    random: () => number
+): string[][] {
+    const first = lotIds.filter((id) => FirstDealtPrivateIds.includes(id))
+    const rest = lotIds.filter((id) => !FirstDealtPrivateIds.includes(id))
+    shuffle(first, random)
+    shuffle(rest, random)
+    const piles: string[][] = Array.from({ length: playerCount }, () => [])
+    ;[...first, ...rest].forEach((id, index) => piles[index % playerCount].push(id))
+    return piles
+}
 // At 4–5 players one of the Zadar and Virovitica Station Rights is removed at random.
 function dealtPrivateIds(playerCount: number, random: () => number): string[] {
     const ids = privatesForPlayerCount(playerCount)
@@ -129,11 +148,14 @@ export function createTwoCrownsOpening({
     // Public Line shares 1..players are the Bonds' reserved shares; the last is the Hungarian Bank's.
     const publicLinePool = (index: number) =>
         index < bonds.length ? reserved : index + 1 === CharterPublicShareNumber ? charter : market
-    const lotIds = [
-        ...privates.filter((p) => p.id !== 'P').map((p) => p.id),
-        ...remaining.map((c) => `LUKA:share:${c.number}`)
-    ]
-    shuffle(lotIds, prng.random)
+    const piles = dealAuctionPiles(
+        [
+            ...privates.filter((p) => p.id !== 'P').map((p) => p.id),
+            ...remaining.map((c) => `LUKA:share:${c.number}`)
+        ],
+        players.length,
+        prng.random
+    )
     const auctioneerId = drawFirstPlayer(
         players.map((player) => player.playerId),
         prng,
@@ -291,13 +313,7 @@ export function createTwoCrownsOpening({
         position,
         titleState: { unionBankDrawnCompanyId: remaining[0].companyId },
         begin: beginOfferPileAuction({
-            piles: players.map((p, index) => ({
-                playerId: p.playerId,
-                lotIds: lotIds.slice(
-                    (index * lotIds.length) / players.length,
-                    ((index + 1) * lotIds.length) / players.length
-                )
-            })),
+            piles: players.map((p, index) => ({ playerId: p.playerId, lotIds: piles[index] })),
             auctioneerId,
             awards: [],
             incomePayments: 0,

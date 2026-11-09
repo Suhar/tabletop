@@ -14,7 +14,9 @@ import type { TileFace } from '@tabletop/18xx'
 
 const cityCount = (face: TileFace) => face.nodes.filter((node) => node.kind === 'city').length
 const KarlovacId = 'I11'
-const AnyCityGrayId = 'two-crowns:G1'
+const AnyCityGrayIds = ['two-crowns:G1', 'two-crowns:G2']
+// The gray city the Lika Survey Office holds (1874design.md, P8).
+const LikaTileId = 'two-crowns:G2'
 // 1874design.md, Junction cities and Gray tiles: a green junction splits into the brown J tile's
 // two cities, and a gray city may join a brown junction back into one.
 export function preservesTwoCrownsStops(before: TileFace, after: TileFace): boolean {
@@ -42,8 +44,8 @@ export const TwoCrownsTrackRules: TrackRules = {
     },
     preservesStops: preservesTwoCrownsStops,
     relabels(locationId, definitionId) {
-        // The one gray city goes on any brown city but Karlovac, labelled or junction included.
-        if (definitionId === AnyCityGrayId) return locationId !== KarlovacId
+        // The gray cities go on any brown city but Karlovac, labelled or junction included.
+        if (AnyCityGrayIds.includes(definitionId)) return locationId !== KarlovacId
         // A J or S hex takes plain tiles until its label applies (brown for J, green for S).
         const tile = TwoCrownsTiles.find((item) => item.id === definitionId)
         const label = TwoCrownsMap.definition.locations.find((item) => item.id === locationId)
@@ -56,7 +58,7 @@ export const TwoCrownsTrackRules: TrackRules = {
     homeLocations: (companyId) => TwoCrownsMap.reservedLocationIds(companyId),
     consentPlayerId: () => undefined,
     restriction(state, request) {
-        // In the final 3 ORs only the two gray tiles may be laid (1874design.md, Trains and phases).
+        // In the final 3 ORs only the gray tiles may be laid (1874design.md, Trains and phases).
         const { gameEnding, operatingSet } = state as {
             gameEnding?: { finalOperatingSet?: number }
             operatingSet?: { number: number }
@@ -70,12 +72,12 @@ export const TwoCrownsTrackRules: TrackRules = {
         const blocker = TwoCrownsPrivateCatalog.blockedBy(state, request.locationId)
         if (blocker) return `${blocker.name} blocks this hex`
         const controller = controllingOwner(state, request.companyId)
-        if (request.definitionId === '18xx:9') {
+        if (request.definitionId === LikaTileId) {
             const privateCompany = state.companies.find((company) => company.id === 'P8')
             const owner =
                 privateCompany && !privateCompany.closed ? privateOwner(state, 'P8') : undefined
             if (!controller || !owner || !sameOwner(controller, owner))
-                return 'The straight yellow tile requires the Lika Survey Office'
+                return 'Tile G2 requires the Lika Survey Office'
         }
         return undefined
     }
