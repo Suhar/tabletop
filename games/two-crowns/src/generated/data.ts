@@ -230,7 +230,7 @@ export const TwoCrownsTrainData = [
     { id: '3+', price: 240, count: 4, rustsOn: 'D' },
     { id: '4+', price: 200, count: 3, rustsOn: 'D' },
     { id: '7', price: 500, count: 5 },
-    { id: 'D', price: 600, count: 7 }
+    { id: 'D', price: 600, count: 10 }
 ] as const
 
 export const TwoCrownsPhaseData = [

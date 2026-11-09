@@ -316,7 +316,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 
 ## Trains and phases
 
-The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is customary in 18xx, the train counts are the same at every player count. Prices are 1871's. Each rank has one more train than 1871, except 2H and 2+, which keep 1871's counts. As in 1871, Diesels are unlimited: the 7 printed are not a cap.
+The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is customary in 18xx, the train counts are the same at every player count. Prices are 1871's. Each rank has one more train than 1871, except 2H and 2+, which keep 1871's counts. As in 1871, Diesels are unlimited: the 10 printed are not a cap.
 
 | Train | Cost | Count | Rusts | ORs per set | Train limit | Tiles | What else changes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -329,7 +329,7 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 | 3+ | $240 | 4 | 5H | 2 | 3 | Green | Start prices 65–58 only (Late space: 74) |
 | 4+ | $200 | 3 | 6H | 3 | 3 | + Brown | Privates close (except the Austrian Bank, the Hungarian Bank and the Lika Survey Office); junction upgrades open |
 | 7 | $500 | 5 | 2+ | 3 | 2 | Brown | Start price 58 only (Late space: 65) |
-| Diesel | $600 | 7 | 3+, 4+ | 3 | 2 | + Gray (3 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the gray tiles may be laid |
+| Diesel | $600 | 10 | 3+, 4+ | 3 | 2 | + Gray (3 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the gray tiles may be laid |
 
 **Train types (1871)**
 

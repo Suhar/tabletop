@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.7.1"
+    "subtitle": "Prototype 0.7.2"
   },
   "prototype": true,
   "bank": "∞",
@@ -1972,7 +1972,7 @@
     {
       "name": "D",
       "image": "Diesel",
-      "quantity": 7,
+      "quantity": 10,
       "price": 600,
       "color": "phaseD"
     }
