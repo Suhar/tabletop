@@ -128,8 +128,8 @@ export const TwoCrownsPrivateData = [
     {
         id: 'P8',
         name: 'Lika Survey Office',
-        faceValue: 100,
-        revenue: 15,
+        faceValue: 90,
+        revenue: 20,
         description:
             'Holds tile G2, a gray city. From the Diesel, a company you preside may lay it on any brown city but Karlovac as its upgrade. Never closes.'
     },

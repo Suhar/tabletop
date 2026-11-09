@@ -350,7 +350,7 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 | P4 | Virovitica Station Rights | $50 | $10 | As P3, for Virovitica. Both are in play at 3 players; one is removed at random at 4–5 players. | First 4+ |
 | P5 | Rijeka Lazaretto | $40 | $10 | In the operating turn of a company you preside, close it to put the quarantine marker on one of that company's trains. When that train would rust, it runs one more OR, then is discarded. | When used; first 4+ |
 | P7 | Kvarner Shipbuilding | $90 | $15 | Exchange for a reserved Südbahn share. | As P1 |
-| P8 | Lika Survey Office | $100 | $15 | Holds gray city tile G2. From the Diesel, any company the owner presides may lay it as its upgrade, on any brown city but Karlovac. | Never |
+| P8 | Lika Survey Office | $90 | $20 | Holds gray city tile G2. From the Diesel, any company the owner presides may lay it as its upgrade, on any brown city but Karlovac. | Never |
 | P9 | Slavonian Agricultural Society | $110 | $10 | Comes with a 10% MÁV share (1871's Royal Agricultural Society). | First 4+ |
 | P10 | Wiener Neustadt Locomotive Works | $110 | $20 | 1871's Hunslet: sell to a non-Luka company for $1–200 from 4H; close it to buy a train at any point in that company's turn. | First 4+, unused |
 | P11 | Kupa Steam Ferry | $120 | $15 | Comes with a 10% MÁV share. | First 4+ |
@@ -362,6 +362,8 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 | P17 | Ancona Steamship Line | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the 4H phase until the first 4+. The buying company places its cheapest station on Ancona's reserved space, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |
 
 **Lika Survey Office pricing (0.6.0).** Until 0.5.0 it paid $30 per OR and closed on the first 4+. In 650 bot games under 0.4.0 and 0.5.0 (v19 bots), a game ran 15.6 ORs, 7.9 of them up to and including the OR of the first 4+ and 7.7 after it; at 4–5 players 16.1, 8.3 and 7.8. That paid its owner about $30 × 8.3 = $248 at 4–5 players. Never closing, it pays for every OR, so $248 / 16.1 = $15.4 per OR keeps the same total; it pays $15 ($242 at 4–5 players, $234 overall). The money now comes later in the game, which the G2 tile makes up for.
+
+**Lika Survey Office repricing (0.7.0).** Face $90 (was $100) and $20 per OR (was $15), set by the designer after a discounted-value comparison. Measured on the same games, a player's wealth grows about 16.5% per OR (final wealth against starting cash: 16.2% at 3 players, 16.7% at 4, 16.2% at 5). That rate holds while players are short of cash; from about the first 4+ most players sit at the certificate limit with idle cash, so money paid then is worth little more than its face at game end. Valued that way, $15 every OR was worth about three quarters of the old $30 until the first 4+, and about $20 per OR matched it for any early rate from 10% to 20%.
 
 **Public Line Bond (not dealt; one per player)**
 

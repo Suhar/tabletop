@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.6.0"
+    "subtitle": "Prototype 0.7.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -175,8 +175,8 @@
     {
       "name": "Lika Survey Office",
       "id": "P8",
-      "price": 100,
-      "revenue": 15,
+      "price": 90,
+      "revenue": 20,
       "tile": "G2",
       "description": "Holds tile G2, a gray city. From the Diesel, a company you preside may lay it on any brown city but Karlovac as its upgrade. Never closes."
     },
