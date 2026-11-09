@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.7.2"
+    "subtitle": "Prototype 0.7.3"
   },
   "prototype": true,
   "bank": "∞",
@@ -2070,6 +2070,7 @@
       "notes": "Triggers game end"
     }
   ],
+  "playerAid": {},
   "tokenTypes": {
     "default": [
       "Free",
@@ -4105,6 +4106,7 @@
     "docs": [
       "cards",
       "charters",
+      "player-aids",
       "map",
       "market"
     ]
