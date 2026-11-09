@@ -19,7 +19,6 @@
         DropdownGroup,
         Tooltip
     } from 'flowbite-svelte'
-    import darkLogo from '$lib/components/images/dark-logo.png'
     import { afterNavigate, goto, onNavigate } from '$app/navigation'
     import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
     import AuthModal from '$lib/components/AuthModal.svelte'
@@ -420,12 +419,11 @@
             <div class="flex flex-row justify-between items-center w-full">
                 <div class="header-brand flex justify-center items-center">
                     <NavBrand href={sessionUser ? '/library' : '/'} class="shrink-0 cursor-pointer">
-                        <img src={darkLogo} alt="Board Together" class="full-logo h-8 w-auto" />
-                        <img
-                            src="/android-chrome-192x192.png"
-                            alt="Board Together"
-                            class="game-logo"
-                        />
+                        <span
+                            class="full-logo text-2xl leading-8 font-bold tracking-wide whitespace-nowrap text-gray-900 dark:text-white"
+                            >__SITE_NAME__</span
+                        >
+                        <img src="/android-chrome-192x192.png" alt="__SITE_NAME__" class="game-logo" />
                     </NavBrand>
 
                     <div
