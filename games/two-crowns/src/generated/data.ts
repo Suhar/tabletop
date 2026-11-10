@@ -33,41 +33,41 @@ export const TwoCrownsPrivateData = [
         id: 'BD1',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 5,
+        revenue: 10,
         description:
-            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+            "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
         id: 'BD2',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 5,
+        revenue: 10,
         description:
-            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+            "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
         id: 'BD3',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 5,
+        revenue: 10,
         description:
-            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+            "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
         id: 'BD4',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 5,
+        revenue: 10,
         description:
-            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+            "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
         id: 'BD5',
         name: 'Public Line Bond',
         faceValue: 0,
-        revenue: 5,
+        revenue: 10,
         description:
-            "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+            "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
         id: 'G',

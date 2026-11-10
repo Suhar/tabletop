@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.7.3"
+    "subtitle": "Prototype 0.8.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -67,52 +67,52 @@
     {
       "name": "Public Line Bond",
       "id": "BD1",
-      "revenue": 5,
+      "revenue": 10,
       "token": {
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+      "description": "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
       "id": "BD2",
-      "revenue": 5,
+      "revenue": 10,
       "token": {
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+      "description": "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
       "id": "BD3",
-      "revenue": 5,
+      "revenue": 10,
       "token": {
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+      "description": "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
       "id": "BD4",
-      "revenue": 5,
+      "revenue": 10,
       "token": {
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+      "description": "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
       "name": "Public Line Bond",
       "id": "BD5",
-      "revenue": 5,
+      "revenue": 10,
       "token": {
         "label": "NAR",
         "color": "narodna"
       },
-      "description": "Can't be sold. From 4H, may be exchanged for a Public Line share in a stock round. Exchanged at the first 4+."
+      "description": "Can't be sold. In any stock round, may be exchanged for its reserved Public Line share. Exchanged at the first 4+."
     },
     {
       "name": "Ganz Locomotive Works",
@@ -2019,8 +2019,7 @@
       "limit": 4,
       "tiles": "green",
       "rounds": 2,
-      "buyCompanies": true,
-      "notes": "Public Line Bonds may be exchanged"
+      "buyCompanies": true
     },
     {
       "train": "5H",

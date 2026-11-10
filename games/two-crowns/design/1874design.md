@@ -104,7 +104,7 @@ Tileable means a hex where a tile can be laid or upgraded: blank hexes plus prep
 
 ## Setup and components
 
-Setup follows 1871, with one change after 1894: every player starts with a Public Line Bond, which pays like a private and later becomes a Public Line share, so everyone has a stake in a public company from the start. Mainline shares come with expensive privates, as in 1871. All dollar figures are placeholders for playtesting.
+Setup follows 1871, with one change after 1894: every player starts with a Public Line Bond, which pays like a private and later becomes a Public Line share, so everyone has a stake in a public company from the start. Mainline shares come with expensive privates, as in 1871.
 
 |  | 3 players | 4 players | 5 players |
 | --- | --- | --- | --- |
@@ -117,7 +117,7 @@ Setup follows 1871, with one change after 1894: every player starts with a Publi
 
 Starting cash is $100 a player below the first draft ($940, $700 and $580). In v17 bot playtests the auction left 1874 players with spare cash, so they reached the certificate limit early and sat on idle cash, which favours the Austrian Bank. The Rijeka Lazaretto and the two lease concessions were then cut by $45 between them. At face value, counting Luka shares at their $80 score value, the auction now leaves $615 at 3 players ($1,905 of items, $205 each), $545 at 4 ($1,855, $136 each) and $545 at 5 ($1,855, $109 each). 1871 at 4 players leaves $830 ($1,920 against $1,090 of privates at face, $208 each), but its auction is bid well above face: rated players and bots both spend about $400 of their $480.
 
-**Bonds and liquidity.** Every player's Public Line Bond is worth about the same at every player count, so it doesn't change the balance between 4 and 5 players. It adds little early cash: it can't be sold, and pays only $5 per OR (1 OR per set in the 2H and 3H phases). From 4H it becomes a share worth roughly one more share's cash. Selling it is self-limiting: each share sold moves the Public Line down a row of the market (86, 80, 74, 65 from its start price), so when everyone sells at once the later sellers get far less. At 5 players five Bonds compete for that exit, so each one is worth a little less than at 4.
+**Bonds and liquidity.** Every player's Public Line Bond is worth about the same at every player count, so it doesn't change the balance between 4 and 5 players. The Bond itself can't be sold, and pays $10 per OR (1 OR per set in the 2H and 3H phases). From the first stock round its holder may exchange it for a share, which can be sold once the Public Line has operated. Selling it is self-limiting: each share sold moves the Public Line down a row of the market (86, 80, 74, 65 from its start price), so when everyone sells at once the later sellers get far less. At 5 players five Bonds compete for that exit, so each one is worth a little less than at 4.
 
 Every private is in play at 3 players, both Station Rights included, which keeps the deck at 7 items per player. At 4–5 players one Station Rights is removed at random.
 
@@ -142,7 +142,7 @@ The tranche chart allows 10 started companies at most: a top row (Mainline, Shor
 
 **Setup steps**
 
-1. Luka draw (1871): shuffle the eight Luka shares. The first drawn names the Mainline, the second the Shortline and the third the Public Line. All three drawn Luka shares leave the game. Each company keeps its Luka name and home, and gets the matching card (MÁV lease, Südbahn lease or Narodna) on its charter.
+1. Luka draw (1871): shuffle the eight Luka shares. The first drawn names the Mainline, the second the Shortline and the third the Public Line. All three drawn Luka shares leave the game. Each company keeps its Luka name and home; its station on the Main, Short or Public space of the tranche chart marks its role, and its president's certificate goes on its concession (the MÁV, Südbahn or Narodna Concession), a private company sold in the auction.
 2. Mainline: stock token on 92, $920 in treasury, station on its home, floated. Its president's certificate goes on the MÁV Concession. One 10% share goes to the Austrian Bank, one with the Slavonian Agricultural Society and one with the Kupa Steam Ferry; the rest go to the bank pool.
 3. Shortline: stock token on 86; its home is reserved, and its station goes there when it floats. Its president's certificate goes on the Südbahn Concession. Reserve three 10% shares as exchange shares for the Sava River Bridge, Pazin Tunnel Company and Kvarner Shipbuilding privates; the rest go to the bank pool. The Shortline floats once 60% of its shares are out of the bank, the reserved shares included, so one more share must be bought. It then takes $860 (10 × 86) from the bank, as in 1871.
 4. Public Line: works like the Shortline. Stock token on 86; its home is reserved, and its station goes there when it floats. Its president's certificate goes on the Narodna Concession. Reserve one 10% share per player and deal each player a Public Line Bond, at every player count; the rest go to the bank pool. It floats once 60% of its shares are out of the bank, the Bond shares and the Hungarian Bank's share included, so at every player count it floats when the concession is sold. It then takes $860 (10 × 86) from the bank, the same as the Shortline.
@@ -309,7 +309,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 **1894 private-company ideas merged in**
 
 - **Major shareholdings.** Concessions carry presidencies. Here, the MÁV, Südbahn and Narodna Concessions.
-- **Starting stake for everyone.** 1894 deals each player shares of its starting companies. 1874 deals a Public Line Bond instead, so the stake can't be dumped before the line is strong.
+- **Starting stake for everyone.** 1894 deals each player shares of its starting companies. 1874 deals a Public Line Bond instead: a coupon until its holder exchanges it for a share, which may be from the first stock round.
 - **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights and the Ancona Steamship (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+.
 - **Blocking privates.** A private that blocks a hex stops blocking it once a company buys the private.
 - **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players, and one is removed at random at 4–5 players, like Liège and Antwerpen in 1894.
@@ -355,7 +355,7 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 | P10 | Wiener Neustadt Locomotive Works | $110 | $20 | 1871's Hunslet: sell to a non-Luka company for $1–200 from 4H; close it to buy a train at any point in that company's turn. | First 4+, unused |
 | P11 | Kupa Steam Ferry | $120 | $15 | Comes with a 10% MÁV share. | First 4+ |
 | P12 | Austrian Bank | $140 | — | Union Bank charter (see Austrian Bank). | Never |
-| P13 | Narodna Concession | $140 | $25 | Public Line president's certificate. Priced below the other concessions because its shares will be sold off after 4H. | When the Public Line operates |
+| P13 | Narodna Concession | $140 | $25 | Public Line president's certificate. Priced below the other concessions because Bond holders can exchange and sell its shares early. | When the Public Line operates |
 | P14 | Hungarian Bank | $90 | $0 | Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz (holdings go to the owner). | Never, unless converted |
 | P15 | MÁV Concession | $150 | $20 | MÁV president's certificate. | When MÁV operates |
 | P16 | Südbahn Concession | $145 | $30 | Südbahn president's certificate. | When the Südbahn operates |
@@ -369,12 +369,14 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 
 A convertible bond: it pays a fixed coupon, then converts into a share.
 
-- **Payout.** $5 per OR from the bank, like a private, about what a share of the line pays early on 2H routes. It was $10, cut to take cash out of the early game. Players will still exchange and sell fairly soon after 4H to turn the stake into cash, which is fine once the line can absorb it.
-- **No selling.** A Bond can't be sold to players, companies or the bank. Its reserved share is off the market until exchanged, so the Public Line can't be dumped early.
-- **Exchange.** In any stock round from the 4H phase, the holder may swap it for the reserved 10% share as a free action. Every remaining Bond is exchanged on the first 4+, when privates close.
-- **Reserved shares.** Until exchanged they count as out of the bank for floating, pay their dividends into the Public Line's treasury, which partly funds the line, and don't count toward its presidency.
+- **Payout.** $10 per OR from the bank, like a private (was $5 until 0.7.3).
+- **No selling.** A Bond can't be sold to players, companies or the bank. The share it becomes is sold like any other share: only once the Public Line has operated.
+- **Exchange.** In any stock round, from the first, the holder may swap it for the reserved 10% share as a free action, as with the Shortline's exchange privates. Every remaining Bond is exchanged on the first 4+, when privates close.
+- **Reserved shares.** They work as the Shortline's reserved exchange shares do: until exchanged they count as out of the bank for floating and as held for a sell-out, pay their dividends to no one (the bank keeps them), and don't count toward the presidency.
 - **Certificates.** A Bond counts as one certificate, as the share it becomes does.
-- **Cost.** The bank pays $5 × players per OR until the Bonds are exchanged, at most the first 4+: roughly $150–200 over a 5-player game.
+- **Cost.** The bank pays $10 × players per OR for each Bond not yet exchanged, at most until the first 4+.
+
+**Public Line Bond change (0.8.0).** Until 0.7.3 the Bond shares paid their dividends into the Public Line's treasury, and could be exchanged only from 4H. In 600 bot games under 0.7.3 (v20), the Narodna Concession's winners won 1.24 times their share; the MÁV and Südbahn Concessions' about 1.0. The three lines earned about the same ($2,470–2,580 a game), so the edge was in the stock. The reserved Bond shares were the only reserved shares that paid the company, and with the Hungarian Bank's share they left 2–4 Public Line shares in the market: by the end of stock round 3 the line had none left in 69% of games (Mainline 14%, Shortline 21%), sold out and rose early, and its holder kept the presidency in 95% of games against 77% for the Südbahn. From 0.8.0 the Bond shares work as the Shortline's exchange shares do, may be exchanged from the first stock round and then sold like any share, and the Bond pays $10.
 
 Not dealt: **k.u.k. Post**, owned by the Luka, pays $80 per OR, closes on the first 4+; and the **Public Line Bond** (see above).
 
@@ -401,7 +403,7 @@ The main question is whether short and long games both stay open: players should
 
 **Open questions**
 
-- **Public Line presidency.** Until the Bonds are exchanged, the president holds 20% and the pool has 8 minus the player count (3 at 5 players). A rival needs 30% from the pool to take over. After the exchanges the president's own Bond makes it 30%. Is that secure enough, or too secure?
+- **Public Line presidency.** The president holds 20% and the pool has 7 minus the player count (the Hungarian Bank holds one). Bonds may be exchanged from the first stock round, and each exchanged share counts toward the presidency, so a rival who exchanges a Bond and buys two pool shares (30%) passes a president who hasn't exchanged their own. Is that too easy now?
 - **Company count.** Is 10 started companies enough at 5 players, and too many at 3?
 - **Map size.** See Map size against other 18xx. Does 95–100 tileable hexes hit the target length at 5 players, and does the 3-player game, on the whole map, run too long?
 - **Implementation.** For boardtogether, a trade-in is a credit on a supply purchase, which fits the existing buy-trains step without a new state machine.

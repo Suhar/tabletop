@@ -10,7 +10,7 @@ export const TwoCrownsPhaseChart = createPhaseChart({
     // From 1874design.md's phase table, as the engine implements it.
     phaseNotes: {
         '2H': 'Start prices: 58, 65, 74, 80 (Late space: 86).',
-        '4H': 'Until the first 4+, companies may buy the Station Rights (½×–1× face), Wiener Neustadt (up to $200) and the Ancona Steamship (½×–1× face); the Luka only the Station Rights. Public Line Bonds may be exchanged.',
+        '4H': 'Until the first 4+, companies may buy the Station Rights (½×–1× face), Wiener Neustadt (up to $200) and the Ancona Steamship (½×–1× face); the Luka only the Station Rights.',
         '5H': '80 start price removed; available: 58, 65, 74 (Late space: 80).',
         '2+': 'The Hungarian Bank can no longer convert to Ganz.',
         '3+': '74 start price removed; available: 58, 65 (Late space: 74).',

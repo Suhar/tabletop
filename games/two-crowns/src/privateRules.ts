@@ -42,9 +42,7 @@ function unionBankIntro(state: UnionBankState) {
 export const TwoCrownsPrivateRules: PrivateRules = {
     exchangeTerms(state, privateCompanyId) {
         if (TwoCrownsPhases.isAtLeast(state.phaseId, '4+')) return undefined
-        // Bonds exchange from the 4H phase (1874design.md, Public Line Bond).
-        if (isBond(privateCompanyId) && !TwoCrownsPhases.isAtLeast(state.phaseId, '4H'))
-            return undefined
+        // Bonds exchange from the first stock round, as the Shortline's privates do (1874design.md, Public Line Bond).
         const reservedId = shortlineExchange(state, privateCompanyId)
         if (reservedId)
             return {
