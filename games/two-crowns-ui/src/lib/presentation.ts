@@ -31,7 +31,5 @@ export const TwoCrownsPresentation: TitlePresentation = {
             ? 'Exchange'
             : isTreasuryPoolId(poolId)
               ? 'Treasury'
-              : TwoCrownsNames.pool(poolId),
-    privatePurchaseLabel: 'Buy Wiener Neustadt',
-    privatePurchaseEmpty: 'You don’t own Wiener Neustadt'
+              : TwoCrownsNames.pool(poolId)
 }
