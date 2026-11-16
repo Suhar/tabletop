@@ -7,12 +7,13 @@ describe('1874 trade-ins', () => {
         expect(tradeInPrice('6H', '5H')).toBe(100)
         expect(tradeInPrice('2+', '6H')).toBe(130)
         expect(tradeInPrice('3+', '2+')).toBe(130)
-        expect(tradeInPrice('D', '7')).toBe(350)
+        expect(tradeInPrice('4+', '3+')).toBe(80)
     })
-    it('refuses other ranks, the 4+, and the first train', () => {
+    it('refuses other ranks, the 4+, the 7, and the first train', () => {
         expect(tradeInPrice('6H', '4H')).toBeUndefined()
         expect(tradeInPrice('7', '4+')).toBeUndefined()
+        // 1874design.md 0.10.0: a 7 can't be traded in for a Diesel.
+        expect(tradeInPrice('D', '7')).toBeUndefined()
         expect(tradeInPrice('2H', '2H')).toBeUndefined()
-        expect(tradeInPrice('4+', '3+')).toBe(80)
     })
 })

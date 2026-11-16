@@ -26,24 +26,26 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | --- | --- | --- | --- |
 | Zagreb | Big city | 30 / 30 / 70 or 60 | No reserved home; Z tiles. Brown is a choice: 2 slots at $70 or 3 slots at $60 |
 | Rijeka | Big city, port | 30 / 30 / 60 or 50 | Hungary's port, at the head of the Kvarner islands. Brown: 2 slots at $60 or 3 slots at $50 |
-| Luka homes | X city | 20 / 30 / 60 or 50 | As in 1871, every Luka home is an X: Pula, Varaždin, Sisak, Osijek, Gospić, Bjelovar, Split and Karlovac (labelled CX). Split is the Dalmatian hub. Brown X: 2 slots at $60, or 3 slots at $50, as in 1871. Pula (labelled P) has only three open sides, so in brown it takes the three-sided P tile ($60, 2 slots) |
+| Luka homes | X city | 20 / 30 / 60 or 50 | As in 1871, every Luka home is an X: Pula, Varaždin, Sisak, Osijek, Gospić, Bjelovar, Split and Karlovac (labelled CX). Split is the Dalmatian hub. Brown X: 2 slots at $60, or 3 slots at $50, as in 1871. Pula (labelled P) has only three open sides, so in brown it takes the three-sided P tile ($60, 2 slots). Gospić is printed yellow, as 1871 prints Summerside: track to Korenica and south to I17 |
 | Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod | Junction city (J) | 20 / 20 / 40 + 40 | Brown is two one-slot cities, one per branch (OO), $40 each. Twelve brown J tiles cover every way to pair the edges, with a second copy of J3, J7 and J9 |
-| Other cities | City | 20 / 20 / 40 | Virovitica, Zadar and Senj. Zadar and Senj have four open sides |
-| Šibenik, Knin | Edge city (S) | 20 / 20 | Three open sides, so green is the three-sided S tile; they stop at green |
-| Single towns | Town | 10 | Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj; Delnice sits in a mountain hex |
-| Double towns | Two towns | 10 + 10 | Samobor/Zaprešić, Krapina/Zabok, Glina/Petrinja, Čakovec/Prelog, Dugo Selo/Vrbovec, Kutina/Popovača, Našice/Orahovica, Benkovac/Obrovac, Opatija/Lovran |
+| Other cities | City | 20 / 20 / 40 | Virovitica, Zadar, Senj, Šibenik and Knin. Šibenik and Knin were three-sided S cities until 0.9.0; the Vodice and Vrlika stubs give each a fourth open side, so they take the plain city tiles |
+| Single towns | Town | 10 | Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj; Delnice and Otočac sit in mountain hexes, Lipovljani on the Sava |
+| Double towns | Two towns | 10 + 10 | Samobor/Zaprešić, Krapina/Zabok, Glina/Petrinja, Čakovec/Prelog, Dugo Selo/Vrbovec, Kutina/Popovača, Našice/Orahovica, Benkovac/Obrovac, Opatija/Lovran, Donji Miholjac/Valpovo |
 | Krk, Rab, Pag | Island towns | 20 / 10 / 10 | The Kvarner islands |
-| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad | Gray towns | 10, Legrad 20 | Fixed track: the Istrian coast, the Dalmatian spur and the border runs to Belgrade and Budapest |
-| Ljubljana | Offboard | 20 / 30 / 60 | Südbahn's gateway to Vienna |
+| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10; Legrad and Korenica 20 | Fixed track: the Istrian coast, the Dalmatian spur and the border runs to Belgrade and Budapest. Legrad (N2) joins Donja Dubrava, Koprivnica and the Budapest line. Korenica (J14) joins Gospić, the Kupa (J12) and the line to Banja Luka |
+| Donja Dubrava, Vodice, Vrlika, Bosanski Brod | Port towns | 10 | Gray dead ends at the map edge, after 1871's harbours: Donja Dubrava off Legrad, Vodice into Šibenik, Vrlika into Knin, Bosanski Brod into Slavonski Brod |
+| Rude Mines | Gray city, no stations | 20 / 20 / 60 | After 1871's Malpeque Shipyard: it counts as a city on routes, but no station may be placed there (black token). It sits on the Ljubljana line, with track to Ljubljana, G9, H6 and H8 |
+| Ljubljana | Offboard | 30 / 40 / 60 | Südbahn's gateway to Vienna |
 | Budapest | Offboard | 40 / 40 / 70 | MÁV's capital |
 | Trieste | Offboard | 20 / 20 / 60 | Rijeka's rival port |
-| Belgrade | Offboard | 20 / 20 / 50 | The eastern exit, past Vukovar |
-| Banja Luka, Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exits |
+| Belgrade | Offboard | 30 / 30 / 50 | The eastern exit, past Vukovar |
+| Banja Luka | Offboard | 30 / 30 / 60 | The Bosnian exit, reached from Lipovljani, Korenica and the Kupa |
+| Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exit past Slavonski Brod |
 | Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
-| Dubrovnik | Sea offboard | 40 / 40 / 60 | The Dalmatian steamer, past Makarska |
-| Malta | Sea offboard | 20 / 40 / 70 | The Malta steamer out of Split |
+| Dubrovnik | Sea offboard | 40 / 40 / 70 | The Dalmatian steamer, past Makarska |
+| Malta | Sea offboard | 20 / 40 / 60 | The Malta steamer out of Split |
 
-**Terrain.** Mountains and rivers both cost $80. The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at K19 links Knin to the Lika line.
+**Terrain.** Mountains and the Sava and Kupa cost $80; the Drava costs $60 (0.9.0). The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at M21 sits between Sinj, Split and Makarska.
 
 **Gray tiles: only three.** Cities stop at brown, apart from the three that get one of these:
 
@@ -55,33 +57,33 @@ All three are available from the Diesel. In the final 3 ORs they are the only ti
 
 ### Tile manifest
 
-Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and no straight yellow track (9; 0.6.0 removed the Lika Survey Office's one). Z, R, J, S and P tiles have no 1871 counterpart. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown. Yellow cities, green and brown track and brown X cities are cut below that scaling (0.5.0 and 0.6.0).
+Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable hexes. 1874 uses only the tile types 1871 uses, so there are no straight yellow cities (57) and no straight yellow track (9; 0.6.0 removed the Lika Survey Office's one). Z, R, J and P tiles have no 1871 counterpart. The counts were set on the 100-hex map; 0.9.0's 84-hex map keeps them, apart from the S tiles (removed) and one more C2. Values match 1871: cities 20 in yellow and green and 40 in brown, X cities 30 in green and 60 (2 slots) or 50 (3 slots) in brown. Zagreb and Rijeka, the two big cities, pay $30 from yellow, and Zagreb pays the most in brown. Yellow cities, green and brown track and brown X cities are cut below that scaling (0.5.0 and 0.6.0).
 
 | Tiles | 1871 | 1874 spots | 1874 tiles |
 | --- | --- | --- | --- |
-| Yellow track | 38 for 41 blank hexes | 63 | 37: 12 of 7, 25 of 8 |
-| Green track | 34 | 63 | 40 |
-| Brown track | 13, one of each | 63 | 15: a second 39 and 40 |
+| Yellow track | 38 for 41 blank hexes | 46 | 37: 12 of 7, 25 of 8 |
+| Green track | 34 | 46 | 40 |
+| Brown track | 13, one of each | 46 | 15: a second 39 and 40 |
 | Yellow single towns | 14 for 6 hexes | 8 | 14: 8 of 3, 6 of 58 |
-| Yellow double towns | 12 for 10 hexes | 9 | 12: 2 of tile 1, 2 each of 56 and 630 to 633 (Čakovec/Prelog can only take 56 or 632, Benkovac/Obrovac only 630 or 631) |
-| Green and brown towns | 4 and 2 | 17 town hexes | 4 (143, 144) and 2 (767, 769) |
-| Yellow cities | 14 for 10 hexes | 18 | 18: 9 of 5, 9 of 6 |
-| Green cities | 9 for 6 hexes | 8 (3 cities, 5 junctions) | 12 |
+| Yellow double towns | 12 for 10 hexes | 10 | 12: 2 of tile 1, 2 each of 56 and 630 to 633 (Čakovec/Prelog can only take 56 or 632, Benkovac/Obrovac only 630 or 631) |
+| Green and brown towns | 4 and 2 | 18 town hexes | 4 (143, 144) and 2 (767, 769) |
+| Yellow cities | 14 for 10 hexes | 17 (Zagreb, Rijeka and Gospić are printed yellow) | 18: 9 of 5, 9 of 6 |
+| Green cities | 9 for 6 hexes | 10 (5 cities, 5 junctions) | 13: 4 of C1, 5 of C2, 4 of C3 |
 | Brown cities | 2 for 7 hexes | 4, 2 with room for brown | 3 (611): most cities stop at green, as in 1871 |
 | Green and brown X | 8 each for 7 hexes | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, the only one that fits Pula), 9 brown (2 of X5, 3 of X6, 2 of X7, 2 of X8) |
 | Brown J | — | 5 | 12: one of each pairing, and a second J3, J7 and J9 |
-| S (Šibenik, Knin) | — | 2 | 2 green, three-sided |
 | P (Pula) | — | 1 | 1 brown, three-sided |
 | Z and R | — (1871's T: 2 green, 2 brown for 2 hexes) | 1 each | 3 green and 2 brown each |
 | Gray | CX and X | — | CX and two any-city: G1, and G2 for the Lika Survey Office |
 
 ### Map size against other 18xx
 
-The first sketch had 141 tileable hexes, about twice 1830 or 1871 and close to 1870, a much longer game. The map above applies the changes below and has 100: 20 per player at 5 players, between 1871 and 1870.
+The first sketch had 141 tileable hexes, about twice 1830 or 1871 and close to 1870, a much longer game. The changes below brought it to 100, 20 per player at 5 players. 0.9.0 pulls Dalmatia and Slavonia two rows closer and turns six edge hexes gray, leaving 84: 17 per player at 5 players, just under 1871's 18.5.
 
 | Game | Players | Tileable hexes | Per player at most players | Cities / towns on tileable hexes | Terrain hexes | Gray (fixed) hexes | Offboards |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| The Two Crowns 1874 (trimmed map) | 3–5 | 100 | 20 (25 at 4, 33 at 3) | 20 / 17 (8 single, 9 double) | 30 (11 mountains, 19 rivers) | 28 | 9 |
+| The Two Crowns 1874 (0.9.0 map) | 3–5 | 84 | 17 (21 at 4, 28 at 3) | 20 / 18 (8 single, 10 double) | 29 (11 mountains, 18 rivers) | 32 | 9 |
+| The Two Crowns 1874 (trimmed map, to 0.8) | 3–5 | 100 | 20 (25 at 4, 33 at 3) | 20 / 17 (8 single, 9 double) | 30 (11 mountains, 19 rivers) | 28 | 9 |
 | The Two Crowns 1874 (first sketch) | 3–5 | 141 | 28 (47 at 3 players) | 21 / 6 | 10 | 0 | 7 |
 | 1870 | 2–6 | 150 | 25 | 19 / 23 | 50 | 0 | 4 |
 | The Old Prince 1871 | 3–4 | 74 | 18.5 | 16 / 16 | 17 | 21 | 6 |
@@ -95,12 +97,13 @@ Tileable means a hex where a tile can be laid or upgraded: blank hexes plus prep
 - **Gray edges (28 hexes).** Fixed track at the Istrian coast (Rovinj), the Kvarner islands (Krk, Rab, Pag), the Dalmatian spur past Split (Makarska) and the border runs to Ljubljana, Trieste, Budapest (through Legrad and Beli Manastir), Belgrade (through Vukovar), Banja Luka and Sarajevo. 1871 has 21.
 - **Slavonia trimmed (19 hexes).** Osijek, Vukovar, Vinkovci, Požega and Slavonski Brod moved west; Belgrade and Bosnia moved in with them.
 - **Towns added (10).** Krapina, Samobor, Dugo Selo, Kutina, Novska, Našice, Glina, Otočac, Benkovac and Sinj, for 17 tileable town hexes plus 8 gray ones. 1871 has 16, which its plus trains need.
-- **Double towns (9 of 17).** 1871 has 6 single and 10 double town hexes; 1874 has 8 single and 9 double. There are 11 yellow double-town tiles (1871 has 12 for 10 hexes) and 14 single-town tiles (1871 has 14 for 6 hexes).
-- **Dalmatia stays open at every player count.** The 3-player game uses the whole map, 33 hexes each. Split is a Luka home, so Dalmatia is a home region rather than a tail.
+- **Double towns (10 of 18 from 0.9.0).** 1871 has 6 single and 10 double town hexes; 1874 has 8 single and 10 double. There are 12 yellow double-town tiles (1871 has 12 for 10 hexes) and 14 single-town tiles (1871 has 14 for 6 hexes).
+- **0.9.0 map (designer).** Dalmatia and southern Slavonia move up two rows, closing the gap below the Kupa and Lika. Donji Miholjac/Valpovo is a new double town. After 1871's map: Gospić is printed yellow, Korenica (J14) and Legrad (moved to N2) are gray junction towns, four gray port stubs worth $10 (Donja Dubrava, Vodice, Vrlika, Bosanski Brod) sit at the edge, and Rude Mines (G7) is a gray city without stations on the Ljubljana line, like Malpeque Shipyard. Belgrade moves to U13, the Budapest line from Beli Manastir bends through S3, R4 and R2, and new gray track joins Donji Miholjac to both Budapest lines (Q3) and Lipovljani to Korenica past Banja Luka (M13, L14). Šibenik and Knin lose their S labels and become plain cities.
+- **Dalmatia stays open at every player count.** The 3-player game uses the whole map, 28 hexes each. Split is a Luka home, so Dalmatia is a home region rather than a tail.
 
 ### Malta
 
-- **Malta.** A sea offboard south-west of Split (20 / 40 / 70), like Ancona and Dubrovnik.
+- **Malta.** A sea offboard south-west of Split (20 / 40 / 60), like Ancona and Dubrovnik.
 
 ## Setup and components
 
@@ -253,7 +256,7 @@ The Hungarian Bank is a second, smaller Austrian Bank that can be cashed out ear
 
 Game length is set by train purchases, and the trade-in is how presidents push it. A trade-in makes the next train cheaper, which speeds the game up. It happens in a company's buy-trains step and is open to every company, the Luka included.
 
-**The rule (1894's train upgrade).** Once per OR, when a company buys a train from the supply, it may hand in one of its trains of the rank just below the one it buys: a 5H for a 6H, a 6H for a 2+, a 7 for a Diesel. Half the handed-in train's face comes off the price, and that train leaves the game rather than going to the pool. A 4+ can never be traded in, so a 7 takes no trade-in.
+**The rule (1894's train upgrade).** Once per OR, when a company buys a train from the supply, it may hand in one of its trains of the rank just below the one it buys: a 5H for a 6H, a 6H for a 2+, a 3+ for a 4+. Half the handed-in train's face comes off the price, and that train leaves the game rather than going to the pool. A 4+ and a 7 can never be traded in, so a 7 and a Diesel take no trade-in (a 7 for a Diesel was allowed until 0.10.0).
 
 - **Supply only.** Trade-ins apply only to new trains from the supply, never to trains bought from the bank pool or another company.
 - **Once per OR.** A company buying two trains in one step may trade in against only one of them.
@@ -273,7 +276,7 @@ Game length is set by train purchases, and the trade-in is how presidents push i
 | 2+ | $220 | $110 | 3+ | 7 |
 | 3+ | $240 | $120 | 4+ | Diesel |
 | 4+ | $200 | — | Never | Diesel (runs once more) |
-| 7 | $500 | $250 | Diesel | Never |
+| 7 | $500 | — | Never | Never |
 | Diesel | $600 | — | — | Never |
 
 **Quarantine (the Rijeka Lazaretto).** The Rijeka Lazaretto (P5) lets its owner save one train from one rust. At any point in the operating turn of a company the owner presides, the owner may close the Lazaretto to put its quarantine marker on one of that company's trains. The marker stays on that train for the rest of the game. When the train would rust, it runs for one more OR instead, in that company's next run step, and is then discarded; until then it counts against the train limit. An unused Lazaretto closes on the first 4+, so the marker must be placed before then, but a marker already placed still saves a 6H from the 4+'s rust. A marked train that is traded in or sold keeps its marker. Quarantine softens a rush rather than speeding one up.
@@ -299,7 +302,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 
 **Junction cities (1894's disconnecting brown upgrade)**
 
-- **Which hexes.** Hexes marked J: Ogulin, Koprivnica, Novska, Vinkovci and Slavonski Brod, where the line into Bosnia leaves the main line. Knin has only three open sides, so it can't split; it is an S city instead. Luka homes are X cities, so none of them is a junction.
+- **Which hexes.** Hexes marked J: Ogulin, Koprivnica, Novska, Vinkovci and Slavonski Brod, where the line into Bosnia leaves the main line. Knin and Šibenik are plain cities. Luka homes are X cities, so none of them is a junction.
 - **Upgrade rule.** Their green-to-brown upgrade must keep track on every hex edge that had track. The brown J tile is an OO tile: two one-slot cities, each on its own branch of two edges, $40 each. A city that was one connected hub becomes two separate halves. There are twelve brown J tiles: one for each way of splitting the green tile's four edges into two branches (1894's X16 to X24), so every green junction has an upgrade, and a second copy of J3, J7 and J9.
 - **Stations.** The green city has two slots, so up to two stations are set aside on the upgrade (1894's station update). If one is the upgrading company's, its president puts it on either city of the new tile at once. The rest go back at the end of the upgrading company's turn, in operating order: each owner picks either city, even one that already holds a station. Two stations on one city sit side by side, and the other city stays open. This is the only way two stations can share a slot, so a brown junction can hold three stations. A company can't have two stations on the tile.
 - **The upgrading company's turn.** If two stations were set aside, the upgrading company can't place a station on the new tile that operating round. If both are other companies' stations, its trains may run through the hex that turn, since those stations only go back at the end of its turn.
@@ -405,5 +408,5 @@ The main question is whether short and long games both stay open: players should
 
 - **Public Line presidency.** The president holds 20% and the pool has 7 minus the player count (the Hungarian Bank holds one). Bonds may be exchanged from the first stock round, and each exchanged share counts toward the presidency, so a rival who exchanges a Bond and buys two pool shares (30%) passes a president who hasn't exchanged their own. Is that too easy now?
 - **Company count.** Is 10 started companies enough at 5 players, and too many at 3?
-- **Map size.** See Map size against other 18xx. Does 95–100 tileable hexes hit the target length at 5 players, and does the 3-player game, on the whole map, run too long?
+- **Map size.** See Map size against other 18xx. Does 84 tileable hexes (0.9.0) hit the target length at 5 players, and does the 3-player game, on the whole map, run too long?
 - **Implementation.** For boardtogether, a trade-in is a credit on a supply purchase, which fits the existing buy-trains step without a new state machine.

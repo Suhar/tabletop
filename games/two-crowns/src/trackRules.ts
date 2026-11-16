@@ -46,7 +46,7 @@ export const TwoCrownsTrackRules: TrackRules = {
     relabels(locationId, definitionId) {
         // The gray cities go on any brown city but Karlovac, labelled or junction included.
         if (AnyCityGrayIds.includes(definitionId)) return locationId !== KarlovacId
-        // A J or S hex takes plain tiles until its label applies (brown for J, green for S).
+        // A J hex takes plain tiles until its label applies in brown.
         const tile = TwoCrownsTiles.find((item) => item.id === definitionId)
         const label = TwoCrownsMap.definition.locations.find((item) => item.id === locationId)
             ?.upgradeLabels?.[0]

@@ -14,41 +14,47 @@ export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     B8: 'Trieste',
     E5: 'Ljubljana',
     Q1: 'Budapest',
-    V16: 'Belgrade',
-    M17: 'Banja Luka',
-    S19: 'Sarajevo',
-    P24: 'Dubrovnik',
-    K25: 'Malta',
+    U13: 'Belgrade',
+    M15: 'Banja Luka',
+    S17: 'Sarajevo',
+    P22: 'Dubrovnik',
+    K23: 'Malta',
     B16: 'Ancona',
     C13: 'Rovinj',
     E11: 'Opatija & Lovran',
+    G7: 'Rude Mines',
     F14: 'Krk',
     F16: 'Rab',
-    G19: 'Pag',
-    T12: 'Vukovar',
-    M25: 'Makarska',
+    G17: 'Pag',
+    T10: 'Vukovar',
+    M23: 'Makarska',
     S5: 'Beli Manastir',
-    O1: 'Legrad',
+    N2: 'Legrad',
+    J14: 'Korenica',
+    M1: 'Donja Dubrava',
+    J20: 'Vodice',
+    M19: 'Vrlika',
+    P12: 'Bosanski Brod',
     K7: 'Zagreb',
     F12: 'Rijeka',
     C15: 'Pula',
     G15: 'Senj',
     H12: 'Ogulin',
-    I17: 'Gospić',
+    I15: 'Gospić',
     I11: 'Karlovac',
     L4: 'Varaždin',
     L10: 'Sisak',
     N4: 'Koprivnica',
     N6: 'Bjelovar',
     P8: 'Virovitica',
-    P12: 'Požega',
-    Q13: 'Slavonski Brod',
-    S9: 'Osijek',
-    S11: 'Vinkovci',
-    H20: 'Zadar',
-    L20: 'Knin',
-    K23: 'Šibenik',
-    L24: 'Split',
+    P10: 'Požega',
+    Q11: 'Slavonski Brod',
+    S7: 'Osijek',
+    S9: 'Vinkovci',
+    H18: 'Zadar',
+    L18: 'Knin',
+    K21: 'Šibenik',
+    L22: 'Split',
     D12: 'Pazin',
     G11: 'Delnice',
     H16: 'Otočac',
@@ -58,24 +64,25 @@ export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     L2: 'Čakovec & Prelog',
     L8: 'Dugo Selo & Vrbovec',
     M5: 'Križevci',
-    N10: 'Kutina & Popovača',
-    N12: 'Novska',
-    M13: 'Lipovljani',
-    Q11: 'Našice & Orahovica',
-    I21: 'Vrana',
-    J20: 'Benkovac & Obrovac',
-    L22: 'Sinj'
+    N8: 'Kutina & Popovača',
+    N10: 'Novska',
+    Q9: 'Našice & Orahovica',
+    I19: 'Vrana',
+    J18: 'Benkovac & Obrovac',
+    L20: 'Sinj',
+    M11: 'Lipovljani',
+    Q5: 'Donji Miholjac & Valpovo'
 }
 
 export const TwoCrownsHomes: Readonly<Record<string, string>> = {
     C15: 'IST',
-    I17: 'LIK',
+    I15: 'LIK',
     I11: 'KAR',
     L4: 'ZAG',
     L10: 'POS',
     N6: 'POD',
-    S9: 'SLA',
-    L24: 'SPL'
+    S7: 'SLA',
+    L22: 'SPL'
 }
 
 export function twoCrownsLocations(
@@ -105,8 +112,8 @@ export function twoCrownsLocations(
             offboard(
                 [5],
                 revenue([
-                    ['yellow', 20],
-                    ['green', 30],
+                    ['yellow', 30],
+                    ['green', 40],
                     ['brown', 60]
                 ])
             )
@@ -122,27 +129,27 @@ export function twoCrownsLocations(
             )
         ),
         ...locations(
-            'V16',
+            'U13',
             offboard(
-                [2],
+                [3],
                 revenue([
-                    ['yellow', 20],
+                    ['yellow', 30],
                     ['brown', 50]
                 ])
             )
         ),
         ...locations(
-            'M17',
+            'M15',
             offboard(
                 [3, 2],
                 revenue([
-                    ['yellow', 20],
+                    ['yellow', 30],
                     ['brown', 60]
                 ])
             )
         ),
         ...locations(
-            'S19',
+            'S17',
             offboard(
                 [3],
                 revenue([
@@ -152,23 +159,23 @@ export function twoCrownsLocations(
             )
         ),
         ...locations(
-            'P24',
+            'P22',
             offboard(
                 [1],
                 revenue([
                     ['yellow', 40],
-                    ['brown', 60]
+                    ['brown', 70]
                 ])
             )
         ),
         ...locations(
-            'K25',
+            'K23',
             offboard(
                 [4],
                 revenue([
                     ['yellow', 20],
                     ['green', 40],
-                    ['brown', 70]
+                    ['brown', 60]
                 ])
             )
         ),
@@ -184,39 +191,76 @@ export function twoCrownsLocations(
                 0
             )
         ),
+        ...locations('R14 P2', track('gray', [[2, 5]])),
+        ...locations(
+            'L14',
+            track('gray', [
+                [2, 5],
+                [2, 4]
+            ])
+        ),
         ...locations('F6', track('gray', [[2, 5]])),
-        ...locations('B10', track('gray', [[3, 5]])),
+        ...locations('B10 Q13', track('gray', [[3, 5]])),
         ...locations('C13', town('gray', [[3, 0, 4]], 10)),
         ...locations('E11', town('white', [[], []], 0)),
         ...locations(
             'G7',
-            track('gray', [
-                [0, 2],
-                [2, 5]
-            ])
+            city(
+                'gray',
+                [0, 2, 4, 5],
+                revenue([
+                    ['yellow', 20],
+                    ['brown', 60]
+                ]),
+                0
+            )
         ),
         ...locations('F14', town('gray', [[3, 0]], 20)),
         ...locations('F16', town('gray', [[3, 5, 4]], 10)),
-        ...locations('G17', track('gray', [[0, 2]])),
-        ...locations('G19', town('gray', [[3, 5]], 10)),
-        ...locations('N2', track('gray', [[4, 0]])),
-        ...locations('T12', town('gray', [[3, 5, 2]], 10)),
-        ...locations('U13', track('gray', [[0, 2]])),
-        ...locations('Q15', track('gray', [[3, 5]])),
-        ...locations('R14', track('white', [])),
-        ...locations('M15', track('gray', [[0, 3]])),
-        ...locations('M25', town('gray', [[2, 4]], 10)),
-        ...locations('N24', track('gray', [[5, 1]])),
-        ...locations('O25', track('gray', [[2, 4]])),
-        ...locations('U15', track('gray', [[3, 5]])),
-        ...locations('R16', track('gray', [[2, 5]])),
-        ...locations('S17', track('gray', [[0, 2]])),
-        ...locations('S5', town('gray', [[0, 2]], 10)),
-        ...locations('R4', track('gray', [[3, 5]])),
-        ...locations('O1', town('gray', [[5, 1]], 20)),
-        ...locations('P2', track('gray', [[2, 5]])),
-        ...locations('Q3', track('gray', [[2, 3]])),
-        ...locations('R2', track('gray', [[0, 2]])),
+        ...locations('G17', town('gray', [[5, 2]], 10)),
+        ...locations('O1', track('gray', [[5, 1]])),
+        ...locations('T10', town('gray', [[3, 5, 2]], 10)),
+        ...locations('U11 S15', track('gray', [[0, 2]])),
+        ...locations(
+            'R2',
+            track('gray', [
+                [0, 2],
+                [0, 1]
+            ])
+        ),
+        ...locations(
+            'R12 C11 D10 D14 F8 G13 I13 I5 I7 J6 K3 K9 M7 O7 O9 P4 P6 I17 O3 R6 H6 T8 K19',
+            track('white', [])
+        ),
+        ...locations(
+            'M13',
+            track('gray', [
+                [0, 3],
+                [1, 3]
+            ])
+        ),
+        ...locations('M23', town('gray', [[2, 4]], 10)),
+        ...locations('N22', track('gray', [[5, 1]])),
+        ...locations('O23', track('gray', [[2, 4]])),
+        ...locations('S5', town('gray', [[0, 3]], 10)),
+        ...locations('S3', track('gray', [[0, 1]])),
+        ...locations('R4', track('gray', [[3, 4]])),
+        ...locations('N2', town('gray', [[0, 2, 4]], 20)),
+        ...locations('J14', town('gray', [[3, 5, 1]], 20)),
+        ...locations('M1', town('gray', [[5]], 10)),
+        ...locations('J20', town('gray', [[5]], 10)),
+        ...locations('M19', town('gray', [[2]], 10)),
+        ...locations('P12', town('gray', [[4]], 10)),
+        ...locations('K15', track('gray', [[2, 3]])),
+        ...locations(
+            'Q3',
+            track('gray', [
+                [2, 3],
+                [0, 2],
+                [4, 0],
+                [3, 4]
+            ])
+        ),
         ...locations('K7', city('yellow', [1, 5], 30, 1, ['Z'])),
         ...locations('F12', city('yellow', [2, 4], 30, 1, ['R'])),
         ...locations('C15', city('white', [], 0, 1, ['P']), {
@@ -229,9 +273,7 @@ export function twoCrownsLocations(
         ...locations('H12', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('I17', city('white', [], 0, 1, ['X']), {
-            upgradeLabels: [{ color: 'yellow', label: 'X' }]
-        }),
+        ...locations('I15', city('yellow', [4, 0], 20, 1, ['X'])),
         ...locations('I11', city('white', [], 0, 1, ['CX']), {
             upgradeLabels: [
                 { color: 'yellow', label: 'X' },
@@ -245,72 +287,62 @@ export function twoCrownsLocations(
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('N4', city('white', [], 0, 1, ['J']), {
-            terrain: { cost: 80, kinds: ['water'] },
+            terrain: { cost: 60, kinds: ['water'] },
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
         ...locations('N6', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('P8', city('white', [], 0, 1)),
-        ...locations('P12', town('white', [[]], 0)),
-        ...locations('Q13', city('white', [], 0, 1, ['J']), {
+        ...locations('P10', town('white', [[]], 0)),
+        ...locations('Q11', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('S9', city('white', [], 0, 1, ['X']), {
+        ...locations('S7', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
-        ...locations('S11', city('white', [], 0, 1, ['J']), {
+        ...locations('S9', city('white', [], 0, 1, ['J']), {
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('H20', city('white', [], 0, 1)),
-        ...locations('L20', city('white', [], 0, 1, ['S']), {
-            upgradeLabels: [{ color: 'green', label: 'S' }]
-        }),
-        ...locations('K23', city('white', [], 0, 1, ['S']), {
-            upgradeLabels: [{ color: 'green', label: 'S' }]
-        }),
-        ...locations('L24', city('white', [], 0, 1, ['X']), {
+        ...locations('H18', city('white', [], 0, 1)),
+        ...locations('L18', city('white', [], 0, 1)),
+        ...locations('K21', city('white', [], 0, 1)),
+        ...locations('L22', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('D12', town('white', [[]], 0)),
         ...locations('G11', town('white', [[]], 0), { terrain: { cost: 80, kinds: ['mountain'] } }),
-        ...locations('H16', town('white', [[]], 0)),
+        ...locations('H16', town('white', [[]], 0), { terrain: { cost: 80, kinds: ['mountain'] } }),
         ...locations('J8', town('white', [[], []], 0)),
         ...locations('K5', town('white', [[], []], 0), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('K11', town('white', [[], []], 0)),
         ...locations('L2', town('white', [[], []], 0)),
         ...locations('L8', town('white', [[], []], 0), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('M5', town('white', [[]], 0)),
-        ...locations('N10', town('white', [[], []], 0)),
-        ...locations('N12', city('white', [], 0, 1, ['J']), {
+        ...locations('N8', town('white', [[], []], 0)),
+        ...locations('N10', city('white', [], 0, 1, ['J']), {
             terrain: { cost: 80, kinds: ['water'] },
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
-        ...locations('M13', town('white', [[]], 0)),
-        ...locations('Q11', town('white', [[], []], 0)),
-        ...locations('I21', town('white', [[]], 0)),
-        ...locations('J20', town('white', [[], []], 0)),
-        ...locations('L22', town('white', [[]], 0)),
-        ...locations('F10 G9 H10 H14 P10 H18 J18 M23 K19 E9', track('white', []), {
+        ...locations('Q9', town('white', [[], []], 0)),
+        ...locations('I19', town('white', [[]], 0)),
+        ...locations('J18', town('white', [[], []], 0)),
+        ...locations('L20', town('white', [[]], 0)),
+        ...locations('F10 G9 H10 H14 J16 M21 K17 E9 L12', track('white', []), {
             terrain: { cost: 80, kinds: ['mountain'] }
         }),
         ...locations('J10 J12 I9 H8', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),
-        ...locations('M11 O13 S13 J4 M9 R12', track('white', []), {
-            terrain: { cost: 80, kinds: ['water'] }
-        }),
+        ...locations('M11', town('white', [[]], 0), { terrain: { cost: 80, kinds: ['water'] } }),
+        ...locations('J4 M9 R10', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
+        ...locations('S11', track('white', [])),
+        ...locations('O11', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('L6', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
-        ...locations('M3 O5 Q7 R10', track('white', []), {
-            terrain: { cost: 80, kinds: ['water'] }
+        ...locations('M3 O5 Q7 R8', track('white', []), {
+            terrain: { cost: 60, kinds: ['water'] }
         }),
-        ...locations(
-            'C11 D10 D14 F8 G13 I13 I15 J14 J16 I5 I7 J6 K3 K9 K13 L12 L14 M7 N8 O7 O9 O11 P4 P6 Q9 R8 T8 I19 O3 Q5 R6 P14 S7 M1 H6 T10',
-            track('white', [])
-        ),
-        ...locations('K21', track('white', [])),
-        ...locations('L16', track('gray', [[2, 5]])),
-        ...locations('K17', track('gray', [[2, 3]])),
-        ...locations('K15', track('gray', [[5, 0]]))
+        ...locations('K13', track('gray', [[5, 0]])),
+        ...locations('Q5', town('white', [[], []], 0))
     ]
 }

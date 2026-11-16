@@ -16,7 +16,7 @@ export const TwoCrownsPhaseChart = createPhaseChart({
         '3+': '74 start price removed; available: 58, 65 (Late space: 74).',
         '4+': 'Privates close except the Austrian Bank, the Hungarian Bank and the Lika Survey Office. Junction upgrades open.',
         '7': '65 start price removed; only 58 remains (Late space: 65).',
-        D: 'Triggers game end. Gray tiles: the CX, G1, and G2 for the Lika Survey Office; only these in the final three ORs.'
+        D: 'Triggers game end. Gray tiles: the CX, G1, and G2 for the Lika Survey Office; only these in the final three ORs. No trade-in: a 7 can’t be traded in for a Diesel.'
     },
     notes: ['The Luka may buy at most one train from the bank per operating turn.']
 })

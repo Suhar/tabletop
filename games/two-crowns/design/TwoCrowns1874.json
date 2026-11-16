@@ -4,13 +4,13 @@
     "designer": "Stephan Suhar",
     "background": "shortline",
     "orientation": "horizontal",
-    "titleY": 1650,
+    "titleY": 1400,
     "titleX": 150,
-    "titleFontSize": 100,
+    "titleFontSize": 90,
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.8.0"
+    "subtitle": "Prototype 0.10.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -663,7 +663,7 @@
       ]
     },
     "C2": {
-      "quantity": 4,
+      "quantity": 5,
       "color": "green",
       "values": [
         {
@@ -719,40 +719,6 @@
         },
         {
           "side": 5
-        }
-      ]
-    },
-    "S1": {
-      "quantity": 2,
-      "color": "green",
-      "values": [
-        {
-          "angle": 210,
-          "percent": 0.8,
-          "value": 20
-        }
-      ],
-      "labels": [
-        {
-          "angle": 150,
-          "percent": 0.8,
-          "label": "S"
-        }
-      ],
-      "cities": [
-        {
-          "size": 2
-        }
-      ],
-      "track": [
-        {
-          "side": 1
-        },
-        {
-          "side": 2
-        },
-        {
-          "side": 3
         }
       ]
     },
@@ -1985,7 +1951,7 @@
         "One action: buy, start a Luka company (or a Branch in the Late space), split, or act for the Austrian Bank or Hungarian Bank"
       ],
       "optional": [
-        "Free: private exchanges, Hungarian Bank conversion (until 2+)"
+        "Free: private and Bond exchanges, Hungarian Bank conversion (until 2+)"
       ],
       "ordered": true
     },
@@ -2380,12 +2346,12 @@
   "map": {
     "players": {
       "x": 150,
-      "y": 1450
+      "y": 1300
     },
     "roundTracker": {
       "type": "row-reverse",
-      "x": 150,
-      "y": 1650
+      "x": 400,
+      "y": 1315
     },
     "hexes": [
       {
@@ -2430,11 +2396,11 @@
           "revenues": [
             {
               "color": "phase2h",
-              "cost": "20"
+              "cost": "30"
             },
             {
               "color": "phase4h",
-              "cost": "30"
+              "cost": "40"
             },
             {
               "color": "phase4+",
@@ -2482,7 +2448,7 @@
         "track": [
           {
             "type": "offboard",
-            "side": 3
+            "side": 4
           }
         ],
         "offBoardRevenue": {
@@ -2492,7 +2458,7 @@
           "revenues": [
             {
               "color": "phase2h",
-              "cost": "20"
+              "cost": "30"
             },
             {
               "color": "phase4+",
@@ -2501,7 +2467,7 @@
           ]
         },
         "hexes": [
-          "V16"
+          "U13"
         ]
       },
       {
@@ -2523,7 +2489,7 @@
           "revenues": [
             {
               "color": "phase2h",
-              "cost": "20"
+              "cost": "30"
             },
             {
               "color": "phase4+",
@@ -2532,7 +2498,7 @@
           ]
         },
         "hexes": [
-          "M17"
+          "M15"
         ]
       },
       {
@@ -2559,7 +2525,7 @@
           ]
         },
         "hexes": [
-          "S19"
+          "S17"
         ]
       },
       {
@@ -2581,12 +2547,12 @@
             },
             {
               "color": "phase4+",
-              "cost": "60"
+              "cost": "70"
             }
           ]
         },
         "hexes": [
-          "P24"
+          "P22"
         ]
       },
       {
@@ -2612,12 +2578,12 @@
             },
             {
               "color": "phase4+",
-              "cost": "70"
+              "cost": "60"
             }
           ]
         },
         "hexes": [
-          "K25"
+          "K23"
         ]
       },
       {
@@ -2667,6 +2633,35 @@
           }
         ],
         "hexes": [
+          "R14",
+          "P2"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "straight",
+            "side": 3
+          },
+          {
+            "side": 3,
+            "type": "gentle"
+          }
+        ],
+        "hexes": [
+          "L14"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "straight",
+            "side": 3
+          }
+        ],
+        "hexes": [
           "F6"
         ]
       },
@@ -2679,7 +2674,8 @@
           }
         ],
         "hexes": [
-          "B10"
+          "B10",
+          "Q13"
         ]
       },
       {
@@ -2739,14 +2735,45 @@
       },
       {
         "color": "gray",
+        "cities": [
+          {
+            "name": {
+              "name": "Rude Mines",
+              "straight": true
+            },
+            "companies": [
+              {
+                "color": "black"
+              }
+            ]
+          }
+        ],
+        "offBoardRevenue": {
+          "angle": 60,
+          "percent": 0.6,
+          "revenues": [
+            {
+              "color": "phase2h",
+              "cost": "20"
+            },
+            {
+              "color": "phase4+",
+              "cost": "60"
+            }
+          ]
+        },
         "track": [
           {
-            "type": "gentle",
             "side": 1
           },
           {
-            "type": "straight",
             "side": 3
+          },
+          {
+            "side": 5
+          },
+          {
+            "side": 6
           }
         ],
         "hexes": [
@@ -2818,24 +2845,11 @@
       },
       {
         "color": "gray",
-        "track": [
-          {
-            "type": "gentle",
-            "side": 1
-          }
-        ],
-        "hexes": [
-          "G17"
-        ]
-      },
-      {
-        "color": "gray",
         "centerTowns": [
           {
             "name": {
               "name": "Pag",
-              "x": -25,
-              "percent": 0.6
+              "y": 30
             }
           }
         ],
@@ -2848,14 +2862,14 @@
         ],
         "track": [
           {
-            "side": 4
+            "side": 6
           },
           {
-            "side": 6
+            "side": 3
           }
         ],
         "hexes": [
-          "G19"
+          "G17"
         ]
       },
       {
@@ -2863,18 +2877,15 @@
         "track": [
           {
             "type": "gentle",
-            "side": 5
+            "side": 6
           }
         ],
         "hexes": [
-          "N2"
+          "O1"
         ]
       },
       {
         "color": "gray",
-        "hexes": [
-          "T12"
-        ],
         "centerTowns": [
           {
             "name": {
@@ -2898,6 +2909,9 @@
           {
             "side": 3
           }
+        ],
+        "hexes": [
+          "T10"
         ]
       },
       {
@@ -2909,25 +2923,52 @@
           }
         ],
         "hexes": [
-          "U13"
+          "U11",
+          "S15"
         ]
       },
       {
         "color": "gray",
         "track": [
           {
-            "side": 4,
-            "type": "gentle"
+            "type": "gentle",
+            "side": 1
+          },
+          {
+            "side": 1,
+            "type": "sharp"
           }
         ],
         "hexes": [
-          "Q15"
+          "R2"
         ]
       },
       {
         "color": "plain",
         "hexes": [
-          "R14"
+          "R12",
+          "C11",
+          "D10",
+          "D14",
+          "F8",
+          "G13",
+          "I13",
+          "I5",
+          "I7",
+          "J6",
+          "K3",
+          "K9",
+          "M7",
+          "O7",
+          "O9",
+          "P4",
+          "P6",
+          "I17",
+          "O3",
+          "R6",
+          "H6",
+          "T8",
+          "K19"
         ]
       },
       {
@@ -2936,10 +2977,14 @@
           {
             "type": "straight",
             "side": 1
+          },
+          {
+            "side": 2,
+            "type": "gentle"
           }
         ],
         "hexes": [
-          "M15"
+          "M13"
         ]
       },
       {
@@ -2968,7 +3013,7 @@
           }
         ],
         "hexes": [
-          "M25"
+          "M23"
         ]
       },
       {
@@ -2980,7 +3025,7 @@
           }
         ],
         "hexes": [
-          "N24"
+          "N22"
         ]
       },
       {
@@ -2992,54 +3037,18 @@
           }
         ],
         "hexes": [
-          "O25"
+          "O23"
         ]
       },
       {
         "color": "gray",
-        "track": [
-          {
-            "type": "gentle",
-            "side": 4
-          }
-        ],
-        "hexes": [
-          "U15"
-        ]
-      },
-      {
-        "color": "gray",
-        "track": [
-          {
-            "side": 3,
-            "type": "straight"
-          }
-        ],
-        "hexes": [
-          "R16"
-        ]
-      },
-      {
-        "color": "gray",
-        "track": [
-          {
-            "type": "gentle",
-            "side": 1
-          }
-        ],
-        "hexes": [
-          "S17"
-        ]
-      },
-      {
-        "color": "gray",
-        "hexes": [
-          "S5"
-        ],
         "centerTowns": [
           {
             "name": {
-              "name": "Beli Manastir"
+              "name": "Beli Manastir",
+              "x": -50,
+              "y": 4,
+              "fontSize": 10
             }
           }
         ],
@@ -3048,20 +3057,35 @@
             "side": 1
           },
           {
-            "side": 3
+            "side": 4
           }
         ],
         "values": [
           {
             "value": 10
           }
+        ],
+        "hexes": [
+          "S5"
         ]
       },
       {
         "color": "gray",
         "track": [
           {
-            "type": "gentle",
+            "type": "sharp",
+            "side": 1
+          }
+        ],
+        "hexes": [
+          "S3"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "sharp",
             "side": 4
           }
         ],
@@ -3073,14 +3097,14 @@
         "color": "gray",
         "track": [
           {
-            "side": 6
+            "side": 1
           },
           {
-            "side": 2
+            "side": 3
+          },
+          {
+            "side": 5
           }
-        ],
-        "hexes": [
-          "O1"
         ],
         "centerTowns": [
           {
@@ -3093,18 +3117,165 @@
           {
             "value": 20
           }
+        ],
+        "hexes": [
+          "N2"
         ]
       },
       {
         "color": "gray",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Korenica",
+              "y": 30
+            }
+          }
+        ],
+        "values": [
+          {
+            "value": 20
+          }
+        ],
         "track": [
           {
-            "type": "straight",
-            "side": 3
+            "side": 4
+          },
+          {
+            "side": 6
+          },
+          {
+            "side": 2
           }
         ],
         "hexes": [
-          "P2"
+          "J14"
+        ]
+      },
+      {
+        "color": "gray",
+        "towns": [
+          {
+            "angle": 300,
+            "name": {
+              "name": "Donja Dubrava",
+              "rotation": 90
+            },
+            "percent": 0.55,
+            "rotation": 120
+          }
+        ],
+        "track": [
+          {
+            "side": 6,
+            "type": "straight",
+            "end": 0.25
+          }
+        ],
+        "values": [
+          {
+            "angle": 120,
+            "percent": 0.2,
+            "value": 10
+          }
+        ],
+        "hexes": [
+          "M1"
+        ]
+      },
+      {
+        "color": "gray",
+        "towns": [
+          {
+            "angle": 300,
+            "name": {
+              "name": "Vodice",
+              "rotation": 90
+            },
+            "percent": 0.55,
+            "rotation": 120
+          }
+        ],
+        "track": [
+          {
+            "side": 6,
+            "type": "straight",
+            "end": 0.25
+          }
+        ],
+        "values": [
+          {
+            "angle": 120,
+            "percent": 0.25,
+            "value": 10
+          }
+        ],
+        "hexes": [
+          "J20"
+        ]
+      },
+      {
+        "color": "gray",
+        "towns": [
+          {
+            "angle": 120,
+            "name": {
+              "name": "Vrlika",
+              "rotation": 270,
+              "reverse": true
+            },
+            "percent": 0.55,
+            "rotation": 120
+          }
+        ],
+        "track": [
+          {
+            "side": 3,
+            "type": "straight",
+            "end": 0.25
+          }
+        ],
+        "values": [
+          {
+            "angle": 300,
+            "percent": 0.25,
+            "value": 10
+          }
+        ],
+        "hexes": [
+          "M19"
+        ]
+      },
+      {
+        "color": "gray",
+        "towns": [
+          {
+            "angle": 240,
+            "name": {
+              "name": "Bosanski Brod",
+              "rotation": 90,
+              "reverse": true
+            },
+            "percent": 0.55,
+            "rotation": 60
+          }
+        ],
+        "track": [
+          {
+            "side": 5,
+            "type": "straight",
+            "end": 0.25
+          }
+        ],
+        "values": [
+          {
+            "angle": 60,
+            "percent": 0.25,
+            "value": 10
+          }
+        ],
+        "hexes": [
+          "P12"
         ]
       },
       {
@@ -3116,19 +3287,31 @@
           }
         ],
         "hexes": [
-          "Q3"
+          "K15"
         ]
       },
       {
         "color": "gray",
         "track": [
           {
-            "type": "gentle",
-            "side": 1
+            "type": "sharp",
+            "side": 3
+          },
+          {
+            "side": 1,
+            "type": "gentle"
+          },
+          {
+            "side": 5,
+            "type": "gentle"
+          },
+          {
+            "side": 4,
+            "type": "sharp"
           }
         ],
         "hexes": [
-          "R2"
+          "Q3"
         ]
       },
       {
@@ -3258,7 +3441,7 @@
         ]
       },
       {
-        "color": "plain",
+        "color": "yellow",
         "cities": [
           {
             "name": {
@@ -3277,7 +3460,22 @@
           }
         ],
         "hexes": [
-          "I17"
+          "I15"
+        ],
+        "track": [
+          {
+            "side": 5
+          },
+          {
+            "side": 1
+          }
+        ],
+        "values": [
+          {
+            "value": 20,
+            "angle": 150,
+            "percent": 0.75
+          }
         ]
       },
       {
@@ -3365,16 +3563,16 @@
             "percent": 0.8
           }
         ],
-        "hexes": [
-          "N4"
-        ],
         "terrain": [
           {
             "type": "water",
-            "cost": 80,
+            "cost": 60,
             "angle": 210,
             "percent": 0.6
           }
+        ],
+        "hexes": [
+          "N4"
         ]
       },
       {
@@ -3409,9 +3607,6 @@
             }
           }
         ],
-        "hexes": [
-          "P8"
-        ],
         "companies": [
           {
             "label": "P4",
@@ -3419,6 +3614,9 @@
             "angle": 120,
             "percent": 0.65
           }
+        ],
+        "hexes": [
+          "P8"
         ]
       },
       {
@@ -3431,7 +3629,7 @@
           }
         ],
         "hexes": [
-          "P12"
+          "P10"
         ]
       },
       {
@@ -3443,15 +3641,15 @@
             }
           }
         ],
-        "hexes": [
-          "Q13"
-        ],
         "labels": [
           {
             "label": "J",
             "angle": 30,
             "percent": 0.8
           }
+        ],
+        "hexes": [
+          "Q11"
         ]
       },
       {
@@ -3474,7 +3672,7 @@
           }
         ],
         "hexes": [
-          "S9"
+          "S7"
         ]
       },
       {
@@ -3494,7 +3692,7 @@
           }
         ],
         "hexes": [
-          "S11"
+          "S9"
         ]
       },
       {
@@ -3515,7 +3713,7 @@
           }
         ],
         "hexes": [
-          "H20"
+          "H18"
         ]
       },
       {
@@ -3527,15 +3725,8 @@
             }
           }
         ],
-        "labels": [
-          {
-            "label": "S",
-            "angle": 30,
-            "percent": 0.8
-          }
-        ],
         "hexes": [
-          "L20"
+          "L18"
         ]
       },
       {
@@ -3548,14 +3739,7 @@
           }
         ],
         "hexes": [
-          "K23"
-        ],
-        "labels": [
-          {
-            "label": "S",
-            "angle": 30,
-            "percent": 0.8
-          }
+          "K21"
         ]
       },
       {
@@ -3578,7 +3762,7 @@
           }
         ],
         "hexes": [
-          "L24"
+          "L22"
         ]
       },
       {
@@ -3624,6 +3808,14 @@
             }
           }
         ],
+        "terrain": [
+          {
+            "type": "mountain",
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
+          }
+        ],
         "hexes": [
           "H16"
         ]
@@ -3666,9 +3858,6 @@
             "y": 25
           }
         ],
-        "hexes": [
-          "K5"
-        ],
         "terrain": [
           {
             "type": "water",
@@ -3676,6 +3865,9 @@
             "angle": 210,
             "percent": 0.6
           }
+        ],
+        "hexes": [
+          "K5"
         ]
       },
       {
@@ -3737,9 +3929,6 @@
             "y": 25
           }
         ],
-        "hexes": [
-          "L8"
-        ],
         "terrain": [
           {
             "type": "water",
@@ -3747,6 +3936,9 @@
             "angle": 210,
             "percent": 0.6
           }
+        ],
+        "hexes": [
+          "L8"
         ]
       },
       {
@@ -3780,7 +3972,7 @@
           }
         ],
         "hexes": [
-          "N10"
+          "N8"
         ]
       },
       {
@@ -3799,9 +3991,6 @@
             "percent": 0.8
           }
         ],
-        "hexes": [
-          "N12"
-        ],
         "terrain": [
           {
             "type": "water",
@@ -3809,19 +3998,9 @@
             "angle": 240,
             "percent": 0.6
           }
-        ]
-      },
-      {
-        "color": "plain",
-        "centerTowns": [
-          {
-            "name": {
-              "name": "Lipovljani"
-            }
-          }
         ],
         "hexes": [
-          "M13"
+          "N10"
         ]
       },
       {
@@ -3842,7 +4021,7 @@
           }
         ],
         "hexes": [
-          "Q11"
+          "Q9"
         ]
       },
       {
@@ -3855,7 +4034,7 @@
           }
         ],
         "hexes": [
-          "I21"
+          "I19"
         ]
       },
       {
@@ -3876,7 +4055,7 @@
           }
         ],
         "hexes": [
-          "J20"
+          "J18"
         ]
       },
       {
@@ -3889,7 +4068,7 @@
           }
         ],
         "hexes": [
-          "L22"
+          "L20"
         ]
       },
       {
@@ -3905,12 +4084,11 @@
           "G9",
           "H10",
           "H14",
-          "P10",
-          "H18",
-          "J18",
-          "M23",
-          "K19",
-          "E9"
+          "J16",
+          "M21",
+          "K17",
+          "E9",
+          "L12"
         ]
       },
       {
@@ -3938,27 +4116,23 @@
       },
       {
         "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Lipovljani"
+            }
+          }
+        ],
         "terrain": [
           {
             "type": "water",
-            "cost": 80
-          }
-        ],
-        "labels": [
-          {
-            "label": "Sava",
-            "fontSize": 14,
-            "angle": 0,
-            "percent": 0.55
+            "cost": 80,
+            "angle": 210,
+            "percent": 0.6
           }
         ],
         "hexes": [
-          "M11",
-          "O13",
-          "S13",
-          "J4",
-          "M9",
-          "R12"
+          "M11"
         ]
       },
       {
@@ -3978,7 +4152,52 @@
           }
         ],
         "hexes": [
-          "L6"
+          "J4",
+          "M9",
+          "R10"
+        ]
+      },
+      {
+        "color": "plain",
+        "hexes": [
+          "S11"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Sava",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
+        ],
+        "hexes": [
+          "O11"
+        ]
+      },
+      {
+        "color": "plain",
+        "terrain": [
+          {
+            "type": "water",
+            "cost": 80
+          }
+        ],
+        "labels": [
+          {
+            "label": "Sava",
+            "fontSize": 14,
+            "angle": 0,
+            "percent": 0.55
+          }
         ],
         "companies": [
           {
@@ -3987,6 +4206,9 @@
             "angle": 120,
             "percent": 0.65
           }
+        ],
+        "hexes": [
+          "L6"
         ]
       },
       {
@@ -3994,7 +4216,7 @@
         "terrain": [
           {
             "type": "water",
-            "cost": 80
+            "cost": 60
           }
         ],
         "labels": [
@@ -4009,90 +4231,40 @@
           "M3",
           "O5",
           "Q7",
-          "R10"
-        ]
-      },
-      {
-        "color": "plain",
-        "hexes": [
-          "C11",
-          "D10",
-          "D14",
-          "F8",
-          "G13",
-          "I13",
-          "I15",
-          "J14",
-          "J16",
-          "I5",
-          "I7",
-          "J6",
-          "K3",
-          "K9",
-          "K13",
-          "L12",
-          "L14",
-          "M7",
-          "N8",
-          "O7",
-          "O9",
-          "O11",
-          "P4",
-          "P6",
-          "Q9",
-          "R8",
-          "T8",
-          "I19",
-          "O3",
-          "Q5",
-          "R6",
-          "P14",
-          "S7",
-          "M1",
-          "H6",
-          "T10"
-        ]
-      },
-      {
-        "color": "plain",
-        "hexes": [
-          "K21"
+          "R8"
         ]
       },
       {
         "color": "gray",
-        "hexes": [
-          "L16"
-        ],
-        "track": [
-          {
-            "side": 3,
-            "type": "straight"
-          }
-        ]
-      },
-      {
-        "color": "gray",
-        "hexes": [
-          "K17"
-        ],
-        "track": [
-          {
-            "side": 3,
-            "type": "sharp"
-          }
-        ]
-      },
-      {
-        "color": "gray",
-        "hexes": [
-          "K15"
-        ],
         "track": [
           {
             "side": 6,
             "type": "sharp"
           }
+        ],
+        "hexes": [
+          "K13"
+        ]
+      },
+      {
+        "color": "plain",
+        "centerTowns": [
+          {
+            "name": {
+              "name": "Donji Miholjac"
+            },
+            "y": -25
+          },
+          {
+            "name": {
+              "name": "Valpovo",
+              "reverse": true
+            },
+            "y": 25
+          }
+        ],
+        "hexes": [
+          "Q5"
         ]
       }
     ]

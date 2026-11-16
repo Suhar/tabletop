@@ -114,7 +114,21 @@ function hexFace(hex, color) {
         if (hex.cities.length > 1)
             throw new Error(`Multi-city map hexes are not supported: ${hex.hexes}`)
         const labels = tileLabels(hex.labels)
-        return `city(${literal(color)}, ${literal(nodeEdges(track))}, ${value(hex)}, ${hex.cities[0].size ?? 1}${labels.length ? `, ${literal(labels)}` : ''})`
+        // A gray city that pays like an offboard (1871's Malpeque Shipyard, 1874's Rude Mines). A
+        // bare black token on it means no station may be placed there.
+        const revenue = hex.offBoardRevenue
+            ? stagedRevenue(hex.offBoardRevenue.revenues)
+            : value(hex)
+        const blocked = (hex.cities[0].companies ?? []).some(
+            (company) => typeof company === 'object' && company.color === 'black' && !company.label
+        )
+        const slots = blocked ? 0 : (hex.cities[0].size ?? 1)
+        return `city(${literal(color)}, ${literal(nodeEdges(track))}, ${revenue}, ${slots}${labels.length ? `, ${literal(labels)}` : ''})`
+    }
+    if (hex.towns?.length) {
+        // 1871's harbours: a town at the end of a short stub of track, a dead end.
+        if (hex.towns.length > 1) throw new Error(`Several stub towns on ${hex.hexes}`)
+        return `town(${literal(color)}, ${literal([track.map((entry) => edge(entry.side))])}, ${value(hex)})`
     }
     if (hex.centerTowns?.length) {
         const edges = nodeEdges(track)
@@ -141,7 +155,7 @@ function hexDetails(hex) {
 }
 
 function hexName(hex) {
-    const names = [...(hex.cities ?? []), ...(hex.centerTowns ?? [])]
+    const names = [...(hex.cities ?? []), ...(hex.centerTowns ?? []), ...(hex.towns ?? [])]
         .map((stop) => stop.name?.name)
         .filter(Boolean)
     if (names.length) return names.join(' & ')

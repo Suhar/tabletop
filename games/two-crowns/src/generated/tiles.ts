@@ -137,13 +137,6 @@ export const TwoCrownsSpecialTiles: readonly TileDefinition[] = [
         face: createCityTileFace('green', [0, 2, 3, 4], 20, 2, [])
     },
     {
-        id: 'two-crowns:S1',
-        printedNumber: 'S1',
-        aliases: [],
-        scope: 'The Two Crowns 1874',
-        face: createCityTileFace('green', [0, 1, 2], 20, 2, ['S'])
-    },
-    {
         id: 'two-crowns:Z1',
         printedNumber: 'Z1',
         aliases: [],
@@ -373,9 +366,8 @@ export const TwoCrownsSpecialTileCounts: Readonly<Record<string, TileManifestEnt
     X8: 2,
     P1: 1,
     C1: 4,
-    C2: 4,
+    C2: 5,
     C3: 4,
-    S1: 2,
     Z1: 1,
     Z2: 1,
     Z3: 1,

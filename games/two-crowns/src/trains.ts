@@ -54,11 +54,17 @@ function tradeInKey(state: object, companyId: string): string {
 const TrainOrder = TwoCrownsTrainData.map((train) => train.id as string)
 /**
  * 1894's train upgrade (1874design.md, Trade-ins): once per OR, a supply purchase may hand in a
- * train of the rank just below, never a 4+, for half its face; the train leaves the game.
+ * train of the rank just below, never a 4+ or a 7, for half its face; the train leaves the game.
+ * So a 7 and a Diesel take no trade-in (a 7 for a Diesel was allowed until design 0.10.0).
  */
+const NeverTradedIn = ['4+', '7']
 export function tradeInPrice(definitionId: string, tradedDefinitionId: string): number | undefined {
     const rank = TrainOrder.indexOf(definitionId)
-    if (rank < 1 || TrainOrder[rank - 1] !== tradedDefinitionId || tradedDefinitionId === '4+')
+    if (
+        rank < 1 ||
+        TrainOrder[rank - 1] !== tradedDefinitionId ||
+        NeverTradedIn.includes(tradedDefinitionId)
+    )
         return undefined
     const price = TwoCrownsTrainDepot.trainDefinition(definitionId).price
     return price - TwoCrownsTrainDepot.trainDefinition(tradedDefinitionId).price / 2

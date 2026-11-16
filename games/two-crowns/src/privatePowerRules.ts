@@ -4,11 +4,21 @@ import {
     controllingOwner,
     type PrivatePowerRules
 } from '@tabletop/18xx'
+import { TwoCrownsLocationNames } from './generated/map.js'
 import { TwoCrownsTiles } from './tiles.js'
 
 // Zadar and Virovitica Station Rights (1874design.md, P3 and P4): the owning company may lay or
 // upgrade the city without a connection as its first lay, then place its cheapest station free.
-const StationRightsLocations: Readonly<Record<string, string>> = { P3: 'H20', P4: 'P8' }
+// Found by name, so the hexes follow the map.
+function hexNamed(name: string): string {
+    const entry = Object.entries(TwoCrownsLocationNames).find(([, value]) => value === name)
+    if (!entry) throw new Error(`No map location is named ${name}`)
+    return entry[0]
+}
+const StationRightsLocations: Readonly<Record<string, string>> = {
+    P3: hexNamed('Zadar'),
+    P4: hexNamed('Virovitica')
+}
 const PlainCityTileIds = TwoCrownsTiles.filter(
     (tile) =>
         ['yellow', 'green'].includes(tile.face.color) &&
