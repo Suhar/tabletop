@@ -125,7 +125,8 @@
         historySetup,
         privateOperationDescription,
         createRouteWorker,
-        boardPanel
+        boardPanel,
+        headerActions
     }: {
         session: EighteenXXSessionView
         additionalStockActions?: readonly StockMenuOption[]
@@ -144,6 +145,8 @@
         createRouteWorker: () => QueuedRouteWorker
         /** The title's own panel on the board, given a way to reveal a hex on the map. */
         boardPanel?: { label: string; content: Snippet<[(locationId: string) => void]> }
+        /** The title's own buttons in the table header, after Undo, such as a rules button. */
+        headerActions?: Snippet
     } = $props()
     const money = $derived(session.presentation.money)
     const {
@@ -1174,6 +1177,7 @@
                             artworkAvailable={session.publishedArtworkAvailable}
                             {publishedArtwork}
                             onToggleArtwork={() => session.toggleArtwork()}
+                            actions={headerActions}
                             {session}
                             bordered={!paneLayout.current}
                             centered={paneLayout.current}

@@ -5,6 +5,7 @@
     import { isHistoryBookkeeping } from './historyNavigation.js'
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import CompanyToken from '../tokens/CompanyToken.svelte'
+    import type { Snippet } from 'svelte'
     let {
         session,
         bordered = true,
@@ -12,11 +13,14 @@
         attention = false,
         artworkAvailable = false,
         publishedArtwork = false,
-        onToggleArtwork
+        onToggleArtwork,
+        actions
     }: {
         artworkAvailable?: boolean
         publishedArtwork?: boolean
         onToggleArtwork?: () => void
+        /** The title's own buttons, after Undo, such as a rules button. */
+        actions?: Snippet
         bordered?: boolean
         centered?: boolean
         attention?: boolean
@@ -165,6 +169,7 @@
                 </svg>
             </button>
         {/if}
+        {#if actions}{@render actions()}{/if}
     </div>
 </header>
 
