@@ -871,6 +871,12 @@
         margin-right: 6px;
         flex-shrink: 0;
     }
+    /* The smallest phones have no room for it beside the name and the header's buttons. */
+    @media (width < 400px) {
+        .cowbell {
+            display: none;
+        }
+    }
     .account-menu {
         display: grid;
         place-items: center;
