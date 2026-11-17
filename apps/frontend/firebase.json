@@ -1,6 +1,6 @@
 {
     "hosting": {
-        "site": "boardtogether",
+        "site": "suhartabletop",
         "public": "build",
         "ignore": ["**/.*", "**/*.br", "**/*.gz"],
         "rewrites": [
