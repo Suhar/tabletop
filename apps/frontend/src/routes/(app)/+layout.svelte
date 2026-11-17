@@ -419,6 +419,7 @@
             <div class="flex flex-row justify-between items-center w-full">
                 <div class="header-brand flex justify-center items-center">
                     <NavBrand href={sessionUser ? '/library' : '/'} class="shrink-0 cursor-pointer">
+                        <!-- A steel cowbell with its drumstick: more cowbell. -->
                         <svg
                             class="cowbell full-logo"
                             viewBox="0 0 32 32"
@@ -427,28 +428,50 @@
                             aria-hidden="true"
                         >
                             <path
-                                d="M12 7.5V5.5a4 4 0 0 1 8 0v2"
-                                fill="none"
-                                stroke="#a8234a"
-                                stroke-width="2.4"
-                                stroke-linecap="round"
-                            ></path>
-                            <path
-                                d="M9.6 7.5h12.8L26 25H6Z"
-                                fill="#d9a441"
-                                stroke="#4a2f10"
-                                stroke-width="1.4"
+                                d="M11 27.1 16.1 26.8 15.7 29.9 11.5 30.1Z"
+                                fill="#3a3236"
+                                stroke="#1c1416"
+                                stroke-width="1.1"
                                 stroke-linejoin="round"
                             ></path>
-                            <path d="M9 10.5h14" stroke="#a8234a" stroke-width="2.2"></path>
                             <path
-                                d="M12.4 13.5 11 22"
-                                stroke="#f6dc9e"
-                                stroke-width="1.6"
-                                stroke-linecap="round"
+                                d="M4.4 4.6 7 8.3 9.6 27.1 7.2 25.2Z"
+                                fill="#787f88"
+                                stroke="#1c1416"
+                                stroke-width="1.1"
+                                stroke-linejoin="round"
                             ></path>
-                            <ellipse cx="16" cy="25" rx="10" ry="2.1" fill="#4a2f10"></ellipse>
-                            <circle cx="16" cy="28.3" r="2.1" fill="#4a2f10"></circle>
+                            <path
+                                d="M7 8.3 26.8 6.7 18.3 26.6 9.6 27.1Z"
+                                fill="#b4bac1"
+                                stroke="#1c1416"
+                                stroke-width="1.1"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M4.4 4.6 25 2.9 26.8 6.7 7 8.3Z"
+                                fill="#e4e7ea"
+                                stroke="#1c1416"
+                                stroke-width="1.1"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M31.4 29.6 29.4 30.8 14.7 2.9 15.8 2.3Z"
+                                fill="#d6a86a"
+                                stroke="#1c1416"
+                                stroke-width="0.9"
+                                stroke-linejoin="round"
+                            ></path>
+                            <ellipse
+                                cx="14.9"
+                                cy="2.1"
+                                rx="1.2"
+                                ry="1.6"
+                                transform="rotate(-28 14.9 2.1)"
+                                fill="#e2bd86"
+                                stroke="#1c1416"
+                                stroke-width="0.9"
+                            ></ellipse>
                         </svg>
                         <span
                             class="full-logo text-2xl leading-8 font-bold tracking-wide whitespace-nowrap text-gray-900 dark:text-white"

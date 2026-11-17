@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AnnotationSolid, ArrowRightOutline, UsersOutline } from 'flowbite-svelte-icons'
+    import { AnnotationSolid, ArrowRightOutline } from 'flowbite-svelte-icons'
     import { getAppContext } from '$lib/stores/appContext.svelte'
 
     const { authorizationService } = getAppContext()
@@ -82,20 +82,6 @@
                 <li>A screenshot, if you can</li>
             </ul>
         </section>
-
-        <section class="community-card" aria-labelledby="private-heading">
-            <div class="card-heading">
-                <UsersOutline class="h-7 w-7 shrink-0" />
-                <h2 id="private-heading">Please keep it between us</h2>
-            </div>
-            <p>
-                These games are unpublished prototypes. Please don’t share screenshots, rules, or
-                the link outside the group.
-            </p>
-            <p class="invite">
-                Know someone who’d enjoy playing? Ask Stephan before passing on the address.
-            </p>
-        </section>
     </div>
 </main>
 
@@ -156,11 +142,7 @@
         font-weight: 600;
     }
     .community {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 24px;
         margin-top: 32px;
-        align-items: start;
     }
     .community-card {
         min-width: 0;
@@ -188,10 +170,6 @@
         color: var(--color-gray-400);
         font-size: 15px;
         line-height: 1.7;
-    }
-    .community-card p.invite {
-        margin-top: 16px;
-        color: var(--color-gray-200);
     }
     .contact {
         display: flex;
@@ -259,8 +237,6 @@
             gap: 6px;
         }
         .community {
-            grid-template-columns: 1fr;
-            gap: 16px;
             margin-top: 24px;
         }
         .tips {
