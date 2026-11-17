@@ -42,8 +42,8 @@
                     Discord Notifications
                 </h3>
                 <p class="text-sm text-gray-700 dark:text-gray-300">
-                    SuharTabletop has a Discord bot that can send you direct notification messages. No
-                    server webhook configuration is needed, and the messages will come to you
+                    SuharTabletop has a Discord bot that can send you direct notification messages.
+                    No server webhook configuration is needed, and the messages will come to you
                     regardless of what server you are in.
                 </p>
                 {#if linkedAccountIdsByType.get(ExternalAuthService.Discord)}

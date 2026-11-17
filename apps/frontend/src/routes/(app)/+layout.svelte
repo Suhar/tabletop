@@ -423,7 +423,11 @@
                             class="full-logo text-2xl leading-8 font-bold tracking-wide whitespace-nowrap text-gray-900 dark:text-white"
                             >SuharTabletop</span
                         >
-                        <img src="/android-chrome-192x192.png" alt="SuharTabletop" class="game-logo" />
+                        <img
+                            src="/android-chrome-192x192.png"
+                            alt="SuharTabletop"
+                            class="game-logo"
+                        />
                     </NavBrand>
 
                     <div

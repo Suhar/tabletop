@@ -35,8 +35,10 @@
             </p>
             <p class="welcome">
                 The site runs on
-                <a class="credit-link" href="https://github.com/justinkwaugh/tabletop" rel="noreferrer"
-                    >Tabletop</a
+                <a
+                    class="credit-link"
+                    href="https://github.com/justinkwaugh/tabletop"
+                    rel="noreferrer">Tabletop</a
                 >, Justin Waugh’s open-source framework for board games online.
             </p>
         </div>
@@ -53,8 +55,9 @@
                 <h2 id="feedback-heading">Tell Stephan what you think</h2>
             </div>
             <p>
-                Found a bug, got stuck on a rule, or had an idea mid-game? Send Stephan a message, or
-                bring it up next time you play together. Compliments and complaints are both welcome.
+                Found a bug, got stuck on a rule, or had an idea mid-game? Send Stephan a message,
+                or bring it up next time you play together. Compliments and complaints are both
+                welcome.
             </p>
             <ul class="tips" aria-label="What helps in a bug report">
                 <li>Which game</li>
@@ -70,8 +73,8 @@
                 <h2 id="private-heading">Please keep it between us</h2>
             </div>
             <p>
-                These games are unpublished prototypes. Please don’t share screenshots, rules, or the
-                link outside the group.
+                These games are unpublished prototypes. Please don’t share screenshots, rules, or
+                the link outside the group.
             </p>
             <p class="invite">
                 Know someone who’d enjoy playing? Ask Stephan before passing on the address.
