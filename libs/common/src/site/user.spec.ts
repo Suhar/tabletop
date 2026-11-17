@@ -110,9 +110,9 @@ describe('isReservedUsername', () => {
 
 describe('isAbandonedSignUp', () => {
     const now = new Date('2026-11-12T12:00:00Z')
-    const createdAt = new Date('2026-11-09T12:00:00Z')
+    const createdAt = new Date('2026-10-13T12:00:00Z')
 
-    it('is an Incomplete Account never activated, three days after it was created', () => {
+    it('is an Incomplete Account never activated, thirty days after it was created', () => {
         expect(isAbandonedSignUp({ status: UserStatus.Incomplete, createdAt }, now)).toBe(true)
         expect(
             isAbandonedSignUp(

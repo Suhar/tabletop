@@ -280,12 +280,14 @@ export class GameService {
             throw new PrivateGameNotFullError({ id: newGame.id })
         }
 
-        // Set the appropriate statuses
+        // Set the appropriate statuses. SuharTabletop: an administrator's game seats its players
+        // without asking them, as the site sends no invitation emails.
+        const seatsWithoutAsking = owner.roles.includes(Role.Admin)
         for (const player of newGame.players) {
             if (player.userId === owner.id) {
                 player.status = PlayerStatus.Joined
             } else if (player.userId) {
-                player.status = PlayerStatus.Reserved
+                player.status = seatsWithoutAsking ? PlayerStatus.Joined : PlayerStatus.Reserved
             }
         }
 
@@ -1116,7 +1118,9 @@ export class GameService {
                             (existingStatus === PlayerStatus.Declined &&
                                 player.status === PlayerStatus.Reserved)
                         ) {
-                            player.status = PlayerStatus.Reserved
+                            player.status = owner?.roles.includes(Role.Admin)
+                                ? PlayerStatus.Joined
+                                : PlayerStatus.Reserved
                         } else {
                             player.status = existingStatus
                         }

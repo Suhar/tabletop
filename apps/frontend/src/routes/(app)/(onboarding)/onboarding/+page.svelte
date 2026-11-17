@@ -2,7 +2,6 @@
     import { Card, Label, Input, Button, Helper, Alert, P, Hr } from 'flowbite-svelte'
     import { ABANDONED_SIGN_UP_DAYS, UserStatus, type UserUpdateRequest } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
-    import { challengeExpiryText } from '$lib/utils/challengeExpiry'
     import { isAlreadyExists, isUsernameNotAllowed } from '$lib/utils/accountErrors'
     import AgeConfirmation from '$lib/components/AgeConfirmation.svelte'
     import { ageConfirmationMessage } from '$lib/utils/accountFormValidation'
@@ -18,10 +17,6 @@
     let username: string | undefined = $state(undefined)
     let email: string | undefined = $state(undefined)
     let ageConfirmed = $state(false)
-    let verificationToken: string | undefined = $state(undefined)
-    let verificationError = $state(false)
-    let newEmailSent = $state(false)
-    let codeExpiresAt: Date | undefined = $state(undefined)
 
     let user = $derived(authorizationService.getSessionUser())
     let neverActivated = $derived(Boolean(user && !user.activatedAt))
@@ -76,34 +71,14 @@
         }
     }
 
-    async function verifyEmail(event: SubmitEvent) {
-        event.preventDefault()
-        if (!verificationToken) {
-            return
+    let stillWaiting = $state(false)
+    async function checkApproval() {
+        const current = await api.getSelf()
+        if (current?.status === UserStatus.Active) {
+            await authorizationService.onLogin(current)
+        } else {
+            stillWaiting = true
         }
-        newEmailSent = false
-        verificationToken = verificationToken.trim()
-
-        try {
-            let updatedUser = await api.verifyEmail(verificationToken)
-            verificationError = false
-
-            authorizationService.setSessionUser(updatedUser)
-
-            verificationToken = ''
-
-            if (updatedUser.status === UserStatus.Active) {
-                await authorizationService.onLogin(updatedUser)
-            }
-        } catch (e) {
-            verificationError = true
-        }
-    }
-
-    async function sendVerificationEmail() {
-        verificationError = false
-        codeExpiresAt = await api.sendVerificationEmail()
-        newEmailSent = true
     }
 
     function trim(event: Event) {
@@ -122,52 +97,27 @@
 
 <div class="h-[calc(100dvh-70px)] flex flex-col items-center justify-center space-y-6">
     {#if user && user.email && !user.emailVerified}
+        <!-- SuharTabletop sends no email: Stephan approves each new account instead of a code. -->
         <Card class="p-4 sm:p-6">
             <h1 class="text-2xl font-medium text-gray-900 dark:text-gray-300">
-                Verify your email...
+                Waiting for approval
             </h1>
             <Hr class="my-4" />
-            {#if unexpectedError}
-                <Alert class="dark:bg-red-200 dark:text-red-700 mb-4">
-                    <span class="font-bold text-lg">Oops...</span><br />
-                    An unexpected error occurred. Please try again and hopefully it will be better next
-                    time.
-                </Alert>
-            {/if}
-            {#if verificationError}
-                <Alert class="dark:bg-red-200 dark:text-red-700 mb-4">
-                    <span class="font-bold text-lg">Verification Failed</span><br />
-                    Please check that you entered the most recent code and that it has not expired. A
-                    code works for 15 minutes.
-                </Alert>
-            {/if}
-            {#if newEmailSent}
-                <Alert class="dark:bg-green-200 dark:text-green-700 mb-4">
-                    <span class="font-bold text-lg">Email Sent</span><br />
-                    Please check your email for a new verification code.
-                    {#if codeExpiresAt}{challengeExpiryText(codeExpiresAt)}{/if}
-                </Alert>
-            {/if}
             <P class="dark:text-gray-300"
-                >An email has been sent to <span class="dark:text-orange-300"
-                    ><strong>{user.email}</strong></span
-                > with a verification token. Please enter the token below to verify your email address.</P
+                >Thanks for signing up. Stephan approves each new account by hand, so you can play
+                once he has. To hurry him along, message <a
+                    class="underline"
+                    href="https://discordapp.com/users/cowbellthunder"
+                    target="_blank"
+                    rel="noreferrer">cowbellthunder</a
+                > on Discord.</P
             >
-            <form class="flex flex-col space-y-6 mt-4" action="/" onsubmit={verifyEmail}>
-                <Input
-                    bind:value={verificationToken}
-                    oninput={trim}
-                    type="text"
-                    name="verificationToken"
-                    placeholder="aBCdef"
-                    required
-                />
-                <div class="flex flex-row justify-between">
-                    <Button onclick={sendVerificationEmail} color="light">Send New Token</Button
-                    ><Button type="submit">Submit</Button>
-                </div>
-            </form>
-            {@render signUpDeadline()}
+            <div class="flex flex-row items-center justify-end gap-4 mt-6">
+                {#if stillWaiting}<span class="text-sm text-gray-500 dark:text-gray-400"
+                        >Not yet.</span
+                    >{/if}
+                <Button onclick={checkApproval}>Check again</Button>
+            </div>
         </Card>
     {:else}
         <Card class="p-4 sm:p-6">

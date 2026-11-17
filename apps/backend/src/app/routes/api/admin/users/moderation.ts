@@ -8,6 +8,9 @@ const AccountParams = Type.Object({ userId: Type.String() }, { additionalPropert
 type RenameRequest = Static<typeof RenameRequest>
 const RenameRequest = Type.Object({ username: Type.String() }, { additionalProperties: false })
 
+type PasswordRequest = Static<typeof PasswordRequest>
+const PasswordRequest = Type.Object({ password: Type.String() }, { additionalProperties: false })
+
 export default async function (fastify: FastifyInstance) {
     const onRequest = fastify.auth([fastify.verifyActiveUser, fastify.verifyRoleAdmin], {
         relation: 'and'
@@ -58,6 +61,39 @@ export default async function (fastify: FastifyInstance) {
                 { adminId: request.user?.id, userId },
                 'Administrator lifted account ban'
             )
+            return { status: 'ok', payload: { user } }
+        }
+    )
+
+    fastify.get('/awaitingApproval', { onRequest }, async function () {
+        const users = await fastify.userService.findSignUpsAwaitingApproval()
+        return { status: 'ok', payload: { users } }
+    })
+
+    fastify.post<{ Params: AccountParams }>(
+        '/:userId/approve',
+        { schema: { params: AccountParams }, onRequest },
+        async function (request) {
+            const { userId } = request.params
+            const user = await fastify.userService.approveSignUp(userId)
+            request.log.info(
+                { adminId: request.user?.id, userId },
+                'Administrator approved sign-up'
+            )
+            return { status: 'ok', payload: { user } }
+        }
+    )
+
+    fastify.post<{ Params: AccountParams; Body: PasswordRequest }>(
+        '/:userId/password',
+        { schema: { params: AccountParams, body: PasswordRequest }, onRequest },
+        async function (request) {
+            const { userId } = request.params
+            const user = await fastify.userService.setPasswordAsAdministrator(
+                userId,
+                request.body.password
+            )
+            request.log.info({ adminId: request.user?.id, userId }, 'Administrator set password')
             return { status: 'ok', payload: { user } }
         }
     )

@@ -130,7 +130,8 @@ export const UserUpdateRequest = Type.Evaluate(
     )
 )
 
-export const ABANDONED_SIGN_UP_DAYS = 3
+// SuharTabletop: long enough for an administrator to get to an approval.
+export const ABANDONED_SIGN_UP_DAYS = 30
 
 // A sign-up never finished within ABANDONED_SIGN_UP_DAYS is deleted. An Account that was ever Active
 // is not a sign-up, even if it is Incomplete again.

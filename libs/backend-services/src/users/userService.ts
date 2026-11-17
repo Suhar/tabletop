@@ -520,6 +520,39 @@ export class UserService {
         return updatedUser
     }
 
+    // SuharTabletop sends no email: an administrator approves a sign-up in place of the
+    // verification code, which completes the Account as verifying its email would.
+    async approveSignUp(userId: string): Promise<User> {
+        const [updatedUser] = await this.userStore.updateUser({
+            userId,
+            fields: { emailVerified: true },
+            validator: (existingUser) =>
+                existingUser.status === UserStatus.Incomplete && existingUser.email
+                    ? UpdateValidationResult.Proceed
+                    : UpdateValidationResult.Cancel
+        })
+        this.addListedUsernameIfActive(updatedUser)
+        return updatedUser
+    }
+
+    async findSignUpsAwaitingApproval(): Promise<User[]> {
+        return (await this.userStore.findIncompleteUsers()).filter(
+            (user) => user.email && !user.emailVerified
+        )
+    }
+
+    // In place of a reset email, an administrator sets a password and passes it on.
+    async setPasswordAsAdministrator(userId: string, password: string): Promise<User> {
+        const cleanPassword = password.trim()
+        if (cleanPassword.length < 12) {
+            throw new InvalidPasswordError()
+        }
+        const user = await this.userStore.findById(userId)
+        if (!user) throw new AccountModerationError('No such account.')
+        this.requireNotDeleted(user)
+        return this.userStore.updatePassword(userId, cleanPassword)
+    }
+
     async sendVerificationEmail(user: User): Promise<IssuedChallenge> {
         if (!user.email) {
             throw new EmailVerificationError()

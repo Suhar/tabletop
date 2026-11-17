@@ -499,6 +499,18 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('renameGameAsAdministrator')
     }
 
+    async getSignUpsAwaitingApproval(): Promise<User[]> {
+        return this.fail('getSignUpsAwaitingApproval')
+    }
+
+    async approveUser(_userId: string): Promise<User> {
+        return this.fail('approveUser')
+    }
+
+    async setUserPassword(_userId: string, _password: string): Promise<User> {
+        return this.fail('setUserPassword')
+    }
+
     async unbanUser(_userId: string): Promise<User> {
         return this.fail('unbanUser')
     }

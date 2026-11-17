@@ -29,7 +29,7 @@
                 is a private table for friends to play games that are still being made.
             </p>
             <p class="welcome">
-                You’re here because Stephan invited you. The games here are prototypes and works in
+                Stephan approves every account by hand. The games here are prototypes and works in
                 progress, so expect rough edges, placeholder art, and rules that change between
                 visits. Thanks for playing them anyway.
             </p>
@@ -43,7 +43,7 @@
             </p>
         </div>
         <ul class="principles" aria-label="The table">
-            <li><strong>Invite</strong> only.</li>
+            <li><strong>Friends</strong> only.</li>
             <li><strong>Always</strong> a work in progress.</li>
         </ul>
     </div>

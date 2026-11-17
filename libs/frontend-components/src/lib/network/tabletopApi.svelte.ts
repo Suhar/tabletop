@@ -1207,6 +1207,24 @@ export class TabletopApi {
         return this.moderateUser(userId, 'unban', {})
     }
 
+    async getSignUpsAwaitingApproval(): Promise<User[]> {
+        const response = await this.wretch
+            .get('/admin/users/awaitingApproval')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UsersResponse>()
+
+        return response.payload.users
+    }
+
+    async approveUser(userId: string): Promise<User> {
+        return this.moderateUser(userId, 'approve', {})
+    }
+
+    async setUserPassword(userId: string, password: string): Promise<User> {
+        return this.moderateUser(userId, 'password', { password })
+    }
+
     async deleteUser(userId: string): Promise<User> {
         return this.moderateUser(userId, 'delete', {})
     }
