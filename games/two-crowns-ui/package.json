@@ -1,6 +1,6 @@
 {
     "name": "@tabletop/two-crowns-ui",
-    "version": "0.10.0",
+    "version": "0.10.1",
     "private": true,
     "type": "module",
     "prettier": "@tabletop/prettier-config",
@@ -54,6 +54,8 @@
         "flowbite": "^3.1.2",
         "flowbite-svelte": "^1.31.0",
         "flowbite-svelte-icons": "^3.1.0",
+        "fontkit": "^2.0.4",
+        "marked": "^18.2.0",
         "rimraf": "^6.1.0",
         "rolldown": "^1.2.15",
         "svelte": "^5.0.0",

@@ -3,22 +3,22 @@
 export const TwoCrownsTitle = { name: 'The Two Crowns 1874', designer: 'Stephan Suhar' }
 
 export const TwoCrownsLukaCompanies = [
-    { companyId: 'IST', name: 'Istrian', number: 6, color: '#ffd331' },
-    { companyId: 'ZAG', name: 'Zagorje', number: 2, color: '#b9875f' },
-    { companyId: 'POS', name: 'Posavina', number: 4, color: '#68b34a' },
-    { companyId: 'SLA', name: 'Slavonian', number: 7, color: '#a3122f' },
-    { companyId: 'LIK', name: 'Lika', number: 3, color: '#8c8c8c' },
-    { companyId: 'POD', name: 'Podravina', number: 5, color: '#2b2b2b' },
-    { companyId: 'KAR', name: 'Karlovac', number: 8, color: '#7fc6e8' },
+    { companyId: 'IST', name: 'Istrian', number: 6, color: '#fed119' },
+    { companyId: 'ZAG', name: 'Zagorje', number: 2, color: '#b96e72' },
+    { companyId: 'POS', name: 'Posavina', number: 4, color: '#47ad33' },
+    { companyId: 'SLA', name: 'Slavonian', number: 7, color: '#a61838' },
+    { companyId: 'LIK', name: 'Lika', number: 3, color: '#7e8892' },
+    { companyId: 'POD', name: 'Podravina', number: 5, color: '#030000' },
+    { companyId: 'KAR', name: 'Karlovac', number: 8, color: '#2c8dcd' },
     { companyId: 'SPL', name: 'Split', number: 1, color: '#1f6f8b' }
 ] as const
 
 export const TwoCrownsBranchCompanies = [
-    { id: 'branch:KB', name: 'Kukoč', label: 'KB', color: '#b39ddb' },
-    { id: 'branch:SB', name: 'Stojaković', label: 'SB', color: '#c2187e' },
-    { id: 'branch:MB', name: 'Modrić', label: 'MB', color: '#0189d1' },
-    { id: 'branch:PB', name: 'Petrović', label: 'PB', color: '#f48221' },
-    { id: 'branch:NB', name: 'Nikola', label: 'NB', color: '#b5d334' }
+    { id: 'branch:KB', name: 'Kukoč', label: 'KB', color: '#a08ac0' },
+    { id: 'branch:SB', name: 'Stojaković', label: 'SB', color: '#b9549c' },
+    { id: 'branch:MB', name: 'Modrić', label: 'MB', color: '#2165ae' },
+    { id: 'branch:PB', name: 'Petrović', label: 'PB', color: '#e84b1c' },
+    { id: 'branch:NB', name: 'Nikola', label: 'NB', color: '#d2d755' }
 ] as const
 
 export const TwoCrownsPrivateData = [

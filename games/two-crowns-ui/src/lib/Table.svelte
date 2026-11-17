@@ -20,6 +20,7 @@
     import { createRouteWorker } from './routeWorker.js'
     import BranchSplitPreview from './BranchSplitPreview.svelte'
     import Tranches from './Tranches.svelte'
+    import RulesButton from './RulesButton.svelte'
     let { gameSession }: { gameSession: GameSession<TwoCrownsState, HydratedTwoCrownsState> } =
         $props()
     function lotInfo(id: string) {
@@ -132,6 +133,7 @@
             <OperatingActions {privateOperationDescription} onFocusRoute={focusRoute} {session} />
         {/if}
     {/snippet}
+    {#snippet headerActions()}<RulesButton />{/snippet}
     {#snippet gameInformation()}
         <div class="tranches" aria-label="Company tranches">
             <span class="tranches-label">Tranches</span>
