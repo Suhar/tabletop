@@ -59,6 +59,22 @@
                 or bring it up next time you play together. Compliments and complaints are both
                 welcome.
             </p>
+            <dl class="contact">
+                <div>
+                    <dt>Discord</dt>
+                    <dd>
+                        <a
+                            href="https://discordapp.com/users/cowbellthunder"
+                            target="_blank"
+                            rel="noreferrer">cowbellthunder</a
+                        >
+                    </dd>
+                </div>
+                <div>
+                    <dt>Email</dt>
+                    <dd><a href="mailto:cowbellthunder@gmail.com">cowbellthunder@gmail.com</a></dd>
+                </div>
+            </dl>
             <ul class="tips" aria-label="What helps in a bug report">
                 <li>Which game</li>
                 <li>What you expected</li>
@@ -176,6 +192,23 @@
     .community-card p.invite {
         margin-top: 16px;
         color: var(--color-gray-200);
+    }
+    .contact {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 28px;
+        margin-top: 16px;
+    }
+    .contact div {
+        display: flex;
+        gap: 8px;
+    }
+    .contact dt {
+        color: var(--color-gray-400);
+    }
+    .contact dd {
+        color: var(--color-gray-100);
+        font-weight: 600;
     }
     .tips {
         list-style-type: disc;

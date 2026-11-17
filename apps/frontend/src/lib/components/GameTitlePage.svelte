@@ -7,7 +7,6 @@
         UsersOutline
     } from 'flowbite-svelte-icons'
     import TitleGames from '$lib/components/TitleGames.svelte'
-    import TitleCompetitions from '$lib/components/TitleCompetitions.svelte'
     import BackLink from '$lib/components/BackLink.svelte'
     import CreateGameModal from '$lib/components/CreateGameModal.svelte'
     import {
@@ -53,9 +52,9 @@
                 <span
                     ><UsersOutline class="h-4 w-4" />
                     {playerCountText(metadata)}</span
-                ><span>{metadata.year}</span>{#if maturityLabel}<span class="maturity-label"
-                        >{maturityLabel}</span
-                    >{/if}
+                >{#if metadata.year}<span>{metadata.year}</span>{/if}<span class="version"
+                    >Version {metadata.version}</span
+                >{#if maturityLabel}<span class="maturity-label">{maturityLabel}</span>{/if}
             </div>
             <h1 id="title-heading">{metadata.name}</h1>
             <p class="credits">Designed by <span>{metadata.designer}</span></p>
@@ -91,7 +90,6 @@
             titleId={title.info.id}
             oncreate={() => (creating = true)}
         />
-        <TitleCompetitions titleId={title.info.id} />
     </div>
 </main>
 

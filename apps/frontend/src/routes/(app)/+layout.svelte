@@ -419,6 +419,37 @@
             <div class="flex flex-row justify-between items-center w-full">
                 <div class="header-brand flex justify-center items-center">
                     <NavBrand href={sessionUser ? '/library' : '/'} class="shrink-0 cursor-pointer">
+                        <svg
+                            class="cowbell full-logo"
+                            viewBox="0 0 32 32"
+                            width="36"
+                            height="36"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M12 7.5V5.5a4 4 0 0 1 8 0v2"
+                                fill="none"
+                                stroke="#a8234a"
+                                stroke-width="2.4"
+                                stroke-linecap="round"
+                            ></path>
+                            <path
+                                d="M9.6 7.5h12.8L26 25H6Z"
+                                fill="#d9a441"
+                                stroke="#4a2f10"
+                                stroke-width="1.4"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path d="M9 10.5h14" stroke="#a8234a" stroke-width="2.2"></path>
+                            <path
+                                d="M12.4 13.5 11 22"
+                                stroke="#f6dc9e"
+                                stroke-width="1.6"
+                                stroke-linecap="round"
+                            ></path>
+                            <ellipse cx="16" cy="25" rx="10" ry="2.1" fill="#4a2f10"></ellipse>
+                            <circle cx="16" cy="28.3" r="2.1" fill="#4a2f10"></circle>
+                        </svg>
                         <span
                             class="full-logo text-2xl leading-8 font-bold tracking-wide whitespace-nowrap text-gray-900 dark:text-white"
                             >SuharTabletop</span
@@ -464,7 +495,7 @@
                                 <HeartOutline class="h-6 w-6" />
                             </a>
                             <a
-                                href="https://github.com/justinkwaugh/tabletop"
+                                href="https://github.com/suhar/tabletop"
                                 target="_blank"
                                 rel="noreferrer"
                                 class="community-link hidden md:inline-flex items-center leading-none"
@@ -483,7 +514,7 @@
                                 </svg>
                             </a>
                             <a
-                                href="https://discord.gg/5ggK5VGGvA"
+                                href="https://discordapp.com/users/cowbellthunder"
                                 target="_blank"
                                 rel="noreferrer"
                                 class="community-link inline-flex items-center leading-none"
@@ -544,35 +575,13 @@
                             {/if}
                             {#if canInstallPwa}
                                 <button
-                                    class="pwa-install cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+                                    class="pwa-install me-3 cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
                                     aria-label="Install SuharTabletop"
                                     onclick={installPwa}
                                 >
                                     <DownloadOutline class="h-6 w-6" aria-hidden="true" />
                                 </button>
                             {/if}
-                            <a
-                                href="/tournaments"
-                                class="competitions-link me-4 inline-flex items-center cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-                                title="Tournaments and leagues"
-                            >
-                                <span class="sr-only">Tournaments and leagues</span>
-                                <svg
-                                    aria-hidden="true"
-                                    viewBox="0 0 24 24"
-                                    class="h-6 w-6"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="M8 21h8M12 17v4M7 4h10M17 4v8a5 5 0 0 1-10 0V4"></path>
-                                    <path
-                                        d="M7 6.5H5a2.5 2.5 0 0 0 0 5h2.4M17 6.5h2a2.5 2.5 0 0 1 0 5h-2.4"
-                                    ></path>
-                                </svg>
-                            </a>
                         {/if}
 
                         <button
@@ -857,6 +866,10 @@
     .game-logo,
     .game-menu-icon {
         display: none;
+    }
+    .cowbell {
+        margin-right: 6px;
+        flex-shrink: 0;
     }
     .account-menu {
         display: grid;

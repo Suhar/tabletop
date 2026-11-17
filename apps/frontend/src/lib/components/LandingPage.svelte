@@ -155,7 +155,7 @@
     }
 
     .hero h1 span {
-        color: #6496df;
+        color: #d4637f;
     }
 
     .intro-copy {
@@ -196,7 +196,7 @@
         border-radius: 8px;
         background: var(--color-blue-600);
         color: white;
-        box-shadow: 0 5px 24px #2563eb20;
+        box-shadow: 0 5px 24px #9e244620;
     }
 
     .primary-action:hover {
@@ -237,14 +237,14 @@
         content: '';
         position: absolute;
         inset: -40px -20px;
-        background: radial-gradient(ellipse, #427ac725, transparent 68%);
+        background: radial-gradient(ellipse, #bd3a5c25, transparent 68%);
         z-index: -1;
     }
 
     .table-ring {
         position: absolute;
         inset: 16px 10%;
-        border: 1px solid #427ac726;
+        border: 1px solid #bd3a5c26;
         border-radius: 50%;
         transform: rotate(-20deg);
     }
@@ -253,7 +253,7 @@
         content: '';
         position: absolute;
         inset: 24px -20px;
-        border: 1px solid #427ac714;
+        border: 1px solid #bd3a5c14;
         border-radius: 50%;
     }
 

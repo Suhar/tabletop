@@ -32,18 +32,44 @@
 }
 
 @theme {
-    --color-highlight-border: #6496df80;
+    /* SuharTabletop is burgundy: the accents the pages draw in blue and the grays they're set on
+       are redefined here, so every page follows without changing its classes. */
+    --color-blue-50: #fcf3f5;
+    --color-blue-100: #f8e4e9;
+    --color-blue-200: #f0c4d0;
+    --color-blue-300: #e597ab;
+    --color-blue-400: #d4637f;
+    --color-blue-500: #bd3a5c;
+    --color-blue-600: #9e2446;
+    --color-blue-700: #841c3a;
+    --color-blue-800: #6b1830;
+    --color-blue-900: #571528;
+    --color-blue-950: #330915;
+
+    --color-gray-50: #faf7f8;
+    --color-gray-100: #f3eef0;
+    --color-gray-200: #e6dde0;
+    --color-gray-300: #d2c4c8;
+    --color-gray-400: #a8959b;
+    --color-gray-500: #7f6b71;
+    --color-gray-600: #5f4d53;
+    --color-gray-700: #48383d;
+    --color-gray-800: #33272b;
+    --color-gray-900: #24191d;
+    --color-gray-950: #170f12;
+
+    --color-highlight-border: #d4637f80;
     --font-tournament: 'Source Sans 3', sans-serif;
-    --color-primary-50: #fff5f2;
-    --color-primary-100: #fff1ee;
-    --color-primary-200: #ffe4de;
-    --color-primary-300: #ffd5cc;
-    --color-primary-400: #ffbcad;
-    --color-primary-500: #fe795d;
-    --color-primary-600: #ef562f;
-    --color-primary-700: #eb4f27;
-    --color-primary-800: #cc4522;
-    --color-primary-900: #a5371b;
+    --color-primary-50: #fcf3f5;
+    --color-primary-100: #f8e4e9;
+    --color-primary-200: #f0c4d0;
+    --color-primary-300: #e597ab;
+    --color-primary-400: #d4637f;
+    --color-primary-500: #bd3a5c;
+    --color-primary-600: #9e2446;
+    --color-primary-700: #841c3a;
+    --color-primary-800: #6b1830;
+    --color-primary-900: #571528;
 
     --color-secondary-50: #f0f9ff;
     --color-secondary-100: #e0f2fe;
