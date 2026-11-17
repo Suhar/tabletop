@@ -421,9 +421,9 @@
                     <NavBrand href={sessionUser ? '/library' : '/'} class="shrink-0 cursor-pointer">
                         <span
                             class="full-logo text-2xl leading-8 font-bold tracking-wide whitespace-nowrap text-gray-900 dark:text-white"
-                            >__SITE_NAME__</span
+                            >SuharTabletop</span
                         >
-                        <img src="/android-chrome-192x192.png" alt="__SITE_NAME__" class="game-logo" />
+                        <img src="/android-chrome-192x192.png" alt="SuharTabletop" class="game-logo" />
                     </NavBrand>
 
                     <div
@@ -541,7 +541,7 @@
                             {#if canInstallPwa}
                                 <button
                                     class="pwa-install cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-                                    aria-label="Install BoardTogether"
+                                    aria-label="Install SuharTabletop"
                                     onclick={installPwa}
                                 >
                                     <DownloadOutline class="h-6 w-6" aria-hidden="true" />
@@ -720,7 +720,7 @@
                         {#if canInstallPwa}
                             <button
                                 class="pwa-install me-1 cursor-pointer text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-                                aria-label="Install BoardTogether"
+                                aria-label="Install SuharTabletop"
                                 onclick={installPwa}
                             >
                                 <DownloadOutline class="h-6 w-6" aria-hidden="true" />

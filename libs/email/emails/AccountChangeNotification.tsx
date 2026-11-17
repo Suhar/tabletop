@@ -36,7 +36,7 @@ export const AccountChangeNotification = ({
     if (changeType === AccountChangeType.AccountDeleted) {
         return (
             <DarkCardEmail
-                preview="Your Board Together account was deleted"
+                preview="Your SuharTabletop account was deleted"
                 heading="Your account was deleted"
                 subline="Your account and the details tied to it have been removed. Finished games show you as a deleted player. This is the last email we will send to this address."
                 footer="If you did not ask for this, please contact us."

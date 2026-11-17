@@ -56,7 +56,7 @@
 </script>
 
 <svelte:head>
-    <title>{data.series.name} games — Board Together</title>
+    <title>{data.series.name} games — SuharTabletop</title>
 </svelte:head>
 
 <main class="series-page collection-page">

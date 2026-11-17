@@ -28,10 +28,10 @@ export const PlayerRemoved = ({
             preview={`${playerName} ${departure} your ${title} game ${gameName}.`}
             wordmarkHref={url}
             heading={gameName}
-            subline={`${playerName} ${departure} Board Together. Your game of ${title} continues, but it will stop on their turn because nobody can move for them.`}
+            subline={`${playerName} ${departure} SuharTabletop. Your game of ${title} continues, but it will stop on their turn because nobody can move for them.`}
             footer={
                 <>
-                    You are playing in this game on Board Together. <ButtonFallback url={url} />
+                    You are playing in this game on SuharTabletop. <ButtonFallback url={url} />
                 </>
             }
         >

@@ -48,7 +48,7 @@ export const GameEnd = ({ result, title, gameName, winners, callKind, url = `` }
             subline={`Your game of ${title} has ended.`}
             footer={
                 <>
-                    You played in this game on __SITE_NAME__. <ButtonFallback url={url} />
+                    You played in this game on SuharTabletop. <ButtonFallback url={url} />
                 </>
             }
         >

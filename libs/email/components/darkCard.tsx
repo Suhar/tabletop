@@ -14,8 +14,8 @@ import {
 } from '@react-email/components'
 import type { CSSProperties, ReactNode } from 'react'
 
-const SITE_URL = '__SITE_URL__'
-const SITE_NAME = '__SITE_NAME__'
+const SITE_URL = 'https://suhartabletop.web.app'
+const SITE_NAME = 'SuharTabletop'
 
 export const darkPalette = {
     canvas: '#111827',

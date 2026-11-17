@@ -1,6 +1,6 @@
 {
-    "name": "__SITE_NAME__",
-    "short_name": "__SITE_NAME__",
+    "name": "SuharTabletop",
+    "short_name": "SuharTabletop",
     "description": "Play board games together online.",
     "id": "/",
     "start_url": "/?standalone=true",

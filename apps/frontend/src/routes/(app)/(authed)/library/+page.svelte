@@ -10,6 +10,6 @@
     }
 </script>
 
-<svelte:head><title>Game library — __SITE_NAME__</title></svelte:head>
+<svelte:head><title>Game library — SuharTabletop</title></svelte:head>
 
 <LandingPage signedIn bind:scrollTop={view.scrollTop} />

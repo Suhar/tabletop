@@ -7,10 +7,10 @@
 </script>
 
 <svelte:head>
-    <title>About — __SITE_NAME__</title>
+    <title>About — SuharTabletop</title>
     <meta
         name="description"
-        content="__SITE_NAME__ is a private, invite-only table for friends to play games that are still being made."
+        content="SuharTabletop is a private table for friends to play games that are still being made."
     />
 </svelte:head>
 
@@ -25,11 +25,11 @@
     <div class="introduction">
         <div class="intro-copy">
             <p class="lead">
-                <span class="font-bold">__SITE_NAME__</span>
+                <span class="font-bold">SuharTabletop</span>
                 is a private table for friends to play games that are still being made.
             </p>
             <p class="welcome">
-                You’re here because __OWNER__ invited you. The games here are prototypes and works in
+                You’re here because Stephan invited you. The games here are prototypes and works in
                 progress, so expect rough edges, placeholder art, and rules that change between
                 visits. Thanks for playing them anyway.
             </p>
@@ -50,10 +50,10 @@
         <section class="community-card" aria-labelledby="feedback-heading">
             <div class="card-heading">
                 <AnnotationSolid class="h-7 w-7 shrink-0" />
-                <h2 id="feedback-heading">Tell __OWNER__ what you think</h2>
+                <h2 id="feedback-heading">Tell Stephan what you think</h2>
             </div>
             <p>
-                Found a bug, got stuck on a rule, or had an idea mid-game? Send __OWNER__ a message, or
+                Found a bug, got stuck on a rule, or had an idea mid-game? Send Stephan a message, or
                 bring it up next time you play together. Compliments and complaints are both welcome.
             </p>
             <ul class="tips" aria-label="What helps in a bug report">
@@ -74,7 +74,7 @@
                 link outside the group.
             </p>
             <p class="invite">
-                Know someone who’d enjoy playing? Ask __OWNER__ to send them an invitation.
+                Know someone who’d enjoy playing? Ask Stephan before passing on the address.
             </p>
         </section>
     </div>

@@ -10,7 +10,7 @@
 </script>
 
 <svelte:head>
-    <title>{names.title} — Board Together</title>
+    <title>{names.title} — SuharTabletop</title>
 </svelte:head>
 
 <main class="legal-page collection-page">

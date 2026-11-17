@@ -43,7 +43,7 @@ export const LeagueSeasonStart = ({
             subline={`${title} · ${level ? `Level ${level.name}` : 'Seeding season'}`}
             footer={
                 <>
-                    You signed up for this league season on __SITE_NAME__. <ButtonFallback url={url} />
+                    You signed up for this league season on SuharTabletop. <ButtonFallback url={url} />
                 </>
             }
         >

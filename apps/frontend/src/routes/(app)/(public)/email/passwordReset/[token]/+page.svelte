@@ -48,7 +48,7 @@
 </script>
 
 <svelte:head>
-    <title>Reset password — Board Together</title>
+    <title>Reset password — SuharTabletop</title>
 </svelte:head>
 
 <LandingPage />

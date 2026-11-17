@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-    <title>Create an account — __SITE_NAME__</title>
+    <title>Create an account — SuharTabletop</title>
 </svelte:head>
 
 <div class="min-h-[calc(100dvh-70px)] flex flex-col items-center justify-center px-4 py-8">

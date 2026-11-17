@@ -30,7 +30,7 @@
         <div class="flex flex-col gap-3">
             <h3 class="text-xl font-medium text-gray-900 dark:text-white">Web Notifications</h3>
             <p class="text-sm text-gray-700 dark:text-gray-300">
-                You can receive notifications from __SITE_NAME__ directly in your web browser. Just
+                You can receive notifications from SuharTabletop directly in your web browser. Just
                 accept the permission prompt your browser shows you.
             </p>
         </div>
@@ -42,7 +42,7 @@
                     Discord Notifications
                 </h3>
                 <p class="text-sm text-gray-700 dark:text-gray-300">
-                    __SITE_NAME__ has a Discord bot that can send you direct notification messages. No
+                    SuharTabletop has a Discord bot that can send you direct notification messages. No
                     server webhook configuration is needed, and the messages will come to you
                     regardless of what server you are in.
                 </p>

@@ -45,7 +45,7 @@ export const ContentReport = ({
         subline={`Reported ${reportedAt} in ${gameName}. The reported player is never told who reported them.`}
         footer={
             <>
-                Sent because a player used Report on Board Together.{' '}
+                Sent because a player used Report on SuharTabletop.{' '}
                 <Link href={gameUrl} style={styles.footerLink}>
                     Open the game
                 </Link>

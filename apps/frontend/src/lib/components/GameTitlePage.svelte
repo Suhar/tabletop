@@ -32,7 +32,7 @@
     }
 </script>
 
-<svelte:head><title>{metadata.name} — __SITE_NAME__</title></svelte:head>
+<svelte:head><title>{metadata.name} — SuharTabletop</title></svelte:head>
 
 <main class="title-page collection-page">
     <BackLink
