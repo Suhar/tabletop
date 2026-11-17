@@ -12,11 +12,45 @@ import {
     type StationAppearance,
     type TileLayout
 } from '@tabletop/18xx-ui'
+import ISTToken from './images/tokens/IST.svg'
+import ZAGToken from './images/tokens/ZAG.svg'
+import POSToken from './images/tokens/POS.svg'
+import SLAToken from './images/tokens/SLA.svg'
+import LIKToken from './images/tokens/LIK.svg'
+import PODToken from './images/tokens/POD.svg'
+import KARToken from './images/tokens/KAR.svg'
+import SPLToken from './images/tokens/SPL.svg'
+import KBToken from './images/tokens/KB.svg'
+import SBToken from './images/tokens/SB.svg'
+import MBToken from './images/tokens/MB.svg'
+import PBToken from './images/tokens/PB.svg'
+import NBToken from './images/tokens/NB.svg'
+import LUKAToken from './images/tokens/LUKA.svg'
 
-const LukaColor = '#f08fb5'
+// 18xx Maker's pink, as for the companies (see import-maker.mjs).
+const LukaColor = '#ec6280'
+
+// The tokens as 18xx Maker draws them, by label; see images/tokens/README.md.
+const MakerTokens: Readonly<Record<string, string>> = {
+    IST: ISTToken,
+    ZAG: ZAGToken,
+    POS: POSToken,
+    SLA: SLAToken,
+    LIK: LIKToken,
+    POD: PODToken,
+    KAR: KARToken,
+    SPL: SPLToken,
+    KB: KBToken,
+    SB: SBToken,
+    MB: MBToken,
+    PB: PBToken,
+    NB: NBToken,
+    LUKA: LUKAToken
+}
 
 function station(id: string, label: string, color: string): [string, StationAppearance] {
-    return [id, { color, label }]
+    const imageUrl = MakerTokens[label === 'Luka' ? 'LUKA' : label]
+    return [id, imageUrl ? { color, label, imageUrl } : { color, label }]
 }
 
 function cityEdges(tile: TileDefinition, nodeId: string): number[] {
