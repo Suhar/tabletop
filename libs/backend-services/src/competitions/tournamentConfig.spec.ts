@@ -53,6 +53,7 @@ function createService(supportsStartingPositions = true, scoring?: GameScoring) 
         readSchedule: vi.fn(),
         readSchedules: vi.fn(),
         commitSchedule: vi.fn(),
+        extendSchedule: vi.fn(),
         correctResult: vi.fn(),
         rebuildStandings: vi.fn(),
         administratorIds: vi.fn(async () => [])
@@ -131,11 +132,64 @@ it("freezes the title's tiebreak rule into the rules and ignores what the client
     expect(undeclared.rules.tiebreakRule).toBeUndefined()
 })
 
+it('offers placement scoring only for titles that record final scores', async () => {
+    expect(createService().tournamentTitles().placementTitleIds).toEqual([])
+    const scoring: GameScoring = { finalScores: () => ({}) }
+    expect(createService(true, scoring).tournamentTitles().placementTitleIds).toEqual(['test'])
+    const placement = draft()
+    placement.rules.scoring = 'placementV1'
+    await expect(createService().create('unscored', placement, admin)).rejects.toThrow(
+        'This game does not record the final scores places need'
+    )
+    const saved = await createService(true, scoring).create('scored', placement, admin)
+    expect(saved.rules.scoring).toBe('placementV1')
+})
+
 it('offers only titles that support assigned starting positions', async () => {
-    expect(createService().tournamentTitleIds()).toEqual(['test'])
+    expect(createService().tournamentTitles().titleIds).toEqual(['test'])
     const unsupported = createService(false)
-    expect(unsupported.tournamentTitleIds()).toEqual([])
+    expect(unsupported.tournamentTitles().titleIds).toEqual([])
     await expect(unsupported.create('event', draft(), admin)).rejects.toThrow(
         'This game is not available for tournaments yet'
     )
+})
+
+function knockout(): TournamentDraft {
+    const input = draft()
+    return {
+        ...input,
+        format: {
+            kind: 'knockout',
+            stages: [{ id: 'bracket', name: 'Bracket', gamesPerEntrant: 2 }],
+            deciderGameConfig: { privateMoney: true }
+        },
+        rules: { ...input.rules, gameConfig: { privateMoney: false } }
+    }
+}
+
+it('accepts a knockout with its own decider options', async () => {
+    const saved = await createService().create('event', knockout(), admin)
+    expect(saved.format).toMatchObject({
+        kind: 'knockout',
+        deciderGameConfig: { privateMoney: true }
+    })
+})
+
+it.each([
+    ['a table of three', (input: TournamentDraft) => (input.rules.tableSize = 3)],
+    ['one game at a time', (input: TournamentDraft) => (input.rules.concurrency = 1)],
+    ['placement scoring', (input: TournamentDraft) => (input.rules.scoring = 'placementV1')],
+    [
+        'invalid decider options',
+        (input: TournamentDraft) => {
+            if (input.format.kind === 'knockout')
+                input.format.deciderGameConfig = { privateMoney: 'yes' }
+        }
+    ]
+])('rejects a knockout with %s', async (_, change) => {
+    const input = knockout()
+    change(input)
+    await expect(
+        createService(true, { finalScores: () => ({}) }).create('event', input, admin)
+    ).rejects.toThrow()
 })

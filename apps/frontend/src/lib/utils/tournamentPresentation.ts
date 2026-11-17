@@ -1,19 +1,50 @@
 import {
-    rankedTiebreak,
+    formatTournamentAveragePlace,
+    formatTournamentTiebreaks,
+    ranksByAveragePlace,
     tournamentCapacity,
     type Tournament,
-    type TournamentScore
+    type TournamentRules,
+    type TournamentScore,
+    type TournamentStanding
 } from '@tabletop/common'
 import { startCountdownText } from './startCountdown'
 
-export function tournamentTiebreakText(
-    row: Pick<TournamentScore, 'completed' | 'tiebreak' | 'pointsBehind'>
-): string {
-    return rankedTiebreak(row)?.toLocaleString(undefined, { maximumFractionDigits: 3 }) ?? '—'
+export function tournamentTiebreakTexts(
+    rows: Pick<
+        TournamentStanding,
+        'userId' | 'completed' | 'tiebreak' | 'pointsBehind' | 'shareOfWinner'
+    >[]
+): Map<string, string> {
+    const texts = formatTournamentTiebreaks(rows)
+    return new Map(rows.map((row, index) => [row.userId, texts[index] ?? '—']))
 }
 
-export function tournamentFormatText(format: Tournament['format']): string {
-    return format.kind === 'mini' ? 'Mini tournament' : 'Multi-stage tournament'
+export function tournamentScoringText(
+    rules: Pick<TournamentRules, 'scoring'>,
+    format?: Pick<Tournament['format'], 'kind'>
+): string {
+    if (format?.kind === 'knockout')
+        return 'Each match is one game from each side; a split match goes to a decider. A shared game counts half. Below the winner, players rank by the round they reached.'
+    return ranksByAveragePlace(rules)
+        ? 'Ranked by average place. Ties go to whoever finished ahead more often at shared tables, then the tiebreak.'
+        : 'A win earns 1 point; joint winners split it.'
+}
+
+export function tournamentAveragePlaceText(
+    row: Pick<TournamentScore, 'completed' | 'placeTotal'>
+): string {
+    return formatTournamentAveragePlace(row) ?? '—'
+}
+
+const formatNames = {
+    mini: ['Mini', 'Mini tournament'],
+    knockout: ['Knockout', 'Knockout tournament'],
+    multiStage: ['Multi-stage', 'Multi-stage tournament']
+} as const satisfies Record<Tournament['format']['kind'], readonly [string, string]>
+
+export function tournamentFormatText(format: Pick<Tournament['format'], 'kind'>): string {
+    return formatNames[format.kind][1]
 }
 
 export function tournamentRosterText(tournament: Pick<Tournament, 'entrants' | 'rules'>): string {
@@ -25,7 +56,7 @@ export function tournamentRosterText(tournament: Pick<Tournament, 'entrants' | '
 
 export function tournamentTag(tournament: Pick<Tournament, 'format' | 'league'>): string {
     if (tournament.league) return 'League'
-    return tournament.format.kind === 'mini' ? 'Mini' : 'Multi-stage'
+    return formatNames[tournament.format.kind][0]
 }
 
 export function tournamentTagTitle(tournament: Pick<Tournament, 'format' | 'league'>): string {

@@ -10,6 +10,7 @@ import {
 import GrayCityTile from './images/tokens/gray-city-tile.svg'
 import { TwoCrownsMapView } from './mapView.js'
 import { TwoCrownsPresentation } from './presentation.js'
+import { createRouteWorker } from './routeWorker.js'
 
 import { assert } from '@tabletop/common'
 import {
@@ -36,7 +37,8 @@ import {
 const BaseSession = createEighteenXXSessionClass(
     TwoCrownsTitleRules,
     TwoCrownsMapView,
-    TwoCrownsPresentation
+    TwoCrownsPresentation,
+    createRouteWorker
 )
 
 export class TwoCrownsSession extends BaseSession {

@@ -11,7 +11,26 @@ A site-organized competition in one Game Title whose Entrants accumulate results
 A Tournament with one Stage in which Entrants accumulate points across several Tables to determine final standings.
 
 **Tournament Format**:
-The structure of one Tournament, such as Mini or Multi-stage. A League contains Tournaments through its Seasons and Groups rather than being a Tournament Format.
+The structure of one Tournament, such as Mini, Knockout or Multi-stage. A League contains Tournaments through its Seasons and Groups rather than being a Tournament Format.
+
+**Knockout**:
+A Tournament with one Stage in which two-player Matches eliminate Entrants through a Bracket until one is champion. Below the champion, Entrants rank by the round they reached.
+_Avoid_: Single elimination, cup
+
+**Bracket**:
+The drawn arrangement of a Knockout's Matches by round, each later Match fed by the winners of two earlier ones. Its size is the next power of two at or above the field.
+
+**Match**:
+A contest between two Entrants in a Knockout: one Game from each Starting Position, then Deciders while they are level.
+
+**Decider**:
+A Game that settles a level Match, played with the event's decider options and without assigned seats, so the title's own setup (for Napoleon's Triumph, the morale auction) decides the sides.
+
+**Bye**:
+An empty first-round place in a Bracket. The Entrant drawn against it advances without playing.
+
+**Walkover**:
+A Match won because the opponent was withdrawn, or because the other place was left empty when both Entrants of a feeding Match were withdrawn.
 
 **Stage Plan**:
 The declared sequence of Stages and participation commitment for a Tournament. A planned Stage exists before its play begins; the number of planned Stages is determined by this plan.
@@ -48,8 +67,17 @@ The maximum number of active Tables an Entrant may occupy within an event at onc
 The sum of an Entrant's final in-game scores across their completed Tables, supplied by the Game Title's scoring capability. It orders Entrants whose tournament scores are equal; it never outranks tournament score.
 _Avoid_: Game Score when referring to the tournament tiebreak rather than one Game's result
 
+**Average Place**:
+An Entrant's finishing places averaged over their completed Tables, lower being better. A shared place counts the average of the places it spans. Events with Placement Scoring rank by it.
+
+**Placement Scoring**:
+The scoring rule that ranks Entrants by Average Place, then by head-to-head finishing order among the tied Entrants, then by tiebreak, instead of by win points. Chosen per Tournament or League, for titles that record final scores.
+
 **Points Behind**:
 An Entrant's total gap to the top final score across their completed Tables. It is a Tiebreak Rule a Game Title may declare, frozen into an event's rules; Fresh Fish declares it. Entrants with equal tournament score then rank by the negated average gap plus one hundredth of their average final score.
+
+**Share of Winner**:
+An Entrant's final score as a share of the top final score at each completed Table, averaged and shown as a percentage. It is a Tiebreak Rule a Game Title may declare; the 18xx titles declare it, since a share does not depend on how much wealth a Table ended with.
 
 **Final Table Result**:
 The accepted outcome of a completed Table, final immediately when its Hosted Game finishes. Players cannot reopen that Game Instance through Undo; an Administrator may make an explicitly attributed correction.
@@ -109,7 +137,7 @@ _Avoid_: Automatic entry
 A Held Place left unconfirmed when the Sign-up Window closes. It is filled by promoting the next eligible Entrant from the Level below, and so on down to the Bottom Level.
 
 **Cutoff Tie**:
-Equal standing between Entrants on either side of a promotion or relegation line. It is resolved by points, then Tiebreak Total or Points Behind, then head-to-head results, then a seeded draw.
+Equal standing between Entrants on either side of a promotion or relegation line. It is resolved by points, then the tiebreak (Tiebreak Total, Points Behind or Share of Winner), then head-to-head results, then a seeded draw. Under Placement Scoring, head-to-head comes before the tiebreak.
 
 **Projected Allocation**:
 The Levels for the next Season implied by a finished Season's movement, before Held Places are confirmed. Groups are drawn only at the Final Allocation.

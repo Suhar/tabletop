@@ -17,11 +17,9 @@
         OfferAuctionBidding
     } from '@tabletop/18xx-ui'
     import { requireTwoCrownsSession } from './session.svelte.js'
+    import { createRouteWorker } from './routeWorker.js'
     import BranchSplitPreview from './BranchSplitPreview.svelte'
     import Tranches from './Tranches.svelte'
-    function createRouteWorker() {
-        return new Worker(new URL('./autorouter.worker.js', import.meta.url), { type: 'module' })
-    }
     let { gameSession }: { gameSession: GameSession<TwoCrownsState, HydratedTwoCrownsState> } =
         $props()
     function lotInfo(id: string) {
@@ -131,12 +129,7 @@
                     </div>
                 </div>
             {/if}
-            <OperatingActions
-                {privateOperationDescription}
-                onFocusRoute={focusRoute}
-                {session}
-                {createRouteWorker}
-            />
+            <OperatingActions {privateOperationDescription} onFocusRoute={focusRoute} {session} />
         {/if}
     {/snippet}
     {#snippet gameInformation()}

@@ -4,6 +4,7 @@ import {
     availableCatalogEntries,
     libraryShelfItems,
     librarySeriesById,
+    playerCountText,
     titleMaturityLabel,
     titleSeries
 } from './libraryTitles.js'
@@ -57,6 +58,13 @@ describe('titleMaturityLabel', () => {
     })
 })
 
+describe('playerCountText', () => {
+    it('gives the player range, or one count when it is fixed', () => {
+        expect(playerCountText(base.metadata)).toBe('2–4 players')
+        expect(playerCountText({ ...base.metadata, maxPlayers: 2 })).toBe('2 players')
+    })
+})
+
 describe('library shelf series', () => {
     function title(name: string, series?: string): GameCatalogEntry {
         return { ...base, id: name, metadata: { ...base.metadata, name, series } }
@@ -92,5 +100,10 @@ describe('library shelf series', () => {
     it('finds series only by their own ids', () => {
         expect(librarySeriesById('18xx')?.name).toBe('18xx')
         expect(librarySeriesById('constructor')).toBeUndefined()
+    })
+
+    it('gives 18xx a lobby and the GIPF project none', () => {
+        expect(librarySeriesById('18xx')?.hasLobby).toBe(true)
+        expect(librarySeriesById('gipf-project')?.hasLobby).toBe(false)
     })
 })

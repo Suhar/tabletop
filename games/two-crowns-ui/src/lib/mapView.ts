@@ -53,6 +53,37 @@ const JunctionLayouts: Readonly<Record<string, TileLayout>> = Object.fromEntries
         ])
 )
 
+/**
+ * Two stations sharing a junction city's one space (1894 §7.3.8) stand as a two-space city, placed
+ * as on the 1894 split tile with the same branches (J8 is X19 with its cities numbered the other
+ * way round).
+ */
+const sharedCity = (nodeId: string, edge: number, distance: number, turn: number) => ({
+    [nodeId]: {
+        nodePositions: { [nodeId]: towardTileEdge(edge, distance) },
+        slotRowTurns: { [nodeId]: turn }
+    }
+})
+export const TwoCrownsSharedCityLayouts: Readonly<
+    Record<string, Readonly<Record<string, TileLayout>>>
+> = {
+    'two-crowns:J1': { ...sharedCity('city-0', 1, 16.5, 60), ...sharedCity('city-1', 3, 16.5, 0) },
+    'two-crowns:J2': { ...sharedCity('city-0', 0, 16.5, 0), ...sharedCity('city-1', 3, 16.5, 0) },
+    'two-crowns:J3': {
+        ...sharedCity('city-0', 5, 13.5, 120),
+        ...sharedCity('city-1', 2, 25.5, 120)
+    },
+    'two-crowns:J4': { ...sharedCity('city-0', 0, 16, 0), ...sharedCity('city-1', 2, 20.5, 120) },
+    'two-crowns:J5': { ...sharedCity('city-0', 0, 16, 0), ...sharedCity('city-1', 4, 20.5, 60) },
+    'two-crowns:J6': { ...sharedCity('city-0', 0, 25.5, 0), ...sharedCity('city-1', 4, 25.5, 60) },
+    'two-crowns:J7': {
+        ...sharedCity('city-0', 2, 21.5, 120),
+        ...sharedCity('city-1', 5, 21.5, 120)
+    },
+    'two-crowns:J8': { ...sharedCity('city-0', 5, 20, 120), ...sharedCity('city-1', 4, 20, 60) },
+    'two-crowns:J9': { ...sharedCity('city-0', 0, 19.5, 0), ...sharedCity('city-1', 4, 25.5, 60) }
+}
+
 export const TwoCrownsTileLayouts: Readonly<Record<string, TileLayout>> = {
     ...StandardTileLayouts,
     ...JunctionLayouts
@@ -62,6 +93,7 @@ export const TwoCrownsMapView: MapViewDefinition = {
     map: TwoCrownsMap,
     tileSet: TwoCrownsTileSet,
     layouts: TwoCrownsTileLayouts,
+    sharedCityLayouts: TwoCrownsSharedCityLayouts,
     stations: Object.fromEntries([
         ...TwoCrownsLukaCompanies.map((company) =>
             station(company.companyId, company.companyId, company.color)

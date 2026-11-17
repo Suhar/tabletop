@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCityTileFace, tileUpgradeMappings } from '@tabletop/18xx'
+import { createCityTileFace, keepsExits, tileUpgradeMappings } from '@tabletop/18xx'
 import { TwoCrownsTiles } from './tiles.js'
 import { TwoCrownsTrackRules, preservesTwoCrownsStops } from './trackRules.js'
 
@@ -8,22 +8,23 @@ const tile = (id: string) => TwoCrownsTiles.find((item) => item.id === `two-crow
 const greenJunction = createCityTileFace('green', [0, 1, 3, 4], 20, 2)
 
 describe('1874 junction and gray tiles', () => {
-    it('splits a green junction into the brown J tile’s two cities', () => {
+    it('splits a green junction into the brown J tile’s two cities, rebuilding the hex', () => {
         const brown = tile('J1')
         expect(preservesTwoCrownsStops(greenJunction, brown)).toBe(true)
-        // Either city may take the old city's first station, so the upgrader has a choice.
-        expect(tileUpgradeMappings(greenJunction, brown)).toHaveLength(2)
+        // As in 1894, the split keeps the exits but not the track, and sets the stations aside.
+        expect(TwoCrownsTrackRules.reconfigures!('H12', greenJunction, brown)).toBe(true)
+        expect(tileUpgradeMappings(greenJunction, brown)).toHaveLength(0)
+        expect(TwoCrownsTrackRules.sharesFullCities).toBe(true)
     })
     it('offers the three ways to pair the green tile’s four edges', () => {
         const split = TwoCrownsTiles.filter((item) => item.face.labels?.includes('J'))
-        const fitting = split.filter(
-            (item) => tileUpgradeMappings(greenJunction, item.face).length > 0
-        )
+        const fitting = split.filter((item) => keepsExits(greenJunction, item.face))
         expect(fitting.map((item) => item.printedNumber)).toEqual(['J1', 'J6', 'J7'])
     })
-    it('joins a brown junction back into one gray city', () => {
+    it('joins a brown junction back into one gray city, keeping its stations', () => {
         const gray = tile('G1')
         expect(preservesTwoCrownsStops(tile('J1'), gray)).toBe(true)
+        expect(TwoCrownsTrackRules.reconfigures!('H12', tile('J1'), gray)).toBe(false)
         expect(tileUpgradeMappings(tile('J1'), gray).length).toBeGreaterThan(0)
     })
     it('lets J hexes take plain tiles before their label applies', () => {

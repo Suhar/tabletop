@@ -19,6 +19,11 @@ const AnyCityGrayIds = ['two-crowns:G1', 'two-crowns:G2']
 const LikaTileId = 'two-crowns:G2'
 // 1874design.md, Junction cities and Gray tiles: a green junction splits into the brown J tile's
 // two cities, and a gray city may join a brown junction back into one.
+const isSplittingJunction = (before: TileFace, after: TileFace) =>
+    before.color === 'green' &&
+    cityCount(before) === 1 &&
+    !!after.labels?.includes('J') &&
+    cityCount(after) === 2
 export function preservesTwoCrownsStops(before: TileFace, after: TileFace): boolean {
     if (sameStopCounts(before, after)) return true
     const towns = (face: TileFace) => face.nodes.filter((node) => node.kind === 'town').length
@@ -43,6 +48,10 @@ export const TwoCrownsTrackRules: TrackRules = {
         return { reason: 'A company may lay two yellow tiles or make one upgrade' }
     },
     preservesStops: preservesTwoCrownsStops,
+    // A split sets the hex's stations aside for their owners to place again, and a set-aside
+    // station may join a full city beside the one already there, as in 1894 (§12.3.2, §7.3.8).
+    reconfigures: (_locationId, before, after) => isSplittingJunction(before, after),
+    sharesFullCities: true,
     relabels(locationId, definitionId) {
         // The gray cities go on any brown city but Karlovac, labelled or junction included.
         if (AnyCityGrayIds.includes(definitionId)) return locationId !== KarlovacId
