@@ -941,8 +941,7 @@
         .game-session-header .header-links {
             margin-right: 4px;
         }
-        .game-session-header .community-link,
-        .game-session-header .competitions-link {
+        .game-session-header .community-link {
             display: none;
         }
         .game-session-header .header-icons {
