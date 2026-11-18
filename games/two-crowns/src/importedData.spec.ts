@@ -12,9 +12,9 @@ describe('The Two Crowns imported from 18xx Maker', () => {
             expect(TwoCrownsMap.reservedLocationIds(company.companyId)).toHaveLength(1)
     })
 
-    it('counts the tileable hexes of the 0.9.0 map', () => {
+    it('counts the tileable hexes of the 0.10.2 map', () => {
         const buildable = TwoCrownsMap.definition.locations.filter((location) => location.buildable)
-        expect(buildable).toHaveLength(84)
+        expect(buildable).toHaveLength(85)
     })
 
     it('labels the X and junction cities for their upgrades', () => {
@@ -35,8 +35,8 @@ describe('The Two Crowns imported from 18xx Maker', () => {
         const mines = face('G7').nodes[0]
         expect(mines.kind).toBe('city')
         expect(mines.kind === 'city' && mines.stationSlots).toBe(0)
-        // Port stubs are dead-end towns on one edge.
-        for (const id of ['M1', 'J20', 'M19', 'P12']) {
+        // Port stubs are dead-end towns on one edge; Donja Dubrava (M1) became a plain town in 0.10.2.
+        for (const id of ['J20', 'M19', 'P12']) {
             expect(face(id).nodes.map((node) => node.kind)).toEqual(['town'])
             expect(face(id).paths).toHaveLength(1)
         }

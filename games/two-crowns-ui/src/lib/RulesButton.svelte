@@ -84,11 +84,19 @@
         max-height: none;
         margin: auto;
         padding: 0;
-        border: 1px solid var(--rail-border, #b8a995);
+        border: 1px solid var(--rules-border);
         border-radius: 8px;
-        background: var(--rail-surface, #f7f1e6);
-        color: var(--rail-text, #443c34);
+        background: var(--rules-surface);
+        color: var(--rules-text);
         box-shadow: 0 18px 50px #0007;
+        /* Its own colours: on your turn the header it opens from swaps in dark text for its
+           light background, which the dialog would otherwise inherit onto its dark surface. */
+        --rules-text: #ffffff;
+        --rules-muted: #b9c4cf;
+        --rules-border: #485666;
+        --rules-surface: #222c37;
+        --rules-hover: #ffffff18;
+        color-scheme: dark;
         /* It opens from the table header, whose text settings it would otherwise inherit. */
         white-space: normal;
         text-align: left;
@@ -109,7 +117,7 @@
         justify-content: space-between;
         gap: 12px;
         padding: 10px 14px 10px 18px;
-        border-bottom: 1px solid var(--rail-border, #b8a995);
+        border-bottom: 1px solid var(--rules-border);
     }
     h2 {
         display: flex;
@@ -119,7 +127,7 @@
         font-weight: 700;
     }
     .version {
-        color: var(--rail-muted, #786550);
+        color: var(--rules-muted);
         font-size: 13px;
         font-weight: 500;
     }
@@ -127,32 +135,32 @@
         width: 32px;
         height: 32px;
         border-radius: 4px;
-        color: var(--rail-muted, #786550);
+        color: var(--rules-muted);
         font-size: 24px;
         line-height: 1;
     }
     .close:hover {
-        background: var(--rail-hover, #69554016);
-        color: var(--rail-text, #443c34);
+        background: var(--rules-hover);
+        color: var(--rules-text);
     }
     nav {
         display: flex;
         flex-wrap: wrap;
         gap: 4px 14px;
         padding: 8px 18px;
-        border-bottom: 1px solid var(--rail-border, #b8a995);
+        border-bottom: 1px solid var(--rules-border);
         font-size: 12px;
     }
     nav a {
-        color: var(--rail-muted, #786550);
+        color: var(--rules-muted);
     }
     nav a:hover {
-        color: var(--rail-text, #443c34);
+        color: var(--rules-text);
         text-decoration: underline;
     }
     .status {
         padding: 18px;
-        color: var(--rail-muted, #786550);
+        color: var(--rules-muted);
     }
     .rulebook {
         flex: 1;
@@ -204,7 +212,7 @@
     .rulebook :global(th),
     .rulebook :global(td) {
         padding: 4px 8px;
-        border: 1px solid var(--rail-border, #b8a995);
+        border: 1px solid var(--rules-border);
         vertical-align: top;
     }
     .rulebook :global(a) {
@@ -214,7 +222,7 @@
     .rulebook :global(blockquote) {
         margin: 0 0 10px;
         padding-left: 12px;
-        border-left: 3px solid var(--rail-border, #b8a995);
-        color: var(--rail-muted, #786550);
+        border-left: 3px solid var(--rules-border);
+        color: var(--rules-muted);
     }
 </style>

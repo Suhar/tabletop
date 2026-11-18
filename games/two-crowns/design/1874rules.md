@@ -1,4 +1,4 @@
-> **Generated, not authoritative.** Player rulebook for design 0.10.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.10.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
+> **Generated, not authoritative.** Player rulebook for design 0.10.0 (0.10.2 for Donja Dubrava), written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.10.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
 
 THE TWO CROWNS 1874
 
@@ -530,11 +530,11 @@ Empty, or with a printed company home location. Revenue is listed by phase (yell
 | Luka homes (8) | X city; Karlovac is CX, Pula is P; Gospić is printed yellow | 20 / 30 / 60 or 50 |
 | Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod | Junction (J) | 20 / 20 / 40 + 40 |
 | Virovitica, Zadar, Senj, Šibenik, Knin | City | 20 / 20 / 40 |
-| Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj | Town | 10 |
+| Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj, Donja Dubrava | Town | 10 |
 | 10 double-town hexes | Two towns | 10 + 10 |
 | Krk, Rab, Pag | Island towns | 20 / 10 / 10 |
 | Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10 (Legrad and Korenica 20) |
-| Donja Dubrava, Vodice, Vrlika, Bosanski Brod | Gray port towns, dead ends | 10 |
+| Vodice, Vrlika, Bosanski Brod | Gray port towns, dead ends | 10 |
 | Rude Mines | Gray city, no stations | 20 / 20 / 60 |
 | Ljubljana | Offboard | 30 / 40 / 60 |
 | Budapest | Offboard | 40 / 40 / 70 |
