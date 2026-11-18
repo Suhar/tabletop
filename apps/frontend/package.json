@@ -21,7 +21,7 @@
         "@tabletop/common": "workspace:*",
         "@tabletop/frontend-components": "workspace:*",
         "@tabletop/games-config": "workspace:*",
-        "ably": "^2.17.0",
+        "@ably/pubsub-device": "^3.1.0",
         "es-iterator-helpers": "^1.2.2",
         "idb": "^8.0.3",
         "javascript-time-ago": "^2.5.10",

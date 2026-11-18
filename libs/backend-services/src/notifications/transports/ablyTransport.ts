@@ -2,11 +2,12 @@ import { Notification } from '@tabletop/common'
 import { SecretsService } from '../../secrets/secretsService.js'
 import { TopicTransport, TopicTransportType } from './topicTransport.js'
 import { nanoid } from 'nanoid'
-import Ably from 'ably'
+// SuharTabletop's Ably account is on MAU pricing, which accepts only Ably's new SDK packages.
+import { createHttpClient, type PubSubHttpClient } from '@ably/pubsub-server'
 
 export class AblyTransport implements TopicTransport {
     type = TopicTransportType.Ably
-    private ably: Ably.Rest
+    private ably: PubSubHttpClient
 
     static async createAblyTransport(secretsService: SecretsService): Promise<AblyTransport> {
         const ablyApiKey = await secretsService.getSecret('ABLY_API_KEY')
@@ -17,7 +18,7 @@ export class AblyTransport implements TopicTransport {
     }
 
     constructor(private readonly ablyApiKey: string) {
-        this.ably = new Ably.Rest(ablyApiKey)
+        this.ably = createHttpClient(ablyApiKey)
     }
 
     private async initialize(): Promise<void> {}

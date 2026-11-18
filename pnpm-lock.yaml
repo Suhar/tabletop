@@ -313,6 +313,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@ably/pubsub-device':
+        specifier: ^3.1.0
+        version: 3.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@noble/hashes':
         specifier: 2.4.0
         version: 2.4.0
@@ -325,9 +328,6 @@ importers:
       '@tabletop/games-config':
         specifier: workspace:*
         version: link:../../config/config-games
-      ably:
-        specifier: ^2.17.0
-        version: 2.30.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       es-iterator-helpers:
         specifier: ^1.2.2
         version: 1.4.0
@@ -6452,6 +6452,9 @@ importers:
 
   libs/backend-services:
     dependencies:
+      '@ably/pubsub-server':
+        specifier: ^3.1.0
+        version: 3.1.0
       '@google-cloud/firestore':
         specifier: ^9.4.0
         version: 9.4.0
@@ -6476,9 +6479,6 @@ importers:
       '@tabletop/games-config':
         specifier: workspace:*
         version: link:../../config/config-games
-      ably:
-        specifier: ^2.17.0
-        version: 2.30.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -6865,6 +6865,40 @@ packages:
 
   '@ably/msgpack-js@0.4.1':
     resolution: {integrity: sha512-Sjxj6SOr17hExAVrsycN7u6oV4PhZcK7Z2S8dM71CH/butgO47cSo/TL6FJPCXUyDAzKkOWjMUpJGyZkEpyu4Q==}
+
+  '@ably/pubsub-core@3.1.0':
+    resolution: {integrity: sha512-cj234Tq76mpilXEKHbaSYlorJnVB7DFILuZLryWG2X8OBq0KLI3pq7Q+ctfbDVafkDOPEzRyhRJSc0cjJVG5Bg==}
+    engines: {node: '>=22'}
+
+  '@ably/pubsub-device@3.1.0':
+    resolution: {integrity: sha512-/JiLB3+tS2zppSqIHFUHqiaMqpao83tMVRdcqrK7KxsnaLn4X7B66B2J2PXVBoJDxUFv+0x1AD2l+xncblWqNA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
+  '@ably/pubsub-server@3.1.0':
+    resolution: {integrity: sha512-WN3tRmzOaVtJB7+o586W13lCORVXyLZbG/dDEFi+ASjKiByK5VasCmwoadXzIAZ/47z2lgoDaRKM2zPL02NGEg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@temporalio/activity': 1.x
+      '@temporalio/common': 1.x
+      '@temporalio/plugin': 1.x
+      '@temporalio/workflow': '>=1.18.0 <2.0.0'
+    peerDependenciesMeta:
+      '@temporalio/activity':
+        optional: true
+      '@temporalio/common':
+        optional: true
+      '@temporalio/plugin':
+        optional: true
+      '@temporalio/workflow':
+        optional: true
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -13081,6 +13115,33 @@ snapshots:
   '@ably/msgpack-js@0.4.1':
     dependencies:
       bops: 1.0.1
+
+  '@ably/pubsub-core@3.1.0': {}
+
+  '@ably/pubsub-device@3.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      '@ably/pubsub-core': 3.1.0
+      dequal: 2.0.3
+      fastestsmallesttextencoderdecoder: 1.0.22
+      got: 11.8.6
+      ulid: 2.4.0
+      ws: 8.22.0
+    optionalDependencies:
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@ably/pubsub-server@3.1.0':
+    dependencies:
+      '@ably/pubsub-core': 3.1.0
+      dequal: 2.0.3
+      got: 11.8.6
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@alloc/quick-lru@5.3.0': {}
 

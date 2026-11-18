@@ -67,7 +67,10 @@ const ably = vi.hoisted(() => {
     return { FakeRealtime }
 })
 
-vi.mock('ably', () => ({ default: { Realtime: ably.FakeRealtime } }))
+vi.mock('@ably/pubsub-device', () => ({
+    createClient: (options: ConstructorParameters<typeof ably.FakeRealtime>[0]) =>
+        new ably.FakeRealtime(options)
+}))
 
 afterEach(() => {
     vi.restoreAllMocks()

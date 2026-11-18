@@ -1,4 +1,5 @@
-import Ably from 'ably'
+// SuharTabletop's Ably account is on MAU pricing, which accepts only Ably's new SDK packages.
+import { createClient, type PubSubClient, type RealtimeChannel } from '@ably/pubsub-device'
 import {
     type RealtimeTransport,
     type RealtimeEvent,
@@ -10,7 +11,7 @@ import { NotificationChannel, type TabletopApi } from '@tabletop/frontend-compon
 
 type ChannelData = {
     identifier: ChannelIdentifier
-    ablyChannel: Ably.RealtimeChannel
+    ablyChannel: RealtimeChannel
     subscribed: boolean
 }
 
@@ -23,10 +24,10 @@ export class AblyConnection implements RealtimeTransport {
 
     private grantedGameIds: Set<string> = new Set()
 
-    private ably: Ably.Realtime
+    private ably: PubSubClient
 
     constructor(private readonly api: Pick<TabletopApi, 'getAblyToken'>) {
-        this.ably = new Ably.Realtime({
+        this.ably = createClient({
             autoConnect: false,
             authCallback: async (_tokenParams, callback) => {
                 const gameIds = this.gameIds()

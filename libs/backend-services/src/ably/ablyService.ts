@@ -1,5 +1,6 @@
 import { SecretsService } from '../secrets/secretsService.js'
-import Ably from 'ably'
+// SuharTabletop's Ably account is on MAU pricing, which accepts only Ably's new SDK packages.
+import { createHttpClient, type PubSubHttpClient, type TokenRequest } from '@ably/pubsub-server'
 
 export const ABLY_CLIENT_OPERATIONS = ['subscribe'] as const
 
@@ -10,7 +11,7 @@ export function ablyClientCapability(topics: string[]): AblyClientCapability {
 }
 
 export class AblyService {
-    private ably: Ably.Rest
+    private ably: PubSubHttpClient
 
     static async createAblyService(secretsService: SecretsService): Promise<AblyService> {
         const ablyApiKey = await secretsService.getSecret('ABLY_API_KEY')
@@ -18,7 +19,7 @@ export class AblyService {
     }
 
     constructor(private readonly ablyApiKey: string) {
-        this.ably = new Ably.Rest(ablyApiKey)
+        this.ably = createHttpClient(ablyApiKey)
     }
 
     async createTokenRequest({
@@ -27,7 +28,7 @@ export class AblyService {
     }: {
         userId: string
         topics: string[]
-    }): Promise<Ably.TokenRequest> {
+    }): Promise<TokenRequest> {
         return await this.ably.auth.createTokenRequest({
             clientId: userId,
             capability: ablyClientCapability(topics)
