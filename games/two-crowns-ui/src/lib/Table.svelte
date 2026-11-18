@@ -53,7 +53,17 @@
             : undefined
 </script>
 
+{#snippet boardTranches()}
+    <div class="board-tranches" aria-label="Company tranches">
+        <span class="board-tranches-label">Tranches</span>
+        <div class="board-tranche-groups">
+            <Tranches {session} slotSize={MarketTokenSize * 1.42} layout="stacked" showInitial />
+        </div>
+    </div>
+{/snippet}
+
 <GameTable
+    boardPanel={{ label: 'Tranches', content: boardTranches }}
     additionalStockActions={[
         ...(session.splitMenuAvailable
             ? [
@@ -140,19 +150,6 @@
             <Tranches {session} layout="row" />
         </div>
     {/snippet}
-    {#snippet boardInformation()}
-        <div class="board-tranches" aria-label="Company tranches">
-            <span class="board-tranches-label">Tranches</span>
-            <div class="board-tranche-groups">
-                <Tranches
-                    {session}
-                    slotSize={MarketTokenSize * 1.42}
-                    layout="stacked"
-                    showInitial
-                />
-            </div>
-        </div>
-    {/snippet}
 </GameTable>
 
 <style>
@@ -206,8 +203,6 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 11px;
-        margin-right: auto;
-        padding-left: 62px;
     }
     .board-tranches-label {
         color: var(--rail-muted, #7f8e9e);
