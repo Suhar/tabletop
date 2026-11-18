@@ -478,7 +478,7 @@
                             >SuharTabletop</span
                         >
                         <img
-                            src="/android-chrome-192x192.png"
+                            src="/android-chrome-192x192.png?v=cowbell"
                             alt="SuharTabletop"
                             class="game-logo"
                         />
