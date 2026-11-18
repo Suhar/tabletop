@@ -118,12 +118,34 @@ export const TwoCrownsSharedCityLayouts: Readonly<
     'two-crowns:J9': { ...sharedCity('city-0', 0, 19.5, 0), ...sharedCity('city-1', 4, 25.5, 60) }
 }
 
+/**
+ * On junctions whose tracks cross, the branch positions crowd the cities, which then shrink; these
+ * stand far enough along their tracks to keep full size, as on the 1894 split tile with the same
+ * branches (J6 is X16; J8 is X19 with its cities numbered the other way round).
+ */
+const CrossingJunctionLayouts: Readonly<Record<string, TileLayout>> = {
+    'two-crowns:J6': {
+        nodePositions: { 'city-0': { x: 0, y: 26.8 }, 'city-1': { x: 23.2, y: -13.4 } }
+    },
+    'two-crowns:J8': {
+        nodePositions: { 'city-0': { x: -2.2, y: 25.4 }, 'city-1': { x: -2.2, y: -25.4 } }
+    }
+}
+
 export const TwoCrownsTileLayouts: Readonly<Record<string, TileLayout>> = {
     ...StandardTileLayouts,
-    ...JunctionLayouts
+    ...JunctionLayouts,
+    ...CrossingJunctionLayouts
 }
 
 export const TwoCrownsMapView: MapViewDefinition = {
+    // A column west of the map, at TOP's market scale: the market in the sea below Istria and
+    // Ancona, with the tranches in its empty lower right, and the depot above it. Each area
+    // includes a 20-unit margin above its panel.
+    boardAreas: {
+        market: { x: -440, y: 700, width: 817, height: 463 },
+        depot: { x: -440, y: 330, width: 381, height: 350 }
+    },
     map: TwoCrownsMap,
     tileSet: TwoCrownsTileSet,
     layouts: TwoCrownsTileLayouts,
