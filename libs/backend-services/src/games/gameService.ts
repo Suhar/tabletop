@@ -290,6 +290,14 @@ export class GameService {
                 player.status = seatsWithoutAsking ? PlayerStatus.Joined : PlayerStatus.Reserved
             }
         }
+        // Nobody is left to accept, so the game can start, as when the last invitee accepts.
+        if (
+            seatsWithoutAsking &&
+            newGame.status === GameStatus.WaitingForPlayers &&
+            newGame.players.every((player) => player.status === PlayerStatus.Joined)
+        ) {
+            newGame.status = GameStatus.WaitingToStart
+        }
 
         const createdGame = await this.gameStore.createGame(newGame, {
             ...(masterSeed === undefined ? {} : { masterSeed }),
