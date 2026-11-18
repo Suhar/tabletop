@@ -1,12 +1,12 @@
 {
     "repo": "Suhar/two-crowns-1874",
-    "version": "0.10.1",
-    "commit": "677c8a1c40ae139d2e45b858cc4835a7a642e87a",
-    "committedAt": "2026-11-17T19:15:38Z",
+    "version": "0.10.2",
+    "commit": "bd4b420dc2b38203f3e6c119574be3a497b3c905",
+    "committedAt": "2026-11-18T15:25:42Z",
     "dirty": false,
     "files": {
-        "1874design.md": "9f86cfd91cff",
-        "TwoCrowns1874.json": "937638711c95",
-        "1874rules.md": "9d700a7cf8b6"
+        "1874design.md": "c80ac3106a5b",
+        "TwoCrowns1874.json": "fc84062b5cca",
+        "1874rules.md": "1321935e9ca3"
     }
 }

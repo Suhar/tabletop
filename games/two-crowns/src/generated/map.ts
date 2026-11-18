@@ -247,7 +247,7 @@ export function twoCrownsLocations(
         ...locations('R4', track('gray', [[3, 4]])),
         ...locations('N2', town('gray', [[0, 2, 4]], 20)),
         ...locations('J14', town('gray', [[3, 5, 1]], 20)),
-        ...locations('M1', town('gray', [[5]], 10)),
+        ...locations('M1', town('white', [[]], 0)),
         ...locations('J20', town('gray', [[5]], 10)),
         ...locations('M19', town('gray', [[2]], 10)),
         ...locations('P12', town('gray', [[4]], 10)),
