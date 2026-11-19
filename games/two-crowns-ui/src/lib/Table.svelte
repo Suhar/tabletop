@@ -77,7 +77,7 @@
         ...(session.titleActionAvailable('ConvertCharter')
             ? [
                   {
-                      label: 'Convert the Hungarian Bank to Ganz',
+                      label: 'Convert HB to Ganz',
                       selected: false,
                       onSelect: () => session.convertCharter()
                   }
