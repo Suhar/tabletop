@@ -62,97 +62,128 @@
     </div>
 {/snippet}
 
-<GameTable
-    boardPanel={{ label: 'Tranches', content: boardTranches }}
-    additionalStockActions={[
-        ...(session.splitMenuAvailable
-            ? [
-                  {
-                      label: 'Split',
-                      selected: session.splitInProgress,
-                      onSelect: () => session.chooseSplit()
-                  }
-              ]
-            : []),
-        ...(session.titleActionAvailable('ConvertCharter')
-            ? [
-                  {
-                      label: 'Convert HB to Ganz',
-                      selected: false,
-                      onSelect: () => session.convertCharter()
-                  }
-              ]
-            : [])
-    ]}
-    historyDescription={(action, { companyName }) =>
-        isSplitCompany(action)
-            ? {
-                  text: `Split ${companyName(action.branchId)} from ${companyName(action.parentId)}`,
-                  value: session.presentation.money(action.expectedFunding),
-                  detail: 'Branch capital',
-                  important: true
-              }
-            : isConvertCharter(action)
-              ? { text: 'Hungarian Bank converted to Ganz', important: true }
-              : isQuarantineTrain(action)
+<div class="burgundy-table">
+    <GameTable
+        boardPanel={{ label: 'Tranches', content: boardTranches }}
+        additionalStockActions={[
+            ...(session.splitMenuAvailable
+                ? [
+                      {
+                          label: 'Split',
+                          selected: session.splitInProgress,
+                          onSelect: () => session.chooseSplit()
+                      }
+                  ]
+                : []),
+            ...(session.titleActionAvailable('ConvertCharter')
+                ? [
+                      {
+                          label: 'Convert HB to Ganz',
+                          selected: false,
+                          onSelect: () => session.convertCharter()
+                      }
+                  ]
+                : [])
+        ]}
+        historyDescription={(action, { companyName }) =>
+            isSplitCompany(action)
                 ? {
-                      text: `Rijeka Lazaretto: quarantine marker on a ${
-                          session.gameState.trainInventory.trains.find(
-                              (train) => train.id === action.trainId
-                          )?.definitionId ?? 'train'
-                      }`,
+                      text: `Split ${companyName(action.branchId)} from ${companyName(action.parentId)}`,
+                      value: session.presentation.money(action.expectedFunding),
+                      detail: 'Branch capital',
                       important: true
                   }
-                : undefined}
-    {numberedShareLocation}
-    auctionLotDescription={(id) => lotInfo(id).description}
-    {session}
-    {privateOperationDescription}
-    {createRouteWorker}
->
-    {#snippet actions(focusLocation, focusRoute)}
-        {#if session.offers.model && !session.offers.model.auction.completed}
-            {#if !session.offers.model.auction.bidding && !session.offers.model.auction.stalled}
-                <AuctionOffers {session} {lotInfo} onFocus={focusLocation} />
-            {:else if session.offers.model.auction.bidding}
-                <OfferAuctionBidding {session} {lotInfo} />
+                : isConvertCharter(action)
+                  ? { text: 'Hungarian Bank converted to Ganz', important: true }
+                  : isQuarantineTrain(action)
+                    ? {
+                          text: `Rijeka Lazaretto: quarantine marker on a ${
+                              session.gameState.trainInventory.trains.find(
+                                  (train) => train.id === action.trainId
+                              )?.definitionId ?? 'train'
+                          }`,
+                          important: true
+                      }
+                    : undefined}
+        {numberedShareLocation}
+        auctionLotDescription={(id) => lotInfo(id).description}
+        {session}
+        {privateOperationDescription}
+        {createRouteWorker}
+    >
+        {#snippet actions(focusLocation, focusRoute)}
+            {#if session.offers.model && !session.offers.model.auction.completed}
+                {#if !session.offers.model.auction.bidding && !session.offers.model.auction.stalled}
+                    <AuctionOffers {session} {lotInfo} onFocus={focusLocation} />
+                {:else if session.offers.model.auction.bidding}
+                    <OfferAuctionBidding {session} {lotInfo} />
+                {:else}
+                    <OpeningAuction {session} showUndo={false} />
+                {/if}
+            {:else if session.splitInProgress}
+                <BranchSplitPreview {session} showUndo={false} onFocusLocation={focusLocation} />
             {:else}
-                <OpeningAuction {session} showUndo={false} />
-            {/if}
-        {:else if session.splitInProgress}
-            <BranchSplitPreview {session} showUndo={false} onFocusLocation={focusLocation} />
-        {:else}
-            {#if session.quarantineTrains.length}
-                <div class="lazaretto" aria-label="Rijeka Lazaretto">
-                    <span class="lazaretto-label"
-                        >Rijeka Lazaretto: close it to mark a train, which runs one more OR when it
-                        would rust</span
-                    >
-                    <div class="lazaretto-trains">
-                        {#each session.quarantineTrains as train (train.trainId)}
-                            <button
-                                class="lazaretto-train"
-                                aria-label={`Quarantine the ${train.name}`}
-                                onclick={() => session.quarantineTrain(train.trainId)}
-                                >Mark {train.name}</button
-                            >
-                        {/each}
+                {#if session.quarantineTrains.length}
+                    <div class="lazaretto" aria-label="Rijeka Lazaretto">
+                        <span class="lazaretto-label"
+                            >Rijeka Lazaretto: close it to mark a train, which runs one more OR when
+                            it would rust</span
+                        >
+                        <div class="lazaretto-trains">
+                            {#each session.quarantineTrains as train (train.trainId)}
+                                <button
+                                    class="lazaretto-train"
+                                    aria-label={`Quarantine the ${train.name}`}
+                                    onclick={() => session.quarantineTrain(train.trainId)}
+                                    >Mark {train.name}</button
+                                >
+                            {/each}
+                        </div>
                     </div>
-                </div>
+                {/if}
+                <OperatingActions
+                    {privateOperationDescription}
+                    onFocusRoute={focusRoute}
+                    {session}
+                />
             {/if}
-            <OperatingActions {privateOperationDescription} onFocusRoute={focusRoute} {session} />
-        {/if}
-    {/snippet}
-    {#snippet headerActions()}<RulesButton />{/snippet}
-    {#snippet gameInformation()}
-        <div class="tranches" aria-label="Company tranches">
-            <span class="tranches-label">Tranches</span>
-            <Tranches {session} layout="row" />
-        </div>
-    {/snippet}
-</GameTable>
+        {/snippet}
+        {#snippet headerActions()}<RulesButton />{/snippet}
+        {#snippet gameInformation()}
+            <div class="tranches" aria-label="Company tranches">
+                <span class="tranches-label">Tranches</span>
+                <Tranches {session} layout="row" />
+            </div>
+        {/snippet}
+    </GameTable>
+</div>
 
 <style>
+    /* SuharTabletop is burgundy (the site's app.css): the table's slate palette takes the site's
+       warm greys and its burgundy accents. */
+    .burgundy-table {
+        display: contents;
+    }
+    .burgundy-table :global(.railway-table) {
+        --rail-text: #f3eef0;
+        --rail-muted: #a8959b;
+        --rail-inactive: #7f6b71;
+        --rail-surface: #2b2024;
+        --rail-surface-inset: #24191d;
+        --rail-surface-raised: #33272b;
+        --rail-surface-selected: #5c2236;
+        --rail-solid: #6b1830;
+        --rail-border: #5f4d53;
+        --rail-interstitial-border: #170f12;
+        --rail-focus: #f0c4d0;
+        --rail-hover: #f0c4d018;
+        --rail-backdrop: #0d0709bb;
+        --rail-table-background: #1c1317;
+    }
+    /* The company cards' Value box is a fixed teal outside a market zone. */
+    .burgundy-table :global(.financial-summary .prices .market-value:not(.market-zone-tint)) {
+        background: #6b183080;
+    }
     .lazaretto {
         display: flex;
         flex-direction: column;

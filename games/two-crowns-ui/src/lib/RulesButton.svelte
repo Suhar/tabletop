@@ -92,9 +92,9 @@
         /* Its own colours: on your turn the header it opens from swaps in dark text for its
            light background, which the dialog would otherwise inherit onto its dark surface. */
         --rules-text: #ffffff;
-        --rules-muted: #b9c4cf;
-        --rules-border: #485666;
-        --rules-surface: #222c37;
+        --rules-muted: #d2c4c8;
+        --rules-border: #5f4d53;
+        --rules-surface: #2b2024;
         --rules-hover: #ffffff18;
         color-scheme: dark;
         /* It opens from the table header, whose text settings it would otherwise inherit. */
@@ -229,8 +229,7 @@
     .rulebook :global(mark) {
         padding: 0 2px;
         border-radius: 2px;
-        background: #f5d76e33;
-        box-shadow: inset 0 -2px 0 #f5d76e;
+        background: #f5d76e40;
         color: inherit;
     }
     /* The private company cards, 18xx Maker's own exports. */
