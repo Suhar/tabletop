@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.11.0"
+    "subtitle": "Prototype 0.12.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -2606,7 +2606,7 @@
             "side": 5
           },
           {
-            "side": 4
+            "side": 6
           }
         ],
         "offBoardRevenue": {
@@ -2624,7 +2624,7 @@
           ]
         },
         "hexes": [
-          "B16"
+          "B14"
         ]
       },
       {
@@ -2678,18 +2678,6 @@
         ],
         "hexes": [
           "E7"
-        ]
-      },
-      {
-        "color": "gray",
-        "track": [
-          {
-            "type": "gentle",
-            "side": 5
-          }
-        ],
-        "hexes": [
-          "B14"
         ]
       },
       {

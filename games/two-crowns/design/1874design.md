@@ -41,7 +41,7 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Belgrade | Offboard | 30 / 30 / 50 | The eastern exit, past Vukovar |
 | Banja Luka | Offboard | 30 / 30 / 60 | The Bosnian exit, reached from Lipovljani, Korenica and the Kupa |
 | Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exit past Slavonski Brod |
-| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula, and since 0.11.0 from Rovinj through the gray B14. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
+| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula and Rovinj; since 0.12.0 it sits in B14, beside both, instead of B16 (0.11.0 joined it to Rovinj through a gray B14). Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
 | Dubrovnik | Sea offboard | 40 / 40 / 70 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 60 | The Malta steamer out of Split |
 
@@ -94,7 +94,7 @@ Tileable means a hex where a tile can be laid or upgraded: blank hexes plus prep
 
 **Changes applied to the map**
 
-- **Gray edges (30 hexes).** Fixed track at the Istrian coast (Rovinj), the Kvarner islands (Krk, Rab, Pag), the Dalmatian spur past Split (Makarska) and the border runs to Ljubljana, Trieste, Budapest (through Legrad and Beli Manastir), Belgrade (through Vukovar), Banja Luka and Sarajevo. 1871 has 21.
+- **Gray edges (32 hexes).** Fixed track at the Istrian coast (Rovinj), the Kvarner islands (Krk, Rab, Pag), the Dalmatian spur past Split (Makarska) and the border runs to Ljubljana, Trieste, Budapest (through Legrad and Beli Manastir), Belgrade (through Vukovar), Banja Luka and Sarajevo. 1871 has 21.
 - **Slavonia trimmed (19 hexes).** Osijek, Vukovar, Vinkovci, Požega and Slavonski Brod moved west; Belgrade and Bosnia moved in with them.
 - **Towns added (10).** Krapina, Samobor, Dugo Selo, Kutina, Novska, Našice, Glina, Otočac, Benkovac and Sinj, for 17 tileable town hexes plus 8 gray ones. 1871 has 16, which its plus trains need.
 - **Double towns (10 of 18 from 0.9.0).** 1871 has 6 single and 10 double town hexes; 1874 has 8 single and 10 double. There are 12 yellow double-town tiles (1871 has 12 for 10 hexes) and 14 single-town tiles (1871 has 14 for 6 hexes).

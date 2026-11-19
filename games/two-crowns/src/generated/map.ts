@@ -19,7 +19,7 @@ export const TwoCrownsLocationNames: Readonly<Record<string, string>> = {
     S17: 'Sarajevo',
     P22: 'Dubrovnik',
     K23: 'Malta',
-    B16: 'Ancona',
+    B14: 'Ancona',
     C13: 'Rovinj',
     E11: 'Opatija & Lovran',
     G7: 'Rude Mines',
@@ -180,10 +180,10 @@ export function twoCrownsLocations(
             )
         ),
         ...locations(
-            'B16',
+            'B14',
             city(
                 'red',
-                [4, 3],
+                [4, 5],
                 revenue([
                     ['yellow', 30],
                     ['brown', 70]
@@ -201,7 +201,6 @@ export function twoCrownsLocations(
         ),
         ...locations('F6', track('gray', [[5, 1]])),
         ...locations('E7', track('gray', [[3, 4]])),
-        ...locations('B14', track('gray', [[4, 0]])),
         ...locations('B10 Q13', track('gray', [[3, 5]])),
         ...locations('C13', town('gray', [[3, 0, 4, 1]], 10)),
         ...locations('E11', town('white', [[], []], 0)),

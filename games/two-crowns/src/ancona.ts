@@ -12,7 +12,7 @@ import { TwoCrownsPhases } from './trains.js'
 import type { TwoCrownsState } from './state.js'
 
 // 1874design.md, Ancona Steamship (P17).
-export const AnconaId = 'B16'
+export const AnconaId = 'B14'
 export const AnconaLineId = 'P17'
 
 type AnconaState = Pick<TwoCrownsState, 'anconaCompanyId'>
