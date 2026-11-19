@@ -9,7 +9,8 @@ import { TwoCrownsPhaseRules } from './phaseRules.js'
 // one of its trains, which then runs one more OR when it would rust.
 describe('1874 Rijeka Lazaretto', () => {
     function operating(playerId: string, machineState = 'LayingTrack') {
-        const state = startTwoCrowns(4)
+        // At 4–5 players the Lazaretto may be the private removed at setup; at 3 it is always dealt.
+        const state = startTwoCrowns(3)
         const mainline = twoCrownsRole(state, 'mainline')
         state.companies.find((item) => item.id === mainline)!.president = {
             kind: 'player',

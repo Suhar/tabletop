@@ -140,11 +140,12 @@ export const TwoCrownsTileLayouts: Readonly<Record<string, TileLayout>> = {
 
 export const TwoCrownsMapView: MapViewDefinition = {
     // The market above Ljubljana, at TOP's market scale, its empty staircase over the map's
-    // northern hexes; the tranches below it, west of Trieste; the depot in the empty south-east.
+    // northern hexes; the tranches below it, west of Trieste; the depot in the empty south-west,
+    // below Ancona and Pula.
     boardAreas: {
         market: { x: -90, y: -175, width: 817, height: 443 },
         panel: { x: -103, y: 268, width: 115, height: 213 },
-        depot: { x: 1260, y: 750, width: 310, height: 330 }
+        depot: { x: 70, y: 712, width: 310, height: 330 }
     },
     map: TwoCrownsMap,
     tileSet: TwoCrownsTileSet,

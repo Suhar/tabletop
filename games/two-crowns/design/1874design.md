@@ -27,21 +27,21 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Zagreb | Big city | 30 / 30 / 70 or 60 | No reserved home; Z tiles. Brown is a choice: 2 slots at $70 or 3 slots at $60 |
 | Rijeka | Big city, port | 30 / 30 / 60 or 50 | Hungary's port, at the head of the Kvarner islands. Brown: 2 slots at $60 or 3 slots at $50 |
 | Luka homes | X city | 20 / 30 / 60 or 50 | As in 1871, every Luka home is an X: Pula, Varaždin, Sisak, Osijek, Gospić, Bjelovar, Split and Karlovac (labelled CX). Split is the Dalmatian hub. Brown X: 2 slots at $60, or 3 slots at $50, as in 1871. Pula (labelled P) has only three open sides, so in brown it takes the three-sided P tile ($60, 2 slots). Gospić is printed yellow, as 1871 prints Summerside: track to Korenica and south to I17 |
-| Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod | Junction city (J) | 20 / 20 / 40 + 40 | Brown is two one-slot cities, one per branch (OO), $40 each. Twelve brown J tiles cover every way to pair the edges, with a second copy of J3, J7 and J9 |
-| Other cities | City | 20 / 20 / 40 | Virovitica, Zadar, Senj, Šibenik and Knin. Šibenik and Knin were three-sided S cities until 0.9.0; the Vodice and Vrlika stubs give each a fourth open side, so they take the plain city tiles |
+| Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod, Šibenik | Junction city (J) | 20 / 20 / 40 + 40 | Brown is two one-slot cities, one per branch (OO), $40 each. Twelve brown J tiles cover every way to pair the edges, with a second copy of J3, J7 and J9 |
+| Other cities | City | 20 / 20 / 40 | Virovitica, Zadar, Senj and Knin. Šibenik and Knin were three-sided S cities until 0.9.0; the Vodice and Vrlika stubs give each a fourth open side, so they take the plain city tiles. Šibenik became a junction (J) in 0.11.0 |
 | Single towns | Town | 10 | Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj, Donja Dubrava; Delnice and Otočac sit in mountain hexes, Lipovljani on the Sava |
 | Double towns | Two towns | 10 + 10 | Samobor/Zaprešić, Krapina/Zabok, Glina/Petrinja, Čakovec/Prelog, Dugo Selo/Vrbovec, Kutina/Popovača, Našice/Orahovica, Benkovac/Obrovac, Opatija/Lovran, Donji Miholjac/Valpovo |
 | Krk, Rab, Pag | Island towns | 20 / 10 / 10 | The Kvarner islands |
-| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10; Legrad and Korenica 20 | Fixed track: the Istrian coast, the Dalmatian spur and the border runs to Belgrade and Budapest. Legrad (N2) joins Donja Dubrava (M1), Koprivnica and the Budapest line. Korenica (J14) joins Gospić, the Kupa (J12) and the line to Banja Luka |
+| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10; Legrad 20 (Korenica 20 until 0.11.0) | Fixed track: the Istrian coast, the Dalmatian spur and the border runs to Belgrade and Budapest. Legrad (N2) joins Donja Dubrava (M1), Koprivnica and the Budapest line. Korenica (J14) joins Gospić, the Kupa (J12) and the line to Banja Luka |
 | Vodice, Vrlika, Bosanski Brod | Port towns | 10 | Gray dead ends at the map edge, after 1871's harbours: Vodice into Šibenik, Vrlika into Knin, Bosanski Brod into Slavonski Brod |
 | Rude Mines | Gray city, no stations | 20 / 20 / 60 | After 1871's Malpeque Shipyard: it counts as a city on routes, but no station may be placed there (black token). It sits on the Ljubljana line, with track to Ljubljana, G9, H6 and H8 |
-| Ljubljana | Offboard | 30 / 40 / 60 | Südbahn's gateway to Vienna |
+| Ljubljana | Offboard | 30 / 40 / 60 | Südbahn's gateway to Vienna. Since 0.11.0 its line runs through two gray hexes (E7, F6) to Rude Mines, one more than before |
 | Budapest | Offboard | 40 / 40 / 70 | MÁV's capital |
 | Trieste | Offboard | 20 / 20 / 60 | Rijeka's rival port |
 | Belgrade | Offboard | 30 / 30 / 50 | The eastern exit, past Vukovar |
 | Banja Luka | Offboard | 30 / 30 / 60 | The Bosnian exit, reached from Lipovljani, Korenica and the Kupa |
 | Sarajevo | Offboard | 20 / 20 / 60 | The Bosnian exit past Slavonski Brod |
-| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
+| Ancona | Sea offboard | 30 / 30 / 70 | Reached from Pula, and since 0.11.0 from Rovinj through the gray B14. Its one station space is marked P17: it is reserved for the company that buys the Ancona Steamship, which also boosts it |
 | Dubrovnik | Sea offboard | 40 / 40 / 70 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 60 | The Malta steamer out of Split |
 
@@ -94,7 +94,7 @@ Tileable means a hex where a tile can be laid or upgraded: blank hexes plus prep
 
 **Changes applied to the map**
 
-- **Gray edges (28 hexes).** Fixed track at the Istrian coast (Rovinj), the Kvarner islands (Krk, Rab, Pag), the Dalmatian spur past Split (Makarska) and the border runs to Ljubljana, Trieste, Budapest (through Legrad and Beli Manastir), Belgrade (through Vukovar), Banja Luka and Sarajevo. 1871 has 21.
+- **Gray edges (30 hexes).** Fixed track at the Istrian coast (Rovinj), the Kvarner islands (Krk, Rab, Pag), the Dalmatian spur past Split (Makarska) and the border runs to Ljubljana, Trieste, Budapest (through Legrad and Beli Manastir), Belgrade (through Vukovar), Banja Luka and Sarajevo. 1871 has 21.
 - **Slavonia trimmed (19 hexes).** Osijek, Vukovar, Vinkovci, Požega and Slavonski Brod moved west; Belgrade and Bosnia moved in with them.
 - **Towns added (10).** Krapina, Samobor, Dugo Selo, Kutina, Novska, Našice, Glina, Otočac, Benkovac and Sinj, for 17 tileable town hexes plus 8 gray ones. 1871 has 16, which its plus trains need.
 - **Double towns (10 of 18 from 0.9.0).** 1871 has 6 single and 10 double town hexes; 1874 has 8 single and 10 double. There are 12 yellow double-town tiles (1871 has 12 for 10 hexes) and 14 single-town tiles (1871 has 14 for 6 hexes).
@@ -118,7 +118,7 @@ Setup follows 1871, with one change after 1894: every player starts with a Publi
 | Auction items dealt per player | 7 | 5 | 4 |
 | Items in auction deck | 21 (16 privates, 5 Luka shares) | 20 (15 privates, 5 Luka shares) | 20 (as 4 players) |
 
-Starting cash is $100 a player below the first draft ($940, $700 and $580). In v17 bot playtests the auction left 1874 players with spare cash, so they reached the certificate limit early and sat on idle cash, which favours the Austrian Bank. The Rijeka Lazaretto and the two lease concessions were then cut by $45 between them. At face value, counting Luka shares at their $80 score value, the auction now leaves $615 at 3 players ($1,905 of items, $205 each), $545 at 4 ($1,855, $136 each) and $545 at 5 ($1,855, $109 each). 1871 at 4 players leaves $830 ($1,920 against $1,090 of privates at face, $208 each), but its auction is bid well above face: rated players and bots both spend about $400 of their $480.
+Starting cash is $100 a player below the first draft ($940, $700 and $580). In v17 bot playtests the auction left 1874 players with spare cash, so they reached the certificate limit early and sat on idle cash, which favours the Austrian Bank. The Rijeka Lazaretto and the two lease concessions were then cut by $45 between them. At face value, counting Luka shares at their $80 score value, the auction now leaves $615 at 3 players ($1,905 of items, $205 each), $545 at 4 ($1,855, $136 each) and $545 at 5 ($1,855, $109 each). Since 0.11.0, when the Rijeka Lazaretto ($40) is the private removed at 4–5 players rather than a Station Rights ($50), the items come to $10 more and the auction leaves $10 less. 1871 at 4 players leaves $830 ($1,920 against $1,090 of privates at face, $208 each), but its auction is bid well above face: rated players and bots both spend about $400 of their $480.
 
 **Bonds and liquidity.** Every player's Public Line Bond is worth about the same at every player count, so it doesn't change the balance between 4 and 5 players. The Bond itself can't be sold, and pays $10 per OR (1 OR per set in the 2H and 3H phases). From the first stock round its holder may exchange it for a share, which can be sold once the Public Line has operated. Selling it is self-limiting: each share sold moves the Public Line down a row of the market (86, 80, 74, 65 from its start price), so when everyone sells at once the later sellers get far less. At 5 players five Bonds compete for that exit, so each one is worth a little less than at 4.
 
@@ -152,7 +152,7 @@ The tranche chart allows 10 started companies at most: a top row (Mainline, Shor
 5. Luka: put Luka station markers on the five remaining homes. The five remaining Luka shares go into the auction deck. The Luka gets $200 and the k.u.k. Post private ($80 per OR, closes on the first 4+).
 6. Austrian Bank: add a 10% share of one random remaining Luka company to its Mainline share. It takes the share when that company is started.
 7. Hungarian Bank: put one Public Line share from the bank pool on it.
-8. Privates: at 3 players all 16 are used. At 4–5 players, remove one of Zadar or Virovitica Station Rights at random, leaving 15.
+8. Privates: at 3 players all 16 are used. At 4–5 players, remove one of Zadar Station Rights, Virovitica Station Rights and the Rijeka Lazaretto at random, leaving 15. Until 0.11.0 only the two Station Rights could be removed.
 9. Deal face up, one item at a time around the table: 7 per player at 3 players, 5 at 4, 4 at 5. First shuffle the MÁV Concession, Narodna Concession, Südbahn Concession, Austrian Bank and Hungarian Bank and deal those five. Then shuffle the remaining privates with the five Luka shares and deal them, continuing around the table from the next player. At 3 and 4 players some players get two of the first five.
 10. Run the 1871 initial auction. First stock round order goes from least cash to most.
 
@@ -302,7 +302,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 
 **Junction cities (1894's disconnecting brown upgrade)**
 
-- **Which hexes.** Hexes marked J: Ogulin, Koprivnica, Novska, Vinkovci and Slavonski Brod, where the line into Bosnia leaves the main line. Knin and Šibenik are plain cities. Luka homes are X cities, so none of them is a junction.
+- **Which hexes.** Hexes marked J: Ogulin, Koprivnica, Novska, Vinkovci and Slavonski Brod, where the line into Bosnia leaves the main line, and Šibenik (0.11.0), where the Dalmatian line meets the Vodice stub. Knin is a plain city. Luka homes are X cities, so none of them is a junction.
 - **Upgrade rule.** Their green-to-brown upgrade must keep track on every hex edge that had track. The brown J tile is an OO tile: two one-slot cities, each on its own branch of two edges, $40 each. A city that was one connected hub becomes two separate halves. There are twelve brown J tiles: one for each way of splitting the green tile's four edges into two branches (1894's X16 to X24), so every green junction has an upgrade, and a second copy of J3, J7 and J9.
 - **Stations.** The green city has two slots, so up to two stations are set aside on the upgrade (1894's station update). If one is the upgrading company's, its president puts it on either city of the new tile at once. The rest go back at the end of the upgrading company's turn, in operating order: each owner picks either city, even one that already holds a station. Two stations on one city sit side by side, and the other city stays open. This is the only way two stations can share a slot, so a brown junction can hold three stations. A company can't have two stations on the tile.
 - **The upgrading company's turn.** If two stations were set aside, the upgrading company can't place a station on the new tile that operating round. If both are other companies' stations, its trains may run through the hex that turn, since those stations only go back at the end of its turn.
@@ -315,7 +315,7 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 - **Starting stake for everyone.** 1894 deals each player shares of its starting companies. 1874 deals a Public Line Bond instead: a coupon until its holder exchanges it for a share, which may be from the first stock round.
 - **Companies buying privates.** Companies may buy privates from players at ½× to 2× face. Here, only the Station Rights and the Ancona Steamship (at ½× to 1× face) and Wiener Neustadt, from 4H until the first 4+.
 - **Blocking privates.** A private that blocks a hex stops blocking it once a company buys the private.
-- **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players, and one is removed at random at 4–5 players, like Liège and Antwerpen in 1894.
+- **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players. At 4–5 players one of them or the Rijeka Lazaretto is removed at random (since 0.11.0; before, one of the pair, like Liège and Antwerpen in 1894).
 
 ## Trains and phases
 
@@ -343,14 +343,14 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 
 ## Private companies
 
-There are 16 privates, numbered P1 to P17 by face value in the first draft, so the Rijeka Lazaretto (P5), the Hungarian Bank (P14), the Südbahn Concession (P16) and the Ancona Steamship (P17) are out of order. P6 is unused: the Dubrovnik Lazaretto was cut. All 16 are in play at 3 players and 15 at 4–5. The concessions, the Austrian Bank and the Hungarian Bank are privates like any other. Privates that work like an 1871 private keep its price, apart from the Austrian Bank ($140, 1871 $120) and the MÁV and Südbahn Concessions ($150 and $145, 1871 $160). All work like 1871's privates: they pay at the start of each OR, are public, and close on the first 4+ unless they say otherwise.
+There are 16 privates, numbered P1 to P17 by face value in the first draft, so the Rijeka Lazaretto (P5), the Hungarian Bank (P14), the Südbahn Concession (P16) and the Ancona Steamship (P17) are out of order. P6 is unused: the Dubrovnik Lazaretto was cut. All 16 are in play at 3 players and 15 at 4–5, without one of P3, P4 and P5. The concessions, the Austrian Bank and the Hungarian Bank are privates like any other. Privates that work like an 1871 private keep its price, apart from the Austrian Bank ($140, 1871 $120) and the MÁV and Südbahn Concessions ($150 and $145, 1871 $160). All work like 1871's privates: they pay at the start of each OR, are public, and close on the first 4+ unless they say otherwise.
 
 | # | Name | Face | Revenue | Power | Closes |
 | --- | --- | --- | --- | --- | --- |
 | P1 | Sava River Bridge | $40 | $5 | Blocks the Sava hex L6, north-east of Zagreb (marked P1 on the map). Exchange for a reserved Südbahn share during a stock round. | On exchange; forced exchange at first 4+ |
 | P2 | Pazin Tunnel Company | $40 | $5 | Exchange for a reserved Südbahn share. | As P1 |
 | P3 | Zadar Station Rights | $50 | $10 | Blocks Zadar. The owning company may lay or upgrade Zadar without a connection, as one of its tile lays or its upgrade that turn (not both on Zadar in one turn). If it does, it may place its cheapest station there free, as its station for that OR. From 4H, may be sold to a company for ½×–1× face. | First 4+ |
-| P4 | Virovitica Station Rights | $50 | $10 | As P3, for Virovitica. Both are in play at 3 players; one is removed at random at 4–5 players. | First 4+ |
+| P4 | Virovitica Station Rights | $50 | $10 | As P3, for Virovitica. Both are in play at 3 players; at 4–5 players one of P3, P4 and P5 is removed at random. | First 4+ |
 | P5 | Rijeka Lazaretto | $40 | $10 | In the operating turn of a company you preside, close it to put the quarantine marker on one of that company's trains. When that train would rust, it runs one more OR, then is discarded. | When used; first 4+ |
 | P7 | Kvarner Shipbuilding | $90 | $15 | Exchange for a reserved Südbahn share. | As P1 |
 | P8 | Lika Survey Office | $90 | $20 | Holds gray city tile G2. From the Diesel, any company the owner presides may lay it as its upgrade, on any brown city but Karlovac. | Never |

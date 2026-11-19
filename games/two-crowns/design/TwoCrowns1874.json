@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.10.2"
+    "subtitle": "Prototype 0.11.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -2386,7 +2386,7 @@
         "track": [
           {
             "type": "offboard",
-            "side": 6
+            "side": 1
           }
         ],
         "offBoardRevenue": {
@@ -2604,6 +2604,9 @@
         "track": [
           {
             "side": 5
+          },
+          {
+            "side": 4
           }
         ],
         "offBoardRevenue": {
@@ -2657,12 +2660,36 @@
         "color": "gray",
         "track": [
           {
-            "type": "straight",
-            "side": 3
+            "type": "gentle",
+            "side": 6
           }
         ],
         "hexes": [
           "F6"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "sharp",
+            "side": 4
+          }
+        ],
+        "hexes": [
+          "E7"
+        ]
+      },
+      {
+        "color": "gray",
+        "track": [
+          {
+            "type": "gentle",
+            "side": 5
+          }
+        ],
+        "hexes": [
+          "B14"
         ]
       },
       {
@@ -2706,6 +2733,9 @@
           },
           {
             "side": 5
+          },
+          {
+            "side": 2
           }
         ],
         "hexes": [
@@ -3134,7 +3164,7 @@
         ],
         "values": [
           {
-            "value": 20
+            "value": 10
           }
         ],
         "track": [
@@ -3722,6 +3752,13 @@
         ],
         "hexes": [
           "K21"
+        ],
+        "labels": [
+          {
+            "label": "J",
+            "angle": 30,
+            "percent": 0.8
+          }
         ]
       },
       {
