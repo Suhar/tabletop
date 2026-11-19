@@ -10,6 +10,7 @@ export {
     type TileDrawnPath,
     type TilePrintedToken,
     type TilePrintedTrack,
+    type TilePrintedShape,
     type TilePrintedText,
     type TileDrawnNode,
     type TileDrawingStyle,
@@ -38,6 +39,7 @@ export {
 export { revenueBadgeHalfWidth } from './tiles/revenueBadge.js'
 export { default as Portfolio } from './finance/Portfolio.svelte'
 export { default as FinanceInspector } from './finance/FinanceInspector.svelte'
+export { default as PresidentBadge } from './finance/PresidentBadge.svelte'
 export { ownerPortfolio } from './finance/ownerPortfolio.js'
 export { withDraftedCompanies, type DraftedCompany } from './finance/draftedCompanies.js'
 
@@ -71,8 +73,10 @@ export { default as OfferAuctionPanel } from './auctions/OfferAuctionPanel.svelt
 export { default as GameEnding } from './ending/GameEnding.svelte'
 
 export { default as GameTable } from './table/GameTable.svelte'
+export { companiesOnOffer } from './table/spreadsheetCompanies.js'
 export {
     companyNameVariants,
+    DefaultCompanyPricePresentation,
     NoParCompanyPricePresentation,
     shortCompanyName,
     type CompanyNameVariants,
@@ -89,15 +93,19 @@ export type { TitleCallout } from './table/historyCallouts.js'
 export {
     companyClosedRow,
     companyClosureDetails,
+    declinedTrainsWords,
     stopRightsBoughtRow,
     departurePaymentsDetail,
     joinDetails,
     ownerName
 } from './table/historyDescription.js'
-export { trainCount, type AwaitedDecision } from './table/awaitedDecision.js'
+export { trainCount, type AwaitedDecision, type DecisionNames } from './table/awaitedDecision.js'
 export type {
     CompanyColumn,
     CompanyMark,
+    StartChoiceSpace,
+    PhaseNotice,
+    TokenBadge,
     TrainTokens,
     MarketLedge,
     MarketZone,
@@ -106,6 +114,7 @@ export type {
     PlaceConnection,
     PrivateTokenPresentation,
     TitleFact,
+    TitlePrivateAction,
     LoanTerms,
     TitleOperatingStep,
     TitlePresentation,
@@ -120,6 +129,12 @@ export { tileSymbolMarkup } from './tiles/tileSymbols.js'
 export { counted } from './presentation/count.js'
 export { InstructedRunSolver } from './session/instructedRunSolver.js'
 export { currencyAffixes, moneyFormat, type MoneyFormat } from './presentation/money.js'
+export {
+    DefaultTableTerms,
+    tableTerms,
+    type ResolvedTableTerms,
+    type TableTerms
+} from './presentation/tableTerms.js'
 export { clickedBackdrop } from './presentation/modalDialog.js'
 export { svgDataUrl } from './presentation/svgDataUrl.js'
 export { default as OperatingActions } from './table/OperatingActions.svelte'
@@ -151,6 +166,7 @@ export { default as StockMarketScene } from './stock/StockMarketScene.svelte'
 
 export { default as CompanyToken } from './tokens/CompanyToken.svelte'
 export { default as SlidingToggle } from './table/SlidingToggle.svelte'
+export { default as SwitchTrack } from './table/SwitchTrack.svelte'
 export { default as CompanyOrder } from './table/CompanyOrder.svelte'
 
 export { default as CompanyDetails } from './table/CompanyDetails.svelte'
@@ -190,7 +206,8 @@ export {
     createDieselPhaseChart,
     createPhaseChart,
     type PhaseChartData,
-    type TrainMark
+    type TrainMark,
+    type TrainUpgrade
 } from './phases/phaseChart.js'
 
 export * from './stock/marketAnimationSource.js'
@@ -202,6 +219,10 @@ export {
     MarketZoneBannerHeight,
     marketGeometry
 } from './stock/marketTokenLayout.js'
+
+export { LoanRateTableHeight } from './loans/loanRateTable.js'
+export { default as PlayerLoanRepayment } from './loans/PlayerLoanRepayment.svelte'
+export { operatingRoundInProgress } from './table/roundHeading.js'
 
 export { default as BoardInset } from './maps/BoardInset.svelte'
 
@@ -219,7 +240,25 @@ export { actionForHistoryStep } from './table/actionForHistoryStep.js'
 
 export { default as AutomaticRoutes } from './routes/AutomaticRoutes.svelte'
 export { default as ProjectedRun } from './routes/ProjectedRun.svelte'
+export { default as TrainRunTable } from './routes/TrainRunTable.svelte'
+export { routeColor } from './routes/routePresentation.js'
 export { default as RunInstructions } from './routes/RunInstructions.svelte'
 export { RouteSolveQueue, type QueuedRouteWorker } from './routes/routeSolveQueue.js'
 export { default as StationBuilding } from './maps/StationBuilding.svelte'
 export type { HistoricalMapState, HistoryMapPlacement } from './maps/historicalMap.js'
+export {
+    MergerRoundModule,
+    type MergerDraft,
+    type MergerRoundSession
+} from './session/mergerRoundModule.svelte.js'
+export {
+    TrainlessMajorModule,
+    type TrainlessMajorSession
+} from './session/trainlessMajorModule.svelte.js'
+export { NationalRailwaySession } from './session/nationalRailwaySession.svelte.js'
+export { default as MergerRound } from './mergers/MergerRound.svelte'
+export { default as TrainlessMajor } from './mergers/TrainlessMajor.svelte'
+export {
+    describeNationalRailwayAction,
+    type NationalRailwayNames
+} from './mergers/nationalRailwayHistory.js'

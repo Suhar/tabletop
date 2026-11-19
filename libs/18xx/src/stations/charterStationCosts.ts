@@ -1,22 +1,41 @@
 import { assertExists } from '@tabletop/common'
-import type { StationState } from '../map/station.js'
+import { waitingStationIndex, type Station } from '../map/station.js'
+import type { StationPlacementContext, StationRules } from './stationPlacement.js'
 
 export type CharterStationCosts = Readonly<Record<string, readonly number[]>>
 
-/** The price of a company's next station: the charter cost after the stations it has used. */
-export function charterStationCost(
-    state: Pick<StationState, 'stations'>,
+/**
+ * A charter station's printed price. Any waiting token may be placed, and a placement pays the
+ * next price; a token shown without a placement keeps the price printed for its own place.
+ */
+export function charterScheduleCost(
+    charter: readonly Station[],
     stationId: string,
-    costs: CharterStationCosts
+    schedule: readonly number[],
+    context?: StationPlacementContext
 ): number {
-    const station = state.stations.find((station) => station.id === stationId)
-    assertExists(station, 'A station placement requires a known station')
-    const used = state.stations.filter(
-        (entry) => entry.companyId === station.companyId && entry.status !== 'available'
-    ).length
-    const cost = costs[station.companyId]?.[used]
-    assertExists(cost, `The ${station.companyId} charter prices every station`)
+    const station = charter.find((entry) => entry.id === stationId)
+    assertExists(station, `Station ${stationId} is on its charter`)
+    const used = charter.filter((entry) => entry.status !== 'available').length
+    const cost = schedule[used + (context ? 0 : waitingStationIndex(charter, station))]
+    assertExists(cost, 'The charter prices each of its stations')
     return cost
+}
+
+/** Stations priced by each company's charter, in the order they are placed. */
+export function charterStationCost(costs: CharterStationCosts): StationRules['placementCost'] {
+    return (state, stationId, context) => {
+        const station = state.stations.find((entry) => entry.id === stationId)
+        assertExists(station, `Station ${stationId} exists`)
+        const schedule = costs[station.companyId]
+        assertExists(schedule, `The ${station.companyId} charter prices every station`)
+        return charterScheduleCost(
+            state.stations.filter((entry) => entry.companyId === station.companyId),
+            stationId,
+            schedule,
+            context
+        )
+    }
 }
 
 /** How many stations each charter provides. */
