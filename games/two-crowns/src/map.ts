@@ -10,30 +10,36 @@ const locationNamed = (name: string) =>
 // no stations. The importer gives it no station slots; the marker says why.
 const RudeMinesId = locationNamed('Rude Mines')
 
-// The Station Rights block their cities while a player owns them (privates.ts); the map marks each
-// city, as 1830 marks its privates' hexes, and drops the mark once the block lifts.
-const StationRightsMarkers = Object.fromEntries(
+// The privates that block hexes (privates.ts): the Station Rights their cities while a player owns
+// them, the Sava River Bridge the Sava hex L6 until it closes. The map marks each hex, as 1830
+// marks its privates' hexes, and drops the mark once the block lifts.
+const blocker = (privateCompanyId: string, description: string) => ({
+    id: `blocks-${privateCompanyId}`,
+    label: privateCompanyId,
+    privateCompanyId,
+    description
+})
+const PrivateBlockMarkers = Object.fromEntries(
     [
-        ['P3', 'Zadar'],
-        ['P4', 'Virovitica']
-    ].flatMap(([privateCompanyId, city]) => {
-        const locationId = locationNamed(city)
-        return locationId
-            ? [
-                  [
-                      locationId,
+        ['L6', blocker('P1', 'No track until the Sava River Bridge closes.')],
+        ...[
+            ['P3', 'Zadar'],
+            ['P4', 'Virovitica']
+        ].flatMap(([privateCompanyId, city]) => {
+            const locationId = locationNamed(city)
+            return locationId
+                ? [
                       [
-                          {
-                              id: `blocks-${privateCompanyId}`,
-                              label: privateCompanyId,
+                          locationId,
+                          blocker(
                               privateCompanyId,
-                              description: `No track while a player owns ${city} Station Rights.`
-                          }
-                      ]
+                              `No track while a player owns ${city} Station Rights.`
+                          )
+                      ] as const
                   ]
-              ]
-            : []
-    })
+                : []
+        })
+    ].map(([locationId, marker]) => [locationId, [marker]])
 )
 
 export const TwoCrownsMap = new RailwayMap({
@@ -41,7 +47,7 @@ export const TwoCrownsMap = new RailwayMap({
     name: TwoCrownsTitle.name,
     orientation: HexOrientation.Flat,
     locations: twoCrownsLocations({
-        ...StationRightsMarkers,
+        ...PrivateBlockMarkers,
         ...(RudeMinesId
             ? {
                   [RudeMinesId]: [
