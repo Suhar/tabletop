@@ -4,7 +4,7 @@ import {
 } from '@tabletop/frontend-components/definition/gameUiDefinition'
 import type { HydratedTwoCrownsState, TwoCrownsState } from '@tabletop/two-crowns'
 import { TwoCrownsInfo } from '@tabletop/two-crowns'
-import coverImg from './images/cover.svg'
+import coverImg from './images/cover.webp'
 
 export const UiDefinition: GameUiDefinition<TwoCrownsState, HydratedTwoCrownsState> = {
     info: {
