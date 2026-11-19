@@ -1,5 +1,13 @@
 import { createPhaseChart } from '@tabletop/18xx-ui'
-import { TwoCrownsPhases, TwoCrownsTrainDepot } from '@tabletop/two-crowns'
+import { TwoCrownsPhases, TwoCrownsTrainDepot, tradeInPrice } from '@tabletop/two-crowns'
+
+// The trade-in price of each train for the next rank, as the engine prices it at purchase.
+function tradeIns(trainId: string) {
+    return TwoCrownsTrainDepot.definition.supply.flatMap(({ definitionId }) => {
+        const price = tradeInPrice(definitionId, trainId)
+        return price === undefined ? [] : [{ definitionId, price }]
+    })
+}
 
 export const TwoCrownsPhaseChart = createPhaseChart({
     phases: TwoCrownsPhases,
@@ -18,5 +26,6 @@ export const TwoCrownsPhaseChart = createPhaseChart({
         '7': '65 start price removed; only 58 remains (Late space: 65).',
         D: 'Triggers game end. Gray tiles: the CX, G1, and G2 for the Lika Survey Office; only these in the final three ORs. No trade-in: a 7 can’t be traded in for a Diesel.'
     },
-    notes: ['The Luka may buy at most one train from the bank per operating turn.']
+    notes: ['The Luka may buy at most one train from the bank per operating turn.'],
+    trainUpgrades: tradeIns
 })
