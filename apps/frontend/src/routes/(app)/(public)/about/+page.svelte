@@ -10,7 +10,7 @@
     <title>About — SuharTabletop</title>
     <meta
         name="description"
-        content="SuharTabletop is a private table for friends to play games that are still being made."
+        content="SuharTabletop is a private table for friends to play prototype games on the BoardTogether engine."
     />
 </svelte:head>
 
@@ -26,12 +26,11 @@
         <div class="intro-copy">
             <p class="lead">
                 <span class="font-bold">SuharTabletop</span>
-                is a private table for friends to play games that are still being made.
+                is a private table for friends to play prototype games on the BoardTogether engine.
             </p>
             <p class="welcome">
-                Stephan approves every account by hand. The games here are prototypes and works in
-                progress, so expect rough edges, placeholder art, and rules that change between
-                visits. Thanks for playing them anyway.
+                You are welcome to play these however you see fit. You can also play against bots:
+                invite FranzBot, RudolfBot, SisiBot, and AndrassyBot to games.
             </p>
             <p class="welcome">
                 The site runs on

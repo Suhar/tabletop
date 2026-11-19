@@ -95,8 +95,11 @@
     )
     // The header hides About Us in a game, so the menu carries it on desktop too.
     let aboutMenuClass = $derived(gameService.currentGameSession ? '' : 'md:hidden')
+    // SuharTabletop has no Discord forum to take bug reports, so the bug button stays hidden.
+    const bugReportsEnabled = false
     let bugReportSession = $derived(
-        sessionUser &&
+        bugReportsEnabled &&
+            sessionUser &&
             gameService.currentGameSession &&
             (authorizationService.isAdmin ||
                 findPlayerForUserId(gameService.currentGameSession.primaryGame, sessionUser.id))
