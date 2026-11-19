@@ -40,6 +40,8 @@ function unionBankIntro(state: UnionBankState) {
         : `**Includes one share of ${mainline}.**\n\n`
 }
 export const TwoCrownsPrivateRules: PrivateRules = {
+    // The map's Station Rights markers stay while these block their cities.
+    blocking: TwoCrownsPrivateCatalog.blocking.bind(TwoCrownsPrivateCatalog),
     exchangeTerms(state, privateCompanyId) {
         if (TwoCrownsPhases.isAtLeast(state.phaseId, '4+')) return undefined
         // Bonds exchange from the first stock round, as the Shortline's privates do (1874design.md, Public Line Bond).
