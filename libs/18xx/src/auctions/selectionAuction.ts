@@ -8,6 +8,7 @@ import {
     type GameState
 } from '@tabletop/common'
 import { finiteCashOwnedBy, type FinancialState } from '../finance/finance.js'
+import { CashPayment, settleCashPayments } from '../finance/cashPayments.js'
 import { AuctionAward, type AuctionLot } from './waterfallAuction.js'
 
 export const SelectionAuction = Type.Object(
@@ -17,7 +18,13 @@ export const SelectionAuction = Type.Object(
         passedPlayerIds: Type.Array(Type.String(), { uniqueItems: true }),
         bidding: Type.Optional(
             Type.Object(
-                { lotId: Type.String(), nominatorId: Type.String(), auction: SimpleAuction },
+                {
+                    lotId: Type.String(),
+                    nominatorId: Type.String(),
+                    /** The player who began the lot's auction by passing, before its nominator. */
+                    openerId: Type.Optional(Type.String()),
+                    auction: SimpleAuction
+                },
                 { additionalProperties: false }
             )
         ),
@@ -35,6 +42,14 @@ export type SelectionAuctionState = FinancialState &
     Pick<GameState, 'players' | 'activePlayerIds' | 'turnManager'> &
     Type.Static<Type.TObject<typeof SelectionAuctionFields>>
 
+/** The tiers a title deals its lots into, the first tier first. */
+export type LotTiers = {
+    /** A sold or removed lot keeps its slot; `null` is a slot emptied by a game that began before slots were kept. */
+    slots: readonly (readonly (string | null)[])[]
+    /** The tier open for nomination once these lots have gone too; undefined when none is left. */
+    openTier(goneLotIds: readonly string[]): number | undefined
+}
+
 /**
  * An opening in which players in turn choose a remaining lot to auction, or pass; once every
  * player has passed in succession, the unsold lots close.
@@ -43,11 +58,7 @@ export interface SelectionAuctionRules {
     lots(state: FinancialState): readonly AuctionLot[]
     /** The remaining lots a player may nominate now. */
     nominationLotIds(state: SelectionAuctionState): readonly string[]
-    /**
-     * The tiers the title deals its lots into, the first tier first, with `null` where a lot
-     * was sold or removed.
-     */
-    tiers?(state: SelectionAuctionState): readonly (readonly (string | null)[])[] | undefined
+    tiers?(state: SelectionAuctionState): LotTiers | undefined
     /** Whether a player may pass instead of nominating a lot. */
     passingWhileNominating(state: SelectionAuctionState): boolean
     openingBid(state: SelectionAuctionState, lotId: string): number
@@ -57,6 +68,13 @@ export interface SelectionAuctionRules {
     lotsRemovedBy?(state: SelectionAuctionState, award: AuctionAward): readonly string[]
     /** Whether the player after the winner, rather than after the nominator, nominates next. */
     nominationFollowsWinner?(state: SelectionAuctionState): boolean
+    /**
+     * The player after the lot's opener nominates next: the first to act on it, though they
+     * passed before another player nominated it, as 1880's starting player (§V).
+     */
+    nominationFollowsOpener?: true
+    /** Players who passed on a lot before its nomination may not bid on it (1880 §V). */
+    passesWithdraw?: true
     closeUnsold(state: SelectionAuctionState, lotIds: readonly string[]): void
     /**
      * When every player passes in succession while lots remain, the next lot's opening bid falls
@@ -64,6 +82,14 @@ export interface SelectionAuctionRules {
      * nominates again; once it falls to nothing, that player receives the lot free (1861 §9.4).
      */
     allPassDiscount?: number
+    /**
+     * When every player passes on the lot, its privates pay their income, as in an operating
+     * round of nothing else, and the lot is offered again from the same player, as 1880's lots
+     * after P1 (§V); none for lots that discount or close instead.
+     */
+    allPassIncome?(state: SelectionAuctionState, lotId: string): CashPayment[] | undefined
+    /** The seat order once every lot is sold, its first player with priority (1880 §V). */
+    firstStockOrder?(state: SelectionAuctionState): readonly string[]
 }
 export const SelectionAuctionResolution = Type.Union([
     Type.Object(
@@ -87,6 +113,15 @@ export const SelectionAuctionResolution = Type.Union([
         },
         { additionalProperties: false }
     ),
+    Type.Object(
+        {
+            kind: Type.Literal('income'),
+            lotId: Type.String(),
+            payments: Type.Array(CashPayment),
+            nominatorId: Type.String()
+        },
+        { additionalProperties: false }
+    ),
     Type.Object({ kind: Type.Literal('complete') }, { additionalProperties: false })
 ])
 export type SelectionAuctionResolution = Type.Static<typeof SelectionAuctionResolution>
@@ -103,8 +138,13 @@ export class SelectionAuctionModel {
     get lots(): readonly AuctionLot[] {
         return this.rules.lots(this.state)
     }
-    get tiers(): readonly (readonly (string | null)[])[] | undefined {
-        return this.rules.tiers?.(this.state)
+    get tiers(): LotTiers['slots'] | undefined {
+        return this.rules.tiers?.(this.state)?.slots
+    }
+    openTier(goneLotIds: readonly string[] = []): number | undefined {
+        const tiers = this.rules.tiers?.(this.state)
+        assertExists(tiers, 'Only a tiered auction has an open tier')
+        return tiers.openTier(goneLotIds)
     }
     get nominationLotIds(): readonly string[] {
         return this.rules.nominationLotIds(this.state)
@@ -122,7 +162,22 @@ export class SelectionAuctionModel {
         const bidding = this.auction.bidding
         return bidding?.lotId === lotId
             ? new PassableBidding(bidding.auction).highBid + this.rules.increment
-            : Math.max(0, this.rules.openingBid(this.state, lotId) - (this.auction.discount ?? 0))
+            : Math.max(0, this.rules.openingBid(this.state, lotId) - this.discountOn(lotId))
+    }
+    private discountOn(lotId: string): number {
+        const discount = this.auction.discount
+        return discount && this.nominationLotIds[0] === lotId ? discount : 0
+    }
+    get someLotOpensOffValue(): boolean {
+        return this.lots.some(
+            (lot) =>
+                this.auction.remainingLotIds.includes(lot.id) &&
+                this.minimumBid(lot.id) !== lot.price
+        )
+    }
+    /** The unsold lots that would leave the game if this award were made now. */
+    lotsRemovedBy(award: AuctionAward): readonly string[] {
+        return this.rules.lotsRemovedBy?.(this.state, award) ?? []
     }
     canNominate(playerId: string, lotId: string, amount: number): boolean {
         return (
@@ -153,16 +208,17 @@ export class SelectionAuctionModel {
     }
     nominate(playerId: string, lotId: string, amount: number, actionId: string): void {
         assert(this.canNominate(playerId, lotId, amount), 'Invalid nomination')
+        const passed = this.auction.passedPlayerIds
+        const openerId = passed[0]
         this.auction.passedPlayerIds = []
+        const bidders = this.rules.passesWithdraw
+            ? this.state.turnManager.turnOrder.filter((id) => !passed.includes(id))
+            : this.state.turnManager.turnOrder
         this.auction.bidding = {
             lotId,
             nominatorId: playerId,
-            auction: PassableBidding.open(
-                actionId,
-                this.state.turnManager.turnOrder,
-                playerId,
-                amount
-            )
+            ...(openerId ? { openerId } : {}),
+            auction: PassableBidding.open(actionId, bidders, playerId, amount)
         }
         this.withdrawUnable()
     }
@@ -189,14 +245,24 @@ export class SelectionAuctionModel {
             const winner = new PassableBidding(bidding.auction).winner
             if (!winner) return undefined
             const award = { lotId: bidding.lotId, playerId: winner.playerId, price: winner.amount }
-            const removedLotIds = [...(this.rules.lotsRemovedBy?.(this.state, award) ?? [])]
+            const removedLotIds = [...this.lotsRemovedBy(award)]
             return { kind: 'award', award, ...(removedLotIds.length ? { removedLotIds } : {}) }
         }
         if (!this.auction.remainingLotIds.length) return { kind: 'complete' }
-        if (this.auction.passedPlayerIds.length === this.state.players.length)
+        if (this.auction.passedPlayerIds.length === this.state.players.length) {
+            const [lotId] = this.rules.nominationLotIds(this.state)
+            const payments = lotId ? this.rules.allPassIncome?.(this.state, lotId) : undefined
+            if (lotId && payments)
+                return {
+                    kind: 'income',
+                    lotId,
+                    payments,
+                    nominatorId: this.auction.passedPlayerIds[0]
+                }
             return this.rules.allPassDiscount
                 ? this.discountResolution(this.rules.allPassDiscount)
                 : { kind: 'close-unsold', lotIds: [...this.auction.remainingLotIds] }
+        }
         return undefined
     }
     private discountResolution(step: number): SelectionAuctionResolution {
@@ -214,7 +280,11 @@ export class SelectionAuctionModel {
         switch (resolution.kind) {
             case 'award': {
                 const { award } = resolution
-                const nominatorId = this.auction.bidding?.nominatorId ?? award.playerId
+                const bidding = this.auction.bidding
+                const nominatorId =
+                    (this.rules.nominationFollowsOpener ? bidding?.openerId : undefined) ??
+                    bidding?.nominatorId ??
+                    award.playerId
                 const removed = resolution.removedLotIds ?? []
                 this.rules.award(this.state, award)
                 this.auction.awards.push(award)
@@ -236,6 +306,11 @@ export class SelectionAuctionModel {
             }
             case 'discount':
                 this.auction.discount = resolution.discount
+                this.auction.passedPlayerIds = []
+                this.auction.nominatorId = resolution.nominatorId
+                break
+            case 'income':
+                settleCashPayments(this.state, resolution.payments)
                 this.auction.passedPlayerIds = []
                 this.auction.nominatorId = resolution.nominatorId
                 break

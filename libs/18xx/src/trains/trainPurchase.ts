@@ -1,4 +1,5 @@
 import type { MapStateData } from '../map/mapState.js'
+import type { TrainExport } from '../operating/exportTrains.js'
 import type { AccessRightState } from '../rights/accessRights.js'
 import { actsFor } from '../finance/receivership.js'
 import * as Type from 'typebox'
@@ -42,6 +43,16 @@ export interface TrainRules {
     afterExchange?(state: TrainPurchaseState, details: TrainPurchaseDetails): void
     countsForLimit?(state: TrainPurchaseState, train: Train): boolean
     /**
+     * The company's trains in groups each held to a limit of its own, as an 1828 system's two
+     * shells (§15.4): it discards from a group over its limit as the limit falls. Without groups
+     * the trains counting for the limit are one group held to ``trainLimit``, which also bounds
+     * every purchase.
+     */
+    trainGroups?(
+        state: TrainPurchaseState,
+        companyId: string
+    ): readonly { trains: readonly Train[]; limit: number }[]
+    /**
      * Whether a train is one a company must own; every train unless the title says, as 1822's
      * permanent 2-trains and Pullmans leave their company still obliged to buy one (§5.5.13).
      */
@@ -73,6 +84,19 @@ export interface TrainRules {
         loans: AutomaticBorrowing
         allowed(state: TrainPurchaseState, request: TrainPurchaseRequest): boolean
     }
+    /**
+     * Whether the company finishing its train step without buying now declines the trains on
+     * sale and goes on buying, after any stock round that brings, as 1880's train-marker company
+     * does when a whole round has passed without a purchase (§X). Such a finish is open to a
+     * company that must still buy a train (a designer's ruling).
+     */
+    declineResumes?(state: TrainPurchaseState, companyId: string): boolean
+    /**
+     * The title's consequences of the company finishing its train step without buying, such as
+     * 1880's removal of the trains on sale, returning the trains that left the game; with
+     * `declineResumes` true, the turn goes on.
+     */
+    declineTrains?(state: TrainPurchaseState, companyId: string): TrainExport | undefined
     /** Records the title's consequences of trains departing, returning what the bank pays. */
     afterTrainsDepart?(
         state: TrainPurchaseState,
@@ -97,6 +121,20 @@ export function trainsCountingForLimit(
     return trainsOwnedBy(state, { kind: 'company', companyId }).filter(
         (train) => rules.countsForLimit?.(state, train) ?? true
     )
+}
+/** The trains of the company's first group over its limit, from which it must discard. */
+export function trainsOverLimit(
+    state: TrainPurchaseState,
+    rules: Pick<TrainRules, 'trainLimit' | 'countsForLimit' | 'trainGroups'>,
+    companyId: string
+): Train[] {
+    const groups = rules.trainGroups?.(state, companyId) ?? [
+        {
+            trains: trainsCountingForLimit(state, rules, companyId),
+            limit: rules.trainLimit(state, companyId)
+        }
+    ]
+    return [...(groups.find((group) => group.trains.length > group.limit)?.trains ?? [])]
 }
 export const TrainPurchaseRequest = Type.Object(
     {

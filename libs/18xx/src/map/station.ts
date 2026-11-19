@@ -132,6 +132,18 @@ export function placeableStations(
     )
 }
 
+/** A waiting token's place among its company's tokens still waiting to be placed. */
+export function waitingStationIndex(
+    stations: readonly Station[],
+    station: Pick<Station, 'id' | 'companyId'>
+): number {
+    const index = stations
+        .filter((entry) => entry.companyId === station.companyId && entry.status === 'available')
+        .findIndex((entry) => entry.id === station.id)
+    assert(index >= 0, `Station ${station.id} is waiting to be placed`)
+    return index
+}
+
 /** Whether a city holds a neutral station, which keeps it open to every route (1882 §11.1). */
 export function cityHasNeutralStation(
     state: Pick<StationState, 'stations' | 'neutralStations'>,
@@ -251,10 +263,23 @@ export function cityIsBlocked(
     locationId: string,
     node: TileNode
 ): boolean {
+    return cityBlockedForCompanies(state, [companyId], locationId, node)
+}
+
+/**
+ * Whether a city is full of stations none of which belongs to any of these companies, so that
+ * no route of theirs passes it: companies merging trace their connections together (1861 §12.3).
+ */
+export function cityBlockedForCompanies(
+    state: StationState,
+    companyIds: readonly string[],
+    locationId: string,
+    node: TileNode
+): boolean {
     if (node.kind !== 'city' || node.stationSlots === 0) return false
     return (
         filledStationSpaces(state, locationId, node) >= node.stationSlots &&
-        !usesStationAt(state, companyId, locationId, node.id) &&
+        !companyIds.some((companyId) => usesStationAt(state, companyId, locationId, node.id)) &&
         !cityHasNeutralStation(state, locationId, node.id)
     )
 }

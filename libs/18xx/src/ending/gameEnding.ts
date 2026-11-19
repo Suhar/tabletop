@@ -12,7 +12,12 @@ export const GameEnding = Type.Object(
         finalOperatingSet: Type.Optional(Type.Integer({ minimum: 1 })),
         finalOperatingRounds: Type.Optional(Type.Integer({ minimum: 1 })),
         /** The round of the final set the game ends after, cutting the set short (1862 §10.1). */
-        finalOperatingRound: Type.Optional(Type.Integer({ minimum: 1 }))
+        finalOperatingRound: Type.Optional(Type.Integer({ minimum: 1 })),
+        /**
+         * The company whose turn in the final round is the game's last, cutting the round short,
+         * as 1880's train-marker company (§XV).
+         */
+        finalCompanyId: Type.Optional(Type.String())
     },
     { additionalProperties: false }
 )
@@ -38,19 +43,41 @@ export function bankExhaustionAtSetEnd(state: OperatingState): GameEnding | unde
             (!state.operatingSet || state.operatingSet.completed ? 1 : 0)
     }
 }
+/**
+ * The bank broken in a stock round ends the game after one more operating round; in an operating
+ * round, after that round (1861 §13, 1867 GTG §12.1).
+ */
+export function bankBrokenRoundEnding(state: OperatingState): GameEnding | undefined {
+    if (!state.bank.broken) return undefined
+    const set = state.operatingSet
+    if (!set || set.completed)
+        return {
+            reason: BankBroken,
+            finalOperatingSet: (set?.number ?? 0) + 1,
+            finalOperatingRound: 1
+        }
+    return {
+        reason: BankBroken,
+        finalOperatingSet: set.number,
+        finalOperatingRound: set.roundNumber
+    }
+}
 export function endingDue(state: EndingState, rules: EndingRules): boolean {
     if (!state.gameEnding) return false
     if (state.gameEnding.finalOperatingSet === undefined) return true
     const set = state.operatingSet
-    const { finalOperatingRound } = state.gameEnding
+    const { finalOperatingRound, finalCompanyId } = state.gameEnding
     return (
         state.machineState === 'OperatingSet' &&
         set?.number === state.gameEnding.finalOperatingSet &&
-        (finalOperatingRound === undefined
-            ? canStartStockRound(state)
-            : set.roundNumber === finalOperatingRound &&
-              set.privateIncomePaid &&
-              !nextOperatingCompany(state)) &&
+        (finalCompanyId !== undefined
+            ? set.roundNumber === finalOperatingRound &&
+              set.completedCompanyIds.includes(finalCompanyId)
+            : finalOperatingRound === undefined
+              ? canStartStockRound(state)
+              : set.roundNumber === finalOperatingRound &&
+                set.privateIncomePaid &&
+                !nextOperatingCompany(state)) &&
         !rules.roundPending?.(state)
     )
 }

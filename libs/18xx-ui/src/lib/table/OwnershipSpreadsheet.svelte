@@ -7,8 +7,9 @@
     import './playerTint.css'
     import '../stock/tradePopover.css'
     import {
-        companySharePrice,
+        companyMarketSpace,
         DefaultCompanyPricePresentation,
+        shownParPrice,
         type CompanyPricePresentation
     } from './companyPresentation.js'
     import { assert, assertExists, type GameAction } from '@tabletop/common'
@@ -35,6 +36,8 @@
     import PlayerName from './PlayerName.svelte'
     import OperatingHistory from './OperatingHistory.svelte'
     import { spreadsheetCompanies } from './spreadsheetCompanies.js'
+    import { marketValueMark } from '../stock/marketColors.js'
+    import '../stock/marketZoneTint.css'
     import { numberedSharesOwned } from './numberedShares.js'
     import SpreadsheetOutline from './SpreadsheetOutline.svelte'
     import { playerPurchaseContribution } from '../stock/purchaseContribution.js'
@@ -181,12 +184,12 @@
               : 'bank'
     }
     const firstPoolId = $derived(ipoPoolId ? 'ipo' : 'market')
-    const poolColumnLabels: Readonly<Record<string, string>> = {
+    const poolColumnLabels: Readonly<Record<string, string>> = $derived({
         ipo: 'IPO',
-        market: 'Market',
+        market: session.terms.marketPool,
         treasury: 'Treas.',
         exchange: 'Exch.'
-    }
+    })
     const portfolioColumnLabels = $derived(
         new Map(portfolioCompanyIds.map((id) => [`company:${id}`, session.companyInitials(id)]))
     )
@@ -306,8 +309,13 @@
         assertExists(first, 'A sortable column needs a sort direction')
         return first.direction
     }
-    const ownerStatisticKeys = ['cash', 'shares', 'certs', 'netWorth'] as const
-    type OwnerStatistic = (typeof ownerStatisticKeys)[number]
+    const OwnerStatisticKeys = ['cash', 'shares', 'certs', 'netWorth'] as const
+    type OwnerStatistic = (typeof OwnerStatisticKeys)[number]
+    const ownerStatisticKeys: readonly OwnerStatistic[] = $derived(
+        session.noCertificateLimit
+            ? OwnerStatisticKeys.filter((key) => key !== 'certs')
+            : OwnerStatisticKeys
+    )
     type OwnerStatisticColumn = SpreadsheetSortColumn<OwnerStatistics> & {
         label: string
         text: (values: OwnerStatistics) => string
@@ -341,6 +349,8 @@
     }
     type CompanyStatistic = 'value' | 'cash' | 'loans' | 'lastRun' | `column:${string}`
     const titleColumns = $derived(session.presentation.companyColumns ?? [])
+    const earlyTitleColumns = $derived(titleColumns.filter((column) => column.beforeLastRun))
+    const lateTitleColumns = $derived(titleColumns.filter((column) => !column.beforeLastRun))
     /** The heading of the loans a company holds, where the title has them in this game. */
     const loansLabel = $derived(
         session.loans.rules ? (session.presentation.loanTerms?.name ?? 'Loans') : undefined
@@ -349,10 +359,11 @@
         pricePresentation.label,
         'Cash',
         'Trains',
-        'Tokens',
+        session.terms.stationTokensHeading,
         ...(loansLabel ? [loansLabel] : []),
+        ...earlyTitleColumns.map((column) => column.label),
         'Last run',
-        ...titleColumns.map((column) => column.label)
+        ...lateTitleColumns.map((column) => column.label)
     ])
     const companyStatisticCount = $derived(companyStatisticHeadings.length)
     let playerSort = $state<SpreadsheetSort<PlayerSortKey>>()
@@ -404,7 +415,7 @@
                 : []),
             {
                 id: 'market',
-                name: 'Market',
+                name: session.terms.marketPool,
                 count: (companyId: string) => poolShares(marketPoolId, companyId),
                 sells: inPool(marketPoolId),
                 holder: (): CertificateHolder => ({
@@ -467,13 +478,25 @@
             }
         })
     )
+    const marketSpaces = $derived(
+        new Map(
+            companies.map((company) => [
+                company.id,
+                companyMarketSpace(
+                    session.stockMarketChart,
+                    session.gameState.stockMarket,
+                    company.id
+                )
+            ])
+        )
+    )
     const companyRows = $derived(
         companies.map((company) => ({
             company,
-            value: companySharePrice(
-                session.stockMarketChart,
-                session.gameState.stockMarket,
-                company.id
+            value: marketSpaces.get(company.id)?.price,
+            valueMark: marketValueMark(
+                marketSpaces.get(company.id),
+                session.presentation.marketZones
             ),
             // Par is the IPO purchase price, so it only matters while the IPO is selling,
             // unless the title still prices company actions from it.
@@ -482,7 +505,7 @@
                 company.started &&
                 !company.closed &&
                 (pricePresentation.parWithoutIpoShares || poolShares(ipoPoolId, company.id) > 0)
-                    ? company.parPrice
+                    ? shownParPrice(pricePresentation, session.gameState, company)
                     : undefined,
             stations: session.gameState.stations.filter(
                 (station) => stationPlacer(session.gameState, station) === company.id
@@ -580,6 +603,18 @@
         )
     }
 </script>
+
+{#snippet companyValueCell(row: CompanyRow, statStart: boolean, operating: boolean)}
+    <td
+        class="bright-cell value-cell"
+        class:company-stat-start={statStart}
+        class:operating-column={operating}
+        class:market-zone-tint={row.valueMark}
+        style={row.valueMark?.style}
+        title={row.valueMark?.title}
+        >{row.value === undefined ? '—' : row.value.toLocaleString('en-US')}</td
+    >
+{/snippet}
 
 {#snippet financialValue(ownerId: string, key: OwnerStatistic)}
     {@const values = statistics.get(ownerId)}
@@ -718,6 +753,20 @@
     {:else}<span class="last-run-revenue">{money(company.lastRunRevenue)}</span>{/if}
 {/snippet}
 
+{#snippet titleRow(column: (typeof titleColumns)[number])}
+    <tr class="company-stat-start financial-row">
+        {@render titleHeader('row', column)}
+        {#each rows as row (row.company.id)}<td
+                class:operating-column={row.company.id === operatingCompanyId}
+                class="bright-cell">{@render titleCell(column, row.company.id)}</td
+            >{/each}
+        {#each ownerStatisticKeys as _, index (index)}<td
+                class:stat-start={index === 0}
+                class="void"
+            ></td>{/each}
+    </tr>
+{/snippet}
+
 {#snippet titleCell(column: (typeof titleColumns)[number], companyId: string)}
     {#if column.marks}<span
             class="title-marks"
@@ -759,6 +808,7 @@
     {@const purchase = shares > 0 ? purchaseForCell(companyId, ownerId) : undefined}
     {@const marked = shares > 0 ? markedCertificate(companyId, ownerId) : undefined}
     {@const saleChoices = shares > 0 ? saleChoicesForCell(companyId, ownerId) : []}
+    {@const presidentLabel = president ? session.presidentMark(companyId) : undefined}
     <td
         class:operating-column={operating}
         class:sold
@@ -776,7 +826,7 @@
                 aria-label={`Buy ${session.companyName(companyId)} from ${owners.find((owner) => owner.id === ownerId)?.name}`}
                 onclick={(event) =>
                     openShareConfirmation(event, { kind: 'buy', request: purchase.request })}
-                >{@render shareValue(String(shares), president, marked)}</button
+                >{@render shareValue(String(shares), presidentLabel, marked)}</button
             >
         {:else if saleChoices.length}
             <button
@@ -784,14 +834,19 @@
                 aria-label={`Sell ${session.companyName(companyId)} shares`}
                 onclick={(event) =>
                     openShareConfirmation(event, { kind: 'sell', companyId, ownerId })}
-                >{@render shareHolding(String(shares), president, numbers, marked)}</button
+                >{@render shareHolding(String(shares), presidentLabel, numbers, marked)}</button
             >
         {:else if shares < 0}
             <span class="share-value" title={`Short ${-shares}`}
                 >{shares}<span class="sr-only"> short</span></span
             >
         {:else}
-            {@render shareHolding(shares === 0 ? '' : String(shares), president, numbers, marked)}
+            {@render shareHolding(
+                shares === 0 ? '' : String(shares),
+                presidentLabel,
+                numbers,
+                marked
+            )}
         {/if}
     </td>
 {/snippet}
@@ -802,27 +857,27 @@
     >
 {/snippet}
 
-{#snippet shareValue(text: string, president: boolean, mark?: MultiShareMark)}
-    <span class="share-value" class:president
+{#snippet shareValue(text: string, president: string | undefined, mark?: MultiShareMark)}
+    <span class="share-value" class:president={!!president}
         >{text}{#if president || mark}<span
                 class="badge"
-                aria-label={[president ? 'President' : '', mark?.name ?? '']
+                aria-label={[president ? session.terms.president : '', mark?.name ?? '']
                     .filter(Boolean)
                     .join(', ')}
-                title={mark?.title}>{president ? 'P' : ''}{mark?.label ?? ''}</span
+                title={mark?.title}>{president ?? ''}{mark?.label ?? ''}</span
             >{/if}</span
     >
 {/snippet}
 
 {#snippet shareHolding(
     text: string,
-    president: boolean,
+    president: string | undefined,
     numbers: readonly number[],
     marked?: MultiShareMark
 )}
     {#if numbers.length}
         {@const label = ` (${numbers.join(',')})`}
-        <span class="noted-value" class:president data-note={label}
+        <span class="noted-value" class:president={!!president} data-note={label}
             >{@render shareValue(text, president, marked)}<span class="value-note">{label}</span
             ></span
         >
@@ -968,14 +1023,18 @@
                                     )}
                                     {@render companySortHeader('col', 'Cash', 'cash')}
                                     <th scope="col">Trains</th>
-                                    <th scope="col">Tokens</th>
+                                    <th scope="col">{session.terms.stationTokensHeading}</th>
                                     {#if loansLabel}{@render companySortHeader(
                                             'col',
                                             loansLabel,
                                             'loans'
                                         )}{/if}
+                                    {#each earlyTitleColumns as column (column.id)}{@render titleHeader(
+                                            'col',
+                                            column
+                                        )}{/each}
                                     {@render companySortHeader('col', 'Last run', 'lastRun')}
-                                    {#each titleColumns as column (column.id)}{@render titleHeader(
+                                    {#each lateTitleColumns as column (column.id)}{@render titleHeader(
                                             'col',
                                             column
                                         )}{/each}
@@ -1024,11 +1083,7 @@
                                                 poolAlternate(owners[index].id),
                                                 row.shareNumbers[index]
                                             )}{/each}
-                                        <td class="company-stat-start bright-cell value-cell"
-                                            >{row.value === undefined
-                                                ? '—'
-                                                : row.value.toLocaleString('en-US')}</td
-                                        >
+                                        {@render companyValueCell(row, true, false)}
                                         <td class="company-stat-start bright-cell"
                                             >{@render companyCash(row.cash)}</td
                                         >
@@ -1043,10 +1098,14 @@
                                         {#if loansLabel}<td class="company-stat-start bright-cell"
                                                 >{@render loansCell(row)}</td
                                             >{/if}
+                                        {#each earlyTitleColumns as column (column.id)}<td
+                                                class="company-stat-start bright-cell"
+                                                >{@render titleCell(column, row.company.id)}</td
+                                            >{/each}
                                         <td class="company-stat-start"
                                             >{@render lastRunCell(row)}</td
                                         >
-                                        {#each titleColumns as column (column.id)}<td
+                                        {#each lateTitleColumns as column (column.id)}<td
                                                 class="company-stat-start bright-cell"
                                                 >{@render titleCell(column, row.company.id)}</td
                                             >{/each}
@@ -1148,14 +1207,11 @@
                                         pricePresentation.label,
                                         'value'
                                     )}
-                                    {#each rows as row (row.company.id)}<td
-                                            class:operating-column={row.company.id ===
-                                                operatingCompanyId}
-                                            class="bright-cell value-cell"
-                                            >{row.value === undefined
-                                                ? '—'
-                                                : row.value.toLocaleString('en-US')}</td
-                                        >{/each}
+                                    {#each rows as row (row.company.id)}{@render companyValueCell(
+                                            row,
+                                            false,
+                                            row.company.id === operatingCompanyId
+                                        )}{/each}
                                     {#each ownerStatisticKeys as _, index (index)}<td
                                             class:stat-start={index === 0}
                                             class="void"
@@ -1187,7 +1243,7 @@
                                         ></td>{/each}
                                 </tr>
                                 <tr class="financial-row">
-                                    <th scope="row">Tokens</th>
+                                    <th scope="row">{session.terms.stationTokensHeading}</th>
                                     {#each rows as row (row.company.id)}
                                         <td
                                             class:operating-column={row.company.id ===
@@ -1217,6 +1273,9 @@
                                             ></td>{/each}
                                     </tr>
                                 {/if}
+                                {#each earlyTitleColumns as column (column.id)}{@render titleRow(
+                                        column
+                                    )}{/each}
                                 <tr class="company-stat-start financial-row">
                                     {@render companySortHeader('row', 'Last run', 'lastRun')}
                                     {#each rows as row (row.company.id)}<td
@@ -1228,21 +1287,9 @@
                                             class="void"
                                         ></td>{/each}
                                 </tr>
-                                {#each titleColumns as column (column.id)}
-                                    <tr class="company-stat-start financial-row">
-                                        {@render titleHeader('row', column)}
-                                        {#each rows as row (row.company.id)}<td
-                                                class:operating-column={row.company.id ===
-                                                    operatingCompanyId}
-                                                class="bright-cell"
-                                                >{@render titleCell(column, row.company.id)}</td
-                                            >{/each}
-                                        {#each ownerStatisticKeys as _, index (index)}<td
-                                                class:stat-start={index === 0}
-                                                class="void"
-                                            ></td>{/each}
-                                    </tr>
-                                {/each}
+                                {#each lateTitleColumns as column (column.id)}{@render titleRow(
+                                        column
+                                    )}{/each}
                             {/if}
                         </tbody>
                     </table>
@@ -1527,6 +1574,10 @@
     }
     td.value-cell {
         --cell-fill: color-mix(in srgb, var(--sheet-market) 45%, var(--sheet-cell));
+    }
+    td.value-cell.market-zone-tint {
+        --cell-fill: var(--market-tint);
+        color: var(--market-tint-ink);
     }
     td {
         background: var(--cell-fill, var(--row-fill, transparent));

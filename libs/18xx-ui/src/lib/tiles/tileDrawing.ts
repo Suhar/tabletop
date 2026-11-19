@@ -51,6 +51,10 @@ export type TileLayout = {
     revenuePositionsByRotation?: Partial<Record<TileRotation, Readonly<Record<string, Point>>>>
     revenuePositionsByOrientation?: Partial<Record<HexOrientation, Readonly<Record<string, Point>>>>
     labelPosition?: Point
+    /** The label's colour in place of ink, drawn without a halo, as on a dark city it stands on. */
+    labelColor?: string
+    /** A label position by the tile's rotation, for a label that stays put as the tile turns. */
+    labelPositionByRotation?: Partial<Record<TileRotation, Point>>
     /** Where the cost of upgrading the tile is printed, in place of the clearest spot found. */
     upgradeCostPosition?: Point
     /**
@@ -86,6 +90,11 @@ export type TileLayout = {
      * on a map over whatever lies there, as the spikes from 1822's London toward its neighbours.
      */
     overhangs?: readonly (readonly Point[])[]
+    /**
+     * Filled shapes the print sets on the tile under its track, before the tile's rotation, as
+     * 1867's yellow triangles mark a side its yellow tile must connect to (GTG §8.6.2).
+     */
+    printedShapes?: readonly TilePrintedShape[]
     hideRevenue?: true | readonly string[]
     /** Lays staged revenue boxes out in a column or a row rather than whichever fits best. */
     revenueStack?: 'column' | 'row'
@@ -128,6 +137,10 @@ export type TileLayout = {
     flippedLaneEdges?: readonly TileEdge[]
 }
 
+/** A filled shape a layout prints; see ``TileLayout.printedShapes``. */
+export type TilePrintedShape = { points: readonly Point[]; color: string }
+/** A printed shape as drawn: its polygon points, each pair "x,y", and its colour. */
+export type TileDrawnShape = { points: string; color: string }
 /** Text a layout prints on the tile; see ``TileLayout.printedText``. */
 export type TilePrintedText = { content: string; at: Point; fontSize: number }
 /** Track a layout prints that no route uses; see ``TileLayout.printedTrack``. */
@@ -154,6 +167,7 @@ export type TileDrawnToken = {
 export type TileDrawnNode = {
     node: TileNode
     center: Point
+    unmarked?: true
     slots: readonly Point[]
     /** Spaces opened into an upside-down V, whose band leaves its bottom side open. */
     openBand?: true
@@ -196,6 +210,8 @@ export type TileDrawing = {
     crossings: readonly TrackCrossing[]
     nodes: readonly TileDrawnNode[]
     labelPosition: Point
+    /** The label's colour, where its layout gives one. */
+    labelColor?: string
     symbolPosition: Point
     upgradeCostPosition: Point
     printedTokens: readonly TileDrawnToken[]
@@ -204,6 +220,7 @@ export type TileDrawing = {
     printedText: readonly TilePrintedText[]
     /** Polygon points, each pair "x,y", of the shapes reaching past the hex's sides. */
     overhangs: readonly string[]
+    printedShapes: readonly TileDrawnShape[]
 }
 
 export function createTileDrawing(
@@ -463,8 +480,9 @@ export function createTileDrawing(
                 : [center]
         })
     ]
-    if (face.labels.length > 0 && layout.labelPosition) {
-        occupied.push(orientPoint(layout.labelPosition, angle))
+    const labelHint = layout.labelPositionByRotation?.[rotation] ?? layout.labelPosition
+    if (face.labels.length > 0 && labelHint) {
+        occupied.push(orientPoint(labelHint, angle))
     }
     const drawnNodes = face.nodes.map((node): Omit<TileDrawnNode, 'slotRadius'> => {
         const center = centers.get(node.id)
@@ -516,22 +534,32 @@ export function createTileDrawing(
                   )
         if (node.kind !== 'junction' && !revenueHidden)
             occupied.push(...(revenueCells.length ? revenueCells : [revenuePosition]))
-        const tracks = face.paths.filter((path) =>
+        const nodeTracks = face.paths.filter((path) =>
             path.endpoints.some(
                 (endpoint) => endpoint.kind === 'node' && endpoint.nodeId === node.id
             )
-        ).length
+        )
+        const tracks = nodeTracks.length
+        const unmarked =
+            (node.kind === 'town' || node.kind === 'junction') &&
+            tracks > 0 &&
+            nodeTracks.every((path) => {
+                const drawn = paths.find((entry) => entry.id === path.id)
+                return !!(drawn?.spike || drawn?.pier)
+            })
         // A town on through track, or ending a single track, is a bar across that track.
         const townAngle =
             !style.townDots &&
+            !unmarked &&
             node.kind === 'town' &&
             (automaticTownPaths.has(node.id) || tracks === 1)
                 ? townMarkerAngle(center, paths)
                 : undefined
-        const dotRadius = townAngle !== undefined ? 4.2 : tracks >= 3 ? 9 : 6.3
+        const dotRadius = townAngle !== undefined ? 4.2 : tracks >= 3 && !unmarked ? 9 : 6.3
         return {
             node,
             center,
+            ...(unmarked ? { unmarked: true as const } : {}),
             slots: node.kind === 'city' ? citySlots(node, center) : [],
             ...(node.kind === 'city' && layout.slotSpreads?.[node.id] !== undefined
                 ? { openBand: true as const }
@@ -562,8 +590,8 @@ export function createTileDrawing(
                 drawn.node.kind === 'city' && !drawn.slots.length ? slotRadius : drawn.dotRadius
         }
     })
-    const labelPosition = layout.labelPosition
-        ? orientPoint(layout.labelPosition, angle)
+    const labelPosition = labelHint
+        ? orientPoint(labelHint, angle)
         : labelAnnotationPosition(
               paths,
               occupied,
@@ -596,6 +624,7 @@ export function createTileDrawing(
         crossings: trackCrossings(paths),
         nodes,
         labelPosition,
+        ...(layout.labelColor ? { labelColor: layout.labelColor } : {}),
         symbolPosition,
         upgradeCostPosition,
         inkGround: !!layout.inkGround,
@@ -605,6 +634,13 @@ export function createTileDrawing(
         printedText: (layout.printedText ?? []).map((text) => ({
             ...text,
             at: orientPoint(text.at, angle)
+        })),
+        printedShapes: (layout.printedShapes ?? []).map(({ points, color }) => ({
+            points: points
+                .map((point) => orientPoint(point, angle))
+                .map((point) => `${point.x},${point.y}`)
+                .join(' '),
+            color
         })),
         overhangs: (layout.overhangs ?? []).map((points) =>
             points
