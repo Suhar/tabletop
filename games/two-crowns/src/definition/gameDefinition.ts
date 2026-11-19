@@ -76,7 +76,9 @@ export const TwoCrownsTitleRules: EighteenXXTitleRules<
     privateRules: TwoCrownsPrivateRules,
     phases: TwoCrownsPhases,
     phaseRules: TwoCrownsPhaseRules,
-    trainRules: TwoCrownsTrainRules
+    trainRules: TwoCrownsTrainRules,
+    // Autorun, as TOP offers it: a president may declare a company's runs and payout ahead.
+    runInstructions: true
 }
 
 export const Definition: GameDefinition<TwoCrownsState, HydratedTwoCrownsState> = {
