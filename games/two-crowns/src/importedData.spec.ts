@@ -24,8 +24,8 @@ describe('The Two Crowns imported from 18xx Maker', () => {
             { color: 'gray', label: 'CX' }
         ])
         expect(labels('H12')).toEqual([{ color: 'brown', label: 'J' }])
-        // Šibenik and Knin are plain cities since 0.9.0.
-        expect(labels('K21')).toBeUndefined()
+        // Knin is a plain city since 0.9.0; Šibenik became a junction city in 0.11.0.
+        expect(labels('K21')).toEqual([{ color: 'brown', label: 'J' }])
         expect(labels('L18')).toBeUndefined()
     })
 

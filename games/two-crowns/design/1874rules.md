@@ -1,8 +1,8 @@
-> **Generated, not authoritative.** Player rulebook for design 0.10.0 (0.10.2 for Donja Dubrava), written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.10.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
+> **Generated, not authoritative.** Player rulebook for design 0.11.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.11.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
 
 THE TWO CROWNS 1874
 
-**Rules, prototype version 0.10.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
+**Rules, prototype version 0.11.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
 
 Text highlighted like this differs from 1871. Components that were only renamed are listed below and are not highlighted. The map, tile and component illustrations are not reproduced here.
 
@@ -144,7 +144,7 @@ These rules assume familiarity with the 18xx system.
   - For each Luka share in the game, place a Luka station marker on its associated home city space as indicated on the share. These will be the five starting homes of the Luka for this game.
   - Select one Luka share at random from the five shares. Take one 10% share of the associated company and place it in the treasury of the Austrian Bank.
   - If playing with three players, shuffle the five Luka shares with all 16 private companies.
-  - If playing with four or five players, remove one of Zadar or Virovitica Station Rights at random, and shuffle the five Luka shares with the remaining 15 private companies.
+  - If playing with four or five players, remove one of Zadar Station Rights, Virovitica Station Rights and the Rijeka Lazaretto at random, and shuffle the five Luka shares with the remaining 15 private companies.
   - Place one Public Line share on the Hungarian Bank.
   - Deal the items face up, one at a time, clockwise around the table. First shuffle the MÁV Concession, Narodna Concession, Südbahn Concession, Austrian Bank and Hungarian Bank, and deal those five. Then shuffle the remaining privates with the five Luka shares and keep dealing from the next player until every player has the same number of items. With 5 players, each player should have 4 items. With 4 players, 5 items. With 3 players, 7 items. At 3 and 4 players some players get two of the first five. These items are public information.
   - Proceed to the initial auction.
@@ -528,12 +528,12 @@ Empty, or with a printed company home location. Revenue is listed by phase (yell
 | Zagreb | Z city, no home | 30 / 30 / 70 or 60 |
 | Rijeka | R city, port | 30 / 30 / 60 or 50 |
 | Luka homes (8) | X city; Karlovac is CX, Pula is P; Gospić is printed yellow | 20 / 30 / 60 or 50 |
-| Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod | Junction (J) | 20 / 20 / 40 + 40 |
-| Virovitica, Zadar, Senj, Šibenik, Knin | City | 20 / 20 / 40 |
+| Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod, Šibenik | Junction (J) | 20 / 20 / 40 + 40 |
+| Virovitica, Zadar, Senj, Knin | City | 20 / 20 / 40 |
 | Pazin, Delnice, Otočac, Križevci, Lipovljani, Požega, Vrana, Sinj, Donja Dubrava | Town | 10 |
 | 10 double-town hexes | Two towns | 10 + 10 |
 | Krk, Rab, Pag | Island towns | 20 / 10 / 10 |
-| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10 (Legrad and Korenica 20) |
+| Rovinj, Makarska, Vukovar, Beli Manastir, Legrad, Korenica | Gray towns | 10 (Legrad 20) |
 | Vodice, Vrlika, Bosanski Brod | Gray port towns, dead ends | 10 |
 | Rude Mines | Gray city, no stations | 20 / 20 / 60 |
 | Ljubljana | Offboard | 30 / 40 / 60 |
@@ -639,7 +639,7 @@ Rude Mines counts as a city for routes, paying $20 until the brown phase and $60
 | Blocks Virovitica. From 4H, may be sold to a company for $25–50. That company may lay or upgrade Virovitica as its first tile lay, with no connection, then place a station there free. Closes at the first 4+. |  |
 | $50 | Revenue: $10 |
 
-**Virovitica Station Rights** works as Zadar Station Rights, for Virovitica. Both are in play at 3 players; at 4–5 players one of the two is removed at random.
+**Virovitica Station Rights** works as Zadar Station Rights, for Virovitica. Both are in play at 3 players; at 4–5 players one of the two or the Rijeka Lazaretto is removed at random.
 
 |  |  |
 | :-: | :-: |
@@ -796,7 +796,7 @@ In brown, Z, R and X cities offer a choice: 2 slots at the higher value or 3 slo
 
 ### **JUNCTION CITIES (J)**
 
-Ogulin, Koprivnica, Novska, Vinkovci and Slavonski Brod are junctions. Their green-to-brown upgrade must keep track on every hex edge that had track, and the brown J tile is two one-slot cities, each on its own branch of two edges, $40 each. There are twelve brown J tiles: one for each way of pairing the edges, so every green junction has an upgrade, and a second J3, J7 and J9.
+Ogulin, Koprivnica, Novska, Vinkovci, Slavonski Brod and Šibenik are junctions. Their green-to-brown upgrade must keep track on every hex edge that had track, and the brown J tile is two one-slot cities, each on its own branch of two edges, $40 each. There are twelve brown J tiles: one for each way of pairing the edges, so every green junction has an upgrade, and a second J3, J7 and J9.
 
 The green city has two slots, so up to two stations are set aside on the upgrade (1894's station update). If one is the upgrading company's, its president puts it on either city of the new tile at once. The rest go back at the end of the upgrading company's turn, in operating order: each owner picks either city, even one that already holds a station. Two stations on one city sit side by side, and the other city stays open. This is the only way two stations can share a slot, so a brown junction can hold three stations. A company can't have two stations on the tile. If two stations were set aside, the upgrading company can't place a station on the new tile that operating round. If both are other companies' stations, its trains may run through the hex that turn, since those stations only go back at the end of its turn. A route may visit both cities of a brown junction, as two separate stops, if track joins them. A brown junction can cut a rival's route in two.
 

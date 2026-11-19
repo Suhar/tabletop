@@ -110,7 +110,7 @@ export function twoCrownsLocations(
         ...locations(
             'E5',
             offboard(
-                [5],
+                [0],
                 revenue([
                     ['yellow', 30],
                     ['green', 40],
@@ -183,7 +183,7 @@ export function twoCrownsLocations(
             'B16',
             city(
                 'red',
-                [4],
+                [4, 3],
                 revenue([
                     ['yellow', 30],
                     ['brown', 70]
@@ -199,9 +199,11 @@ export function twoCrownsLocations(
                 [2, 4]
             ])
         ),
-        ...locations('F6', track('gray', [[2, 5]])),
+        ...locations('F6', track('gray', [[5, 1]])),
+        ...locations('E7', track('gray', [[3, 4]])),
+        ...locations('B14', track('gray', [[4, 0]])),
         ...locations('B10 Q13', track('gray', [[3, 5]])),
-        ...locations('C13', town('gray', [[3, 0, 4]], 10)),
+        ...locations('C13', town('gray', [[3, 0, 4, 1]], 10)),
         ...locations('E11', town('white', [[], []], 0)),
         ...locations(
             'G7',
@@ -246,7 +248,7 @@ export function twoCrownsLocations(
         ...locations('S3', track('gray', [[0, 1]])),
         ...locations('R4', track('gray', [[3, 4]])),
         ...locations('N2', town('gray', [[0, 2, 4]], 20)),
-        ...locations('J14', town('gray', [[3, 5, 1]], 20)),
+        ...locations('J14', town('gray', [[3, 5, 1]], 10)),
         ...locations('M1', town('white', [[]], 0)),
         ...locations('J20', town('gray', [[5]], 10)),
         ...locations('M19', town('gray', [[2]], 10)),
@@ -306,7 +308,9 @@ export function twoCrownsLocations(
         }),
         ...locations('H18', city('white', [], 0, 1)),
         ...locations('L18', city('white', [], 0, 1)),
-        ...locations('K21', city('white', [], 0, 1)),
+        ...locations('K21', city('white', [], 0, 1, ['J']), {
+            upgradeLabels: [{ color: 'brown', label: 'J' }]
+        }),
         ...locations('L22', city('white', [], 0, 1, ['X']), {
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
