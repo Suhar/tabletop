@@ -30,7 +30,7 @@
             </p>
             <p class="welcome">
                 You are welcome to play these however you see fit. You can also play against bots:
-                invite FranzBot, RudolfBot, SisiBot, and AndrassyBot to games.
+                invite FranzBot, RudolfBot, SisiBot, DeakBot, and AndrassyBot to games.
             </p>
             <p class="welcome">
                 The site runs on
