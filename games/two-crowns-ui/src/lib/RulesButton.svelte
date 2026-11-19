@@ -225,4 +225,21 @@
         border-left: 3px solid var(--rules-border);
         color: var(--rules-muted);
     }
+    /* What 1874 changes from 1871, as the rulebook's foreword says. */
+    .rulebook :global(mark) {
+        padding: 0 2px;
+        border-radius: 2px;
+        background: #f5d76e33;
+        box-shadow: inset 0 -2px 0 #f5d76e;
+        color: inherit;
+    }
+    /* The private company cards, 18xx Maker's own exports. */
+    .rulebook :global(img.private-card) {
+        display: block;
+        width: min(320px, 100%);
+        height: auto;
+        margin: 6px 0 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #00000066;
+    }
 </style>

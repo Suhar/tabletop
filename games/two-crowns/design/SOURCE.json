@@ -1,12 +1,31 @@
 {
     "repo": "Suhar/two-crowns-1874",
     "version": "0.11.1",
-    "commit": "c85b75f3616939d44fec0d44f75f732a78afb5bf",
-    "committedAt": "2026-11-19T04:08:26Z",
+    "commit": "a512e7669c20e92fe84dbf7d49246bef843d07ee",
+    "committedAt": "2026-11-19T04:28:42Z",
     "dirty": false,
     "files": {
         "1874design.md": "41115f6529b1",
         "TwoCrowns1874.json": "72bc0edf2dc2",
-        "1874rules.md": "deea740865cb"
+        "1874rules.md": "08694c768596",
+        "cards/BD.png": "7953f3b46238",
+        "cards/G.png": "679875e7706f",
+        "cards/P.png": "c4f7bb62d3f4",
+        "cards/P1.png": "3e024d7272d3",
+        "cards/P10.png": "15b4407e2647",
+        "cards/P11.png": "1c083451225a",
+        "cards/P12.png": "79ca8a643f1a",
+        "cards/P13.png": "9225e6c1766b",
+        "cards/P14.png": "77dfa2301f29",
+        "cards/P15.png": "6d9a66be618b",
+        "cards/P16.png": "986b6269bfe8",
+        "cards/P17.png": "d6c8829448f4",
+        "cards/P2.png": "0a902ccb60dc",
+        "cards/P3.png": "e0d233a9c54c",
+        "cards/P4.png": "27bd7bf0583f",
+        "cards/P5.png": "caf2f150b164",
+        "cards/P7.png": "2c0d14e67b4e",
+        "cards/P8.png": "da9f3d83615b",
+        "cards/P9.png": "f2e8e7fba9f3"
     }
 }
