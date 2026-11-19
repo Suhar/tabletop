@@ -52,6 +52,27 @@ describe('1874 setup', () => {
         expect(lots.some((id) => id.startsWith('BD'))).toBe(false)
     })
 
+    it.each([4, 5])(
+        'removes one of the Station Rights and the Rijeka Lazaretto at random at %i players',
+        (count) => {
+            const removed = new Set<string>()
+            for (let seed = 1; seed <= 30; seed++) {
+                const lots = startTwoCrowns(count, seed).offerAuction!.piles.flatMap(
+                    (pile) => pile.lotIds
+                )
+                const missing = ['P3', 'P4', 'P5'].filter((id) => !lots.includes(id))
+                expect(missing).toHaveLength(1)
+                removed.add(missing[0])
+            }
+            expect([...removed].sort()).toEqual(['P3', 'P4', 'P5'])
+        }
+    )
+
+    it('deals the Station Rights and the Rijeka Lazaretto at 3 players', () => {
+        const lots = startTwoCrowns(3).offerAuction!.piles.flatMap((pile) => pile.lotIds)
+        expect(['P3', 'P4', 'P5'].filter((id) => lots.includes(id))).toHaveLength(3)
+    })
+
     it.each([3, 4, 5])('deals the concessions and banks first at %i players', (count) => {
         for (const seed of [1, 2, 3]) {
             const piles = startTwoCrowns(count, seed).offerAuction!.piles.map((pile) => pile.lotIds)

@@ -117,11 +117,13 @@ export function dealAuctionPiles(
     ;[...first, ...rest].forEach((id, index) => piles[index % playerCount].push(id))
     return piles
 }
-// At 4–5 players one of the Zadar and Virovitica Station Rights is removed at random.
+// At 4–5 players one of the Zadar and Virovitica Station Rights and the Rijeka Lazaretto is
+// removed at random.
+const RemovableAtFourPlusIds = ['P3', 'P4', 'P5']
 function dealtPrivateIds(playerCount: number, random: () => number): string[] {
     const ids = privatesForPlayerCount(playerCount)
     if (playerCount < 4) return ids
-    const removed = random() < 0.5 ? 'P3' : 'P4'
+    const removed = RemovableAtFourPlusIds[Math.floor(random() * RemovableAtFourPlusIds.length)]
     return ids.filter((id) => id !== removed)
 }
 export function createTwoCrownsOpening({
