@@ -4,7 +4,15 @@
 // The clone defaults to <main checkout>/design/two-crowns-1874; TWO_CROWNS_DESIGN overrides it.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+    copyFileSync,
+    existsSync,
+    mkdirSync,
+    readdirSync,
+    readFileSync,
+    rmSync,
+    writeFileSync
+} from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -55,9 +63,26 @@ const copies = {
 for (const [copy, file] of Object.entries(copies)) {
     copyFileSync(join(clone, file), join(root, 'design', copy))
 }
-const files = Object.keys(copies)
+// The private company cards the rulebook shows, exported from 18xx Maker into rules/cards.
+const cardsFolder = join(root, 'design', 'cards')
+rmSync(cardsFolder, { recursive: true, force: true })
+mkdirSync(cardsFolder)
+const cards = existsSync(join(clone, 'rules', 'cards'))
+    ? readdirSync(join(clone, 'rules', 'cards')).filter((file) => file.endsWith('.png'))
+    : []
+for (const card of cards) copyFileSync(join(clone, 'rules', 'cards', card), join(cardsFolder, card))
+const files = [...Object.keys(copies), ...cards.map((card) => `cards/${card}`)]
 
-const dirty = git(clone, 'status', '--porcelain', '--', ...Object.values(copies), 'VERSION') !== ''
+const dirty =
+    git(
+        clone,
+        'status',
+        '--porcelain',
+        '--',
+        ...Object.values(copies),
+        'rules/cards',
+        'VERSION'
+    ) !== ''
 const source = {
     repo: 'Suhar/two-crowns-1874',
     version,

@@ -147,6 +147,11 @@ export const TwoCrownsMapView: MapViewDefinition = {
         panel: { x: -103, y: 268, width: 115, height: 213 },
         depot: { x: 70, y: 712, width: 310, height: 330 }
     },
+    // The Station Rights' markers on Zadar and Virovitica look like 1830's private blocks.
+    markerArt: {
+        'blocks-P3': { localLine: true, above: true },
+        'blocks-P4': { localLine: true, above: true }
+    },
     map: TwoCrownsMap,
     tileSet: TwoCrownsTileSet,
     layouts: TwoCrownsTileLayouts,
