@@ -1,8 +1,8 @@
-> **Generated, not authoritative.** Player rulebook for design 0.14.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.14.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
+> **Generated, not authoritative.** Player rulebook for design 0.15.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.15.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
 
 THE TWO CROWNS 1874
 
-**Rules, prototype version 0.14.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
+**Rules, prototype version 0.15.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
 
 Text <mark>highlighted like this</mark> differs from 1871. Components that were only renamed are listed below and are not highlighted. The map, tile and component illustrations are not reproduced here.
 
@@ -517,7 +517,7 @@ These rules assume familiarity with the 18xx system.
 
 ### **PLAIN HEXES**
 
-Some show a terrain cost. <mark>Mountains and the Sava and Kupa cost $80; the Drava costs $60. Where the Sava runs through Novska, Lipovljani and the river hex south-east of Novska, it costs $60. The rivers run between cities, so most routes cross them.</mark>
+Some show a terrain cost. <mark>Mountains and the Sava and Kupa cost $80; the Drava costs $60. Where the Sava runs through Novska, Lipovljani and the river hex south-east of Novska, it costs $60. The rivers run between cities, so most routes cross them. The mountain south of Gospić costs $80; Koprivnica has no river cost.</mark>
 
 ### **CITIES**
 

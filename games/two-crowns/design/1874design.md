@@ -45,7 +45,7 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Dubrovnik | Sea offboard | 40 / 40 / 70 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 60 | The Malta steamer out of Split |
 
-**Terrain.** Mountains and the Sava and Kupa cost $80; the Drava costs $60 (0.9.0). Since 0.13.0 the Sava costs $60 at Novska, Lipovljani and O11, the river hex south-east of Novska. The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at M21 sits between Sinj, Split and Makarska.
+**Terrain.** Mountains and the Sava and Kupa cost $80; the Drava costs $60 (0.9.0). Since 0.13.0 the Sava costs $60 at Novska, Lipovljani and O11, the river hex south-east of Novska. The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at M21 sits between Sinj, Split and Makarska. Since 0.15.0 I17, south of Gospić, is a mountain, to make the Lika's cheap southern build cost something; K17, between I17 and Knin, is no longer one; and Koprivnica (N4) no longer has the Drava's $60.
 
 **Gray tiles: only three.** Cities stop at brown, apart from the three that get one of these:
 
