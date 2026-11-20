@@ -45,7 +45,7 @@ The Luka's homes are spread across the whole map. That gives the Pier track-buil
 | Dubrovnik | Sea offboard | 40 / 40 / 70 | The Dalmatian steamer, past Makarska |
 | Malta | Sea offboard | 20 / 40 / 60 | The Malta steamer out of Split |
 
-**Terrain.** Mountains and the Sava and Kupa cost $80; the Drava costs $60 (0.9.0). The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at M21 sits between Sinj, Split and Makarska.
+**Terrain.** Mountains and the Sava and Kupa cost $80; the Drava costs $60 (0.9.0). Since 0.13.0 the Sava costs $60 at Novska, Lipovljani and O11, the river hex south-east of Novska. The rivers sit between cities, so most routes can't avoid them: the Sava cuts Zagreb off from Varaždin and Bjelovar (J4 to M9, through Krapina and Dugo Selo) and runs on past Sisak, Novska and Slavonski Brod; the Kupa crosses the lines from Zagreb to Karlovac and Ogulin; the Drava runs from Varaždin through Koprivnica toward Osijek. The mountain at M21 sits between Sinj, Split and Makarska.
 
 **Gray tiles: only three.** Cities stop at brown, apart from the three that get one of these:
 
@@ -70,9 +70,9 @@ Tile counts keep 1871's tiles per spot on the map, scaled to 1874's 100 tileable
 | Yellow cities | 14 for 10 hexes | 17 (Zagreb, Rijeka and Gospić are printed yellow) | 18: 9 of 5, 9 of 6 |
 | Green cities | 9 for 6 hexes | 10 (5 cities, 5 junctions) | 13: 4 of C1, 5 of C2, 4 of C3 |
 | Brown cities | 2 for 7 hexes | 4, 2 with room for brown | 3 (611): most cities stop at green, as in 1871 |
-| Green and brown X | 8 each for 7 hexes | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, the only one that fits Pula), 9 brown (2 of X5, 3 of X6, 2 of X7, 2 of X8) |
+| Green and brown X | 8 each for 7 hexes | 8 green, 7 brown (Pula takes P) | 9 green (3 of X2, 2 of X3, the only one that fits Pula), 9 brown (2 of X5, 3 of X6, 2 of X7, 2 of X8) |
 | Brown J | — | 5 | 12: one of each pairing, and a second J3, J7 and J9 |
-| P (Pula) | — | 1 | 1 brown, three-sided |
+| P (Pula) | — | 1 | 1 brown, three sides in a row like X3 (0.13.0; before, like X2) |
 | Z and R | — (1871's T: 2 green, 2 brown for 2 hexes) | 1 each | 3 green and 2 brown each |
 | Gray | CX and X | — | CX and two any-city: G1, and G2 for the Lika Survey Office |
 

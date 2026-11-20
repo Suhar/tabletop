@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.12.0"
+    "subtitle": "Prototype 0.13.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -627,7 +627,7 @@
           "side": 2
         },
         {
-          "side": 6
+          "side": 1
         }
       ]
     },
@@ -4001,7 +4001,7 @@
         "terrain": [
           {
             "type": "water",
-            "cost": 80,
+            "cost": 60,
             "angle": 240,
             "percent": 0.6
           }
@@ -4133,7 +4133,7 @@
         "terrain": [
           {
             "type": "water",
-            "cost": 80,
+            "cost": 60,
             "angle": 210,
             "percent": 0.6
           }
@@ -4175,7 +4175,7 @@
         "terrain": [
           {
             "type": "water",
-            "cost": 80
+            "cost": 60
           }
         ],
         "labels": [
