@@ -2,13 +2,17 @@ import { isTreasuryPoolId } from '@tabletop/18xx'
 import { moneyFormat, type TitlePresentation } from '@tabletop/18xx-ui'
 import { TwoCrownsCompanies, TwoCrownsNames } from '@tabletop/two-crowns'
 import { TwoCrownsCompanyNames } from './companyPresentation.js'
-import { TwoCrownsPhaseChart } from './phaseChart.js'
+import { NoTradeInsPhaseChart, TwoCrownsPhaseChart } from './phaseChart.js'
 import { TwoCrownsMarketZones } from './marketPresentation.js'
 import { TwoCrownsTrainColors } from './trainPresentation.js'
 
 export const TwoCrownsPresentation: TitlePresentation = {
     money: moneyFormat('$'),
     phaseChart: TwoCrownsPhaseChart,
+    phaseChartFor: (state) =>
+        (state as { variants?: { noTradeIns?: true } }).variants?.noTradeIns
+            ? NoTradeInsPhaseChart
+            : TwoCrownsPhaseChart,
     trainColors: TwoCrownsTrainColors,
     phaseColors: TwoCrownsTrainColors,
     marketPoolId: 'market',

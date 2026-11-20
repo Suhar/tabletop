@@ -28,7 +28,8 @@ import { TwoCrownsPrivateCatalog, TwoCrownsPrivates, privatesForPlayerCount } fr
 import type { HydratedTwoCrownsState, TwoCrownsState } from './state.js'
 import { TwoCrownsMarket } from './stockMarket.js'
 import { TwoCrownsTileSet } from './tiles.js'
-import { TwoCrownsTrainDepot } from './trains.js'
+import { ExtraSixHDepotId, TwoCrownsTrainDepot } from './trains.js'
+import { TwoCrownsGameConfig } from './definition/gameConfig.js'
 import { BondIds, CharterPublicShareNumber, isBond } from './holdings.js'
 export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
     increment: 5,
@@ -136,6 +137,7 @@ export function createTwoCrownsOpening({
         players.length >= 3 && players.length <= 5,
         'The Two Crowns supports three to five players'
     )
+    const variants = TwoCrownsGameConfig.variants(config)
     const shuffled = [...TwoCrownsCompanies]
     shuffle(shuffled, prng.random)
     const [mainline, shortline, narodna, ...remaining] = shuffled
@@ -307,13 +309,18 @@ export function createTwoCrownsOpening({
         stationReservations,
         stockMarket,
         tileInventory: TwoCrownsTileSet.createInventory(),
-        trainInventory: TwoCrownsTrainDepot.createInventory(),
+        trainInventory: TwoCrownsTrainDepot.createInventory(
+            variants.extraSixH ? ExtraSixHDepotId : undefined
+        ),
         phaseId: '2H'
     }
     addTwoCrownsBranches(position)
     return {
         position,
-        titleState: { unionBankDrawnCompanyId: remaining[0].companyId },
+        titleState: {
+            unionBankDrawnCompanyId: remaining[0].companyId,
+            ...(Object.keys(variants).length > 0 ? { variants } : {})
+        },
         begin: beginOfferPileAuction({
             piles: players.map((p, index) => ({ playerId: p.playerId, lotIds: piles[index] })),
             auctioneerId,

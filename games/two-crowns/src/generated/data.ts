@@ -177,7 +177,7 @@ export const TwoCrownsPrivateData = [
         faceValue: 90,
         revenue: 0,
         description:
-            'Comes with a Public Line share; works like the Austrian Bank. Until the first 2+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits.'
+            'Comes with a Public Line share; works like the Austrian Bank. Until the first 3+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits.'
     },
     {
         id: 'P15',

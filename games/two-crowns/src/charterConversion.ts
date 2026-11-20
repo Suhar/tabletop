@@ -71,8 +71,9 @@ export function charterConversionReason(
     const owner = privateOwner(state, CharterId)
     const player: Owner = { kind: 'player', playerId }
     if (!owner || !sameOwner(owner, player)) return 'You do not own the Hungarian Bank.'
-    if (TwoCrownsPhases.isAtLeast(state.phaseId, '2+'))
-        return 'The Hungarian Bank can no longer convert once a 2+ is bought.'
+    // Until the first 3+ (1874design.md, Hungarian Bank; the first 2+ before design 0.14.0).
+    if (TwoCrownsPhases.isAtLeast(state.phaseId, '3+'))
+        return 'The Hungarian Bank can no longer convert once a 3+ is bought.'
     // The owner must be able to sell back within 60% and the certificate limit.
     const held = certificatesOwnedBy(state, charterOwner).filter((item) => item.kind === 'share')
     for (const companyId of new Set(held.map((item) => item.companyId))) {

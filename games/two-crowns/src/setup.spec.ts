@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { GameEngine, GameStorage, PlayerStatus } from '@tabletop/common'
+import { GameEngine, GameStorage, PlayerStatus, type GameConfig } from '@tabletop/common'
 import { Definition } from './definition/gameDefinition.js'
 import { twoCrownsRole } from './companies.js'
 import { FirstDealtPrivateIds, dealAuctionPiles } from './openingAuction.js'
 import { TwoCrownsPrivateCatalog } from './privates.js'
 import { TwoCrownsTrackRules } from './trackRules.js'
 
-export function startTwoCrowns(playerCount: number, seed = 1) {
+export function startTwoCrowns(playerCount: number, seed = 1, config: GameConfig = {}) {
     const game = Definition.runtime.initializer.initializeGame(
         {
             id: `setup-${playerCount}-${seed}`,
@@ -16,7 +16,7 @@ export function startTwoCrowns(playerCount: number, seed = 1) {
             storage: GameStorage.Local,
             hotseat: true,
             seed,
-            config: {},
+            config,
             players: Array.from({ length: playerCount }, (_, index) => ({
                 id: `p${index + 1}`,
                 name: `p${index + 1}`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TwoCrownsPhaseChart } from './phaseChart.js'
+import { NoTradeInsPhaseChart, TwoCrownsPhaseChart } from './phaseChart.js'
 
 // 1874design.md, Trade-ins: a supply purchase may hand in a train of the rank just below, never a
 // 4+ or a 7, for half its face.
@@ -13,5 +13,10 @@ describe('1874 phase chart', () => {
         expect(upgrades['4+']).toEqual([])
         expect(upgrades['7']).toEqual([])
         expect(upgrades['D']).toEqual([])
+    })
+    it('lists no trade-ins under the No trade-ins variant', () => {
+        expect(NoTradeInsPhaseChart.trains.every((train) => train.upgrades === undefined)).toBe(
+            true
+        )
     })
 })
