@@ -1,6 +1,7 @@
 import { EighteenXXPreferenceDefinition } from '@tabletop/18xx'
 import type { GameInfo } from '@tabletop/common'
 import { TwoCrownsTitle } from '../generated/data.js'
+import { TwoCrownsConfigurator } from './gameConfig.js'
 import { GAME_VERSION } from './version.js'
 
 export const TwoCrownsInfo: GameInfo = {
@@ -18,5 +19,6 @@ export const TwoCrownsInfo: GameInfo = {
         defaultPlayerCount: 4,
         version: GAME_VERSION,
         beta: false
-    }
+    },
+    configurator: new TwoCrownsConfigurator()
 }

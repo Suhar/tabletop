@@ -17,6 +17,8 @@ function distance(id: string): TrainDefinition['distance'] {
     return { measure: 'revenue-centers', maximum: reach }
 }
 
+export const ExtraSixHDepotId = 'two-crowns-extra-6h'
+const SixHCount = TwoCrownsTrainData.find((train) => train.id === '6H')!.count
 export const TwoCrownsTrainDepot = new TrainDepot({
     id: 'two-crowns',
     trains: TwoCrownsTrainData.map((train) => ({
@@ -30,7 +32,9 @@ export const TwoCrownsTrainDepot = new TrainDepot({
     supply: TwoCrownsTrainData.map((train) => ({
         definitionId: train.id,
         count: train.id === 'D' ? ('unlimited' as const) : train.count
-    }))
+    })),
+    // The Extra 6H variant (1874design.md, Variant rules).
+    supplyVariants: { [ExtraSixHDepotId]: { '6H': SixHCount + 1 } }
 })
 
 const TileColorOrder = ['yellow', 'green', 'brown', 'gray']
@@ -45,7 +49,11 @@ export const TwoCrownsPhases = new PhaseTable(
     TwoCrownsTrainDepot
 )
 const hasRoute = requiresStationRoute(TwoCrownsMap, TwoCrownsTileSet)
-type TradeInState = { tradeIns?: string[]; operatingSet?: { number: number; roundNumber: number } }
+type TradeInState = {
+    tradeIns?: string[]
+    operatingSet?: { number: number; roundNumber: number }
+    variants?: { noTradeIns?: true }
+}
 const tradeInState = (state: object) => state as TradeInState
 function tradeInKey(state: object, companyId: string): string {
     const set = tradeInState(state).operatingSet
@@ -71,7 +79,9 @@ export function tradeInPrice(definitionId: string, tradedDefinitionId: string): 
 }
 export const TwoCrownsTrainRules: TrainRules = {
     depot: TwoCrownsTrainDepot,
+    // The No trade-ins variant turns them off (1874design.md, Variant rules).
     exchangePrice: (state, companyId, definitionId, train) =>
+        tradeInState(state).variants?.noTradeIns ||
         tradeInState(state).tradeIns?.includes(tradeInKey(state, companyId))
             ? undefined
             : tradeInPrice(definitionId, train.definitionId),

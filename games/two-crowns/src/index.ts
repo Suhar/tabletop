@@ -1,5 +1,6 @@
 export { Definition, TwoCrownsTitleRules } from './definition/gameDefinition.js'
 export { TwoCrownsInfo } from './definition/info.js'
+export * from './definition/gameConfig.js'
 export { TwoCrownsMap } from './map.js'
 export * from './luka.js'
 export * from './players.js'

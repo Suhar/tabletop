@@ -10,7 +10,7 @@
     "designerFontSize": 60,
     "currency": "$#",
     "publisher": "self",
-    "subtitle": "Prototype 0.13.0"
+    "subtitle": "Prototype 0.14.0"
   },
   "prototype": true,
   "bank": "∞",
@@ -233,7 +233,7 @@
         "label": "$",
         "color": "red"
       },
-      "description": "Comes with a Public Line share; works like the Austrian Bank. Until the first 2+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits."
+      "description": "Comes with a Public Line share; works like the Austrian Bank. Until the first 3+, may convert to Ganz in a stock round: its cash and shares go to the owner, who sells down to the limits."
     },
     {
       "name": "MÁV Concession",
@@ -2003,14 +2003,14 @@
       "train": "2+",
       "limit": 3,
       "tiles": "green",
-      "rounds": 2,
-      "notes": "Hungarian Bank can no longer convert"
+      "rounds": 2
     },
     {
       "train": "3+",
       "limit": 3,
       "tiles": "green",
-      "rounds": 2
+      "rounds": 2,
+      "notes": "Hungarian Bank can no longer convert"
     },
     {
       "train": "4+",

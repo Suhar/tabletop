@@ -164,7 +164,7 @@ The round structure is 1871's: dealt auction, then stock rounds alternating with
 
 1. Sell (1871 limits: at most 30% of one company per turn, no selling unoperated companies).
 2. Then one action: buy one share, start a Luka company, start a Branch company in the Late space, split a company, act for the Austrian Bank, or act for the Hungarian Bank (until it converts).
-3. Free actions any time on your turn: private exchanges, and converting the Hungarian Bank (until the first 2+; stock rounds only). Doing only a free action does not count as a pass.
+3. Free actions any time on your turn: private exchanges, and converting the Hungarian Bank (until the first 3+; stock rounds only). Doing only a free action does not count as a pass.
 
 **Selling privates to companies (1894).** From the 4H phase until the first 4+, a company may buy Zadar or Virovitica Station Rights (P3, P4) from a player for ½× to 1× face, Wiener Neustadt (P10) for $1–200, or the Ancona Steamship (P17) for ½× to 1× face. The Luka may buy only the Station Rights. Both sides must agree. This is the main liquidity valve.
 
@@ -228,7 +228,7 @@ The Austrian Bank is 1871's Union Bank, unchanged at its core. It favours a long
 
 ## Hungarian Bank
 
-The Hungarian Bank is a second, smaller Austrian Bank that can be cashed out early. Kept, it compounds over a long game like the Austrian Bank. Converted before the 2+, it hands its owner its holdings and becomes a locomotive works a company can use once.
+The Hungarian Bank is a second, smaller Austrian Bank that can be cashed out early. Kept, it compounds over a long game like the Austrian Bank. Converted before the 3+, it hands its owner its holdings and becomes a locomotive works a company can use once.
 
 **The bank.** Private P14, face $90, no revenue, counts as one certificate. It starts with one Public Line share and no cash, and works as the Austrian Bank does:
 
@@ -238,7 +238,7 @@ The Hungarian Bank is a second, smaller Austrian Bank that can be cashed out ear
 - **Splits.** It swaps half its shares like any player, as the Austrian Bank does.
 - **Game end.** It never closes unless converted. Its cash and shares count toward its owner's net worth.
 
-**Converting to Ganz.** Until the first 2+ is bought, the owner may convert the Hungarian Bank during a stock round, as a free action on any of their stock turns. It can't convert during an operating round.
+**Converting to Ganz.** Until the first 3+ is bought (until the first 2+ before 0.14.0), the owner may convert the Hungarian Bank during a stock round, as a free action on any of their stock turns. It can't convert during an operating round.
 
 1. The Hungarian Bank's cash and shares go to its owner, presidencies included. The Hungarian Bank closes and the Ganz Locomotive Works takes its place.
 2. The owner must then sell to the bank pool, at market price, any shares that take them over 60% of a company, and enough shares to get back within the certificate limit. Normal sell rules apply, except the 30% limit, and these sales count as selling that company this stock round.
@@ -250,7 +250,7 @@ The Hungarian Bank is a second, smaller Austrian Bank that can be cashed out ear
 - **Sell.** It may be sold to any company for $1–100; both sides must agree.
 - **Power.** The owning company may close it at any point in its operating turn, not just in the buy-trains step, to buy one train from the supply at its printed price, less any trade-in. Using it closes it.
 
-**Tuning target.** The Hungarian Bank should be worth converting for a player who needs cash or shares before the 2+, and worth keeping for one who expects a long game. If it is always converted, or never, adjust its price or the Ganz sale cap.
+**Tuning target.** The Hungarian Bank should be worth converting for a player who needs cash or shares before the 3+, and worth keeping for one who expects a long game. If it is always converted, or never, adjust its price or the Ganz sale cap.
 
 ## Trade-ins
 
@@ -317,6 +317,15 @@ This section keeps 1871's company splits as they are and adds two pieces from 18
 - **Blocking privates.** A private that blocks a hex stops blocking it once a company buys the private.
 - **Station-rights pair.** Zadar and Virovitica Station Rights; both are in play at 3 players. At 4–5 players one of them or the Rijeka Lazaretto is removed at random (since 0.11.0; before, one of the pair, like Liège and Antwerpen in 1894).
 
+## Variant rules
+
+Two options, chosen when the game is set up. Both are off by default; the standard game uses neither.
+
+- **No trade-ins.** No company may trade in a train (see Trade-ins). Every train from the supply costs its printed
+  price, Wiener Neustadt and Ganz included. Rusts come only as trains run out, so the game runs longer.
+- **Extra 6H.** The roster has one more 6H: four instead of three. The 6H phase lasts one train longer, so the first
+  2+, and with it the 4H rust, comes one purchase later.
+
 ## Trains and phases
 
 The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is customary in 18xx, the train counts are the same at every player count. Prices are 1871's. Each rank has one more train than 1871, except 2H and 2+, which keep 1871's counts. As in 1871, Diesels are unlimited: the 10 printed are not a cap.
@@ -328,8 +337,8 @@ The roster is 1871's (hex trains, then plus trains, then 7 and Diesel). As is cu
 | 4H | $120 | 4 | — | 2 | 4 | + Green | Companies may buy the Station Rights, Wiener Neustadt and the Ancona Steamship |
 | 5H | $160 | 4 | 2H | 2 | 4 | Green | Start price 80 gone (Late space: 80) |
 | 6H | $180 | 3 | 3H | 2 | 4 | Green | — |
-| 2+ | $220 | 4 | 4H | 2 | 3 | Green | Hungarian Bank can no longer convert |
-| 3+ | $240 | 4 | 5H | 2 | 3 | Green | Start prices 65–58 only (Late space: 74) |
+| 2+ | $220 | 4 | 4H | 2 | 3 | Green | — |
+| 3+ | $240 | 4 | 5H | 2 | 3 | Green | Start prices 65–58 only (Late space: 74); Hungarian Bank can no longer convert |
 | 4+ | $200 | 3 | 6H | 3 | 3 | + Brown | Privates close (except the Austrian Bank, the Hungarian Bank and the Lika Survey Office); junction upgrades open |
 | 7 | $500 | 5 | 2+ | 3 | 2 | Brown | Start price 58 only (Late space: 65) |
 | Diesel | $600 | 10 | 3+, 4+ | 3 | 2 | + Gray (3 tiles) | Game end triggered; each 4+ still runs once and can't be sold; in the final 3 ORs only the gray tiles may be laid |
@@ -359,7 +368,7 @@ There are 16 privates, numbered P1 to P17 by face value in the first draft, so t
 | P11 | Kupa Steam Ferry | $120 | $15 | Comes with a 10% MÁV share. | First 4+ |
 | P12 | Austrian Bank | $140 | — | Union Bank charter (see Austrian Bank). | Never |
 | P13 | Narodna Concession | $140 | $25 | Public Line president's certificate. Priced below the other concessions because Bond holders can exchange and sell its shares early. | When the Public Line operates |
-| P14 | Hungarian Bank | $90 | $0 | Comes with a Public Line share; works as a second Austrian Bank. Until the first 2+, may convert into Ganz (holdings go to the owner). | Never, unless converted |
+| P14 | Hungarian Bank | $90 | $0 | Comes with a Public Line share; works as a second Austrian Bank. Until the first 3+, may convert into Ganz (holdings go to the owner). | Never, unless converted |
 | P15 | MÁV Concession | $150 | $20 | MÁV president's certificate. | When MÁV operates |
 | P16 | Südbahn Concession | $145 | $30 | Südbahn president's certificate. | When the Südbahn operates |
 | P17 | Ancona Steamship | $90 | $15 | May be sold to any company but the Luka for ½×–1× face, from the 4H phase until the first 4+. The buying company places its cheapest station on Ancona's reserved space, free, needing no connection and not counting as its station for that OR; for the rest of the game, even after this closes, its routes to Ancona add the largest other stop on the route (town or offboard included). | When sold, or on the first 4+ |

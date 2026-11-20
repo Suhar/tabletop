@@ -15,6 +15,7 @@ import {
     type HydratedEighteenXXState
 } from '@tabletop/18xx'
 import * as Type from 'typebox'
+import { TwoCrownsVariants } from './definition/gameConfig.js'
 
 export const TwoCrownsState = composeEighteenXXState(
     {
@@ -36,6 +37,8 @@ export const TwoCrownsState = composeEighteenXXState(
         tradeIns: Type.Optional(Type.Array(Type.String(), { uniqueItems: true })),
         // The train with the Rijeka Lazaretto's quarantine marker, which runs once more on its rust.
         quarantinedTrainId: Type.Optional(Type.String({ minLength: 1 })),
+        // The variant rules chosen at setup (1874design.md); absent in games set up before 0.14.0.
+        variants: Type.Optional(TwoCrownsVariants),
         // Optional because games set up before it was recorded lack it.
         unionBankDrawnCompanyId: Type.Optional(Type.String({ minLength: 1 }))
     },

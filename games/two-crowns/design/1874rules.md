@@ -1,8 +1,8 @@
-> **Generated, not authoritative.** Player rulebook for design 0.13.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.13.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
+> **Generated, not authoritative.** Player rulebook for design 0.14.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.14.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
 
 THE TWO CROWNS 1874
 
-**Rules, prototype version 0.13.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
+**Rules, prototype version 0.14.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
 
 Text <mark>highlighted like this</mark> differs from 1871. Components that were only renamed are listed below and are not highlighted. The map, tile and component illustrations are not reproduced here.
 
@@ -10,9 +10,10 @@ Text <mark>highlighted like this</mark> differs from 1871. Components that were 
 
   - **Three starting companies.** Three Luka shares are drawn: the Mainline (leased by MÁV), the Shortline (leased by the Südbahn) and the new Public Line. Their president's certificates are sold in the auction with the MÁV, Südbahn and Narodna Concessions. The Mainline starts floated, the Shortline floats once one more share is bought, and the Public Line floats when its concession is sold. Every player holds a Public Line Bond that pays $10 per OR and may be exchanged for a Public Line share in any stock round.
   - **Trade-ins.** Once per OR, a company buying a train from the supply may hand in its train of the rank just below for half its face value (after 1894's train upgrade), so presidents can bring the rusts on sooner. A 4+ or a 7 can't be traded in.
-  - **Hungarian Bank.** A second, smaller Austrian Bank that comes with a Public Line share. Until the first 2+ it may convert, during a stock round, into the Ganz Locomotive Works, handing its holdings to its owner.
+  - **Hungarian Bank.** A second, smaller Austrian Bank that comes with a Public Line share. Until the first 3+ it may convert, during a stock round, into the Ganz Locomotive Works, handing its holdings to its owner.
   - **A bigger table.** 3–5 players, 10 company spaces including a Late space, 16 privates and one more train in most ranks.
   - **1894 track ideas.** Junction cities split in two in brown, and there are only three gray tiles.
+  - **Variant rules.** Two options for the table to choose at setup: no trade-ins, and an extra 6H (see 15).
 
 |  |  |  |
 | :-: | :-: | :-: |
@@ -202,7 +203,7 @@ These rules assume familiarity with the 18xx system.
 
 <!-- end list -->
 
-  - At any time on their stock turn, a player may use the private powers of Pazin Tunnel Company, Sava River Bridge and Kvarner Shipbuilding to exchange for a share, in addition to the actions above. Exchanging but performing no other stock action forfeits any previous order for priority. Exchanging with these privates allows the player to exceed the 60% ownership limit, and they are not required to sell down. <mark>Exchanging a Public Line Bond for its share and converting the Hungarian Bank (until the first 2+) are also done this way, in addition to the player's action.</mark>
+  - At any time on their stock turn, a player may use the private powers of Pazin Tunnel Company, Sava River Bridge and Kvarner Shipbuilding to exchange for a share, in addition to the actions above. Exchanging but performing no other stock action forfeits any previous order for priority. Exchanging with these privates allows the player to exceed the 60% ownership limit, and they are not required to sell down. <mark>Exchanging a Public Line Bond for its share and converting the Hungarian Bank (until the first 3+) are also done this way, in addition to the player's action.</mark>
   - If a player does none of these actions, they **pass** and receive the lowest-numbered available player order card for the next stock round from the unused set of player order cards.
   - A player that has passed may re-enter the stock round if play returns to them. If they take an action they forfeit their turn order card for the next stock round. The player with the next larger number card of the other color then swaps their card for the returned card, repeating as necessary for the other players so that the existing relative player order is maintained.
 
@@ -667,7 +668,7 @@ At the end of the game, all cash and stock in the Austrian Bank is transferred t
 
 <mark>**Hungarian Bank.** It has no income. It starts with one 10% Public Line share and no cash, counts as one certificate and never closes unless converted. It works as the Austrian Bank: once per stock round its owner may buy one certificate or start a company for it, as their one action, the Hungarian Bank paying what it can and the owner the rest. It never sells voluntarily, its owner can't take assets out except by converting, dividends on its shares go into its treasury, its shares don't count against the owner's 60% limit, it can be a president, it exchanges shares in splits, and its cash and shares count for its owner at game end.</mark>
 
-<mark>**Converting to Ganz.** Until the first 2+ is bought, the owner may convert the Hungarian Bank on any of their stock turns, in addition to their action. It can only convert during a stock round, never during an operating round. The Hungarian Bank's cash and shares go to the owner, presidencies included, and the Ganz Locomotive Works takes its place. The owner must then sell to the bank pool, at market price, any shares that take them over 60% of a company and enough shares to get back within the certificate limit. Normal sell rules apply, except the 30% limit, and these sales count as selling that company this stock round. The owner can't convert if they couldn't make those sales.</mark>
+<mark>**Converting to Ganz.** Until the first 3+ is bought, the owner may convert the Hungarian Bank on any of their stock turns, in addition to their action. It can only convert during a stock round, never during an operating round. The Hungarian Bank's cash and shares go to the owner, presidencies included, and the Ganz Locomotive Works takes its place. The owner must then sell to the bank pool, at market price, any shares that take them over 60% of a company and enough shares to get back within the certificate limit. Normal sell rules apply, except the 30% limit, and these sales count as selling that company this stock round. The owner can't convert if they couldn't make those sales.</mark>
 
 <img class="private-card" src="cards/G.png" alt="Ganz Locomotive Works (G) card" width="320">
 
@@ -866,7 +867,6 @@ A valid route must contain at least two revenue centers (cities, towns, offboard
   - Yellow, green tiles available
   - Green offboard values
   - 4H rusts
-  - <mark>Hungarian Bank can no longer convert</mark>
 
 **3+**
 
@@ -876,6 +876,7 @@ A valid route must contain at least two revenue centers (cities, towns, offboard
   - Yellow, green tiles available
   - Green offboard values
   - 5H rusts
+  - <mark>Hungarian Bank can no longer convert</mark>
 
 **4+**
 
@@ -908,7 +909,14 @@ A valid route must contain at least two revenue centers (cities, towns, offboard
   - 3+ and 4+ rust (each 4+ runs once first)
   - Game ends at the completion of the next set (see 8.2)
 
-# **15 CHEAT SHEET**
+# **15 VARIANT RULES**
+
+<mark>The table may choose either or both of these when setting up the game. Neither is part of the standard game.</mark>
+
+  - <mark>**No trade-ins.** No company may trade in a train (7.6.5 does not apply). Every train from the bank costs its printed price, including those bought with Wiener Neustadt or Ganz.</mark>
+  - <mark>**Extra 6H.** The train roster has four 6H trains instead of three, so the first 2+, and the 4H rust with it, comes one train later.</mark>
+
+# **16 CHEAT SHEET**
 
 ### **SETUP**
 
@@ -964,7 +972,7 @@ A valid route must contain at least two revenue centers (cities, towns, offboard
 ### **PRIVATES**
 
   - Austrian Bank: acts exactly like another player. Its net worth goes to its owner at the end of the game. It can't voluntarily sell shares. It can be president of a company. It must spend all its cash before its owner pays for it. All normal player rules apply to it.
-  - <mark>Hungarian Bank: as the Austrian Bank, but starts with one Public Line share. Until the first 2+ it may convert into Ganz during a stock round, a one-use train purchase.</mark>
+  - <mark>Hungarian Bank: as the Austrian Bank, but starts with one Public Line share. Until the first 3+ it may convert into Ganz during a stock round, a one-use train purchase.</mark>
   - <mark>Ancona Steamship: sell to a non-Luka company from 4H until the first 4+, for ½× to 1× face. The buyer gets a free Ancona station and bonus.</mark>
   - Exchange shares: an action in addition to sell/buy in the stock round. You lose your pass if you only exchange in a turn.
   - <mark>All privates close on the 4+ (except the Austrian Bank).</mark>
