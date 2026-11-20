@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createCityTileFace, keepsExits, tileUpgradeMappings } from '@tabletop/18xx'
+import {
+    createCityTileFace,
+    keepsExits,
+    rotateTileFace,
+    tileExits,
+    tileUpgradeMappings,
+    type TileRotation
+} from '@tabletop/18xx'
 import { TwoCrownsTiles } from './tiles.js'
 import { TwoCrownsTrackRules, preservesTwoCrownsStops } from './trackRules.js'
 
@@ -33,5 +40,20 @@ describe('1874 junction and gray tiles', () => {
         expect(relabels('H12', '18xx:6')).toBe(true)
         expect(relabels('H12', 'two-crowns:C1')).toBe(true)
         expect(relabels('H12', 'two-crowns:5X')).toBe(false)
+    })
+    it('fits Pula’s three open edges in green and brown', () => {
+        // Rovinj, D14 and Ancona: Pula's edges in a row (0.12.0 and later).
+        const open = [2, 3, 4]
+        const fits = (id: string) =>
+            ([0, 1, 2, 3, 4, 5] as TileRotation[]).filter((rotation) =>
+                [...tileExits(rotateTileFace(tile(id), rotation))].every((edge) =>
+                    open.includes(edge)
+                )
+            )
+        expect(fits('X2')).toEqual([])
+        const [rotation] = fits('X3')
+        expect(rotation).toBeDefined()
+        const green = rotateTileFace(tile('X3'), rotation!)
+        expect(keepsExits(green, rotateTileFace(tile('P1'), rotation!))).toBe(true)
     })
 })

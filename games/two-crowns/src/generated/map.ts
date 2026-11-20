@@ -324,7 +324,7 @@ export function twoCrownsLocations(
         ...locations('M5', town('white', [[]], 0)),
         ...locations('N8', town('white', [[], []], 0)),
         ...locations('N10', city('white', [], 0, 1, ['J']), {
-            terrain: { cost: 80, kinds: ['water'] },
+            terrain: { cost: 60, kinds: ['water'] },
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
         ...locations('Q9', town('white', [[], []], 0)),
@@ -337,10 +337,10 @@ export function twoCrownsLocations(
         ...locations('J10 J12 I9 H8', track('white', []), {
             terrain: { cost: 80, kinds: ['water'] }
         }),
-        ...locations('M11', town('white', [[]], 0), { terrain: { cost: 80, kinds: ['water'] } }),
+        ...locations('M11', town('white', [[]], 0), { terrain: { cost: 60, kinds: ['water'] } }),
         ...locations('J4 M9 R10', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('S11', track('white', [])),
-        ...locations('O11', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
+        ...locations('O11', track('white', []), { terrain: { cost: 60, kinds: ['water'] } }),
         ...locations('L6', track('white', []), { terrain: { cost: 80, kinds: ['water'] } }),
         ...locations('M3 O5 Q7 R8', track('white', []), {
             terrain: { cost: 60, kinds: ['water'] }

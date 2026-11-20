@@ -1,8 +1,8 @@
-> **Generated, not authoritative.** Player rulebook for design 0.12.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.12.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
+> **Generated, not authoritative.** Player rulebook for design 0.13.0, written from the design draft and the 1871 rules. Copied from the Google Doc "The Two Crowns 1874 — Rules" of 2026-11-02 (design 0.4.0), with the changes from 0.5.0 to 0.13.0 patched in by hand. The file name carries the design version. Where it disagrees with `1874design.md`, the design draft wins. Regenerate it when the minor version changes.
 
 THE TWO CROWNS 1874
 
-**Rules, prototype version 0.12.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
+**Rules, prototype version 0.13.0.** These are the rules of The Old Prince 1871 as implemented on Board Together ([justinkwaugh/tabletop, games/the-old-prince](https://github.com/justinkwaugh/tabletop/tree/main/games/the-old-prince)), changed for The Two Crowns 1874.
 
 Text <mark>highlighted like this</mark> differs from 1871. Components that were only renamed are listed below and are not highlighted. The map, tile and component illustrations are not reproduced here.
 
@@ -516,7 +516,7 @@ These rules assume familiarity with the 18xx system.
 
 ### **PLAIN HEXES**
 
-Some show a terrain cost. <mark>Mountains and the Sava and Kupa cost $80; the Drava costs $60. The rivers run between cities, so most routes cross them.</mark>
+Some show a terrain cost. <mark>Mountains and the Sava and Kupa cost $80; the Drava costs $60. Where the Sava runs through Novska, Lipovljani and the river hex south-east of Novska, it costs $60. The rivers run between cities, so most routes cross them.</mark>
 
 ### **CITIES**
 
@@ -725,7 +725,7 @@ Track is placed on the map to create routes for trains. Yellow track is laid on 
 
 <mark>Some cities are labeled X (the Luka homes), Z (Zagreb), R (Rijeka) or P (Pula) on the map. These upgrade to normal yellow cities but have special upgrades in green and brown.</mark> When upgrading an X tile, you may select any upgrade that preserves the route and follows the upgrade rules. The CX tile follows the normal X upgrade path for green and brown. <mark>There is a special gray CX tile reserved for Karlovac.</mark>
 
-<mark>In brown, Z, R and X cities offer a choice: 2 slots at the higher value or 3 slots at the lower. Pula has only three open sides: in green it takes the one X tile that fits (X2), and in brown the three-sided P tile.</mark>
+<mark>In brown, Z, R and X cities offer a choice: 2 slots at the higher value or 3 slots at the lower. Pula has only three open sides: in green it takes the one X tile that fits (X3), and in brown the three-sided P tile.</mark>
 
 ### **JUNCTION CITIES (J)**
 
