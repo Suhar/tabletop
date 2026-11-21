@@ -230,7 +230,7 @@ export function twoCrownsLocations(
             ])
         ),
         ...locations(
-            'R12 C11 D10 D14 F8 G13 I13 I5 I7 J6 K3 K9 M7 O7 O9 P4 P6 I17 O3 R6 H6 T8 K19',
+            'R12 C11 D10 D14 F8 G13 I13 I5 I7 J6 K3 K9 M7 O7 O9 P4 P6 O3 R6 H6 T8 K19 K17',
             track('white', [])
         ),
         ...locations(
@@ -288,7 +288,6 @@ export function twoCrownsLocations(
             upgradeLabels: [{ color: 'yellow', label: 'X' }]
         }),
         ...locations('N4', city('white', [], 0, 1, ['J']), {
-            terrain: { cost: 60, kinds: ['water'] },
             upgradeLabels: [{ color: 'brown', label: 'J' }]
         }),
         ...locations('N6', city('white', [], 0, 1, ['X']), {
@@ -331,7 +330,7 @@ export function twoCrownsLocations(
         ...locations('I19', town('white', [[]], 0)),
         ...locations('J18', town('white', [[], []], 0)),
         ...locations('L20', town('white', [[]], 0)),
-        ...locations('F10 G9 H10 H14 J16 M21 K17 E9 L12', track('white', []), {
+        ...locations('F10 G9 H10 H14 J16 M21 E9 L12 I17', track('white', []), {
             terrain: { cost: 80, kinds: ['mountain'] }
         }),
         ...locations('J10 J12 I9 H8', track('white', []), {
