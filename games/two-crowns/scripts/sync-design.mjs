@@ -56,6 +56,15 @@ if (missing.length > 0) {
     console.error(`The design repo at ${clone} has no ${missing.join(', ')}`)
     process.exit(1)
 }
+// 18xx Maker prints the map's subtitle on the map and on every export, so it names the version.
+const subtitle =
+    JSON.parse(readFileSync(join(clone, 'TwoCrowns1874.json'), 'utf8')).info?.subtitle ?? ''
+if (subtitle !== `Prototype ${version}`) {
+    console.error(
+        `TwoCrowns1874.json's info.subtitle is "${subtitle}"; set it to "Prototype ${version}" to match VERSION`
+    )
+    process.exit(1)
+}
 const copies = {
     ...Object.fromEntries(authorities.map((file) => [file, file])),
     '1874rules.md': rulebook
