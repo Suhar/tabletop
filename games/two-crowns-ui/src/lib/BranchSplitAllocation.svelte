@@ -84,6 +84,10 @@
                                             .name}
                                         color={TwoCrownsTrainColors[train.definitionId]}
                                         obsolete={isObsoleteTrain(train)}
+                                        tokens={session.presentation.trainTokens?.(
+                                            session.gameState,
+                                            train
+                                        )}
                                     />
                                 </div>
                             {:else}<span class="empty">None</span>{/each}

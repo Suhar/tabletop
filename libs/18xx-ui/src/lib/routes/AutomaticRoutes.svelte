@@ -100,6 +100,7 @@
             {subsidyName}
             bonusName={(sourceId) => session.names.routeBonus(sourceId)}
             trainName={(id) => session.trainDepot.trainDefinition(id).name}
+            trainTokens={(train) => session.presentation.trainTokens?.(session.gameState, train)}
         />
         <span class="buttons">
             {#if drawn}<button

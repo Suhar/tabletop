@@ -13,10 +13,12 @@ import {
     type EighteenXXState,
     type EighteenXXTitleRules,
     type PurchaseOfferRequest,
+    type Train,
     type TrainPurchaseDetails,
     type TrainPurchaseRequest,
     isCompanyPurchaseOffer
 } from '@tabletop/18xx'
+import type { TrainTokens } from './titlePresentation.js'
 import type { ModuleSession } from './moduleSession.js'
 import { StagedSelection, singleChoice } from './stagedSelection.svelte.js'
 import {
@@ -43,7 +45,8 @@ export class TrainBuyingModule {
     )
     constructor(
         private readonly session: TrainBuyingSession,
-        private readonly purchaseOptions: PurchaseOptions
+        private readonly purchaseOptions: PurchaseOptions,
+        private readonly trainTokens: (train: Train) => TrainTokens | undefined = () => undefined
     ) {}
 
     private buying = $derived.by(() => this.session.state.machineState === 'BuyingTrains')
@@ -105,16 +108,25 @@ export class TrainBuyingModule {
     exchangeChoices = $derived.by(() => {
         const choices = new Map<
             string,
-            { exchange: TrainPurchaseDetails; tradedDefinitionId: string }
+            {
+                exchange: TrainPurchaseDetails
+                tradedDefinitionId: string
+                tradedTokens?: TrainTokens
+            }
         >()
         for (const exchange of this.exchanges) {
             const traded = this.session.state.trainInventory.trains.find(
                 (train) => train.id === exchange.exchangeTrainId
             )
             assertExists(traded, 'A train exchange trades in an owned train')
-            const key = `${exchange.definitionId}:${traded.definitionId}:${exchange.price}`
+            const tradedTokens = this.trainTokens(traded)
+            const key = `${exchange.definitionId}:${traded.definitionId}:${exchange.price}:${tradedTokens?.count ?? 0}:${tradedTokens?.label ?? ''}`
             if (!choices.has(key))
-                choices.set(key, { exchange, tradedDefinitionId: traded.definitionId })
+                choices.set(key, {
+                    exchange,
+                    tradedDefinitionId: traded.definitionId,
+                    tradedTokens
+                })
         }
         return [...choices.values()]
     })

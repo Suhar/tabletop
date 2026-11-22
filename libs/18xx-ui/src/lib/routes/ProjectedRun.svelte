@@ -28,6 +28,7 @@
             label="Projected train income"
             subsidyName={session.presentation.runSubsidyName}
             trainName={(id) => session.trainDepot.trainDefinition(id).name}
+            trainTokens={(train) => session.presentation.trainTokens?.(session.gameState, train)}
         />
         {#if !projection.solution.exhaustive}<small>Best routes found within the search time.</small
             >{/if}

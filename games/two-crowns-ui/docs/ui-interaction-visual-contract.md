@@ -72,6 +72,27 @@ neither operated nor sold out, in a full tranche before it) carries a small flat
 at its token's top-right, in both places. The key sits above the token so it never
 covers a caption. Neither the lock nor the Tranches label explains the wait.
 
+### Luka homes
+
+Trigger: always. People need to find where each of the eight Luka companies starts.
+
+- A Luka station on the map prints the initials of the company whose home it holds, on
+  the Luka's pink, until that company's own token replaces it. The same holds in track
+  previews and History View. It is presentation only: the station is the Luka's.
+- Homes in the table header opens a list of share number, company, city and hex. A city
+  closes the list and shows itself on the map.
+- A Luka share's name, its auction description and a company's start name the home city.
+
+### Quarantine label
+
+Trigger: a train carries the Rijeka Lazaretto's marker.
+
+- That train's badge has a Lazaretto label under it wherever an owned train is shown or
+  chosen: company cards and order, spreadsheet, routes, purchases between companies,
+  trade-ins, discards and split allocation. An identical unmarked train has none, and
+  the two are separate trade-in choices.
+- The label follows displayed state and adds no selection.
+
 ### Title presentation
 
 These change shared presentation without adding interaction:

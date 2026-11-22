@@ -2972,3 +2972,15 @@ the header element, so the header's turn-attention colors do not reach it.
 
 `turnRestart.spec.ts` covers operating and stock turns, consecutive companies, a turn
 finished before an automatic company, interrupted turns, and other players' actions.
+
+## Trains and stations set apart by a title
+
+- **Train label.** A title's `trainTokens` may give a train a `label` as well as, or in
+  place of, pips. It prints under the badge wherever that owned train is shown or chosen,
+  and trade-in choices that differ by label or token count are never merged. This covers
+  markers on one train (1874's quarantine) and counted markers (1862's warranties);
+  titles without `trainTokens` are unchanged.
+- **Station by location.** A title's `locationStations` may print one company's station
+  differently at a location, as where a pool company's stations each hold another
+  company's home. Ownership and rules do not follow the appearance; neutral, closed and
+  shared appearances take precedence.

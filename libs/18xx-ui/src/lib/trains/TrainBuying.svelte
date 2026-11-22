@@ -180,7 +180,7 @@
                     </div>
                     {#if session.trainBuying.exchangeChoices.length}<h3>Trade in</h3>
                         <div class="trains">
-                            {#each session.trainBuying.exchangeChoices as { exchange, tradedDefinitionId } (`${exchange.definitionId}:${tradedDefinitionId}:${exchange.price}`)}
+                            {#each session.trainBuying.exchangeChoices as { exchange, tradedDefinitionId, tradedTokens } (exchange.exchangeTrainId + ':' + exchange.definitionId + ':' + exchange.price)}
                                 {@const definition = session.trainDepot.trainDefinition(
                                     exchange.definitionId
                                 )}
@@ -204,6 +204,7 @@
                                                 tradedDefinitionId
                                             ).name}
                                             color={trainColors[tradedDefinitionId]}
+                                            tokens={tradedTokens}
                                         /></small
                                     >
                                 </div>

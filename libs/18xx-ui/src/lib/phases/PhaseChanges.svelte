@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { controllingOwner } from '@tabletop/18xx'
+    import { controllingOwner, type Train } from '@tabletop/18xx'
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import TrainBadge from '../trains/TrainBadge.svelte'
+    import { labelledTrainName } from '../trains/labelledTrainName.js'
     import { trainCount } from '../table/awaitedDecision.js'
     let { session, showUndo = true }: { showUndo?: boolean; session: EighteenXXSessionView } =
         $props()
@@ -15,6 +16,11 @@
     const limit = $derived(session.discard.trains.length - session.discard.excess)
     const trainName = (definitionId: string) =>
         session.trainDepot.trainDefinition(definitionId).name
+    const markedTrainName = (train: Train) =>
+        labelledTrainName(
+            trainName(train.definitionId),
+            session.presentation.trainTokens?.(gameState, train)
+        )
     const event = $derived(session.discard.phaseEvent)
     const consequences = $derived.by((): { definitionId?: string; text: string }[] => {
         if (!event) return []
@@ -109,13 +115,14 @@
             <div class="choices">
                 {#each session.discard.trains as train (train.id)}<button
                         class="train"
-                        aria-label={`Discard ${trainName(train.definitionId)}`}
+                        aria-label={`Discard ${markedTrainName(train)}`}
                         disabled={!session.discard.canDiscard}
                         aria-pressed={session.discard.selection === train.id}
                         onclick={() => session.discard.select(train.id)}
                         ><TrainBadge
                             name={trainName(train.definitionId)}
                             color={trainColors[train.definitionId]}
+                            tokens={session.presentation.trainTokens?.(gameState, train)}
                         /></button
                     >{/each}
             </div>
@@ -124,7 +131,7 @@
                         class="action-button"
                         disabled={!session.discard.canDiscard}
                         onclick={() => session.discard.confirm()}
-                        >Discard {trainName(selected.definitionId)}</button
+                        >Discard {markedTrainName(selected)}</button
                     >{/if}
                 {#if showUndo}<button
                         disabled={session.busy ||

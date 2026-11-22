@@ -37,11 +37,13 @@
     >
 {/snippet}
 
-{#if tokens}<span class="with-tokens" class:carrying={tokens.count > 0}
+{#if tokens}<span class="with-tokens" class:carrying={tokens.count > 0 || !!tokens.label}
         >{@render badge()}{#if tokens.count}<TrainTokenPips
                 count={tokens.count}
                 lapsing={tokens.lapsing}
-            />{/if}</span
+            />{/if}{#if tokens.label}<span class="token-label" aria-hidden="true"
+                >{tokens.label}</span
+            >{/if}</span
     >{:else}{@render badge()}{/if}
 
 <style>
@@ -69,6 +71,15 @@
     .carrying {
         gap: 2px;
         padding-bottom: 2px;
+    }
+    .token-label {
+        padding: 0 0.3em;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 11px;
+        white-space: nowrap;
     }
     .obsolete {
         clip-path: inset(0 round 3px);

@@ -67,6 +67,11 @@ export type MapViewDefinition = {
      */
     publishedStations?: Readonly<Record<string, StationAppearance>>
     /**
+     * How a company's station prints at particular locations, by company then location id, such
+     * as a pool company's stations that each hold another company's home.
+     */
+    locationStations?: Readonly<Record<string, Readonly<Record<string, StationAppearance>>>>
+    /**
      * How a station that another company shares through station access prints, by the access's
      * source, such as one token two corporations hold jointly.
      */
@@ -232,7 +237,7 @@ export function withPlayedMarkerArt(
 /** How a map view prints stations: by company, shared, and neutral. */
 export type StationViews = Pick<
     MapViewDefinition,
-    'stations' | 'sharedStations' | 'neutralStation' | 'closedCompanyStation'
+    'stations' | 'locationStations' | 'sharedStations' | 'neutralStation' | 'closedCompanyStation'
 >
 
 /** The placed stations as map tokens; the companies say which are closed. */
@@ -240,6 +245,7 @@ export function stationMapTokens(
     state: StationState & { companies?: readonly Pick<Company, 'id' | 'closed'>[] },
     {
         stations: appearances,
+        locationStations,
         sharedStations: shared = {},
         neutralStation,
         closedCompanyStation
@@ -266,6 +272,7 @@ export function stationMapTokens(
             neutral ??
             closed ??
             (access && shared[access.sourceId]) ??
+            locationStations?.[station.companyId]?.[station.position.locationId] ??
             appearances[station.companyId]
         assertExists(appearance, `Missing station appearance: ${station.companyId}`)
         return [{ id: station.id, ...station.position, ...appearance }]

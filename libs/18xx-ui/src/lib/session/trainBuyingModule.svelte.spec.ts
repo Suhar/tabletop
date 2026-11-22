@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TrainDepot } from '@tabletop/18xx'
 import { minimalPlayState, minimalTrainRules, minimalTransferRules } from '@tabletop/18xx/testing'
 import { TrainBuyingModule, type TrainBuyingSession } from './trainBuyingModule.svelte.js'
 import { testSession } from './moduleTestSession.js'
@@ -131,5 +132,58 @@ describe('TrainBuyingModule', () => {
         module.setCompanyTrainPrice(81)
         expect(module.companyEvaluation?.reason).toBe('The buyer cannot afford the offer.')
         expect(module.companyContributions).toEqual([])
+    })
+
+    it('offers a labelled train and an identical unlabelled one as separate trade-ins', () => {
+        const owner = { kind: 'company', companyId: 'R' } as const
+        const depot = new TrainDepot({
+            id: 'trains',
+            trains: [
+                {
+                    id: '2',
+                    name: '2',
+                    price: 100,
+                    distance: { measure: 'revenue-centers', maximum: 2 }
+                }
+            ],
+            supply: [{ definitionId: '2', count: 3 }]
+        })
+        const inventory = depot.createInventory()
+        const [plain, marked] = inventory.trains.map((train) => train.id)
+        for (const trainId of [plain, marked]) depot.purchase(inventory, trainId, '2', owner)
+        const state: TrainBuyingSession['state'] = {
+            ...minimalPlayState(),
+            machineState: 'BuyingTrains',
+            usedPrivatePowerIds: [],
+            cash: [{ owner, amount: 500 }],
+            trainPurchaseStep: { companyId: 'R', purchasedTrainIds: [] },
+            trainInventory: inventory
+        }
+        const { session } = testSession(
+            state,
+            {
+                trainRules: { ...minimalTrainRules, depot, exchangePrice: () => 50 },
+                transferRules: minimalTransferRules
+            },
+            ['BuyTrain']
+        )
+        const merged = new TrainBuyingModule(session, () => [])
+        expect(merged.exchangeChoices).toHaveLength(1)
+        const labelled = new TrainBuyingModule(
+            session,
+            () => [],
+            (train) =>
+                train.id === marked
+                    ? { count: 0, lapsing: false, description: 'Marked', label: 'Marker' }
+                    : undefined
+        )
+        expect(labelled.exchangeChoices.map((choice) => choice.exchange.exchangeTrainId)).toEqual([
+            plain,
+            marked
+        ])
+        expect(labelled.exchangeChoices.map((choice) => choice.tradedTokens?.label)).toEqual([
+            undefined,
+            'Marker'
+        ])
     })
 })
