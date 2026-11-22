@@ -19,6 +19,7 @@
     } from '@tabletop/18xx'
     import type { TrainTokens } from '../session/titlePresentation.js'
     import type { StationAppearance } from '../maps/stationPresentation.js'
+    import { labelledTrainName } from '../trains/labelledTrainName.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import CompanyOrderOverview from './CompanyOrderOverview.svelte'
@@ -178,7 +179,7 @@
                 data-company-id={company.id}
                 class:completed
                 aria-current={currentCompanyId === company.id ? 'step' : undefined}
-                aria-label={`${companyName(company.id)}, cash ${amount === undefined ? 'not applicable' : amount}, trains ${trains.map((train) => (train.obsolete ? `${train.name} obsolete` : train.name)).join(', ') || 'none'}, ${remainingTokens.length} ${stationToken}s remaining${currentCompanyId === company.id ? ', operating' : completed ? ', operated' : ''}`}
+                aria-label={`${companyName(company.id)}, cash ${amount === undefined ? 'not applicable' : amount}, trains ${trains.map((train) => `${labelledTrainName(train.name, train.tokens)}${train.obsolete ? ' obsolete' : ''}`).join(', ') || 'none'}, ${remainingTokens.length} ${stationToken}s remaining${currentCompanyId === company.id ? ', operating' : completed ? ', operated' : ''}`}
                 title={companyName(company.id)}
             >
                 <button

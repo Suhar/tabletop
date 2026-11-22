@@ -59,6 +59,7 @@ export { default as FinanceMap } from './maps/FinanceMap.svelte'
 export { default as TrainBuying } from './trains/TrainBuying.svelte'
 
 export { default as PrivateCompanies } from './privates/PrivateCompanies.svelte'
+export { default as PlaceLink } from './places/PlaceLink.svelte'
 export { setPlaceLinks, type PlaceLinks } from './places/placeLinks.js'
 export { default as PlaceText } from './places/PlaceText.svelte'
 

@@ -102,9 +102,10 @@ export type CompanyMark = {
 }
 /**
  * Tokens a train carries, such as warranties, drawn as pips under its badge. A train that only
- * its tokens keep from rusting is `lapsing`, and its badge is striped.
+ * its tokens keep from rusting is `lapsing`, and its badge is striped. A marker that sets one
+ * train apart from others of its kind has a `label`, printed under its badge.
  */
-export type TrainTokens = { count: number; lapsing: boolean; description: string }
+export type TrainTokens = { count: number; lapsing: boolean; description: string; label?: string }
 export type PlaceConnection = { from: string; to: string }
 
 /** Shown under a company's header: the companies it was formed from, such as a System's shells, or a connection it can show on the map. */
@@ -299,7 +300,7 @@ export type TitlePresentation<State extends GameState = EighteenXXState> = {
      */
     companyTokenBadges?(state: State, companyId: string): readonly TokenBadge[]
     /** The tokens on a company's train. A title that draws them gives every train's, so badges line up at the top. */
-    trainTokens?(state: State, train: Train): TrainTokens
+    trainTokens?(state: State, train: Train): TrainTokens | undefined
     /**
      * Whether a company's president's mark gives the size of the president's certificate in
      * shares, as P3, where the president chooses it, as for 1880's majors (§XII).

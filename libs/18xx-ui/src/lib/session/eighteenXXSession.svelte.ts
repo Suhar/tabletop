@@ -1,4 +1,5 @@
 import type { EighteenXXRuntimeSchema, TitleStateSchema } from '@tabletop/18xx'
+import { labelledTrainName } from '../trains/labelledTrainName.js'
 import { constructionOperatingSteps, operatingStepIndex } from '../table/operatingStep.js'
 import {
     privateIncome,
@@ -342,7 +343,8 @@ export class EighteenXXSession<
     )
     readonly trainBuying = new TrainBuyingModule(
         this.moduleSession,
-        () => this.decisions.purchaseOptions
+        () => this.decisions.purchaseOptions,
+        (train) => this.presentation.trainTokens?.(this.gameState, train)
     )
     get requiresStationTokenChoice(): boolean {
         return false
@@ -742,7 +744,10 @@ export class EighteenXXSession<
     private trainName(state: State, trainId: string) {
         const train = state.trainInventory.trains.find((train) => train.id === trainId)
         assertExists(train, `Train ${trainId} requires its inventory record`)
-        return this.trainDepot.trainDefinition(train.definitionId).name
+        return labelledTrainName(
+            this.trainDepot.trainDefinition(train.definitionId).name,
+            this.presentation.trainTokens?.(state, train)
+        )
     }
     /**
      * A title's own optional actions in the operating turn, each an entry in the operating mode

@@ -12,6 +12,7 @@ import {
     type StationAppearance,
     type TileLayout
 } from '@tabletop/18xx-ui'
+import { LukaHomes } from './lukaHomes.js'
 import ISTToken from './images/tokens/IST.svg'
 import ZAGToken from './images/tokens/ZAG.svg'
 import POSToken from './images/tokens/POS.svg'
@@ -115,13 +116,14 @@ export const TwoCrownsSharedCityLayouts: Readonly<
         ...sharedCity('city-1', 5, 21.5, 120)
     },
     'two-crowns:J8': { ...sharedCity('city-0', 5, 20, 120), ...sharedCity('city-1', 4, 20, 60) },
-    'two-crowns:J9': { ...sharedCity('city-0', 0, 19.5, 0), ...sharedCity('city-1', 4, 25.5, 60) }
+    'two-crowns:J9': { ...sharedCity('city-0', 0, 19.5, 0), ...sharedCity('city-1', 2, 25.5, 120) }
 }
 
 /**
  * On junctions whose tracks cross, the branch positions crowd the cities, which then shrink; these
  * stand far enough along their tracks to keep full size, as on the 1894 split tile with the same
- * branches (J6 is X16; J8 is X19 with its cities numbered the other way round).
+ * branches (J6 is X16; J8 is X19 with its cities numbered the other way round). J9's are the
+ * design's: its curve's city stands to one side, clear of the straight.
  */
 const CrossingJunctionLayouts: Readonly<Record<string, TileLayout>> = {
     'two-crowns:J6': {
@@ -129,6 +131,9 @@ const CrossingJunctionLayouts: Readonly<Record<string, TileLayout>> = {
     },
     'two-crowns:J8': {
         nodePositions: { 'city-0': { x: -2.2, y: 25.4 }, 'city-1': { x: -2.2, y: -25.4 } }
+    },
+    'two-crowns:J9': {
+        nodePositions: { 'city-0': towardTileEdge(0, 21.65), 'city-1': towardTileEdge(2, 25) }
     }
 }
 
@@ -158,6 +163,11 @@ export const TwoCrownsMapView: MapViewDefinition = {
     tileSet: TwoCrownsTileSet,
     layouts: TwoCrownsTileLayouts,
     sharedCityLayouts: TwoCrownsSharedCityLayouts,
+    locationStations: {
+        LUKA: Object.fromEntries(
+            LukaHomes.map((home) => [home.locationId, { color: LukaColor, label: home.companyId }])
+        )
+    },
     stations: Object.fromEntries([
         ...TwoCrownsLukaCompanies.map((company) =>
             station(company.companyId, company.companyId, company.color)

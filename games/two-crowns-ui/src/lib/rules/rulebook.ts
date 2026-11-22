@@ -39,7 +39,7 @@ const Cards: Readonly<Record<string, string>> = {
     'BD.png': cardBD,
     'P.png': cardP
 }
-export const RulebookVersion = '0.15.0'
+export const RulebookVersion = '0.15.1'
 export const RulebookContents: readonly { id: string; title: string }[] = [
     { id: 'rule-changes-from-1871', title: 'Changes from 1871' },
     { id: 'rule-1-introduction', title: '1 Introduction' },

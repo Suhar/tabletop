@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MoneyFormat } from '../presentation/money.js'
     import { isObsoleteTrain, type OperatingResult, type Train } from '@tabletop/18xx'
+    import type { TrainTokens } from '../session/titlePresentation.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
     import { capitalized } from '../presentation/words.js'
     import { DefaultRunSubsidyName, routeColor } from './routePresentation.js'
@@ -10,6 +11,7 @@
         result,
         trains,
         trainName,
+        trainTokens,
         trainColors,
         onFocusRoute,
         onChooseTrain,
@@ -27,6 +29,7 @@
         result: OperatingResult
         trains: readonly Train[]
         trainName: (definitionId: string) => string
+        trainTokens?: (train: Train) => TrainTokens | undefined
         trainColors: Readonly<Record<string, string>>
         onFocusRoute?: (trainId: string) => void
         onChooseTrain?: (trainId: string) => void
@@ -89,6 +92,7 @@
                                 name={trainName(train.definitionId)}
                                 color={trainColors[train.definitionId]}
                                 obsolete={isObsoleteTrain(train)}
+                                tokens={trainTokens?.(train)}
                             />{#each attached(route?.attachmentIds) as stock (stock.id)}<span
                                     class="attached"
                                     title={`${trainName(stock.definitionId)} attached`}

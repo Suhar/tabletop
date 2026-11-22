@@ -37,6 +37,11 @@
         }
         return [...groups].map(([companyId, trains]) => ({ companyId, trains }))
     })
+    const trainTokens = (trainId: string) => {
+        const train = session.gameState.trainInventory.trains.find((train) => train.id === trainId)
+        assertExists(train, 'A company train choice requires its train')
+        return session.presentation.trainTokens?.(session.gameState, train)
+    }
     const selectedTrain = $derived.by(() => {
         const asset = response?.asset ?? request?.asset
         if (asset?.kind !== 'train') return undefined
@@ -44,7 +49,10 @@
             (train) => train.id === asset.trainId
         )
         assertExists(train, 'Selected purchase requires a train')
-        return session.trainDepot.trainDefinition(train.definitionId)
+        return {
+            definition: session.trainDepot.trainDefinition(train.definitionId),
+            tokens: trainTokens(train.id)
+        }
     })
 </script>
 
@@ -63,7 +71,11 @@
             />
             <strong>{session.actionCompanyName(response.buyer.companyId)}</strong>
             <span>offers {money(response.price)} for</span>
-            <TrainBadge name={selectedTrain.name} color={trainColors[selectedTrain.id]} />
+            <TrainBadge
+                name={selectedTrain.definition.name}
+                color={trainColors[selectedTrain.definition.id]}
+                tokens={selectedTrain.tokens}
+            />
             <span>from</span>
             {#if response.seller.kind === 'company'}
                 <CompanyToken
@@ -85,7 +97,11 @@
             {#if request.seller.kind === 'company'}<span class="treasury"
                     >has {treasury(request.seller.companyId)}</span
                 >{/if}
-            <TrainBadge name={selectedTrain.name} color={trainColors[selectedTrain.id]} />
+            <TrainBadge
+                name={selectedTrain.definition.name}
+                color={trainColors[selectedTrain.definition.id]}
+                tokens={selectedTrain.tokens}
+            />
         </div>
         <div class="controls">
             <label
@@ -138,6 +154,9 @@
                                     name={session.trainDepot.trainDefinition(choice.definitionId)
                                         .name}
                                     color={trainColors[choice.definitionId]}
+                                    tokens={choice.request.asset.kind === 'train'
+                                        ? trainTokens(choice.request.asset.trainId)
+                                        : undefined}
                                 />
                             </button>
                         {/each}

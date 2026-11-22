@@ -1,11 +1,5 @@
 <script lang="ts">
-    import {
-        isConvertCharter,
-        isQuarantineTrain,
-        isSplitCompany,
-        TwoCrownsCompanies,
-        TwoCrownsMap
-    } from '@tabletop/two-crowns'
+    import { isConvertCharter, isQuarantineTrain, isSplitCompany } from '@tabletop/two-crowns'
     import OpeningAuction from './OpeningAuction.svelte'
     import type { GameSession } from '@tabletop/frontend-components'
     import type { TwoCrownsState, HydratedTwoCrownsState } from '@tabletop/two-crowns'
@@ -20,6 +14,8 @@
     import { createRouteWorker } from './routeWorker.js'
     import BranchSplitPreview from './BranchSplitPreview.svelte'
     import Tranches from './Tranches.svelte'
+    import LukaHomesButton from './LukaHomesButton.svelte'
+    import { lukaHome } from './lukaHomes.js'
     import RulesButton from './RulesButton.svelte'
     let { gameSession }: { gameSession: GameSession<TwoCrownsState, HydratedTwoCrownsState> } =
         $props()
@@ -27,24 +23,17 @@
         const privateCompany = session.privates.companies.find((company) => company.id === id)
         if (privateCompany) return { description: privateCompany.description }
         const share = session.gameState.certificates.find((certificate) => certificate.id === id)
-        const company =
-            share?.kind === 'share'
-                ? TwoCrownsCompanies.find((company) => company.number === share.number)
+        const home =
+            share?.kind === 'share' && share.number !== undefined
+                ? lukaHome(share.number)
                 : undefined
-        const locationId = company ? numberedShareLocation('LUKA', company.number) : undefined
         return {
-            locationId,
-            description: `A numbered Luka share associated with ${company?.name}. Receives a share of the Luka's dividends while outstanding. It may be exchanged when the associated railway is formed and is worth $80 at game end.`
+            locationId: home?.locationId,
+            description: `A numbered Luka share associated with ${home?.name}, which starts in ${home?.place}. Receives a share of the Luka's dividends while outstanding. It may be exchanged when the associated railway is formed and is worth $80 at game end.`
         }
     }
     function numberedShareLocation(companyId: string, number: number) {
-        if (companyId !== 'LUKA') return undefined
-        const company = TwoCrownsCompanies.find((company) => company.number === number)
-        return TwoCrownsMap.definition.locations.find((location) =>
-            location.reservations?.some(
-                (reservation) => reservation.companyId === company?.companyId
-            )
-        )?.id
+        return companyId === 'LUKA' ? lukaHome(number)?.locationId : undefined
     }
     const session = $derived(requireTwoCrownsSession(gameSession))
     const privateOperationDescription = (id: string, companyId: string) =>
@@ -148,7 +137,7 @@
                 />
             {/if}
         {/snippet}
-        {#snippet headerActions()}<RulesButton />{/snippet}
+        {#snippet headerActions()}<LukaHomesButton {session} /><RulesButton />{/snippet}
         {#snippet gameInformation()}
             <div class="tranches" aria-label="Company tranches">
                 <span class="tranches-label">Tranches</span>
