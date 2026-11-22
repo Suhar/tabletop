@@ -104,6 +104,12 @@ on the instance, `roles/iam.serviceAccountUser` on the VM's service account, and
 `compute.projects.get` and `compute.instances.get`; SSH runs as that account, named through
 `CLOUDSDK_CORE_ACCOUNT` from the key file.
 
+### SuharTabletop's private bucket
+
+Unlike upstream, this site's artifact bucket is private, so `deploy-game` builds UI bundles
+without a public asset address: their images and fonts keep site paths
+(`/games/<id>/ui/<version>/assets/`), which the backend serves. Keep this when merging upstream.
+
 ### History, rollback, and switch
 
 Every manifest change appends to a publication history: per game a list of logic and UI

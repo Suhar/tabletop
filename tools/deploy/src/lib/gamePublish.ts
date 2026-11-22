@@ -4,7 +4,6 @@ import {
     buildGameLogicPackageCommand,
     buildGameUiCommand,
     buildGameUiPackageCommand,
-    publicBucketUrl,
     deployGameLogicCommand,
     deployGameUiBrotliScriptCommands,
     deployGameUiCommand,
@@ -12,7 +11,6 @@ import {
     writeGameVersionCommand
 } from './commands.js'
 import {
-    assertArtifactBucket,
     assertCleanWorkingTree,
     assertDeployConfig,
     checkArtifactsPublishable,
@@ -132,14 +130,8 @@ const buildAndUpload = async (
     }
     if (pendingKinds.includes('ui')) {
         await runSpec(context, buildGameUiPackageCommand(context.repoRoot, packageId))
-        await runSpec(
-            context,
-            buildGameUiCommand(
-                context.repoRoot,
-                packageId,
-                publicBucketUrl(assertArtifactBucket(context.deployConfig))
-            )
-        )
+        // SuharTabletop's bucket is private: assets keep site paths, which the backend serves.
+        await runSpec(context, buildGameUiCommand(context.repoRoot, packageId))
     }
 
     const deploySpecs = [
