@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { assertExists, type Point } from '@tabletop/common'
-import { Side, type Face } from '@tabletop/napoleons-triumph'
+import { AUSTERLITZ, Side, type Face } from '@tabletop/napoleons-triumph'
 import {
     TestGame,
     arrangeBattlefield,
@@ -13,9 +13,9 @@ import { BoardView, toView, viewRotation } from './boardView.js'
 import { APPROACH_GEOMETRY, LOCALE_GEOMETRY } from '$lib/map/boardGeometry.js'
 import { BLOCK_LENGTH, BLOCK_THICKNESS, blockSamples, coveredBy } from './blockShape.js'
 import { boxSamples } from './orientedBox.js'
-import { layoutPieces, type BlockSprite } from './pieceLayout.js'
+import { BAR_HALF_THICKNESS, layoutPieces, type BlockSprite } from './pieceLayout.js'
 import { insidePolygon } from './polygon.js'
-import { targetBarBox } from './targetBar.js'
+import { approachBarBox, targetBarBox } from './targetBar.js'
 
 // Counts the layout's point-in-locale tests, a measure of its work that does not depend on the machine.
 vi.mock('./polygon.js', async (importOriginal) => {
@@ -369,6 +369,69 @@ describe('a reserve of several groups in a locale long across the screen', () =>
         expect(Math.abs(across('langeron') - across('liechtenstein'))).toBeGreaterThanOrEqual(
             BLOCK_LENGTH
         )
+    })
+})
+
+// From a reported game: Bessières' corps and a detached cavalry block in reserve at locale 43 stood one
+// above the other, the corps against the bar of the approach to 56, and was read as blocking it.
+describe("a reserve beside its locale's approaches", () => {
+    const SMALL = 43
+
+    function laidOut() {
+        const game = new TestGame()
+        game.deployBoth()
+        const french = (id: string, face: Face, commanderId?: string) => ({
+            id,
+            side: Side.French,
+            face,
+            locale: SMALL,
+            commanderId
+        })
+        arrangeBattlefield(game, [
+            french('F24', infantry(2), 'bessieres'),
+            french('F25', infantry(3), 'bessieres'),
+            french('F35', infantry(2), 'bessieres'),
+            french('F36', infantry(3), 'bessieres'),
+            french('F18', cavalry(2))
+        ])
+        const sprites = layoutPieces(game.hydrated, { rotation: viewRotation(BoardView.French) })
+        return { game, blocks: sprites.flatMap((sprite) => sprite.blocks) }
+    }
+
+    it('stands clear of the bar of the approach to 56, which lies level with it', () => {
+        const { game, blocks } = laidOut()
+        expect(blocks).toHaveLength(5)
+        const toward56 = game.hydrated.map.approachBetween(SMALL, 56).id
+        const bar = approachBarBox(toward56, BAR_HALF_THICKNESS)
+        expect(boxSamples(bar).filter(coveredBy(blocks, 5))).toEqual([])
+        const { outline } = LOCALE_GEOMETRY[SMALL]
+        for (const block of blocks) {
+            expect(insidePolygon(block.centre, outline)).toBe(true)
+        }
+    })
+
+    // From reported games: an impassable border has no bar drawn, and a reserve in a locale with one
+    // left the whole table blank.
+    it('stands in a locale with an impassable border, which has no bar to keep clear of', () => {
+        const withImpassableBorder = Object.keys(LOCALE_GEOMETRY)
+            .map(Number)
+            .filter((locale) =>
+                AUSTERLITZ.approachesOf(locale).some((approach) => approach.impassable)
+            )
+        expect(withImpassableBorder).toContain(58)
+        for (const locale of withImpassableBorder) {
+            const placed = new TestGame()
+            placed.deployBoth()
+            arrangeBattlefield(placed, [
+                { id: 'F24', side: Side.French, face: infantry(2), locale }
+            ])
+            for (const view of Object.values(BoardView)) {
+                const blocks = layoutPieces(placed.hydrated, {
+                    rotation: viewRotation(view)
+                }).flatMap((sprite) => sprite.blocks)
+                expect(blocks.map((block) => block.unit.id)).toContain('F24')
+            }
+        }
     })
 })
 

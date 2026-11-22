@@ -7,6 +7,8 @@ import {
 import { sameCoordinates, type AxialCoordinates, type GameAction } from '@tabletop/common'
 import {
     ActionType,
+    ChooseColor,
+    DvonnVersion,
     isMoveStack,
     MoveStack,
     PlacePiece,
@@ -15,7 +17,9 @@ import {
     type HydratedDvonnGameState,
     type DvonnGameState,
     type DvonnPreferences,
-    type Piece
+    type Piece,
+    type PieceColor,
+    versionFromConfig
 } from '@tabletop/dvonn'
 import { DvonnStageOrder, setDvonnSelection, type DvonnSelection } from './stagedSelection.js'
 import { PIECE_MODEL, type PieceModel } from '$lib/board/pieceGeometry.js'
@@ -107,7 +111,10 @@ export class DvonnGameSession extends GameSession<DvonnGameState, HydratedDvonnG
     // A badge on each stack with its height.
     heightBadges: boolean = $derived(this.preferences.values.heightBadges)
 
+    // A move's badges are gathered when it starts, so a badge added mid-move would wait at the old
+    // space; the toggle lands the move first.
     toggleHeightBadges() {
+        this.moveInterrupter?.interrupt()
         this.preferences.set({ heightBadges: !this.heightBadges })
     }
 
@@ -117,6 +124,13 @@ export class DvonnGameSession extends GameSession<DvonnGameState, HydratedDvonnG
 
     canPlace = $derived(this.canAct(ActionType.PlacePiece))
     canMove = $derived(this.canAct(ActionType.MoveStack))
+    canChooseColor = $derived(this.canAct(ActionType.ChooseColor))
+
+    // I set, you choose: the first player places both colours' pieces, so each placement says
+    // whose it is.
+    private setsBoth: boolean = $derived(
+        versionFromConfig(this.game.config) === DvonnVersion.ISetYouChoose
+    )
 
     placeable: AxialCoordinates[] = $derived(
         this.canPlace ? this.gameState.board.vacantSpaces() : []
@@ -124,6 +138,12 @@ export class DvonnGameSession extends GameSession<DvonnGameState, HydratedDvonnG
 
     // A placement puts down a DVONN piece until all three are on the board.
     placingDvonn: boolean = $derived(this.canPlace && this.gameState.placesDvonnNext())
+
+    placingColor: PieceColor | undefined = $derived(
+        this.canPlace && this.setsBoth && !this.placingDvonn
+            ? this.gameState.colorToPlace()
+            : undefined
+    )
 
     movable: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
@@ -225,6 +245,11 @@ export class DvonnGameSession extends GameSession<DvonnGameState, HydratedDvonnG
                 setDvonnSelection(this.ownSelection, 'from', same ? undefined : spaceKey(coords))
             )
         }
+    }
+
+    async chooseColor(color: PieceColor) {
+        if (this.moving || !this.canChooseColor) return
+        await this.applyAction(this.createPlayerAction(ChooseColor, { color }))
     }
 
     private select(selection: DvonnSelection) {

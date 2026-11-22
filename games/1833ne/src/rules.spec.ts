@@ -16,7 +16,12 @@ import {
 import { table } from '../test/table.js'
 import { position } from '../test/position.js'
 import { buyAllPrivates, launch, passStockRound, rotationFor } from '../test/flow.js'
-import { PrivatePowerRules1833NE, blockedByPrivate, privatePhaseEffects } from './privates.js'
+import {
+    PrivateCatalog1833NE,
+    PrivatePowerRules1833NE,
+    blockedByPrivate,
+    privatePhaseEffects
+} from './privates.js'
 import { trainRetirement } from './trains.js'
 import { Map1833NE } from './map.js'
 import { TileSet1833NE } from './tiles.js'
@@ -338,12 +343,18 @@ describe('the golden spike (corporate mats)', () => {
             {}
         )
         for (const company of state.companies)
-            if (company.id === 'StL&A' || company.id === 'A&StL') {
-                company.started = true
-                company.president = {
+            if (company.id === 'StL&A' || company.id === 'A&StL') company.started = true
+        for (const certificate of state.certificates)
+            if (
+                certificate.kind === 'share' &&
+                certificate.president &&
+                (certificate.companyId === 'StL&A' || certificate.companyId === 'A&StL')
+            ) {
+                certificate.owner = {
                     kind: 'player',
-                    playerId: company.id === 'StL&A' ? 'p1' : 'p2'
+                    playerId: certificate.companyId === 'StL&A' ? 'p1' : 'p2'
                 }
+                delete certificate.poolId
             }
         state.spikeLayers = ['StL&A']
         const hydrated = table(4).engine.runtime.hydrator.hydrateState(state)
@@ -365,6 +376,12 @@ describe('the golden spike (corporate mats)', () => {
 })
 
 describe('Lowell Merchants (P2)', () => {
+    it('describes the free G20 tile as one of the ordinary lays', () => {
+        expect(PrivateCatalog1833NE.definition('P2').description).toContain(
+            'as one of its ordinary tile lays'
+        )
+    })
+
     it('makes its buyer’s G20 tile free in the round it bought it', () => {
         const state = position([], [], {})
         state.operatingSet = {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { ActionSource, type GameAction } from '@tabletop/common'
+import {
+    ActionSource,
+    CALL_GAME_ACTION_TYPE,
+    Color,
+    GameCallKind,
+    type CallGameAction,
+    type GameAction
+} from '@tabletop/common'
 import { ActionType, PieceKind, spaceFromName as s } from '@tabletop/tzaar'
 import { historyEntries } from './historyEntries.js'
 
@@ -69,5 +76,46 @@ describe('historyEntries', () => {
         expect(() =>
             historyEntries([action('a', { type: ActionType.Capture, from: s('D1'), to: s('D2') })])
         ).toThrow(/records its outcome/)
+    })
+
+    it('gives a called game its own entry after the last move', () => {
+        const call: CallGameAction = {
+            id: 'call',
+            gameId: 'g',
+            source: ActionSource.System,
+            type: CALL_GAME_ACTION_TYPE,
+            call: {
+                kind: GameCallKind.Conceded,
+                initiatorPlayerId: 'b',
+                declaredWinnerId: 'a',
+                approvingPlayerIds: ['b'],
+                decliningPlayerIds: []
+            }
+        }
+        const entries = historyEntries([action('a', { type: ActionType.Pass, metadata: {} }), call])
+        expect(entries).toMatchObject([
+            { kind: 'pass', playerId: 'a', firstIndex: 0 },
+            { kind: 'call', firstIndex: 1, lastIndex: 1, action: call }
+        ])
+    })
+
+    it('reads the colour placed and the colour taken in I set, you choose', () => {
+        const entries = historyEntries([
+            action('a', {
+                type: ActionType.PlacePiece,
+                coords: s('E4'),
+                kind: PieceKind.Tott,
+                metadata: { color: Color.Black }
+            }),
+            action('b', {
+                type: ActionType.ChooseColor,
+                color: Color.White,
+                metadata: { stuckPlayerId: 'a' }
+            })
+        ])
+        expect(entries).toMatchObject([
+            { kind: 'place', playerId: 'a', piece: PieceKind.Tott, color: Color.Black },
+            { kind: 'choose', playerId: 'b', color: Color.White, stuckPlayerId: 'a' }
+        ])
     })
 })

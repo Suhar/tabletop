@@ -15,7 +15,6 @@
     import Board from '$lib/components/Board.svelte'
     import Header from '$lib/components/Header.svelte'
     import ActionPanel from '$lib/components/ActionPanel.svelte'
-    import GameEndPanel from '$lib/components/GameEndPanel.svelte'
     import BoardStyleToggle from '$lib/components/BoardStyleToggle.svelte'
     import OverlayToggle from '$lib/components/OverlayToggle.svelte'
     import { DvonnGameSession } from '$lib/model/session.svelte.js'
@@ -44,11 +43,7 @@
 {#snippet turnControls()}
     <Header />
     <div class="action-card">
-        {#if gameSession.gameState.result && !gameSession.isViewingHistory}
-            <GameEndPanel />
-        {:else}
-            <ActionPanel />
-        {/if}
+        <ActionPanel />
     </div>
 {/snippet}
 
@@ -120,7 +115,6 @@
                                 pressed={gameSession.showCoordinates}
                                 onToggle={() => gameSession.toggleCoordinates()}
                             />
-                            <BoardStyleToggle />
                             <OverlayToggle
                                 label="Height badges"
                                 pressed={gameSession.heightBadges}
@@ -141,6 +135,7 @@
                                     >
                                 </svg>
                             </OverlayToggle>
+                            <BoardStyleToggle />
                             <!-- Tall stacks shrink to the full height unless a player would
                                  rather see them whole and turn the board to see past them. -->
                             <OverlayToggle

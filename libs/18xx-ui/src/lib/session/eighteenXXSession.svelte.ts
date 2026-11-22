@@ -69,8 +69,9 @@ import {
 import { shouldContinueHistoryStep } from '../table/historyNavigation.js'
 import { operatingRoundInProgress } from '../table/roundHeading.js'
 import type { HistoryWording } from '../table/historyDescription.js'
-import { operatingHistory } from '../table/operatingHistory.js'
+import { roundIncomeHistory } from '../table/roundIncomeHistory.js'
 import { wealthHistory } from '../table/wealthHistory.js'
+import type { RoundProgressTitle } from '../table/roundProgress.js'
 import { shareCard, tradedCertificateIds, type ShareCard } from '../table/shareCards.js'
 import { tableTerms, type ResolvedTableTerms } from '../presentation/tableTerms.js'
 import { phaseLabel, phaseName } from '../phases/phaseChart.js'
@@ -106,12 +107,13 @@ import { StockModule } from './stockModule.svelte.js'
 import type { MapRoute } from '../maps/mapDrawing.js'
 import { TableNotices } from './tableNotices.svelte.js'
 import type {
+    MarketMarker,
     TitlePrivateAction,
     PrivateTokenPresentation,
     TitleOperatingStep,
     TitlePresentation
 } from './titlePresentation.js'
-import { TrackModule } from './trackModule.svelte.js'
+import { TrackModule, type TitleTrackLay } from './trackModule.svelte.js'
 import { TrainBuyingModule } from './trainBuyingModule.svelte.js'
 import { TrainFundingModule } from './trainFundingModule.svelte.js'
 import { CorporateFinanceModule } from './corporateFinanceModule.svelte.js'
@@ -212,17 +214,22 @@ export class EighteenXXSession<
             })
         }
     }
-    operatingIncomeHistory() {
-        return operatingHistory(this.actions)
+    private get roundProgressTitle(): RoundProgressTitle {
+        return {
+            openingRound: this.presentation.openingRound,
+            titleRounds: this.presentation.titleRounds
+        }
+    }
+    roundIncomeHistory() {
+        return roundIncomeHistory(this.actions, this.roundProgressTitle)
     }
     playerWealthHistory() {
         return wealthHistory(this.actions, this.gameState, {
+            ...this.roundProgressTitle,
             startingCash: this.rules.startingCash({
                 playerCount: this.gameState.players.length,
                 config: this.game.config
-            }),
-            openingRound: this.presentation.openingRound,
-            titleRounds: this.presentation.titleRounds
+            })
         })
     }
     readonly marketAnimation = createMarketAnimationSource(this, (state) => state.stockMarket)
@@ -312,13 +319,20 @@ export class EighteenXXSession<
         if (!state.activePlayerIds.length) return undefined
         return state.turnManager.currentTurn()?.playerId
     }
+    /** Whether a title's own action controls are disabled: sending, publishing or in history. */
+    readonly actionsLocked = $derived(
+        this.busy || this.updatingVisibleState || this.isViewingHistory
+    )
     readonly privates = new PrivatesModule(this.moduleSession)
     readonly notices = new TableNotices(
         () => this.isViewingHistory || this.localHotseat,
         () => this.myPlayer?.id,
         (action) => this.noticeText(action)
     )
-    readonly trainFunding = new TrainFundingModule(this.moduleSession)
+    readonly trainFunding: TrainFundingModule = new TrainFundingModule(
+        this.moduleSession,
+        () => this.trainBuying.buysOutright
+    )
     readonly decisions = new CompanyDecisionsModule(this.moduleSession)
     readonly privateActions: PrivateActionsModule = new PrivateActionsModule(
         this.moduleSession,
@@ -339,7 +353,8 @@ export class EighteenXXSession<
         () => {
             this.map.clearInspection()
         },
-        () => this.trackBuildingActive
+        () => this.trackBuildingActive,
+        () => this.titleTrackLay
     )
     readonly trainBuying = new TrainBuyingModule(
         this.moduleSession,
@@ -569,7 +584,8 @@ export class EighteenXXSession<
             this.phases.phases.map((phase) => [phase.id, phase.tileColors])
         ),
         tileColors: this.tileAppearance.colors,
-        tileColorNames: this.tileAppearance.colorNames ?? {}
+        tileColorNames: this.tileAppearance.colorNames ?? {},
+        everyPhase: !!this.presentation.historyMarksEveryPhase
     }))
     // Held as text, so the map redraws when the art changes rather than on every action.
     private playedMarkerArt = $derived.by(() =>
@@ -628,6 +644,10 @@ export class EighteenXXSession<
     })
     /** The rulebook's words for what the table names. */
     readonly terms: ResolvedTableTerms = $derived(tableTerms(this.presentation.terms))
+    /** The title's own markers, hung under the market's spaces. */
+    readonly marketMarkers: readonly MarketMarker[] = $derived(
+        this.presentation.marketMarkers?.(this.gameState) ?? []
+    )
     constructor(
         options: SessionOptions<Schema, State>,
         private readonly rules: EighteenXXSessionRules<Schema, State>,
@@ -711,6 +731,13 @@ export class EighteenXXSession<
     }
     protected get sharedActionsBlocked(): boolean {
         return false
+    }
+    /**
+     * A lay the title asks the player for outside a company's track step, such as 1860's home
+     * tile; offered only while the player may make it.
+     */
+    protected get titleTrackLay(): TitleTrackLay | undefined {
+        return undefined
     }
     /** Private powers whose rules the title applies itself, offered under Use privates. */
     protected get titlePrivatePowers(): readonly TitlePrivatePower[] {

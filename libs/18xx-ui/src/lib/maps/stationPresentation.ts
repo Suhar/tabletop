@@ -1,7 +1,15 @@
 import type { TerrainIconName } from './terrainIcons.js'
 import type { MapBonusArrow } from './bonusArrows.js'
 import { assertExists, type BoundingBox, type HexOrientation, type Point } from '@tabletop/common'
-import type { Company, StationState, RailwayMap, TileEdge, TileFace, TileSet } from '@tabletop/18xx'
+import type {
+    Company,
+    NeutralStations,
+    StationState,
+    RailwayMap,
+    TileEdge,
+    TileFace,
+    TileSet
+} from '@tabletop/18xx'
 import type {
     BoardArtwork,
     MapMarkerArt,
@@ -83,6 +91,12 @@ export type MapViewDefinition = {
      * a closed company's token elsewhere keeps its own look.
      */
     closedCompanyStation?: StationAppearance
+    /**
+     * How the stations of companies the game state singles out print on the map, by company id,
+     * such as 1860's bankrupt companies' bases lying face down; their tokens elsewhere keep
+     * their own look.
+     */
+    stateStations?: (state: object) => Readonly<Record<string, StationAppearance>>
     /**
      * Station spaces the board prints held beyond its homes, by company or by a shared station's
      * source, shown until a token stands there, such as a joint token's city.
@@ -180,6 +194,11 @@ export type MapViewDefinition = {
     publishedPlacements?: Readonly<Record<string, MapPlacement>>
     joinedEdges?: Readonly<Record<string, readonly TileEdge[]>>
     /**
+     * Hexes one tile covers together, such as 18RoyalGorge's gorge: choosing any of them for a
+     * lay chooses the piece, which highlights and is previewed as one.
+     */
+    tileGroups?: readonly (readonly string[])[]
+    /**
      * Sides along which a laid tile joins the tile beside it as one printed area, by tile
      * definition id, as a scenario overlay that spans two hexes.
      */
@@ -234,23 +253,31 @@ export function withPlayedMarkerArt(
     }
 }
 
-/** How a map view prints stations: by company, shared, and neutral. */
+/** How a map view prints stations: by company, shared, and neutral, as its map lists them. */
 export type StationViews = Pick<
     MapViewDefinition,
-    'stations' | 'locationStations' | 'sharedStations' | 'neutralStation' | 'closedCompanyStation'
->
+    | 'stations'
+    | 'locationStations'
+    | 'sharedStations'
+    | 'neutralStation'
+    | 'closedCompanyStation'
+    | 'stateStations'
+> & { map: NeutralStations }
 
 /** The placed stations as map tokens; the companies say which are closed. */
 export function stationMapTokens(
     state: StationState & { companies?: readonly Pick<Company, 'id' | 'closed'>[] },
     {
+        map,
         stations: appearances,
         locationStations,
         sharedStations: shared = {},
         neutralStation,
-        closedCompanyStation
+        closedCompanyStation,
+        stateStations
     }: StationViews
 ): MapToken[] {
+    const singledOut = stateStations?.(state) ?? {}
     return state.stations.flatMap((station) => {
         if (station.status !== 'placed') return []
         const access = (state.stationAccess ?? []).find(
@@ -260,7 +287,7 @@ export function stationMapTokens(
                 shared[entry.sourceId]
         )
         const neutral =
-            neutralStation && state.neutralStations?.some((entry) => entry.stationId === station.id)
+            neutralStation && map.neutralStations.some((entry) => entry.stationId === station.id)
                 ? neutralStation
                 : undefined
         const closed =
@@ -271,6 +298,7 @@ export function stationMapTokens(
         const appearance =
             neutral ??
             closed ??
+            singledOut[station.companyId] ??
             (access && shared[access.sourceId]) ??
             locationStations?.[station.companyId]?.[station.position.locationId] ??
             appearances[station.companyId]

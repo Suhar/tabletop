@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defaultGameConfig, GameEngine, PlayerStatus } from '@tabletop/common'
+import { coordinatesToNumber, defaultGameConfig, GameEngine, PlayerStatus } from '@tabletop/common'
 import { startingPositionFile } from '@tabletop/common/testing'
 import { Definition, MarbleColor, ZertzInfo, ZertzRuntime } from '@tabletop/zertz'
 
@@ -14,7 +14,12 @@ const { White, Grey, Black } = MarbleColor
 const marbles = (white, grey, black) => ({ [White]: white, [Grey]: grey, [Black]: black })
 
 /** A standard game with Player 1 to move, the given rings removed and marbles placed. */
-function position({ removed = [], placed = [], captured = [marbles(0, 0, 0), marbles(0, 0, 0)] }) {
+function position({
+    removed = [],
+    placed = [],
+    captured = [marbles(0, 0, 0), marbles(0, 0, 0)],
+    autoJump = []
+}) {
     const game = ZertzRuntime.initializer.initializeGame(
         {
             id: 'scenario',
@@ -40,10 +45,13 @@ function position({ removed = [], placed = [], captured = [marbles(0, 0, 0), mar
             (candidate) => candidate.coords.q === q && candidate.coords.r === r
         )
         ring.marble = color
+        // As a game would, had it begun with the marble on its ring.
+        ring.marbleSeed = coordinatesToNumber({ q, r })
         state.pool[color] -= 1
     }
     state.players.forEach((player, index) => {
         player.captured = captured[index]
+        if (autoJump.includes(player.playerId)) player.autoJump = true
         for (const color of [White, Grey, Black]) {
             state.pool[color] -= captured[index][color]
         }
@@ -122,5 +130,19 @@ write(
             [-3, 3, White],
             [-2, 3, Grey]
         ]
+    })
+)
+
+write(
+    'auto-jump-answers-a-move',
+    'Auto-jump answers a move',
+    position({
+        removed: [[3, 0]],
+        placed: [
+            [0, 0, White],
+            [2, 0, Black],
+            [-2, 0, Black]
+        ],
+        autoJump: ['player-2']
     })
 )

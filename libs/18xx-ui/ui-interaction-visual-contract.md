@@ -126,8 +126,10 @@ a different map replaces the whole scene. Neither operation is a game Action.
 A company token on the map fills its city slot's circle. A placed station takes its
 look from the first of these that applies: the map view's `neutralStation` for a
 neutral station, its `closedCompanyStation` for a station of a closed company (1828's
-blocking stations), the shared-station look of the access the station carries, then the
-company's own. A closed company's token anywhere off the map keeps the company's look.
+blocking stations), its `stateStations` for the companies the state singles out (1860's
+bankrupt companies' bases, face down), the shared-station look of the access the station
+carries, then the company's own. A closed or singled-out company's token anywhere off the map
+keeps the company's look.
 A reserved city slot without a token shows the reserving company's token in its own
 colours at reduced opacity, titled "Reserved for [company]"; without a company appearance it
 falls back to the company id as small text. Track into an offboard ends in a short
@@ -171,6 +173,18 @@ Tapping one moves it over the hex; tapping the hex moves on to the next option; 
 takes the one shown and ✗ cancels, with the same controls as laying track. The option
 shown is a staged choice, so Undo takes it back before the hex. 1862 offers a small
 station's lines this way, each tile with the station on its line.
+
+A lay the title asks for outside a company's track step (`titleTrackLay` on the session, as
+1860's home tile as a company floats in a stock round) is offered on the map exactly as track
+laying is: the title's construction says which hexes and tiles, the tiles arc round the chosen
+hex, rotate and confirm, and the confirmed lay is the title's own Action. It exists only while
+the player may make it; its staging is the shared track selection, so Undo backs it out as any
+lay's. A halt (a town node marked `halt`) prints as a grey stop outlined in ink; where its
+layout gives a `haltSymbol`, the sign stands in a value badge in place of a value, and a halt
+prints no value otherwise. A train a company runs without owning it, as 1860's insolvent
+companies lease the bank's smallest, carries a "leased" tag in the run panel. A company train's
+price field takes the steps and bounds of the transfer rules' price range, as 1860's multiples
+of £10.
 
 A town on through track without a set position stands at its line's middle, unless
 other track on the tile runs within 12 units of that point, as where an 1862 small
@@ -268,7 +282,10 @@ earlier or later or remove it. Native buttons support pointer, keyboard, and tou
 The shared stock market displays each distinct space and its committed marker
 stack, top to bottom. Its scroll area is keyboard focusable and contained at
 mobile widths. Market order is listed beneath it. Equal prices retain separate
-spaces and stack identities. Previewing a trade does not move markers.
+spaces and stack identities. Previewing a trade does not move markers. A title's
+own market markers (`marketMarkers`, such as 18RoyalGorge's debt marker) hang as
+flat tabs, rounded at the bottom, under their space below the market, clear of the
+companies' stacks; they never enter market order or any rule.
 
 ### Coexistence and precedence
 
@@ -1414,6 +1431,10 @@ Choosing a tile previews its first legal placement. Clicking that same map hex a
 The table action area keeps construction status, cost and Finish Track, with selection controls on the map. The economy workbench retains its existing explicit controls. Verification covers both titles, on-screen arc bounds, preview/rotation/cancel, acceptance, history, reload, Undo, and tab preservation.
 
 The map construction header reserves inline space for the pending cost. Choosing, rotating, cancelling, or accepting a tile must not add a cost row or resize the map viewport.
+
+### Tile groups
+
+A title may declare hexes one tile covers together (`MapViewDefinition.tileGroups`, such as 18RoyalGorge's gorge). While track is being laid, every member of a group with a legal hex is legal itself; hovering, selecting or previewing any member highlights the whole group as one outline, drawn along each member's outer sides only, and choosing any member chooses a legal hex of the piece. Elsewhere, such as station placement or inspection, members highlight one by one; a lay's history map outlines the whole group. The picker centres on the group's middle; its arc keeps clear of the whole group, and its cost and accept/cancel controls stand above and below it; clicking any member again rotates the preview as clicking the hex does. A lay whose rules place companion tiles (`TrackRules.companionTiles`) is drawn in the picker as one piece, in one drawing: the hexes' shadows beneath every hex, their shared sides without a seam, every hex at its board position and scale. Its landed preview shows every hex of the piece on the map before acceptance.
 
 ### Selected tile motion
 

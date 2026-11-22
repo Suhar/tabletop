@@ -59,11 +59,6 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
         const mainline = twoCrownsRole(state, 'mainline'),
             shortline = twoCrownsRole(state, 'shortline'),
             publicLine = twoCrownsRole(state, 'narodna')
-        const concessions: Record<string, string> = {
-            P15: mainline,
-            P16: shortline,
-            P13: publicLine
-        }
         const extras: Record<string, string[]> = {
             P15: [`${mainline}:president`],
             P16: [`${shortline}:president`],
@@ -72,9 +67,6 @@ export const TwoCrownsAuctionRules: OfferPileAuctionRules = {
             P11: [`${mainline}:share:2`]
         }
         awardCertificates(state, award, [`${award.lotId}:charter`, ...(extras[award.lotId] ?? [])])
-        const concession = concessions[award.lotId]
-        if (concession)
-            getCompany(state, concession).president = { kind: 'player', playerId: award.playerId }
     },
     incomePayments(state) {
         return privateIncomePayments(state, { charters: TwoCrownsCharters }).filter(

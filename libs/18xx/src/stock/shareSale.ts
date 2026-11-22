@@ -2,10 +2,11 @@ import { companyShareCount } from '../company/companyCharters.js'
 import * as Type from 'typebox'
 import { assert, assertExists } from '@tabletop/common'
 import {
-    Owner,
     cashOwnedBy,
     certificatesOwnedBy,
     getCompany,
+    Owner,
+    presidentOf,
     sameOwner,
     sharesOwned
 } from '../finance/finance.js'
@@ -63,8 +64,8 @@ export function presidencyLapse(
     kept: number,
     poolId: string
 ): { soldCertificateIds: string[]; lapse: PresidencyLapse } | undefined {
-    const company = getCompany(state, companyId)
-    if (!company.president || !sameOwner(company.president, seller)) return undefined
+    const previous = presidentOf(state, companyId)
+    if (!previous || !sameOwner(previous, seller)) return undefined
     const owned = certificatesOwnedBy(state, seller).filter(
         (certificate) => certificate.kind === 'share' && certificate.companyId === companyId
     )
@@ -93,7 +94,7 @@ export function presidencyLapse(
             president.id,
             ...ordinary.filter((certificate) => !keptIds.includes(certificate.id)).map((c) => c.id)
         ],
-        lapse: { previous: company.president, takenCertificateIds: taken }
+        lapse: { previous, takenCertificateIds: taken }
     }
 }
 
@@ -180,6 +181,7 @@ export function evaluateShareSale(
         market: rules.market,
         charters: rules.charters,
         presidencyCandidates: rules.presidencyCandidates,
+        presidentless: rules.presidentless,
         holdsMarketMove: rules.holdsMarketMove,
         saleTerms: extendingSaleTerms(rules.saleTerms, previous)
     })
@@ -241,6 +243,7 @@ export function evaluateShareDisposal(
         | 'presidencyExchange'
         | 'holdsMarketMove'
         | 'presidencyLapses'
+        | 'presidentless'
     >
 ): ShareSaleResult {
     if (!sales.length || new Set(sales.map((sale) => sale.companyId)).size !== sales.length)
@@ -276,13 +279,15 @@ export function evaluateShareDisposal(
         )
         if ((marketShares + sale.shares) * 100 > terms.marketLimit * shareCount)
             return { reason: 'The Market cannot hold that many shares.' }
-        const presidency = evaluatePresidency(
-            projected,
-            company.id,
-            rules.presidencyCandidates(projected, company.id),
-            { owner: seller, shares: owned - sale.shares },
-            presidencyExchangeTerms(rules)
-        )
+        const presidency = rules.presidentless?.(projected, company.id)
+            ? {}
+            : evaluatePresidency(
+                  projected,
+                  company.id,
+                  rules.presidencyCandidates(projected, company.id),
+                  { owner: seller, shares: owned - sale.shares },
+                  presidencyExchangeTerms(rules)
+              )
         const lapsed =
             presidency.reason && rules.presidencyLapses
                 ? presidencyLapse(projected, company.id, seller, owned - sale.shares, pool.id)
@@ -299,7 +304,7 @@ export function evaluateShareDisposal(
         const from = rules.market.companySpace(projected.stockMarket, company.id)
         const fromStackIndex = stockMarkerStackIndex(projected.stockMarket, company.id)
         const to = rules.market.move(from.id, terms.direction, terms.movement)
-        const proceeds = terms.price * sale.shares
+        const proceeds = terms.proceeds ?? terms.price * sale.shares
         const settlement: ShareSaleSettlement = {
             ...sale,
             certificateIds,
@@ -347,7 +352,6 @@ export function transferSaleCertificates(state: StockState, sale: ShareSaleSettl
         certificate.owner = sale.lapse.previous
         delete certificate.poolId
     }
-    delete getCompany(state, sale.companyId).president
 }
 
 export function applyShareSale(state: StockState, details: ShareSaleDetails): void {

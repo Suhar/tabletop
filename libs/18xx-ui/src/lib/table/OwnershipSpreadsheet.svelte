@@ -21,11 +21,13 @@
         signedShares,
         controllingOwner,
         getCompany,
+        presidentOf,
         sameOwner,
         playersWithBankruptLast,
         sharesOwned,
         trainsOwnedBy,
         type Company,
+        type Station,
         type Owner,
         type PurchaseRequest,
         isObsoleteTrain,
@@ -34,7 +36,7 @@
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import type { NumberedShareNames } from './companyPresentation.js'
     import PlayerName from './PlayerName.svelte'
-    import OperatingHistory from './OperatingHistory.svelte'
+    import IncomeHistory from './IncomeHistory.svelte'
     import { spreadsheetCompanies } from './spreadsheetCompanies.js'
     import { marketValueMark } from '../stock/marketColors.js'
     import '../stock/marketZoneTint.css'
@@ -490,6 +492,16 @@
             ])
         )
     )
+    function presidentColumnId(companyId: string): string | undefined {
+        const drafter = session.drafterOf(companyId)
+        if (drafter) return `player:${drafter}`
+        const president = presidentOf(session.gameState, companyId)
+        if (president?.kind === 'player') return `player:${president.playerId}`
+        if (president?.kind === 'company') return `company:${president.companyId}`
+        return holdsReceiverPresidentCertificate(session.gameState, companyId, marketPoolId)
+            ? 'market'
+            : undefined
+    }
     const companyRows = $derived(
         companies.map((company) => ({
             company,
@@ -508,7 +520,7 @@
                     ? shownParPrice(pricePresentation, session.gameState, company)
                     : undefined,
             stations: session.gameState.stations.filter(
-                (station) => stationPlacer(session.gameState, station) === company.id
+                (station) => stationPlacer(session.mapView.map, station) === company.id
             ),
             cash: cashOwnedBy(session.gameState, { kind: 'company', companyId: company.id }),
             loans:
@@ -516,15 +528,7 @@
                     ? session.loans.loans(company.id)
                     : undefined,
             lastRun: companyLastRun(session.actions, session.gameState.actionCount, company.id),
-            presidentId: session.drafterOf(company.id)
-                ? `player:${session.drafterOf(company.id)}`
-                : company.president?.kind === 'player'
-                  ? `player:${company.president.playerId}`
-                  : company.president?.kind === 'company'
-                    ? `company:${company.president.companyId}`
-                    : holdsReceiverPresidentCertificate(session.gameState, company.id, marketPoolId)
-                      ? 'market'
-                      : undefined,
+            presidentId: presidentColumnId(company.id),
             shares: owners.map((owner) => owner.count(company.id)),
             shareNumbers: owners.map((owner) => playerShareNumbers(owner.id, company.id))
         }))
@@ -601,6 +605,12 @@
             ownerPlayerColor(ownerId) ??
             (controllerId ? session.colors.getPlayerBgColorValue(controllerId) : undefined)
         )
+    }
+    /** A company's stations left of all it has, or a dash for one that has none. */
+    function stationCount(stations: readonly Station[]): string {
+        if (!stations.length) return '—'
+        const available = stations.filter((station) => station.status === 'available').length
+        return `${available}/${stations.length}`
     }
 </script>
 
@@ -935,9 +945,9 @@
     <div class="sheet-spacing" aria-hidden="true"></div>
     <div class="sheet-content">
         {#if period !== 'Current'}
-            <OperatingHistory
+            <IncomeHistory
                 {money}
-                rounds={session.operatingIncomeHistory()}
+                rounds={session.roundIncomeHistory()}
                 players={seatOrder.map((playerId) => ({
                     playerId,
                     name: session.getPlayerName(playerId),
@@ -1091,9 +1101,7 @@
                                             >{@render companyTrains(row.company.id)}</td
                                         >
                                         <td class="bright-cell token-cell"
-                                            >{row.stations.filter(
-                                                (station) => station.status === 'available'
-                                            ).length}/{row.stations.length}</td
+                                            >{stationCount(row.stations)}</td
                                         >
                                         {#if loansLabel}<td class="company-stat-start bright-cell"
                                                 >{@render loansCell(row)}</td
@@ -1249,9 +1257,7 @@
                                             class:operating-column={row.company.id ===
                                                 operatingCompanyId}
                                             class="bright-cell token-cell"
-                                            >{row.stations.filter(
-                                                (station) => station.status === 'available'
-                                            ).length}/{row.stations.length}</td
+                                            >{stationCount(row.stations)}</td
                                         >
                                     {/each}
                                     {#each ownerStatisticKeys as _, index (index)}<td

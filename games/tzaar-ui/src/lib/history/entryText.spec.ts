@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { Color } from '@tabletop/common'
 import { PieceKind, spaceFromName, spaceName } from '@tabletop/tzaar'
 import { entrySegments } from './entryText.js'
-import type { HistoryEntry } from './historyEntries.js'
+import type { MoveEntry } from './historyEntries.js'
 
 const span = { id: 'a', firstIndex: 0, lastIndex: 0, playerId: 'alice' }
 
-function joined(entry: HistoryEntry, brief = false): string {
+function joined(entry: MoveEntry, brief = false): string {
     return entrySegments(entry, brief)
         .map((segment) =>
             segment.kind === 'text'
@@ -18,7 +19,7 @@ function joined(entry: HistoryEntry, brief = false): string {
 }
 
 describe('history text', () => {
-    const capture: HistoryEntry = {
+    const capture: MoveEntry = {
         ...span,
         kind: 'capture',
         from: spaceFromName('D1'),
@@ -56,5 +57,18 @@ describe('history text', () => {
             joined({ ...span, kind: 'place', coords: spaceFromName('E5'), piece: PieceKind.Tzarra })
         ).toBe(' placed a Tzarra on E5')
         expect(joined({ ...span, kind: 'pass' })).toBe(' passed the second move')
+    })
+
+    it('names the colour of each piece placed and taken in I set, you choose', () => {
+        const coords = spaceFromName('E4')
+        const place: MoveEntry = {
+            ...span,
+            kind: 'place',
+            coords,
+            piece: PieceKind.Tzarra,
+            color: Color.Black
+        }
+        expect(joined(place)).toBe(' placed a black Tzarra on E4')
+        expect(joined({ ...span, kind: 'choose', color: Color.White })).toBe(' took White')
     })
 })

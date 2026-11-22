@@ -14,6 +14,7 @@ import {
     certificatesOwnedBy,
     closePrivate,
     companyShareCount,
+    presides,
     privateOwner,
     sameOwner,
     settleCashPayments,
@@ -130,15 +131,13 @@ export class HydratedConvertCharter
         const shares = certificatesOwnedBy(state, charterOwner).filter(
             (item) => item.kind === 'share'
         )
+        const presidencies = state.companies
+            .filter((company) => presides(state, company.id, charterOwner))
+            .map((company) => company.id)
         for (const certificate of shares) {
             certificate.owner = { ...player }
             delete certificate.poolId
         }
-        const presidencies = state.companies
-            .filter((company) => company.president && sameOwner(company.president, charterOwner))
-            .map((company) => company.id)
-        for (const company of state.companies)
-            if (presidencies.includes(company.id)) company.president = { ...player }
         closePrivate(state, CharterId)
         state.companies.push({ id: GanzId, kind: 'private' })
         state.certificates.push({

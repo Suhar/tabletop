@@ -7,6 +7,7 @@ import {
 } from '@tabletop/common'
 import {
     AUSTERLITZ,
+    ActionType,
     isAdvance,
     isAssignLosses,
     isAttach,
@@ -63,6 +64,8 @@ export interface Standing {
     units: ProjectedUnit[]
     commanders: Commander[]
     attack?: VisibleAttack
+    /** Cavalry riding by road (rule 10), or seen still riding when the last turn ended (rule 11). */
+    riderIds?: readonly string[]
 }
 
 export interface MoveReplay {
@@ -94,7 +97,12 @@ export interface Movement {
 }
 
 export function standingOf(state: Readonly<NapoleonsTriumphProjectedState>): Standing {
-    return { units: state.units, commanders: state.commanders, attack: state.attack }
+    return {
+        units: state.units,
+        commanders: state.commanders,
+        attack: state.attack,
+        riderIds: state.roadMarch?.unitIds ?? state.revealedRide?.unitIds
+    }
 }
 
 export function piecesOf(standing: Standing, units = standing.units): BoardPieces {
@@ -184,6 +192,18 @@ function unitsNamedBy(action: GameAction): string[] {
     return isLeadDefense(action) ? action.leaderIds : []
 }
 
+// Rules 10 and 11: these turn riding cavalry face-up where it stands, moving nothing and naming no unit.
+const SHOWS_RIDERS: readonly string[] = [ActionType.StayInReserve, ActionType.AcknowledgeReveal]
+
+function ridersShownBy(action: GameAction, before: Standing): ProjectedUnit[] {
+    if (!SHOWS_RIDERS.includes(action.type)) {
+        return []
+    }
+    const { riderIds } = before
+    assertExists(riderIds, `No cavalry was riding before ${action.type}`)
+    return before.units.filter((unit) => riderIds.includes(unit.id))
+}
+
 function subjectOf(action: GameAction, before: Standing, after: Standing): Subject {
     const movements = movementsOf(action, before, after)
     const stood = new Map(before.units.map((unit) => [unit.id, unit.position]))
@@ -191,6 +211,7 @@ function subjectOf(action: GameAction, before: Standing, after: Standing): Subje
     const lost = before.units.filter((unit) => isOnMap(unit) && !remaining.has(unit.id))
     const setDown = after.units.filter((unit) => isOnMap(unit) && !stood.get(unit.id))
     const attack = belongsToAnAttack(action) ? (after.attack ?? before.attack) : undefined
+    const riders = ridersShownBy(action, before)
     const joined = isAttach(action)
         ? after.commanders.find((commander) => commander.id === action.commanderId)
         : undefined
@@ -202,6 +223,7 @@ function subjectOf(action: GameAction, before: Standing, after: Standing): Subje
             ...movements.flatMap((movement) => movement.unitIds),
             ...lost.map((unit) => unit.id),
             ...setDown.map((unit) => unit.id),
+            ...riders.map((unit) => unit.id),
             ...unitsNamedBy(action)
         ],
         locales: [
@@ -210,7 +232,7 @@ function subjectOf(action: GameAction, before: Standing, after: Standing): Subje
                 ...movement.via,
                 movement.to.locale
             ]),
-            ...[...lost, ...setDown].flatMap((unit) => unit.position?.locale ?? []),
+            ...[...lost, ...setDown, ...riders].flatMap((unit) => unit.position?.locale ?? []),
             ...(attack
                 ? [attack.attackApproach, attack.defenseApproach].map(
                       (approach) => AUSTERLITZ.approach(approach).locale

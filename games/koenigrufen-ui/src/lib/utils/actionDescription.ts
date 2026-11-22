@@ -1,4 +1,9 @@
-import { ActionSource, type GameAction } from '@tabletop/common'
+import {
+    gameCallDescription,
+    isCallGameAction,
+    isCascadedSystemAction,
+    type GameAction
+} from '@tabletop/common'
 import {
     Contracts,
     FourthKing,
@@ -14,6 +19,7 @@ import {
     isPass,
     isPickUpTalon,
     isPlayCard,
+    isGiveTalonCard,
     isRevealTalon,
     isSayMeinSpiel,
     type CalledKing,
@@ -119,17 +125,24 @@ export function describeAction(
             const played = `${who} played ${cardLabel(action.cardId, style)}`
             return winner ? `${played}; ${names.name(winner)} won the trick` : played
         }
+        case isGiveTalonCard(action):
+            return action.metadata
+                ? `${names.name(action.metadata.playerId)} took the talon card ${cardLabel(action.metadata.cardId, style)}`
+                : 'A talon card was taken'
         case isEndHand(action):
             return action.metadata
                 ? `${describeHandResult(action.metadata, names)} (${describeScoreChanges(action.metadata, names)})`
                 : undefined
+        case isCallGameAction(action):
+            return gameCallDescription(action.call, names.name)
         default:
             return undefined
     }
 }
 
 // The History Step that led to these actions' end: the latest User Action and the System Actions it
-// set off, each described in order. Before any User Action, the System Actions that set up the game.
+// set off, or a called game's ending, each described in order. Before any User Action, the System
+// Actions that set up the game.
 export function describeStep(
     actions: readonly GameAction[],
     names: Names,
@@ -137,7 +150,7 @@ export function describeStep(
 ): string[] {
     const start = Math.max(
         0,
-        actions.findLastIndex((action) => action.source === ActionSource.User)
+        actions.findLastIndex((action) => !isCascadedSystemAction(action))
     )
     return actions.slice(start).flatMap((action) => {
         const description = describeAction(action, names, style)
