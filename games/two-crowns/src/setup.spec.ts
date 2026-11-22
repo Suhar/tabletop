@@ -106,10 +106,11 @@ describe('1874 setup', () => {
         expect(TwoCrownsPrivateCatalog.definition('P8').closure).toBe('never')
         const state = startTwoCrowns(3)
         const mainline = twoCrownsRole(state, 'mainline')
-        state.companies.find((item) => item.id === mainline)!.president = {
-            kind: 'player',
-            playerId: 'p1'
-        }
+        const presidency = state.certificates.find(
+            (item) => item.companyId === mainline && item.kind === 'share' && item.president
+        )!
+        presidency.owner = { kind: 'player', playerId: 'p1' }
+        delete presidency.poolId
         const request = { companyId: mainline, locationId: 'K7', definitionId: 'two-crowns:G2' }
         expect(TwoCrownsTrackRules.restriction!(state, request as never)).toBe(
             'Tile G2 requires the Lika Survey Office'

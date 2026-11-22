@@ -41,6 +41,11 @@ export interface TrainRules {
     trainLimit(state: TrainPurchaseState, companyId: string): number
     /** Records the title's consequences of a purchase that handed in a train. */
     afterExchange?(state: TrainPurchaseState, details: TrainPurchaseDetails): void
+    /**
+     * Whether a purchase from the depot may take the company past its train limit, as
+     * 18RoyalGorge's purchase that rusts one of the company's own trains (RT-4).
+     */
+    limitExemption?(state: TrainPurchaseState, companyId: string, definitionId: string): boolean
     countsForLimit?(state: TrainPurchaseState, train: Train): boolean
     /**
      * The company's trains in groups each held to a limit of its own, as an 1828 system's two
@@ -281,7 +286,8 @@ export class TrainPurchase {
                 (exchanged && (this.rules.countsForLimit?.(this.state, exchanged) ?? true)
                     ? 1
                     : 0) >=
-            limit
+                limit &&
+            (marketTrain || !this.rules.limitExemption?.(this.state, companyId, definitionId))
         )
             return { reason: 'The company is at its train limit.' }
         const limitReason = this.rules.limitReason?.(this.state, companyId, definitionId)

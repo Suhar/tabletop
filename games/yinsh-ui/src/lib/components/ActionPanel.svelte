@@ -2,8 +2,13 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { historyEntries } from '$lib/history/historyEntries.js'
     import HistoryEntryLine from './HistoryEntryLine.svelte'
+    import { holdTallest } from './holdTallest.js'
+    import GameEndPanel from './GameEndPanel.svelte'
 
     const session = getGameSession()
+
+    // The ending takes the panel's place, so the height it holds keeps the board still.
+    const ended = $derived(session.gameState.result !== undefined && !session.isViewingHistory)
 
     const lastEntry = $derived(historyEntries(session.actions).at(-1))
 
@@ -13,7 +18,9 @@
 
     // The opponent could not move, so you move again.
     const passedPlayerId = $derived(
-        lastEntry?.kind === 'place' ? undefined : lastEntry?.passedPlayerId
+        lastEntry?.kind === 'place' || lastEntry?.kind === 'call'
+            ? undefined
+            : lastEntry?.passedPlayerId
     )
 
     const prompt = $derived.by(() => {
@@ -31,8 +38,10 @@
 </script>
 
 <!-- One row, as Bus and Magna Grecia do: the last move while you wait, the prompt on your turn. -->
-<div class="panel">
-    {#if session.isViewingHistory || !prompt}
+<div class="panel" {@attach holdTallest}>
+    {#if ended}
+        <GameEndPanel />
+    {:else if session.isViewingHistory || !prompt}
         {#if lastEntry}
             <HistoryEntryLine entry={lastEntry} brief />
         {:else}

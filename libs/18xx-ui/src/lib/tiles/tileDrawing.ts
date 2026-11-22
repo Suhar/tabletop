@@ -15,7 +15,8 @@ import {
     type TileFace,
     type TileNode,
     type TilePath,
-    type TileRotation
+    type TileRotation,
+    isHalt
 } from '@tabletop/18xx'
 import {
     createArcTilePath,
@@ -96,6 +97,13 @@ export type TileLayout = {
      */
     printedShapes?: readonly TilePrintedShape[]
     hideRevenue?: true | readonly string[]
+    /**
+     * The sign a halt prints in place of a value, such as 1860's £ for the subsidy it pays; a
+     * halt prints no value otherwise.
+     */
+    haltSymbol?: string
+    /** The fill of a halt's stop, outlined in ink, such as 1860's grey; paper otherwise. */
+    haltFill?: string
     /** Lays staged revenue boxes out in a column or a row rather than whichever fits best. */
     revenueStack?: 'column' | 'row'
     /** Centres the revenue, with any badge beneath it on a map, on the hex's middle line. */
@@ -177,6 +185,10 @@ export type TileDrawnNode = {
     /** Station circle radius: the style's size, reduced so neighbouring cities on the tile stay apart. */
     slotRadius: number
     townAngle?: number
+    /** The sign a halt prints where a stop's value would stand. */
+    haltSymbol?: string
+    /** The fill of a halt's stop. */
+    haltFill?: string
     /**
      * Radius of a node drawn as a dot: a town's is larger where three or more tracks meet, and a
      * city without station spaces fills a station circle, since it is still a city.
@@ -487,8 +499,12 @@ export function createTileDrawing(
     const drawnNodes = face.nodes.map((node): Omit<TileDrawnNode, 'slotRadius'> => {
         const center = centers.get(node.id)
         assertExists(center, `Unknown tile node ${node.id}`)
+        const halt = isHalt(node)
+        const haltSymbol = halt ? layout.haltSymbol : undefined
         const revenueHidden =
-            layout.hideRevenue === true || (layout.hideRevenue?.includes(node.id) ?? false)
+            layout.hideRevenue === true ||
+            (layout.hideRevenue?.includes(node.id) ?? false) ||
+            (halt && !haltSymbol)
         const hint =
             layout.revenuePositionsByOrientation?.[orientation]?.[node.id] ??
             layout.revenuePositionsByRotation?.[rotation]?.[node.id] ??
@@ -547,12 +563,12 @@ export function createTileDrawing(
                 const drawn = paths.find((entry) => entry.id === path.id)
                 return !!(drawn?.spike || drawn?.pier)
             })
-        // A town on through track, or ending a single track, is a bar across that track.
+        // A town on one line of track, through it or at its end, is a bar across that line.
         const townAngle =
             !style.townDots &&
             !unmarked &&
             node.kind === 'town' &&
-            (automaticTownPaths.has(node.id) || tracks === 1)
+            (automaticTownPaths.has(node.id) || tracks === 1 || tracks === 2)
                 ? townMarkerAngle(center, paths)
                 : undefined
         const dotRadius = townAngle !== undefined ? 4.2 : tracks >= 3 && !unmarked ? 9 : 6.3
@@ -568,6 +584,8 @@ export function createTileDrawing(
             revenueCells,
             revenueHidden,
             townAngle,
+            ...(haltSymbol ? { haltSymbol } : {}),
+            ...(halt && layout.haltFill ? { haltFill: layout.haltFill } : {}),
             dotRadius
         }
     })
@@ -760,16 +778,25 @@ function clearPosition(line: TileDrawnPath, others: readonly TileDrawnPath[]): n
 }
 
 function townMarkerAngle(center: Point, paths: readonly TileDrawnPath[]): number {
-    const path = paths.find((path) => path.start === center || path.end === center)
-    if (!path) return 0
-    const control = path.start === center ? path.controls[0] : path.controls[1]
-    const tangent =
-        control.x === center.x && control.y === center.y
-            ? path.start === center
-                ? path.end
-                : path.start
-            : control
-    return (Math.atan2(tangent.y - center.y, tangent.x - center.x) * 180) / Math.PI + 90
+    const away = paths.flatMap((path) => {
+        if (path.start !== center && path.end !== center) return []
+        const control = path.start === center ? path.controls[0] : path.controls[1]
+        const toward =
+            control.x === center.x && control.y === center.y
+                ? path.start === center
+                    ? path.end
+                    : path.start
+                : control
+        const length = Math.hypot(toward.x - center.x, toward.y - center.y)
+        return length
+            ? [{ x: (toward.x - center.x) / length, y: (toward.y - center.y) / length }]
+            : []
+    })
+    if (!away.length) return 0
+    // Through a town the line runs from one track's direction to the other's opposite.
+    const line =
+        away.length === 2 ? { x: away[0].x - away[1].x, y: away[0].y - away[1].y } : away[0]
+    return (Math.atan2(line.y, line.x) * 180) / Math.PI + 90
 }
 
 export const LabelFontSize = 12

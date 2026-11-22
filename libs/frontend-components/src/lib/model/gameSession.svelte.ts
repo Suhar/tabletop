@@ -1163,6 +1163,11 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
                 return
             }
 
+            if (this.replacesEarlierDeclaration(relevantContext, action)) {
+                await this.applyEarlierDeclarationReplacement(action, relevantContext)
+                return
+            }
+
             // Optimistically apply the action locally (this will assign indices to the actions and store them)
             let actionResults: GameActionResults<T>
             try {
@@ -1206,10 +1211,7 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
                     actions: relevantContext.actions,
                     state: relevantContext.state
                 })
-            } else if (
-                this.usesHostExecution(relevantContext) ||
-                relevantContext.game.storage === GameStorage.Remote
-            ) {
+            } else if (this.submitsToHost(relevantContext)) {
                 // Now send the action to the server
                 if (this.debug) {
                     console.log(`Sending ${action.type} ${action.id} to server: `, action)
@@ -1281,10 +1283,12 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         await this.representations.reload()
     }
 
-    private async applyServerAuthoritativeAction(
-        action: GameAction,
-        context: GameContext<T, U>
-    ): Promise<void> {
+    private submitsToHost(context: GameContext<T, U>): boolean {
+        return this.usesHostExecution(context) || context.game.storage === GameStorage.Remote
+    }
+
+    // Undefined when the representation went stale while the host answered, and was reloaded.
+    private async submitToHost(action: GameAction, context: GameContext<T, U>) {
         const isRepresentationCurrent = this.representations.captureValidity()
         action.index = context.state.actionCount
 
@@ -1295,9 +1299,43 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         const response = await this.api.applyAction(context.game, action)
         if (!isRepresentationCurrent()) {
             await this.representations.reload()
-            return
+            return undefined
         }
-        this.reconciliation.acceptSubmission(action.id, response)
+        return response
+    }
+
+    // The host replays the Actions after a replaced declaration, regenerating their System
+    // Actions (ADR 0008), so the client takes the host's history rather than predicting it.
+    private replacesEarlierDeclaration(context: GameContext<T, U>, action: GameAction): boolean {
+        const replaced = action.supersedesActionId
+        return (
+            replaced !== undefined &&
+            this.usesHostExecution(context) &&
+            context.actions.at(-1)?.id !== replaced
+        )
+    }
+
+    private async applyEarlierDeclarationReplacement(
+        action: GameAction,
+        context: GameContext<T, U>
+    ): Promise<void> {
+        const response = await this.submitToHost(action, context)
+        if (!response) return
+        assertExists(
+            response.actions.find((processedAction) => processedAction.id === action.id),
+            `Processed action not found for ${action.id}`
+        )
+        // The host's broadcasts of the replay predate this game, so they are not applied again.
+        this.presenter.present({ kind: 'own-action' }, () => context.updateGame(response.game))
+        await this.checkSync()
+    }
+
+    private async applyServerAuthoritativeAction(
+        action: GameAction,
+        context: GameContext<T, U>
+    ): Promise<void> {
+        const response = await this.submitToHost(action, context)
+        if (response) this.reconciliation.acceptSubmission(action.id, response)
     }
 
     async undo() {
@@ -1315,8 +1353,7 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         const isRepresentationCurrent = this.representations.captureValidity()
         const targetAction = structuredClone($state.snapshot(target))
         const before = context.clone()
-        const hosted =
-            this.usesHostExecution(context) || context.game.storage === GameStorage.Remote
+        const hosted = this.submitsToHost(context)
         const privileged =
             context === this.gameContext && this.representations.hostContext !== undefined
 

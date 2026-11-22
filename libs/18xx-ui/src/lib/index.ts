@@ -46,6 +46,7 @@ export { withDraftedCompanies, type DraftedCompany } from './finance/draftedComp
 export * from './session/eighteenXXSession.svelte.js'
 export { StagedSelection, singleChoice } from './session/stagedSelection.svelte.js'
 export type { PrivateTrackPower, TitlePrivatePower } from './session/privateActionsModule.svelte.js'
+export type { TitleTrackConstruction, TitleTrackLay } from './session/trackModule.svelte.js'
 export { default as StockTrading } from './stock/StockTrading.svelte'
 export { default as StockMarket } from './stock/StockMarket.svelte'
 
@@ -109,6 +110,7 @@ export type {
     TokenBadge,
     TrainTokens,
     MarketLedge,
+    MarketMarker,
     MarketZone,
     MarketZoneBanner,
     MarketZoneFill,
@@ -218,6 +220,7 @@ export {
     MarketScenePadding,
     MarketTokenSize,
     MarketZoneBannerHeight,
+    MarketTabHeight,
     marketGeometry
 } from './stock/marketTokenLayout.js'
 

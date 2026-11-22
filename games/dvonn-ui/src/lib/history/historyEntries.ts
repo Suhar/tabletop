@@ -1,5 +1,17 @@
-import { assertExists, type AxialCoordinates, type GameAction } from '@tabletop/common'
-import { isDvonnPiece, isMoveStack, isPlacePiece } from '@tabletop/dvonn'
+import {
+    assertExists,
+    isCallGameAction,
+    type AxialCoordinates,
+    type CallGameAction,
+    type GameAction
+} from '@tabletop/common'
+import {
+    isChooseColor,
+    isDvonnPiece,
+    isMoveStack,
+    isPlacePiece,
+    type PieceColor
+} from '@tabletop/dvonn'
 
 type Span = { id: string; firstIndex: number; lastIndex: number; playerId: string }
 
@@ -7,7 +19,16 @@ export type PlaceEntry = Span & {
     kind: 'place'
     coords: AxialCoordinates
     dvonn: boolean
+    // The piece's colour, told when the setter of an I set, you choose board places for both.
+    color?: PieceColor
     // White's last placement, when White cannot make the first move.
+    passedPlayerId?: string
+}
+
+export type ChooseEntry = Span & {
+    kind: 'choose'
+    color: PieceColor
+    // White, when the set board leaves them no first move.
     passedPlayerId?: string
 }
 
@@ -24,11 +45,23 @@ export type MoveEntry = Span & {
     passedPlayerId?: string
 }
 
-export type HistoryEntry = PlaceEntry | MoveEntry
+export type PlayerEntry = PlaceEntry | ChooseEntry | MoveEntry
+
+// A call, a concession or a stall ends the game with a system action of its own.
+export type CallEntry = {
+    kind: 'call'
+    id: string
+    firstIndex: number
+    lastIndex: number
+    action: CallGameAction
+}
+
+export type HistoryEntry = PlayerEntry | CallEntry
 
 export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
     return actions.flatMap((action, index): HistoryEntry[] => {
         const span = { id: action.id, firstIndex: index, lastIndex: index }
+        if (isCallGameAction(action)) return [{ ...span, kind: 'call', action }]
         if (isPlacePiece(action)) {
             assertExists(action.metadata, 'A processed placement records its piece')
             return [
@@ -38,6 +71,19 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
                     playerId: action.playerId,
                     coords: action.coords,
                     dvonn: isDvonnPiece(action.metadata.piece),
+                    color: action.metadata.color,
+                    passedPlayerId: action.metadata.passedPlayerId
+                }
+            ]
+        }
+        if (isChooseColor(action)) {
+            assertExists(action.metadata, 'A processed choice of colour records its outcome')
+            return [
+                {
+                    ...span,
+                    kind: 'choose',
+                    playerId: action.playerId,
+                    color: action.color,
                     passedPlayerId: action.metadata.passedPlayerId
                 }
             ]
@@ -61,7 +107,6 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
                 }
             ]
         }
-        // The platform's own actions, such as a concession, have no entry here.
         return []
     })
 }

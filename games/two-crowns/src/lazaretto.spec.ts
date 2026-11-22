@@ -12,10 +12,11 @@ describe('1874 Rijeka Lazaretto', () => {
         // At 4–5 players the Lazaretto may be the private removed at setup; at 3 it is always dealt.
         const state = startTwoCrowns(3)
         const mainline = twoCrownsRole(state, 'mainline')
-        state.companies.find((item) => item.id === mainline)!.president = {
-            kind: 'player',
-            playerId: 'p1'
-        }
+        const presidency = state.certificates.find(
+            (item) => item.companyId === mainline && item.kind === 'share' && item.president
+        )!
+        presidency.owner = { kind: 'player', playerId: 'p1' }
+        delete presidency.poolId
         const lazaretto = state.certificates.find((item) => item.companyId === LazarettoId)!
         lazaretto.owner = { kind: 'player', playerId }
         delete lazaretto.poolId

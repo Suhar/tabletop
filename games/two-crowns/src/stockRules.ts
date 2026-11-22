@@ -9,6 +9,7 @@ import {
     getCompany,
     marketSaleTerms,
     playersAfterPresident,
+    presidentOf,
     privateOwner,
     sameOwner,
     treasuryPoolId,
@@ -59,7 +60,7 @@ export const TwoCrownsStockRules: StockRules = {
     saleTerms(state, companyId) {
         const company = getCompany(state, companyId)
         const shareCount = companyShareCount(state, TwoCrownsCharters, companyId)
-        if (companyId === 'LUKA' || !shareCount || !company.president)
+        if (companyId === 'LUKA' || !shareCount || !presidentOf(state, companyId))
             return 'This company has no saleable shares.'
         if (!company.operated) return 'Shares cannot be sold until the company has operated.'
         return marketSaleTerms(TwoCrownsMarket, state, companyId, {

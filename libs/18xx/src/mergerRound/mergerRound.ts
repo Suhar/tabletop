@@ -13,10 +13,13 @@ import { AssetTransfer, transferCompanyAssets } from '../company/companyMerger.j
 import { CompanyClosure, closeShareCompany } from '../company/companyClosure.js'
 import { startCompanyAtPar } from '../company/companyStart.js'
 import { ConnectedTrack } from '../construction/connectedTrack.js'
+import type { ValuationRules } from '../ending/finalWealth.js'
+import { RoundEnd, roundEnd } from '../ending/roundEnd.js'
 import { CashPayment, settleCashPayments } from '../finance/cashPayments.js'
 import {
     finiteCashOwnedBy,
     getCompany,
+    presidentOf,
     treasuryPoolId,
     type OpenShare
 } from '../finance/finance.js'
@@ -78,6 +81,8 @@ export interface MergerRoundRules {
     directorShares: number
     certificateLimit(state: State): number
     ownershipLimitPercent(state: State): number
+    /** How players' net worth is valued as the round ends. */
+    valuationRules: ValuationRules
 }
 
 export type MergerRequest = {
@@ -124,7 +129,9 @@ const StartMergerRoundAction = systemAction('StartMergerRound', {
 export const StartMergerRound = StartMergerRoundAction.schema
 export const isStartMergerRound = StartMergerRoundAction.is
 
-const EndMergerRoundAction = systemAction('EndMergerRound', {})
+const EndMergerRoundAction = systemAction('EndMergerRound', {
+    metadata: Type.Optional(Type.Object({ roundEnd: RoundEnd }, { additionalProperties: false }))
+})
 export const EndMergerRound = EndMergerRoundAction.schema
 export const isEndMergerRound = EndMergerRoundAction.is
 
@@ -333,7 +340,7 @@ export class MergerRounds {
         )
         return placed.some((hub) => {
             const track = new ConnectedTrack(mapState, [hub.position], (locationId, node) =>
-                cityBlockedForCompanies(state, minorIds, locationId, node)
+                cityBlockedForCompanies(state, this.rules.map, minorIds, locationId, node)
             )
             return placed.every(
                 (other) =>
@@ -437,6 +444,7 @@ export class MergerRounds {
 
         class HydratedEndMergerRound extends EndMergerRoundAction.Base {
             declare type: 'EndMergerRound'
+            declare metadata?: Type.Static<typeof EndMergerRound>['metadata']
             apply(state: State): void {
                 const round = rounds.requireRound(state)
                 assert(
@@ -447,6 +455,9 @@ export class MergerRounds {
                 )
                 round.completed = true
                 state.activePlayerIds = []
+                this.metadata = {
+                    roundEnd: roundEnd(state, rounds.rules.valuationRules, 'title')
+                }
             }
         }
 
@@ -704,7 +715,7 @@ export class MergerRounds {
     }
 
     private ownerOf(state: State, companyId: string): string {
-        const owner = getCompany(state, companyId).president
+        const owner = presidentOf(state, companyId)
         assert(owner?.kind === 'player', 'A minor company has a player for its owner')
         return owner.playerId
     }
@@ -872,10 +883,7 @@ export class MergerRounds {
         const { rules } = this
         const { majorId, directorId } = proposal
         const space = rules.market.space(proposal.marketSpaceId)
-        startCompanyAtPar(state, rules.market, majorId, proposal.marketSpaceId, {
-            kind: 'player',
-            playerId: directorId
-        })
+        startCompanyAtPar(state, rules.market, majorId, proposal.marketSpaceId)
         const major = getCompany(state, majorId)
         major.floated = true
         major.funded = true
@@ -1016,7 +1024,7 @@ export class MergerRounds {
             this.rules.stockRules.presidencyCandidates(state, proposal.majorId)
         ).change
         if (change) applyPresidencyChange(state, change)
-        const director = getCompany(state, proposal.majorId).president
+        const director = presidentOf(state, proposal.majorId)
         if (director?.kind === 'player') proposal.directorId = director.playerId
         return payment
     }

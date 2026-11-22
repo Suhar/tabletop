@@ -11,6 +11,11 @@ export type PhaseChartData = {
         id: string
         /** What the rulebook calls the phase, where that is not its train. */
         name?: string
+        /**
+         * What starts the phase within its name, where several phases share one, as 18RoyalGorge's
+         * Treaty of Boston within Green.
+         */
+        event?: string
         tileColors: readonly string[]
         operatingRounds: number
         trainLimit: number
@@ -51,7 +56,9 @@ export type DepotCertificate = {
 type ChartTrain = PhaseChartData['trains'][number]
 
 export function phaseName(chart: Pick<PhaseChartData, 'phases'>, phaseId: string): string {
-    return chart.phases.find((phase) => phase.id === phaseId)?.name ?? phaseId
+    const phase = chart.phases.find((entry) => entry.id === phaseId)
+    const name = phase?.name ?? phaseId
+    return phase?.event ? `${name} — ${phase.event}` : name
 }
 
 export function numberedPhaseLabel(phaseIds: readonly string[]): string {
@@ -62,10 +69,12 @@ export function phaseLabel(
     chart: Pick<PhaseChartData, 'phases'>,
     phaseIds: readonly string[]
 ): string {
-    const names = phaseIds.map((phaseId) => phaseName(chart, phaseId))
-    return names.some((name, index) => name !== phaseIds[index])
-        ? `${names.join(' → ')} phase`
-        : numberedPhaseLabel(phaseIds)
+    const phases = phaseIds.map((phaseId) => chart.phases.find((phase) => phase.id === phaseId))
+    const names = phaseIds.map((phaseId, index) => phases[index]?.name ?? phaseId)
+    if (names.every((name, index) => name === phaseIds[index])) return numberedPhaseLabel(phaseIds)
+    const distinct = names.filter((name, index) => name !== names[index - 1])
+    const event = phases.at(-1)?.event
+    return `${distinct.join(' → ')} phase${event ? ` — ${event}` : ''}`
 }
 
 export type TrainRosterRow = {
@@ -164,8 +173,10 @@ export function createPhaseChart({
     depot,
     rustNotes = {},
     rustPhases = {},
+    rustTrainIds = {},
     phaseNotes = {},
     phaseNames,
+    phaseEvents,
     notes = [],
     omittedPhaseIds = [],
     omittedTrainIds = [],
@@ -177,9 +188,16 @@ export function createPhaseChart({
     depot: TrainDepot
     rustNotes?: Readonly<Record<string, string>>
     rustPhases?: Readonly<Record<string, string>>
+    /**
+     * The trains whose purchase rusts a train, where its phase starts on a later purchase of a
+     * kind rather than the first, as 18MEX's second 6-train makes the 4-trains obsolete.
+     */
+    rustTrainIds?: Readonly<Record<string, readonly string[]>>
     phaseNotes?: Readonly<Record<string, string>>
     /** What the rulebook calls the phases, where that is not their trains. */
     phaseNames?: Readonly<Record<string, string>>
+    /** What starts each phase that shares its name with others, such as a deck's event card. */
+    phaseEvents?: Readonly<Record<string, string>>
     notes?: readonly string[]
     /** Phases and trains a variant leaves out, and trains it makes permanent. */
     omittedPhaseIds?: readonly string[]
@@ -196,6 +214,7 @@ export function createPhaseChart({
             .map(({ id, tileColors, operatingRounds, trainLimit }) => ({
                 id,
                 ...(phaseNames?.[id] ? { name: phaseNames[id] } : {}),
+                ...(phaseEvents?.[id] ? { event: phaseEvents[id] } : {}),
                 tileColors,
                 operatingRounds,
                 trainLimit,
@@ -214,7 +233,9 @@ export function createPhaseChart({
                           price: train.price,
                           supplyId: definitionId,
                           rustPhaseId,
-                          rustTrainIds: rustPhaseId ? phases.phase(rustPhaseId).startedBy : [],
+                          rustTrainIds: rustPhaseId
+                              ? (rustTrainIds[train.id] ?? phases.phase(rustPhaseId).startedBy)
+                              : [],
                           rustNote: rustNotes[train.id],
                           upgrades: trainUpgrades?.(train.id)
                       }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { Color } from '@tabletop/common'
 import { spaceFromName as s, spaceName } from '@tabletop/dvonn'
 import { entrySegments, type Segment } from './entryText.js'
-import type { HistoryEntry } from './historyEntries.js'
+import type { PlayerEntry } from './historyEntries.js'
 
 function read(segments: Segment[]): string {
     return segments
@@ -20,7 +21,7 @@ function read(segments: Segment[]): string {
 
 const span = { id: 'a', firstIndex: 0, lastIndex: 0, playerId: 'p' }
 
-const move: HistoryEntry = {
+const move: PlayerEntry = {
     ...span,
     kind: 'move',
     from: s('D3'),
@@ -47,7 +48,7 @@ describe('entrySegments', () => {
     })
 
     it('names a single piece and a DVONN placement', () => {
-        const single: HistoryEntry = {
+        const single: PlayerEntry = {
             ...move,
             moved: 1,
             landedOn: 1,
@@ -58,7 +59,20 @@ describe('entrySegments', () => {
         expect(read(entrySegments(single))).toBe(
             ' moved a piece from D3 onto a piece on D5, making 2'
         )
-        const place: HistoryEntry = { ...span, kind: 'place', coords: s('E3'), dvonn: true }
+        const place: PlayerEntry = { ...span, kind: 'place', coords: s('E3'), dvonn: true }
         expect(read(entrySegments(place))).toBe(' placed a DVONN piece on E3')
+    })
+
+    it('names the colour of each piece placed and taken in I set, you choose', () => {
+        const place: PlayerEntry = {
+            ...span,
+            kind: 'place',
+            coords: s('E3'),
+            dvonn: false,
+            color: Color.Black
+        }
+        expect(read(entrySegments(place))).toBe(' placed a black piece on E3')
+        const choose: PlayerEntry = { ...span, kind: 'choose', color: Color.White }
+        expect(read(entrySegments(choose))).toBe(' took White')
     })
 })

@@ -17,7 +17,6 @@
     import Header from '$lib/components/Header.svelte'
     import ActionPanel from '$lib/components/ActionPanel.svelte'
     import ReserveStrip from '$lib/components/ReserveStrip.svelte'
-    import GameEndPanel from '$lib/components/GameEndPanel.svelte'
     import { MatrxGameSession } from '$lib/model/session.svelte.js'
     import { setGameSession } from '$lib/model/sessionContext.svelte.js'
 
@@ -44,11 +43,7 @@
 {#snippet turnControls()}
     <Header />
     <div class="action-card">
-        {#if gameSession.gameState.result && !gameSession.isViewingHistory}
-            <GameEndPanel />
-        {:else}
-            <ActionPanel />
-        {/if}
+        <ActionPanel />
     </div>
     <ReserveStrip />
 {/snippet}
@@ -85,6 +80,9 @@
                 {#snippet chat()}
                     <GameChat
                         timeColor="text-gray-500"
+                        messageTextColor="text-(--matrx-ink)"
+                        composerTextColor="text-(--matrx-ink)"
+                        messageHoverColor="hover:bg-(--matrx-panel-hover)"
                         bgColor="bg-[#ffffff]"
                         inputBgColor="bg-[#ffffff]"
                         inputBorderColor="border-[#c3cad2]"
@@ -116,6 +114,27 @@
                                 pressed={gameSession.showCoordinates}
                                 onToggle={() => gameSession.toggleCoordinates()}>A1</OverlayToggle
                             >
+                            <OverlayToggle
+                                label="Piece badges"
+                                pressed={gameSession.pieceBadges}
+                                onToggle={() => gameSession.togglePieceBadges()}
+                            >
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="-8 -8 16 16"
+                                    aria-hidden="true"
+                                >
+                                    <circle r="6.5" class="badge-ring"></circle>
+                                    <text
+                                        y="3.6"
+                                        text-anchor="middle"
+                                        font-size="10"
+                                        font-weight="700"
+                                        fill="currentColor">G</text
+                                    >
+                                </svg>
+                            </OverlayToggle>
                             <OverlayToggle
                                 label="E5 mark"
                                 pressed={gameSession.centreMark}

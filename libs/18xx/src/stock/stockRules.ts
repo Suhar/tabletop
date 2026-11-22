@@ -38,6 +38,12 @@ export function presidencyExchangeTerms(
 export type ShareSaleTerms = {
     payer: Owner
     price: number
+    /**
+     * What selling exactly these shares pays, where a share is worth no whole amount, as an
+     * 18MEX NdM 5% unit, half a 10% share's price, the odd half rounded up (3.2(a)); otherwise
+     * the price for each share.
+     */
+    proceeds?: number
     destinationPoolId: string
     marketLimit: number
     maximumShares: number
@@ -87,6 +93,11 @@ export interface StockRules {
      * (1862 §6.3, §8).
      */
     presidencyLapses?: true
+    /**
+     * Whether the company's shares carry no presidency at all, as 18RoyalGorge's steel and gold
+     * companies, which issue ten single shares and never operate (SR-5, SR-6).
+     */
+    presidentless?(state: StockState, companyId: string): boolean
     /**
      * What follows any sale into the market, such as the market closing its own shorts. Sale
      * previews may run it on a shallow copy of the state, so it replaces nested state it changes.

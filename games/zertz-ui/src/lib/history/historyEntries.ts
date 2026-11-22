@@ -1,7 +1,9 @@
 import {
     assertExists,
+    isCallGameAction,
     sameCoordinates,
     type AxialCoordinates,
+    type CallGameAction,
     type GameAction
 } from '@tabletop/common'
 import {
@@ -11,7 +13,7 @@ import {
     type MarbleColor,
     type Ring
 } from '@tabletop/zertz'
-import { applyToSeeds, placementSeed, seedAt } from '$lib/board/marbleSeeds.js'
+import { actionNumber, applyToSeeds, placementSeed, seedAt } from '$lib/board/marbleSeeds.js'
 
 type TurnSpan = {
     id: string
@@ -39,7 +41,18 @@ export type CaptureEntry = TurnSpan & {
     captured: { color: MarbleColor; seed: number }[]
 }
 
-export type HistoryEntry = PlacementEntry | CaptureEntry
+export type MoveEntry = PlacementEntry | CaptureEntry
+
+// A call, a concession or a stall ends the game with a system action of its own.
+export type CallEntry = {
+    kind: 'call'
+    id: string
+    firstIndex: number
+    lastIndex: number
+    action: CallGameAction
+}
+
+export type HistoryEntry = MoveEntry | CallEntry
 
 export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
     const entries: HistoryEntry[] = []
@@ -47,9 +60,19 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
     let chain: CaptureEntry | undefined
 
     actions.forEach((action, index) => {
-        if (isPlaceMarble(action)) {
+        const number = actionNumber(action, index)
+        if (isCallGameAction(action)) {
             chain = undefined
-            const seed = placementSeed(action.coords, index)
+            entries.push({
+                kind: 'call',
+                id: action.id,
+                firstIndex: index,
+                lastIndex: index,
+                action
+            })
+        } else if (isPlaceMarble(action)) {
+            chain = undefined
+            const seed = placementSeed(action.coords, number)
             const { metadata } = action
             assertExists(metadata, 'A processed placement has its metadata')
             const claimed = [...metadata.claimedOnPlacing, ...metadata.claimedOnRemoving]
@@ -66,9 +89,11 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
                 ...(action.remove === undefined ? {} : { removedAt: action.remove }),
                 claimed: claimed.map((ring) => ({
                     ...ring,
-                    seed: sameCoordinates(ring.coords, action.coords)
-                        ? seed
-                        : seedAt(seeds, ring.coords)
+                    seed:
+                        ring.marbleSeed ??
+                        (sameCoordinates(ring.coords, action.coords)
+                            ? seed
+                            : seedAt(seeds, ring.coords))
                 }))
             })
         } else if (isCapture(action)) {
@@ -82,7 +107,7 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
                     lastIndex: index,
                     playerId: action.playerId,
                     jumper: metadata.jumper,
-                    jumperSeed: seedAt(seeds, action.from),
+                    jumperSeed: metadata.jumperSeed ?? seedAt(seeds, action.from),
                     path: [action.from],
                     captured: []
                 }
@@ -92,13 +117,13 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
             chain.path.push(action.to)
             chain.captured.push({
                 color: metadata.captured,
-                seed: seedAt(seeds, metadata.over)
+                seed: metadata.capturedSeed ?? seedAt(seeds, metadata.over)
             })
             if (!metadata.continues) {
                 chain = undefined
             }
         }
-        applyToSeeds(seeds, action, index)
+        applyToSeeds(seeds, action, number)
     })
 
     return entries

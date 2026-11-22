@@ -1,6 +1,6 @@
-import type { AxialCoordinates } from '@tabletop/common'
-import { PieceKind, type StackSummary } from '@tabletop/tzaar'
-import type { HistoryEntry } from './historyEntries.js'
+import { Color, type AxialCoordinates } from '@tabletop/common'
+import { PieceKind, type PieceColor, type StackSummary } from '@tabletop/tzaar'
+import type { MoveEntry, PlaceEntry } from './historyEntries.js'
 
 export type Segment =
     | { kind: 'text'; text: string }
@@ -25,11 +25,13 @@ const player = (playerId: string): Segment => ({ kind: 'player', playerId })
 
 // Spaces live inside text segments: Svelte trims whitespace at the edges of template blocks.
 // The brief form keeps the action banner to one line; the history panel uses the full one.
-export function entrySegments(entry: HistoryEntry, brief = false): Segment[] {
+export function entrySegments(entry: MoveEntry, brief = false): Segment[] {
     const stuck = entry.stuckPlayerId === undefined ? [] : stuckSegments(entry.stuckPlayerId, brief)
     switch (entry.kind) {
         case 'place':
-            return [text(` placed a ${KIND_NAMES[entry.piece]} on `), space(entry.coords), ...stuck]
+            return [text(` placed ${pieceOf(entry)} on `), space(entry.coords), ...stuck]
+        case 'choose':
+            return [text(` took ${COLOR_NAMES[entry.color]}`), ...stuck]
         case 'capture':
             return [
                 text(brief ? ' captured ' : ` moved ${stackOf(entry.moved)} from `),
@@ -54,6 +56,16 @@ export function entrySegments(entry: HistoryEntry, brief = false): Segment[] {
         case 'pass':
             return [text(' passed the second move'), ...stuck]
     }
+}
+
+export const COLOR_NAMES: Record<PieceColor, string> = {
+    [Color.White]: 'White',
+    [Color.Black]: 'Black'
+}
+
+function pieceOf({ piece, color }: PlaceEntry): string {
+    const name = KIND_NAMES[piece]
+    return color === undefined ? `a ${name}` : `a ${COLOR_NAMES[color].toLowerCase()} ${name}`
 }
 
 function stuckSegments(playerId: string, brief: boolean): Segment[] {

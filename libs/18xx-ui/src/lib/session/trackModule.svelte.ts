@@ -11,10 +11,12 @@ import {
     type EighteenXXState,
     type EighteenXXTitleRules,
     type StationState,
+    type BoardTile,
     type TrackLayDetails,
     type TrackRequest
 } from '@tabletop/18xx'
 import type { MapViewDefinition } from '../maps/stationPresentation.js'
+import { withTileGroups } from '../maps/tileGroups.js'
 import type { CompanyDecisionsModule } from './companyDecisionsModule.svelte.js'
 import type { PrivateActionsModule } from './privateActionsModule.svelte.js'
 import type { ModuleSession } from './moduleSession.js'
@@ -32,8 +34,22 @@ export type TrackSession = ModuleSession<
 type TrackMap = {
     map: Pick<MapViewDefinition['map'], 'definition'>
     tileSet: Pick<MapViewDefinition['tileSet'], 'definitions'>
+    tileGroups?: MapViewDefinition['tileGroups']
 }
 type PrivateActions = Pick<PrivateActionsModule, 'selection' | 'trackPowerSelection' | 'titlePower'>
+/** The construction a lay the title applies itself is chosen from. */
+export type TitleTrackConstruction = Pick<
+    TrackConstruction,
+    'choices' | 'canReach' | 'evaluate' | 'inventoryAfter' | 'stationsAfter'
+>
+/**
+ * A lay the title asks for outside a company's track step, such as 1860's home tile as a company
+ * floats in a stock round: chosen on the map as any lay is, and committed as the title's Action.
+ */
+export type TitleTrackLay = {
+    construction: TitleTrackConstruction
+    commit(details: TrackLayDetails): Promise<void>
+}
 type Decisions = Pick<CompanyDecisionsModule, 'selectPrivateTile' | 'confirm'>
 
 export class TrackModule {
@@ -44,16 +60,19 @@ export class TrackModule {
         private readonly privateActions: PrivateActions,
         private readonly decisions: Decisions,
         private readonly onLocationChosen: () => void,
-        private readonly active: () => boolean = () => true
+        private readonly active: () => boolean = () => true,
+        private readonly titleLayOffer: () => TitleTrackLay | undefined = () => undefined
     ) {}
 
+    private titleLay = $derived.by(() => this.titleLayOffer())
     private laying = $derived.by(
         () =>
-            this.active() &&
-            (!!this.privateActions.trackPowerSelection ||
-                (this.session.state.machineState === 'LayingTrack' &&
-                    !this.session.state.privateStation &&
-                    !this.privateActions.selection))
+            !!this.titleLay ||
+            (this.active() &&
+                (!!this.privateActions.trackPowerSelection ||
+                    (this.session.state.machineState === 'LayingTrack' &&
+                        !this.session.state.privateStation &&
+                        !this.privateActions.selection)))
     )
     selection = $derived.by((): TrackSelection =>
         this.session.selectionsVisible && this.laying ? this.stages.state : {}
@@ -62,7 +81,8 @@ export class TrackModule {
         const power = this.privateActions.titlePower
         return power?.kind === 'track' ? power : undefined
     })
-    construction = $derived.by(() => {
+    construction = $derived.by((): TitleTrackConstruction => {
+        if (this.titleLay) return this.titleLay.construction
         if (this.titlePower) return this.titlePower.construction
         const { state, rules } = this.session
         const power = this.privateActions.trackPowerSelection?.value
@@ -78,10 +98,11 @@ export class TrackModule {
     canBuild = $derived.by(
         () =>
             this.session.interactive &&
-            this.active() &&
-            (!!this.privateActions.trackPowerSelection ||
-                (!this.privateActions.selection &&
-                    this.session.validActionTypes.includes('FinishTrack')))
+            (!!this.titleLay ||
+                (this.active() &&
+                    (!!this.privateActions.trackPowerSelection ||
+                        (!this.privateActions.selection &&
+                            this.session.validActionTypes.includes('FinishTrack')))))
     )
     showChoices = $derived.by(() => !this.session.viewingHistory && this.laying)
     private choicesByLocation = $derived.by(
@@ -97,7 +118,7 @@ export class TrackModule {
     )
     // A private power lays only at its own locations, which may need no connection at all.
     reachableLocationIds = $derived.by(() =>
-        this.showChoices && !this.privateActions.trackPowerSelection
+        this.showChoices && !this.titleLay && !this.privateActions.trackPowerSelection
             ? this.mapView()
                   .map.definition.locations.filter((location) =>
                       this.construction.canReach(location.id)
@@ -108,6 +129,8 @@ export class TrackModule {
     locationIds = $derived.by(() =>
         [...this.choicesByLocation].filter(([, choices]) => choices.length).map(([id]) => id)
     )
+    /** The legal hexes, with every hex a tile laid there covers too, which choose it as well. */
+    pieceLocationIds = $derived.by(() => withTileGroups(this.mapView(), this.locationIds))
     choices = $derived.by(() =>
         this.selection.locationId
             ? (this.choicesByLocation.get(this.selection.locationId.value) ?? [])
@@ -179,6 +202,15 @@ export class TrackModule {
         })
     )
 
+    /** A lay's tiles: its own, and those it places beside it as one piece. */
+    pieceOf(details: TrackLayDetails): readonly BoardTile[] {
+        const { locationId, definitionId, rotation } = details
+        const { state, rules } = this.session
+        return [
+            { locationId, definitionId, rotation },
+            ...(rules.trackRules.companionTiles?.(state, details) ?? [])
+        ]
+    }
     selectLocation(locationId: string) {
         assert(
             this.canBuild && this.locationIds.includes(locationId),
@@ -236,7 +268,8 @@ export class TrackModule {
     consentersToAsk = $derived.by((): readonly string[] => {
         const preview = this.preview
         // A lay made with a private company's power is settled by that power.
-        if (!preview || this.titlePower || this.privateActions.trackPowerSelection) return []
+        if (!preview || this.titleLay || this.titlePower || this.privateActions.trackPowerSelection)
+            return []
         const { state, rules } = this.session
         const consenters = new TrackConstruction(state, rules.trackRules).consenters(preview)
         const me = this.session.playerId
@@ -272,6 +305,11 @@ export class TrackModule {
     }
 
     private async commit(preview: TrackLayDetails, askedPlayerId?: string) {
+        if (this.titleLay) {
+            await this.titleLay.commit(preview)
+            this.stages.clear()
+            return
+        }
         if (this.titlePower) {
             // A title may stage the lay locally for a later combined action.
             await this.titlePower.commit(preview)

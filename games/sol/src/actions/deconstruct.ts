@@ -15,10 +15,12 @@ import {
     isTransmitTower,
     Station
 } from '../components/stations.js'
+import { SolarGate } from '../components/solarGate.js'
 
 export type DeconstructMetadata = Type.Static<typeof DeconstructMetadata>
 export const DeconstructMetadata = Type.Object({
-    removedStation: Station,
+    removedStation: Type.Optional(Station),
+    removedGate: Type.Optional(SolarGate),
     oldMovement: Type.Number(),
     newMovement: Type.Number()
 })
@@ -31,6 +33,7 @@ export const Deconstruct = Type.Evaluate(
             type: Type.Literal(ActionType.Deconstruct),
             playerId: Type.String(),
             coords: OffsetCoordinates,
+            innerCoords: Type.Optional(OffsetCoordinates),
             metadata: Type.Optional(DeconstructMetadata)
         })
     ])
@@ -49,39 +52,49 @@ export class HydratedDeconstruct
     declare type: ActionType.Deconstruct
     declare playerId: string
     declare coords: OffsetCoordinates
+    declare innerCoords?: OffsetCoordinates
     declare metadata?: DeconstructMetadata
     constructor(data: Deconstruct) {
         super(data, DeconstructValidator)
     }
 
     apply(state: HydratedSolGameState, _context?: MachineContext) {
-        if (!HydratedDeconstruct.canDeconstructAt(state, this.playerId, this.coords)) {
-            throw Error('Invalid deconstruct')
-        }
         const playerState = state.getPlayerState(this.playerId)
-        const cell = state.board.cellAt(this.coords)
-        const station = cell.station
-        assertExists(station, 'No station to deconstruct')
+        const oldMovement = playerState.movement
 
-        const removedStation = state.board.removeStationAt(this.coords)
-        assertExists(removedStation, 'Failed to remove station')
-
-        this.metadata = {
-            removedStation: removedStation,
-            oldMovement: playerState.movement,
-            newMovement: 0 // Placeholder, will be set below
-        }
-
-        switch (true) {
-            case isEnergyNode(removedStation):
-                playerState.energyNodes.push(removedStation)
-                break
-            case isTransmitTower(removedStation):
-                playerState.transmitTowers.push(removedStation)
-                break
-            case isSundiverFoundry(removedStation):
-                playerState.sundiverFoundries.push(removedStation)
-                break
+        if (this.innerCoords) {
+            if (
+                !HydratedDeconstruct.canDeconstructGateAt(
+                    state,
+                    this.playerId,
+                    this.innerCoords,
+                    this.coords
+                )
+            ) {
+                throw Error('Invalid deconstruct')
+            }
+            const removedGate = state.board.removeGateBetween(this.innerCoords, this.coords)
+            assertExists(removedGate, 'Failed to remove gate')
+            playerState.solarGates.push(removedGate)
+            this.metadata = { removedGate, oldMovement, newMovement: oldMovement }
+        } else {
+            if (!HydratedDeconstruct.canDeconstructAt(state, this.playerId, this.coords)) {
+                throw Error('Invalid deconstruct')
+            }
+            const removedStation = state.board.removeStationAt(this.coords)
+            assertExists(removedStation, 'Failed to remove station')
+            switch (true) {
+                case isEnergyNode(removedStation):
+                    playerState.energyNodes.push(removedStation)
+                    break
+                case isTransmitTower(removedStation):
+                    playerState.transmitTowers.push(removedStation)
+                    break
+                case isSundiverFoundry(removedStation):
+                    playerState.sundiverFoundries.push(removedStation)
+                    break
+            }
+            this.metadata = { removedStation, oldMovement, newMovement: oldMovement }
         }
 
         const sundivers = playerState.removeSundiversFromReserve(2)
@@ -90,13 +103,15 @@ export class HydratedDeconstruct
         playerState.movement = state.calculatePlayerMovement(playerState.playerId)
         this.metadata.newMovement = playerState.movement
 
-        // It happems before the turn sort of, so the movement points get altered too
+        // It happens before the turn sort of, so the movement points get altered too
         playerState.movementPoints = playerState.movement
     }
 
     static canDeconstruct(state: HydratedSolGameState, playerId: string): boolean {
-        return Iterator.from(state.board).some((cell) =>
-            this.canDeconstructAt(state, playerId, cell.coords)
+        return (
+            Iterator.from(state.board).some((cell) =>
+                this.canDeconstructAt(state, playerId, cell.coords)
+            ) || this.deconstructableGates(state, playerId).length > 0
         )
     }
 
@@ -107,5 +122,18 @@ export class HydratedDeconstruct
     ): boolean {
         const cell = state.board.cellAt(coords)
         return cell.station !== undefined && cell.station.playerId === playerId
+    }
+
+    static deconstructableGates(state: HydratedSolGameState, playerId: string): SolarGate[] {
+        return Object.values(state.board.gates).filter((gate) => gate.playerId === playerId)
+    }
+
+    static canDeconstructGateAt(
+        state: HydratedSolGameState,
+        playerId: string,
+        innerCoords: OffsetCoordinates,
+        outerCoords: OffsetCoordinates
+    ): boolean {
+        return state.board.gateBetween(innerCoords, outerCoords)?.playerId === playerId
     }
 }

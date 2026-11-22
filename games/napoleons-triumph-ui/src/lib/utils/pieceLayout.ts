@@ -1,5 +1,6 @@
 import { assertExists, type Point } from '@tabletop/common'
 import {
+    AUSTERLITZ,
     samePosition,
     standingGroupKey,
     type Commander,
@@ -22,8 +23,9 @@ import {
     type BlockFootprint
 } from './blockShape.js'
 import { screenAxes, uprightAngle } from './boardView.js'
+import { nearBox, type OrientedBox } from './orientedBox.js'
 import { insidePolygon } from './polygon.js'
-import { TARGET_BAR_DEPTH, targetBarBox } from './targetBar.js'
+import { TARGET_BAR_DEPTH, approachBarBox, targetBarBox } from './targetBar.js'
 import { inReadingOrder } from './unitTypeOrder.js'
 import { byCommander } from './groupOrder.js'
 
@@ -46,7 +48,13 @@ const NEIGHBOUR_CLEARANCE = FILE_GROUP_GAP
 // Deliberate: a reserve stands as far from the pieces fronting an approach as groups in one file do,
 // so the two are never read as one stack.
 const RESERVE_CLEARANCE = FILE_GROUP_GAP
+// Deliberate: a reserve keeps the same gap from its locale's approach bars, so that where a bar runs
+// level across the screen the reserve is not read as a corps blocking that approach.
+const RESERVE_BAR_CLEARANCE = RESERVE_CLEARANCE
 const OVERLAP_COST = 12
+// Deliberate: a reserve gets off a level approach bar only by moving where it lies over no piece, no
+// offered target bar a player taps, and no edge of its locale it did not cross before.
+const BAR_CROWDING_COST = 1
 const STRAY_COST = 3
 const DRIFT_COST = 0.02
 
@@ -426,16 +434,23 @@ function isBelow(place: Point, locale: LocaleGeometry, down: Point): boolean {
     return (place.x - locale.anchor.x) * down.x + (place.y - locale.anchor.y) * down.y > 0
 }
 
+/** The board angle, in degrees, of the screen's left-to-right direction in the view turned by rotation. */
+function screenRightAngle(rotation: number): number {
+    const { right } = screenAxes(rotation)
+    return (Math.atan2(right.y, right.x) * 180) / Math.PI
+}
+
 function arrangeReserve(
     groups: PlacedGroup[],
     options: LayoutOptions,
-    columns: number
+    columns: number,
+    squeeze = 1
 ): PlacedBlocks[] {
     const locale = LOCALE_GEOMETRY[groups[0].position.locale]
     const { right, down } = screenAxes(options.rotation)
-    const angle = uprightAngle((Math.atan2(right.y, right.x) * 180) / Math.PI, options.rotation)
+    const angle = uprightAngle(screenRightAngle(options.rotation), options.rotation)
     const loose = options.looseLocales?.includes(groups[0].position.locale) === true
-    const room = Math.max(BLOCK_THICKNESS * 2, locale.clearance * 2.2)
+    const room = Math.max(BLOCK_THICKNESS * 2, locale.clearance * 2.2 * squeeze)
     const rows = Math.ceil(groups.length / columns)
     const tallest = Math.max(...groups.map((group) => group.units.length))
     const spacing = rankSpacing(tallest * rows, room, loose)
@@ -487,13 +502,43 @@ interface CandidateSpot extends ReserveSpot {
 interface ReserveSpots {
     stay: CandidateSpot
     stayIsClear: boolean
+    spotAt: (shift: Point) => CandidateSpot
     all: () => CandidateSpot[]
+}
+
+// Deliberate: only a bar lying near level with a reserve's blocks makes it look like a corps
+// fronting that approach; one standing across them never does.
+const LEVEL_BAR_DEGREES = 20
+
+// Impassable borders are printed with no approach bar, so they have no APPROACH_GEOMETRY.
+function levelBarsOf(localeId: number, blockAngle: number): OrientedBox[] {
+    return AUSTERLITZ.passableApproachesOf(localeId).flatMap((approach) => {
+        const turn = Math.abs(APPROACH_GEOMETRY[approach.id].angle - blockAngle) % 180
+        return Math.min(turn, 180 - turn) <= LEVEL_BAR_DEGREES
+            ? [approachBarBox(approach.id, BAR_HALF_THICKNESS)]
+            : []
+    })
+}
+
+function nearAnyBar(bars: readonly OrientedBox[]): (point: Point) => boolean {
+    const near = bars.map((bar) => nearBox(bar, RESERVE_BAR_CLEARANCE))
+    return (point) => near.some((onBar) => onBar(point))
+}
+
+function crowdsABar(spot: ReserveSpot, bars: readonly OrientedBox[]): boolean {
+    const onBar = nearAnyBar(bars)
+    return spot.reserve.some(({ blocks }) =>
+        blocks.some((block) =>
+            blockSamples(block).some((sample) => onBar(moved(sample, spot.shift)))
+        )
+    )
 }
 
 function spotsFor(
     reserve: PlacedBlocks[],
     locale: LocaleGeometry,
-    placed: readonly BlockFootprint[]
+    placed: readonly BlockFootprint[],
+    bars: readonly OrientedBox[] = []
 ): ReserveSpots {
     const samples = reserve.flatMap(({ blocks }) => blocks.flatMap(blockSamples))
     const centres = reserve.flatMap(({ blocks }) => blocks.map((block) => block.centre))
@@ -507,7 +552,8 @@ function spotsFor(
             Math.hypot(block.centre.x - locale.anchor.x, block.centre.y - locale.anchor.y) <
             reach * 2 + BLOCK_LENGTH
     )
-    const onPlaced = coveredBy(near, RESERVE_CLEARANCE)
+    const onPiece = coveredBy(near, RESERVE_CLEARANCE)
+    const onBar = nearAnyBar(bars)
     const spotAt = (shift: Point): CandidateSpot => {
         const drift = Math.hypot(shift.x, shift.y) * DRIFT_COST
         return {
@@ -521,13 +567,20 @@ function spotsFor(
             // spot is dearer than the limit.
             costUpTo: (limit) => {
                 let covered = 0
+                let crowding = 0
                 let stray = 0
                 let cost = drift
                 for (const sample of samples) {
                     const point = moved(sample, shift)
-                    covered += onPlaced(point) ? 1 : 0
+                    const covering = onPiece(point)
+                    covered += covering ? 1 : 0
+                    crowding += !covering && onBar(point) ? 1 : 0
                     stray += insidePolygon(point, locale.outline) ? 0 : 1
-                    cost = covered * OVERLAP_COST + stray * STRAY_COST + drift
+                    cost =
+                        covered * OVERLAP_COST +
+                        crowding * BAR_CROWDING_COST +
+                        stray * STRAY_COST +
+                        drift
                     if (cost > limit) {
                         return undefined
                     }
@@ -542,7 +595,12 @@ function spotsFor(
         searched ??= [stay, ...shiftsInside(locale).map(spotAt)]
         return searched
     }
-    return { stay, stayIsClear: samples.every((sample) => !onPlaced(sample)), all }
+    return {
+        stay,
+        stayIsClear: samples.every((sample) => !onPiece(sample) && !onBar(sample)),
+        spotAt,
+        all
+    }
 }
 
 function shiftsInside(locale: LocaleGeometry): Point[] {
@@ -561,12 +619,16 @@ function shiftsInside(locale: LocaleGeometry): Point[] {
 
 // Deliberate: spots are costed nearest first, so a cheap one is found early and most others are
 // given up after a few samples. A tie goes to the spot listed first, as costing every spot in
-// turn would choose.
-function cheapestSpot(spots: readonly CandidateSpot[]): ReserveSpot {
+// turn would choose. A spot already chosen wins ties against them all, so it is kept unless another is cheaper.
+function cheapestSpot(spots: readonly CandidateSpot[], chosen?: CandidateSpot): CandidateSpot {
     const nearestFirst = spots
         .map((spot, listed) => ({ spot, listed }))
         .toSorted((a, b) => a.spot.drift - b.spot.drift || a.listed - b.listed)
-    let best: { spot: CandidateSpot; listed: number; cost: number } | undefined
+    let best: { spot: CandidateSpot; listed: number; cost: number } | undefined = chosen && {
+        spot: chosen,
+        listed: -1,
+        cost: chosen.costUpTo(Infinity) ?? Infinity
+    }
     for (const { spot, listed } of nearestFirst) {
         const cost = spot.costUpTo(best?.cost ?? Infinity)
         if (
@@ -593,6 +655,9 @@ function columnsToTry(groupCount: number, locale: LocaleGeometry): number[] {
     return Array.from({ length: groupCount - fitted + 1 }, (_, added) => fitted + added)
 }
 
+// A reserve that would crowd an approach bar lying level with it may close up this much further to keep clear.
+const BAR_SQUEEZE = 0.8
+
 // Deliberate: a block whose middle leaves its locale is read as standing in the next one, so a
 // reserve whose clearest spot would put one there keeps every middle inside instead, overlapping
 // other pieces if it must, and may stand in more columns than its locale's clearance gives it.
@@ -601,14 +666,26 @@ function settleReserve(
     options: LayoutOptions,
     placed: readonly BlockFootprint[]
 ): ReserveSpot {
-    const locale = LOCALE_GEOMETRY[groups[0].position.locale]
+    const localeId = groups[0].position.locale
+    const locale = LOCALE_GEOMETRY[localeId]
     const spotsIn = (columns: number) =>
         spotsFor(arrangeReserve(groups, options, columns), locale, placed)
     const [fittedColumns, ...widerColumns] = columnsToTry(groups.length, locale)
     const fitted = spotsIn(fittedColumns)
     const clearest = fitted.stayIsClear ? fitted.stay : cheapestSpot(fitted.all())
     if (clearest.strandedBlocks === 0) {
-        return clearest
+        const bars = levelBarsOf(localeId, screenRightAngle(options.rotation))
+        if (!crowdsABar(clearest, bars)) {
+            return clearest
+        }
+        const besideBars = (squeeze: number) =>
+            spotsFor(arrangeReserve(groups, options, fittedColumns, squeeze), locale, placed, bars)
+        const asLaidOut = besideBars(1)
+        const closedUp = besideBars(BAR_SQUEEZE)
+        const inside = [...asLaidOut.all(), ...closedUp.all()].filter(
+            (spot) => spot.strandedBlocks === 0
+        )
+        return cheapestSpot(inside, asLaidOut.spotAt(clearest.shift))
     }
     return cheapestKeepingInside(
         [fitted, ...widerColumns.map(spotsIn)].flatMap((spots) => spots.all())

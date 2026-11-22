@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { CalledGameEnding } from '@tabletop/frontend-components'
     import { EndReason } from '@tabletop/lyngk'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
@@ -15,6 +16,7 @@
 
     // Names the count that decided the game: stacks of 5 first, then 4s, 3s, 2s and singles.
     const reason = $derived.by(() => {
+        if (session.gameCall) return undefined
         const { gameState } = session
         if (gameState.endReason === EndReason.StackOfSix) {
             const [winner] = winners
@@ -27,18 +29,60 @@
             .map((player) => gameState.rankingOf(player.playerId)[decider])
             .toSorted((a, b) => b - a)
             .join(' to ')
-        const level = decider === 0 ? '' : `Level on ${HEIGHTS.slice(0, decider).join(', ')}; `
-        return `${level}decided on ${HEIGHTS[decider]}, ${counts}`
+        return `Won on ${HEIGHTS[decider]}, ${counts}`
     })
 </script>
 
-<div class="flex flex-col items-center gap-1 px-3 py-2 text-center text-(--lyngk-ink)">
-    <div class="text-[22px] font-semibold tracking-[0.06em]">
-        {#if isDraw}
-            A draw
-        {:else if winners[0]}
-            {winners[0] === session.myPlayer?.id ? 'You win' : `${nameOf(winners[0])} wins`}
-        {/if}
-    </div>
-    <div class="text-[15px] text-(--lyngk-ink-quiet)">{reason}</div>
+<div class="ending">
+    {#if reason}
+        <span class="winner">
+            {#if isDraw}
+                A draw
+            {:else if winners[0]}
+                {winners[0] === session.myPlayer?.id ? 'You win' : `${nameOf(winners[0])} wins`}
+            {/if}
+        </span>
+        <span class="reason" title={reason}>{reason}</span>
+    {:else}
+        <CalledGameEnding class="text-[18px] tracking-[0.02em]" />
+    {/if}
 </div>
+
+<style>
+    /* Within the height the action panel holds: the winner over the reason, the reason trimmed
+       rather than wrapped. */
+    .ending {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 0;
+        max-width: 100%;
+        line-height: 1.2;
+    }
+
+    .winner {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .reason {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 15px;
+        color: var(--lyngk-ink-quiet);
+    }
+
+    @media (max-width: 639px) {
+        .reason {
+            font-size: 13px;
+        }
+    }
+</style>

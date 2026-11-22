@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ActionSource, type AxialCoordinates, type GameAction } from '@tabletop/common'
+import {
+    ActionSource,
+    assert,
+    CALL_GAME_ACTION_TYPE,
+    GameCallKind,
+    type AxialCoordinates,
+    type CallGameAction,
+    type GameAction
+} from '@tabletop/common'
 import {
     ActionType,
     MarbleColor,
@@ -57,6 +65,20 @@ function jump(
     }
 }
 
+const call: CallGameAction = {
+    id: 'call',
+    gameId: 'game',
+    source: ActionSource.System,
+    type: CALL_GAME_ACTION_TYPE,
+    call: {
+        kind: GameCallKind.Conceded,
+        initiatorPlayerId: 'p1',
+        declaredWinnerId: 'p0',
+        approvingPlayerIds: ['p1'],
+        decliningPlayerIds: []
+    }
+}
+
 describe('historyEntries', () => {
     it('reads a move’s placement, removal and both claims', () => {
         const actions: GameAction[] = [
@@ -95,9 +117,9 @@ describe('historyEntries', () => {
             placement('a', 'p0', MarbleColor.Grey, false),
             placement('b', 'p1', MarbleColor.White, false)
         ])
-        expect(entries.map((entry) => [entry.kind, entry.playerId, entry.lastIndex])).toEqual([
-            ['placement', 'p0', 0],
-            ['placement', 'p1', 1]
+        expect(entries).toMatchObject([
+            { kind: 'placement', playerId: 'p0', lastIndex: 0 },
+            { kind: 'placement', playerId: 'p1', lastIndex: 1 }
         ])
     })
 
@@ -165,5 +187,51 @@ describe('historyEntries', () => {
             jumperSeed: placementSeed({ q: 0, r: 0 }, 0),
             captured: [{ color: MarbleColor.Grey, seed: placementSeed({ q: 1, r: 0 }, 1) }]
         })
+    })
+
+    it('names a placed marble by its action number when the history starts part way through', () => {
+        const actions = [{ ...placement('a', 'p1', MarbleColor.White, true), index: 12 }]
+        const [entry] = historyEntries(actions)
+        expect(entry.kind === 'placement' && entry.seed).toBe(placementSeed({ q: 0, r: 0 }, 12))
+    })
+
+    it('names captured and claimed marbles by the seeds their actions recorded', () => {
+        const jumped = jump('j', 'p2', MarbleColor.Black, false, { q: 0, r: 0 }, { q: 2, r: 0 })
+        assert(jumped.metadata)
+        jumped.metadata = { ...jumped.metadata, jumperSeed: 7, capturedSeed: 8 }
+        const placed = placement('a', 'p1', MarbleColor.White, true, [], [MarbleColor.Grey])
+        assert(placed.metadata)
+        placed.metadata.claimedOnRemoving[0].marbleSeed = 9
+        const [claim, capture] = historyEntries([placed, jumped])
+        expect(claim.kind === 'placement' && claim.claimed[0].seed).toBe(9)
+        expect(capture.kind === 'capture' && capture.jumperSeed).toBe(7)
+        expect(capture.kind === 'capture' && capture.captured[0].seed).toBe(8)
+    })
+
+    it('gives a called game its own entry after the last move', () => {
+        const entries = historyEntries([placement('a', 'p0', MarbleColor.Grey, false), call])
+        expect(entries).toMatchObject([
+            { kind: 'placement', playerId: 'p0', firstIndex: 0 },
+            { kind: 'call', firstIndex: 1, lastIndex: 1, action: call }
+        ])
+    })
+
+    it('keeps a call apart from a capture chain left unfinished', () => {
+        const entries = historyEntries([
+            jump('a', 'p0', MarbleColor.Black, true, { q: 0, r: 0 }, { q: 2, r: 0 }),
+            call
+        ])
+        expect(entries).toMatchObject([
+            {
+                kind: 'capture',
+                firstIndex: 0,
+                lastIndex: 0,
+                path: [
+                    { q: 0, r: 0 },
+                    { q: 2, r: 0 }
+                ]
+            },
+            { kind: 'call', firstIndex: 1, lastIndex: 1, action: call }
+        ])
     })
 })

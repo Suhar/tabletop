@@ -2,6 +2,7 @@ import { TwoCrownsCharters } from './charters.js'
 import { TwoCrownsMarket } from './stockMarket.js'
 import {
     applyPresidencyChange,
+    CompanyStationsOnly,
     applyStationPlacement,
     closePrivate,
     evaluatePresidency,
@@ -116,16 +117,20 @@ export const TwoCrownsCompanyRules: CompanyRules = {
             if (role === 'shortline' || role === 'narodna') {
                 const reservation = state.stationReservations.find((r) => r.companyId === companyId)
                 assertExists(reservation, 'A leased line requires its reserved home')
-                applyStationPlacement(state, {
-                    stationId: homeStationId(companyId),
-                    companyId,
-                    position: {
-                        locationId: reservation.locationId,
-                        nodeId: reservation.nodeId,
-                        slot: 0
+                applyStationPlacement(
+                    state,
+                    {
+                        stationId: homeStationId(companyId),
+                        companyId,
+                        position: {
+                            locationId: reservation.locationId,
+                            nodeId: reservation.nodeId,
+                            slot: 0
+                        },
+                        cost: 0
                     },
-                    cost: 0
-                })
+                    CompanyStationsOnly
+                )
             }
             return
         }

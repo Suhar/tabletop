@@ -34,10 +34,6 @@ describe('1874 Autorun', () => {
         )!
         president.owner = { kind: 'player', playerId: 'p2' }
         delete president.poolId
-        state.companies.find((item) => item.id === mainline)!.president = {
-            kind: 'player',
-            playerId: 'p2'
-        }
         expect(engine.getValidActionTypesForPlayer(game, state, 'p2')).toContain(
             'SetRunInstruction'
         )

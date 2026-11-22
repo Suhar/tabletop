@@ -14,6 +14,7 @@
         certificatesOwnedBy,
         controllingOwner,
         getCompany,
+        presides,
         privateOwner,
         sameOwner,
         trainsOwnedBy,
@@ -340,7 +341,7 @@
                                     entry.poolId
                                 )
                                     ? `Holds the ${session.terms.presidentWord}’s certificate`
-                                    : company.president && sameOwner(entry.owner, company.president)
+                                    : presides(gameState, company.id, entry.owner)
                                       ? session.terms.president
                                       : undefined}
                             <tr
@@ -557,7 +558,10 @@
                                 ? power.label
                                 : undefined}
                         /></span
-                    >{/each}
+                    >{/each}{#if !item.closed}{@const held = session.presentation.privateHoldings?.(
+                        gameState,
+                        item.id
+                    )}{#if held}<small class="private-holdings">{held}</small>{/if}{/if}
             </div>
             <span
                 >{purchasePrice ??
@@ -578,6 +582,13 @@
     .private-power {
         margin-left: 6px;
         white-space: nowrap;
+    }
+    .private-holdings {
+        display: block;
+        color: var(--rail-muted, #817565);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 14px;
     }
     .company-detail.unavailable {
         background: var(--rail-surface, #f1f1ef);

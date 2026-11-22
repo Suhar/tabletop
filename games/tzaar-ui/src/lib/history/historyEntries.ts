@@ -1,9 +1,17 @@
-import { assertExists, type AxialCoordinates, type GameAction } from '@tabletop/common'
+import {
+    assertExists,
+    isCallGameAction,
+    type AxialCoordinates,
+    type CallGameAction,
+    type GameAction
+} from '@tabletop/common'
 import {
     isCapture,
+    isChooseColor,
     isPass,
     isPlacePiece,
     isStack,
+    type PieceColor,
     type PieceKind,
     type StackSummary
 } from '@tabletop/tzaar'
@@ -14,7 +22,16 @@ export type PlaceEntry = Span & {
     kind: 'place'
     coords: AxialCoordinates
     piece: PieceKind
+    // The piece's colour, told when the setter of an I set, you choose board places for both.
+    color?: PieceColor
     // The last placement, when White cannot make the opening capture.
+    stuckPlayerId?: string
+}
+
+export type ChooseEntry = Span & {
+    kind: 'choose'
+    color: PieceColor
+    // White, when the set board leaves them no opening capture.
     stuckPlayerId?: string
 }
 
@@ -43,7 +60,18 @@ export type StackEntry = Span & {
 
 export type PassEntry = Span & { kind: 'pass'; stuckPlayerId?: string }
 
-export type HistoryEntry = PlaceEntry | CaptureEntry | StackEntry | PassEntry
+export type MoveEntry = PlaceEntry | ChooseEntry | CaptureEntry | StackEntry | PassEntry
+
+// A call, a concession or a stall ends the game with a system action of its own.
+export type CallEntry = {
+    kind: 'call'
+    id: string
+    firstIndex: number
+    lastIndex: number
+    action: CallGameAction
+}
+
+export type HistoryEntry = MoveEntry | CallEntry
 
 // Every action played records what history tells of it.
 function recorded<T>(metadata: T | undefined): T {
@@ -53,6 +81,9 @@ function recorded<T>(metadata: T | undefined): T {
 
 export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
     return actions.flatMap((action, index): HistoryEntry[] => {
+        if (isCallGameAction(action)) {
+            return [{ kind: 'call', id: action.id, firstIndex: index, lastIndex: index, action }]
+        }
         if (action.playerId === undefined) return []
         const span = {
             id: action.id,
@@ -68,9 +99,14 @@ export function historyEntries(actions: readonly GameAction[]): HistoryEntry[] {
                     kind: 'place',
                     coords: action.coords,
                     piece: action.kind,
+                    color: metadata.color,
                     stuckPlayerId: metadata.stuckPlayerId
                 }
             ]
+        }
+        if (isChooseColor(action)) {
+            const { stuckPlayerId } = recorded(action.metadata)
+            return [{ ...span, kind: 'choose', color: action.color, stuckPlayerId }]
         }
         if (isCapture(action)) {
             const metadata = recorded(action.metadata)

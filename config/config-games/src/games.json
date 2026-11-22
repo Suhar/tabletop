@@ -206,5 +206,21 @@
     {
         "gameId": "punct",
         "packageId": "punct"
+    },
+    {
+        "gameId": "18royalgorge",
+        "packageId": "18royalgorge"
+    },
+    {
+        "gameId": "hex",
+        "packageId": "hex"
+    },
+    {
+        "gameId": "18mex",
+        "packageId": "18mex"
+    },
+    {
+        "gameId": "1860",
+        "packageId": "1860"
     }
 ]
