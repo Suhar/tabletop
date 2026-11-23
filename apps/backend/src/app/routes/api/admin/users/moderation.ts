@@ -65,25 +65,6 @@ export default async function (fastify: FastifyInstance) {
         }
     )
 
-    fastify.get('/awaitingApproval', { onRequest }, async function () {
-        const users = await fastify.userService.findSignUpsAwaitingApproval()
-        return { status: 'ok', payload: { users } }
-    })
-
-    fastify.post<{ Params: AccountParams }>(
-        '/:userId/approve',
-        { schema: { params: AccountParams }, onRequest },
-        async function (request) {
-            const { userId } = request.params
-            const user = await fastify.userService.approveSignUp(userId)
-            request.log.info(
-                { adminId: request.user?.id, userId },
-                'Administrator approved sign-up'
-            )
-            return { status: 'ok', payload: { user } }
-        }
-    )
-
     fastify.post<{ Params: AccountParams; Body: PasswordRequest }>(
         '/:userId/password',
         { schema: { params: AccountParams, body: PasswordRequest }, onRequest },

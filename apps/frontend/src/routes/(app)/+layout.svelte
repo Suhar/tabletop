@@ -42,7 +42,8 @@
         UserStatus,
         GameVisibility,
         getTitleVisibility,
-        findPlayerForUserId
+        findPlayerForUserId,
+        canApproveSignUps
     } from '@tabletop/common'
     import {
         VersionChange,
@@ -75,6 +76,7 @@
     let { children } = $props()
 
     let sessionUser = $derived(authorizationService.getSessionUser())
+    let mayApproveSignUps = $derived(sessionUser ? canApproveSignUps(sessionUser.roles) : false)
     let otherTurnCount = $derived(
         gameService.currentGameSession
             ? otherTurnGames(
@@ -271,6 +273,11 @@
     async function gotoAdmin() {
         showCancelPrompt = false
         await goto('/admin')
+    }
+
+    async function gotoSignUps() {
+        showCancelPrompt = false
+        await goto('/sign-ups')
     }
 
     async function gotoDashboard() {
@@ -693,6 +700,10 @@
                                 {#if authorizationService.isAdmin}
                                     <DropdownItem class="w-full text-left" onclick={gotoAdmin}
                                         >Admin</DropdownItem
+                                    >
+                                {:else if mayApproveSignUps}
+                                    <DropdownItem class="w-full text-left" onclick={gotoSignUps}
+                                        >Sign-ups</DropdownItem
                                     >
                                 {/if}
                                 <DropdownDivider />

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     accountStatusAfterCompletionCheck,
+    canApproveSignUps,
     canHoldAuthenticatedSession,
     isAbandonedSignUp,
     Role,
@@ -28,6 +29,17 @@ describe('withAssignedRoles', () => {
         expect(
             withAssignedRoles([Role.User], [Role.Developer, Role.AlphaTester, Role.Developer])
         ).toEqual([Role.User, Role.AlphaTester, Role.Developer])
+    })
+})
+
+describe('canApproveSignUps', () => {
+    it('admits Administrators and Approvers', () => {
+        expect(canApproveSignUps([Role.User, Role.Admin])).toBe(true)
+        expect(canApproveSignUps([Role.User, Role.Approver])).toBe(true)
+    })
+
+    it('refuses every other role', () => {
+        expect(canApproveSignUps([Role.User, Role.Developer, Role.BetaTester])).toBe(false)
     })
 })
 

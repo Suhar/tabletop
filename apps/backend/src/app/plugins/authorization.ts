@@ -1,6 +1,6 @@
 import { measure } from '@tabletop/backend-services/diagnostics'
 import fp from 'fastify-plugin'
-import { User, Role, UserStatus } from '@tabletop/common'
+import { User, Role, UserStatus, canApproveSignUps } from '@tabletop/common'
 import {
     AuthenticatedSession,
     RecentAuthenticationRequiredError,
@@ -16,6 +16,7 @@ declare module 'fastify' {
         verifyActiveUser: FastifyAuthFunction
         verifyRoleUser: FastifyAuthFunction
         verifyRoleAdmin: FastifyAuthFunction
+        verifySignUpApprover: FastifyAuthFunction
         verifyRecentAuthentication: FastifyAuthFunction
     }
 
@@ -86,15 +87,24 @@ export default fp(async function (fastify: FastifyInstance) {
         verifyRole(request, Role.Admin)
     }
 
+    async function verifySignUpApprover(request: FastifyRequest) {
+        if (!canApproveSignUps(requireUser(request).roles)) {
+            throw fastify.httpErrors.forbidden('User may not approve sign-ups')
+        }
+    }
+
     function verifyRole(request: FastifyRequest, role: Role) {
+        if (!requireUser(request).roles.includes(role)) {
+            throw fastify.httpErrors.forbidden('User does not have ' + role + ' role')
+        }
+    }
+
+    function requireUser(request: FastifyRequest): User {
         const user = request.user
         if (!user) {
             throw fastify.httpErrors.unauthorized('No user found')
         }
-
-        if (!user.roles.includes(role)) {
-            throw fastify.httpErrors.forbidden('User does not have ' + role + ' role')
-        }
+        return user
     }
 
     fastify.decorate('verifyUser', verifyUser)
@@ -102,5 +112,6 @@ export default fp(async function (fastify: FastifyInstance) {
     fastify.decorate('verifyIncompleteUser', verifyIncompleteUser)
     fastify.decorate('verifyRoleUser', verifyRoleUser)
     fastify.decorate('verifyRoleAdmin', verifyRoleAdmin)
+    fastify.decorate('verifySignUpApprover', verifySignUpApprover)
     fastify.decorate('verifyRecentAuthentication', verifyRecentAuthentication)
 })

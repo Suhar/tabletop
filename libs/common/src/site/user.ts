@@ -8,7 +8,8 @@ export enum Role {
     Developer = 'developer',
     Admin = 'admin',
     BetaTester = 'betatester',
-    AlphaTester = 'alphatester'
+    AlphaTester = 'alphatester',
+    Approver = 'approver'
 }
 
 export enum UserStatus {
@@ -228,7 +229,12 @@ export function accountStatusAfterCompletionCheck(
     return satisfiesCompletion ? UserStatus.Active : UserStatus.Incomplete
 }
 
-export const ADMIN_ASSIGNABLE_ROLES = [Role.AlphaTester, Role.BetaTester, Role.Developer] as const
+export const ADMIN_ASSIGNABLE_ROLES = [
+    Role.AlphaTester,
+    Role.BetaTester,
+    Role.Developer,
+    Role.Approver
+] as const
 export type AdminAssignableRole = (typeof ADMIN_ASSIGNABLE_ROLES)[number]
 
 export function isAdminAssignableRole(role: Role): role is AdminAssignableRole {
@@ -242,4 +248,8 @@ export function withAssignedRoles(
     const retained = existingRoles.filter((role) => !isAdminAssignableRole(role))
     const assigned = ADMIN_ASSIGNABLE_ROLES.filter((role) => assignedRoles.includes(role))
     return [...retained, ...assigned]
+}
+
+export function canApproveSignUps(roles: readonly Role[]): boolean {
+    return roles.includes(Role.Admin) || roles.includes(Role.Approver)
 }

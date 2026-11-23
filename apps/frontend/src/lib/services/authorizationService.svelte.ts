@@ -1,4 +1,10 @@
-import { canHoldAuthenticatedSession, Role, User, UserStatus } from '@tabletop/common'
+import {
+    canApproveSignUps,
+    canHoldAuthenticatedSession,
+    Role,
+    User,
+    UserStatus
+} from '@tabletop/common'
 import { goto, invalidateAll } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
 import { AuthorizationCategory, type TabletopApi } from '@tabletop/frontend-components'
@@ -38,6 +44,9 @@ export class AuthorizationService {
 
     isAdmin: boolean = $derived(Boolean(this.sessionUser?.roles.includes(Role.Admin)))
     isDeveloper: boolean = $derived(Boolean(this.sessionUser?.roles.includes(Role.Developer)))
+    mayApproveSignUps: boolean = $derived(
+        Boolean(this.sessionUser && canApproveSignUps(this.sessionUser.roles))
+    )
     canUseDeveloperTools: boolean = $derived(this.isAdmin || this.isDeveloper)
     debugViewEnabled: boolean = $state(false)
     adminCapabilitiesEnabled: boolean = $state(false)
