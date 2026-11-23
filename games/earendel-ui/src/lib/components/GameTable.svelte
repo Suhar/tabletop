@@ -60,54 +60,59 @@
     })
 </script>
 
-<Starfield seed={skySeed} />
-
-<div style="--chat-height-offset: 0px;">
-    <DefaultTableLayout>
-        {#snippet sideContent()}
-            <ElevatedDeck />
-            <PiecesInPlay />
-            <DefaultSideContent>
-                {#snippet playersPanel()}
-                    <PlayersPanel />
-                {/snippet}
-                {#snippet history()}
-                    <History />
-                {/snippet}
-            </DefaultSideContent>
-            <TechnologyPiles />
-        {/snippet}
-        {#snippet gameContent()}
-            <!-- A fixed height, so nothing shown above the board ever moves or rescales it. Content
+<!-- The sky lies behind the table and no further: it fills this wrapper, and the table is
+     positioned so that it paints over the sky without either needing a z-index. A sky pushed
+     behind the whole page instead is hidden wherever the page paints its own background, as
+     the hosted site's does. -->
+<div class="relative" style="--chat-height-offset: 0px;">
+    <Starfield seed={skySeed} />
+    <div class="relative">
+        <DefaultTableLayout>
+            {#snippet sideContent()}
+                <ElevatedDeck />
+                <PiecesInPlay />
+                <DefaultSideContent>
+                    {#snippet playersPanel()}
+                        <PlayersPanel />
+                    {/snippet}
+                    {#snippet history()}
+                        <History />
+                    {/snippet}
+                </DefaultSideContent>
+                <TechnologyPiles />
+            {/snippet}
+            {#snippet gameContent()}
+                <!-- A fixed height, so nothing shown above the board ever moves or rescales it. Content
                  that outgrows it scrolls within it. -->
-            <div class="above-board shrink-0 flex flex-col" data-above-board>
-                <Header />
-                <div class="min-h-0 flex-1 overflow-y-auto">
-                    {#if gameSession.isViewingHistory}
-                        <!-- What happened, and under it the hand of whoever's turn it was, turning
+                <div class="above-board shrink-0 flex flex-col" data-above-board>
+                    <Header />
+                    <div class="min-h-0 flex-1 overflow-y-auto">
+                        {#if gameSession.isViewingHistory}
+                            <!-- What happened, and under it the hand of whoever's turn it was, turning
                              and dealing as the actions replay. -->
-                        <div class="flex flex-col items-center pt-1">
-                            <HistoryDescription />
-                            <Hand cards interactive={false} />
-                        </div>
-                    {:else if gameSession.gameState.result}
-                        <GameEndSummary />
-                    {:else}
-                        <InformationPanel />
+                            <div class="flex flex-col items-center pt-1">
+                                <HistoryDescription />
+                                <Hand cards interactive={false} />
+                            </div>
+                        {:else if gameSession.gameState.result}
+                            <GameEndSummary />
+                        {:else}
+                            <InformationPanel />
+                        {/if}
+                    </div>
+                </div>
+                <!-- overflow-hidden keeps the height fixed so the wrapper scales to its bounds -->
+                <div class="relative grow-0 overflow-hidden" style="flex:1;">
+                    <ScalingWrapper justify="center" controls="bottom-left" expandable>
+                        <Board />
+                    </ScalingWrapper>
+                    {#if gameSession.titleStage !== 'hidden'}
+                        <TitleCard />
                     {/if}
                 </div>
-            </div>
-            <!-- overflow-hidden keeps the height fixed so the wrapper scales to its bounds -->
-            <div class="relative grow-0 overflow-hidden" style="flex:1;">
-                <ScalingWrapper justify="center" controls="bottom-left" expandable>
-                    <Board />
-                </ScalingWrapper>
-                {#if gameSession.titleStage !== 'hidden'}
-                    <TitleCard />
-                {/if}
-            </div>
-        {/snippet}
-    </DefaultTableLayout>
+            {/snippet}
+        </DefaultTableLayout>
+    </div>
 </div>
 
 {#if gameSession.overviewShown}
