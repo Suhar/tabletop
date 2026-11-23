@@ -61,6 +61,13 @@ export class TrussGrowthAnimator {
             )
         }
 
+        // A girder an earlier step of this run faded, and this step makes again, is the board's
+        // own element still: it comes back, since no stand-in is drawn for a girder on show.
+        for (const key of after) {
+            const girder = this.girders.get(key)
+            if (girder) animationContext.actionTimeline.set(girder, { opacity: 1 }, 0)
+        }
+
         // Stood in against the board on show, not this step's start: while a run of actions
         // plays, the board on show is still the one from before the first of them, so a girder
         // an earlier step grew stays drawn, full length, while a later step animates.

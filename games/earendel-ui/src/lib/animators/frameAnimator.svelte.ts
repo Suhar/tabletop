@@ -41,6 +41,9 @@ export class FrameAnimator {
         })
 
         const target = viewBoxOf(boardFrame(Object.values(to.board.hexes).map((hex) => hex.coords)))
+        // The change's own extent is what is wanted once it is done: following the extent from
+        // before it would aim the frame back at the old board until the new state arrived.
+        this.wanted = target
         if (target === this.framed) return
         this.slide?.kill()
         this.framed = target

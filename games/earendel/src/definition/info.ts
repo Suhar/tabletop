@@ -6,7 +6,7 @@ export const EarendelInfo: GameInfo = {
     id: 'earendel',
     metadata: {
         name: 'Earendel',
-        designer: 'Unknown',
+        designer: 'Dave Perkins',
         description: 'Earendel is a tabletop game implemented using the Tabletop framework.',
         year: '2026',
         minPlayers: 2,

@@ -420,9 +420,13 @@
         }
     }
 
+    let destroyed = false
+
     async function assembleBoard() {
         assembling = true
         await tick()
+        // Torn down while waiting: there is no board to build, and no title to bring back.
+        if (destroyed) return
         const tiles = [...tileHexes.entries()].sort(
             ([a], [b]) => Number(a.replace(/\D+/g, '')) - Number(b.replace(/\D+/g, ''))
         )
@@ -507,6 +511,7 @@
         for (const listener of listeners) gameSession.addGameStateChangeListener(listener)
         return () => {
             for (const listener of listeners) gameSession.removeGameStateChangeListener(listener)
+            destroyed = true
             assembly?.kill()
             gameSession.beginPlay()
         }

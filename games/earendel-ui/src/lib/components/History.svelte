@@ -30,6 +30,10 @@
 
     let gameSession = getGameSession()
 
+    // Rows settle with a little motion as play adds them. Stepping through history is a
+    // restoration, shown as it stands: nothing fades or slides then.
+    const settle = (duration: number) => (gameSession.isViewingHistory ? 0 : duration)
+
     let reversedActions = $derived.by(() => {
         const reversed = gameSession.actions
             .toReversed()
@@ -67,9 +71,9 @@
                     tabindex={-1}
                     onfocus={() => {}}
                     onkeypress={() => {}}
-                    in:fade={{ duration: 200, easing: quartIn }}
-                    out:fade={{ duration: 50 }}
-                    animate:flip={{ duration: 100 }}
+                    in:fade={{ duration: settle(200), easing: quartIn }}
+                    out:fade={{ duration: settle(50) }}
+                    animate:flip={{ duration: settle(100) }}
                 >
                     <div
                         class="absolute w-3 h-3 bg-[#ad9c80] rounded-full mt-1.5 -start-1.5 border dark:border-[#ad9c80] dark:bg-[#ad9c80]"
