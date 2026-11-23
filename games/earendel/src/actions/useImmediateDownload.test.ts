@@ -7,9 +7,8 @@ import { focusedCardId } from '../model/technologyCards.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { UseImmediateDownload } from './useImmediateDownload.js'
-import { planetsInSightOf } from '../util/lineOfSight.js'
 import { downloadTargetsFrom } from '../util/download.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -52,8 +51,8 @@ const planet = (
     }
 }
 
-// The anchor planet at (2,0) holds the mover's Download. A far planet at (8,0) holds a Railgun,
-// with clear space between them. Row 3 is spare.
+// The anchor planet at (2,0) holds the mover's Download. A far planet at (5,0), three hexes off
+// and so just within reach, holds a Railgun. Row 3 is spare.
 function scenario(farEffect = TechnologyEffectKind.Railgun) {
     const game = new TestGame()
     const mover = game.activePlayerId
@@ -61,7 +60,7 @@ function scenario(farEffect = TechnologyEffectKind.Railgun) {
 
     const board = openRow()
     planet(board, at(2, 0), DOWNLOAD)
-    planet(board, at(8, 0), card(farEffect, 1))
+    planet(board, at(5, 0), card(farEffect, 1))
 
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
@@ -86,60 +85,61 @@ const download = (playerId: string, from: AxialCoordinates, to: AxialCoordinates
     to
 })
 
-describe('clear line of sight', () => {
-    it('reaches an adjacent planet - there is nothing in between to block', () => {
-        const board = openRow()
-        planet(board, at(2, 0))
-        planet(board, at(3, 0))
+describe('reach', () => {
+    const reachable = (game: TestGame, mover: string) =>
+        downloadTargetsFrom(game.hydrated, mover, at(2, 0)).map(hexKey)
 
-        // The one deliberate difference from the station sight-link rule, which skips a station
-        // standing right next door. Two neighbouring planets must not be the single pair that
-        // cannot see each other.
-        expect(planetsInSightOf(board, at(2, 0)).map(hexKey)).toContain(hexKey(at(3, 0)))
+    it('takes in every explored planet within three hexes, in any direction', () => {
+        const { game, mover } = scenario()
+        // Three away along the row (the scenario's own), and three away off every axis.
+        planet(game.state.board, at(3, 2), card(TechnologyEffectKind.TacticalFeint, 0))
+
+        expect(reachable(game, mover).sort()).toEqual([hexKey(at(5, 0)), hexKey(at(3, 2))].sort())
     })
 
-    it('is blocked by any piece between, including the viewer’s own', () => {
-        const board = openRow()
-        planet(board, at(2, 0))
-        planet(board, at(8, 0))
-        expect(planetsInSightOf(board, at(2, 0)).map(hexKey)).toContain(hexKey(at(8, 0)))
+    it('stops at three hexes', () => {
+        const { game, mover } = scenario()
+        planet(game.state.board, at(6, 0), card(TechnologyEffectKind.TacticalFeint, 0))
 
-        board.hexes[hexKey(at(5, 0))].piece = ship('p1', PieceType.Probe)
-        expect(planetsInSightOf(board, at(2, 0)).map(hexKey)).not.toContain(hexKey(at(8, 0)))
+        expect(reachable(game, mover)).toEqual([hexKey(at(5, 0))])
     })
 
-    it('is blocked by a planet between, and stops at the nearer one', () => {
-        const board = openRow()
-        planet(board, at(2, 0))
-        planet(board, at(5, 0))
-        planet(board, at(8, 0))
+    it('is not blocked by anything between: a ship, a planet, or a gap in the board', () => {
+        const { game, mover, other } = scenario()
+        game.state.board.hexes[hexKey(at(3, 0))].piece = ship(other, PieceType.Fighter)
+        planet(game.state.board, at(4, 0))
+        expect(reachable(game, mover)).toEqual([hexKey(at(5, 0))])
 
-        const seen = planetsInSightOf(board, at(2, 0)).map(hexKey)
-        expect(seen).toContain(hexKey(at(5, 0)))
-        expect(seen).not.toContain(hexKey(at(8, 0)))
+        delete game.state.board.hexes[hexKey(at(3, 0))]
+        expect(reachable(game, mover)).toEqual([hexKey(at(5, 0))])
     })
 
-    it('only runs along the six axes', () => {
-        const board = openRow()
-        planet(board, at(2, 0))
-        // Row 3 is not on any axis from row 0, so nothing there is ever in sight.
-        planet(board, at(8, 3))
-        expect(planetsInSightOf(board, at(2, 0))).toEqual([])
+    it('is not interrupted by a jammer', () => {
+        const { game, mover, other } = scenario()
+        game.state.board.hexes[hexKey(at(3, 0))].piece = ship(other, PieceType.Jammer)
+
+        expect(reachable(game, mover)).toEqual([hexKey(at(5, 0))])
+        game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))
+        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toContain(
+            FAR_RAILGUN
+        )
     })
 })
 
 describe('Immediate Download', () => {
-    it('takes the technology of a planet in sight, with no wait', () => {
+    it('takes the technology of a planet within reach, with no wait', () => {
         const { game, mover } = scenario()
 
         expect(game.validActionsFor(mover)).toContain(ActionType.UseImmediateDownload)
 
-        game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
+        game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))
 
         const playerState = game.state.players.find((p) => p.playerId === mover)!
         expect(playerState.technologies).toContain(FAR_RAILGUN)
-        // A Railgun is a cooldown power, so "available immediately" means it is simply usable.
-        expect(playerState.cooldownEffects).toContain(TechnologyEffectKind.Railgun)
+        // A Railgun is a cooldown power, so "now or later, with no wait" means it is simply usable.
+        expect(
+            game.hydrated.getPlayerState(mover).hasCooldownEffect(TechnologyEffectKind.Railgun)
+        ).toBe(true)
         // Spent: one time use.
         expect(playerState.storedEffects).not.toContain(TechnologyEffectKind.ImmediateDownload)
         // The turn carries on - this costs a power, not the placement.
@@ -150,62 +150,60 @@ describe('Immediate Download', () => {
         const { game, mover, other } = scenario()
         game.state.players.find((p) => p.playerId === other)!.technologies = [FAR_RAILGUN]
 
-        game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
+        game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))
 
         // A technology gained is a record, not a token: nobody is robbed.
-        expect(game.state.board.hexes[hexKey(at(8, 0))].technologyId).toBe(FAR_RAILGUN)
+        expect(game.state.board.hexes[hexKey(at(5, 0))].technologyId).toBe(FAR_RAILGUN)
         expect(game.state.players.find((p) => p.playerId === other)!.technologies).toContain(
             FAR_RAILGUN
         )
     })
 
-    it('resolves a downloaded Immediate effect on the spot', () => {
+    it('hands over a downloaded one-shot technology unspent, to use now or later', () => {
         const { game, mover } = scenario(TechnologyEffectKind.MoveFriendlyPiece)
-        // Something for it to move: with an empty board Tactical Shift has no decision to offer
-        // and auto-resolves, which would hide the routing this test is about.
         game.state.board.hexes[hexKey(at(0, 3))].piece = ship(mover, PieceType.Station)
 
-        game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))
+        game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))
 
-        // Tactical Shift acts at once when gained, so downloading it hands the player its
-        // decision rather than a card to remember.
-        expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
-        expect(game.state.pendingTechnology?.technologyId).toBe(
-            card(TechnologyEffectKind.MoveFriendlyPiece, 1)
+        // Tactical Shift arrives as a use to keep: nothing is owed, the turn carries on, and it
+        // may be spent this turn or held.
+        expect(game.state.pendingTechnology).toBeUndefined()
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.players.find((p) => p.playerId === mover)!.storedEffects).toContain(
+            TechnologyEffectKind.MoveFriendlyPiece
         )
+        expect(game.validActionsFor(mover)).toContain(ActionType.UseTacticalShift)
     })
 
-    it('refuses a planet it cannot see, one already held, and an unexplored one', () => {
+    it('refuses a planet out of reach, one already held, and an unexplored one', () => {
         const { game, mover } = scenario()
 
-        // Blocked by a ship standing between the two planets.
-        game.state.board.hexes[hexKey(at(5, 0))].piece = ship(mover, PieceType.Probe)
-        expect(downloadTargetsFrom(game.hydrated, mover, at(2, 0))).toEqual([])
-        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
-        delete game.state.board.hexes[hexKey(at(5, 0))].piece
+        // Four hexes off: one too far.
+        planet(game.state.board, at(6, 0), card(TechnologyEffectKind.TacticalFeint, 0))
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(6, 0)))).toThrow()
 
         // Already theirs - nothing to download, and a one-shot power would be wasted.
         game.state.players.find((p) => p.playerId === mover)!.technologies = [DOWNLOAD, FAR_RAILGUN]
-        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))).toThrow()
         game.state.players.find((p) => p.playerId === mover)!.technologies = [DOWNLOAD]
 
         // Unexplored, so it holds no technology to read.
-        delete game.state.board.hexes[hexKey(at(8, 0))].technologyId
-        game.state.board.hexes[hexKey(at(8, 0))].explored = false
-        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
+        delete game.state.board.hexes[hexKey(at(5, 0))].technologyId
+        game.state.board.hexes[hexKey(at(5, 0))].explored = false
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))).toThrow()
     })
 
-    it('refuses a planet holding another Download, so sight cannot chain', () => {
+    it('refuses a planet holding another Download, so reach cannot chain', () => {
         const { game, mover } = scenario(TechnologyEffectKind.ImmediateDownload)
 
         expect(downloadTargetsFrom(game.hydrated, mover, at(2, 0))).toEqual([])
-        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(8, 0)))).toThrow()
+        expect(() => game.run(UseImmediateDownload, download(mover, at(2, 0), at(5, 0)))).toThrow()
     })
 
     it('must be spent from a planet actually holding the player’s Download', () => {
         const { game, mover } = scenario()
-        // The far planet is in sight and holds a technology, but it isn't the anchor.
-        expect(() => game.run(UseImmediateDownload, download(mover, at(8, 0), at(2, 0)))).toThrow()
+        // The far planet is within reach and holds a technology, but it isn't the anchor.
+        expect(() => game.run(UseImmediateDownload, download(mover, at(5, 0), at(2, 0)))).toThrow()
     })
 
     it('is not offered without the stored effect', () => {

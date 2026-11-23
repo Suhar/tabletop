@@ -3,7 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
-import { afterDraw } from '../util/turn.js'
+import { endPlacement } from '../util/turn.js'
 
 type PlacingBonusPieceAction = HydratedPlacePiece
 
@@ -43,8 +43,7 @@ export class PlacingBonusPieceStateHandler implements MachineStateHandler<
                 if (gameState.pendingTerraform) return MachineState.Terraforming
                 if (gameState.pendingExploration) return MachineState.Exploring
                 if (gameState.pendingAttack) return MachineState.Attacking
-                // afterDraw, not endPlacement: this detour can start before the draft discard is made.
-                return afterDraw(gameState, context, action)
+                return endPlacement(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

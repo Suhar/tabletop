@@ -5,8 +5,9 @@ import { canUseCooldownEffect } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
+import { AttackPiece, HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
 import { endPlacement } from '../util/turn.js'
+import { isTorpedoAt } from '../util/attack.js'
 
 type AttackingAction = HydratedAttackPiece | HydratedAttackSpread
 
@@ -35,6 +36,17 @@ export class AttackingStateHandler implements MachineStateHandler<
         const pending = context.gameState.pendingAttack
         if (!pending) return
         context.gameState.activePlayerIds = [pending.playerId]
+
+        // A torpedo must strike, so with one station beside it there is nothing to choose.
+        if (
+            isTorpedoAt(context.gameState.board, pending.fighterCoords) &&
+            pending.targets.length === 1
+        ) {
+            context.addSystemAction(AttackPiece, {
+                playerId: pending.playerId,
+                coords: pending.targets[0]
+            })
+        }
     }
 
     onAction(
@@ -44,7 +56,7 @@ export class AttackingStateHandler implements MachineStateHandler<
         switch (true) {
             case isAttackPiece(action):
             case isAttackSpread(action): {
-                return endPlacement(context.gameState, context, action)
+                return endPlacement(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')
@@ -63,6 +75,7 @@ export class AttackingStateHandler implements MachineStateHandler<
         if (actionType === ActionType.AttackSpread) {
             return (
                 pending.targets.length > 1 &&
+                !isTorpedoAt(context.gameState.board, pending.fighterCoords) &&
                 canUseCooldownEffect(
                     context.gameState,
                     playerId,

@@ -14,9 +14,12 @@ import {
     type EarendelSelection,
     type EarendelSelectionValues
 } from './stagedSelection.js'
+import { type RulesHelp, rulesHelpFor } from '$lib/utils/rulesHelp.js'
+import { orbitNotes, type OrbitNote } from '$lib/utils/orbitNotes.js'
 import { describePiece } from '$lib/utils/describe.js'
 import { highlightedHexesOf } from '$lib/utils/highlights.js'
 import { rankStandings, type FinalStanding } from '$lib/utils/standings.js'
+import { scoreBreakdown, type ScoreBreakdown } from '$lib/utils/scoreBreakdown.js'
 import { stationTubesOf, type StationTube } from '$lib/utils/stationLinks.js'
 import {
     ActionType,
@@ -34,13 +37,33 @@ import {
     drawCountForPlayer,
     DrawPieces,
     TechnologyEffectKind,
+    TechnologyCategory,
     turnsUntilReady,
     attackableTargets,
+    isTorpedoAt,
+    torpedoTargets,
     probeDestinations,
     technologyCard,
     technologyName,
     UseUpdatedLogistics,
     UseTacticalFeint,
+    UseTacticalShift,
+    UseWarpDrive,
+    UseDimensionalRift,
+    UseConscription,
+    UseFactoryOverride,
+    UseColonyShip,
+    settleablePlanets,
+    legalRiftsFor,
+    riftDestinationsFrom,
+    legalWarpsFor,
+    warpDestinationsFrom,
+    UseBeyondTheFrontier,
+    UseSpoofedOrders,
+    UseAsteroidField,
+    UseSecurityBreach,
+    PlayScrap,
+    spoofablePieces,
     UseTradeRouteWormhole,
     UseImmediateDownload,
     EndTurn,
@@ -52,12 +75,33 @@ import {
     wormholableShips,
     wormholeDestinations,
     AttackSpread,
+    FoundPlanet,
+    StowShip,
+    StowChoice,
+    stowedShipKind,
+    hexesInterdictedFor,
+    seedableHexes,
+    SeedNebula,
+    isDraftThree,
+    isEscorted,
+    ruleInForce,
+    bombardmentTargets,
+    ChooseEventOrder,
+    EventPick,
+    type EventChoice,
+    interceptTargets,
+    salvageChoices,
+    shipyardChoices,
+    stormDestinations,
+    stormOrigins,
+    TECHNOLOGY_EFFECT_INFO,
     controllerOf,
     planetCoordinates,
     relayedProbesOf,
     relayStationsOf,
     planetPointsByPlayer,
     neighborsOf,
+    HexKind,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
@@ -73,6 +117,8 @@ import {
     PlaceTile,
     UseLogisticsUpgrade,
     TILE_ROTATIONS,
+    isDrawPieces,
+    MachineState,
     type Piece,
     PieceSource,
     PieceType,
@@ -82,6 +128,19 @@ import {
     type TechnologyCard,
     payableClaims
 } from '@tabletop/earendel'
+
+// A ship in the turn's hand: still held, or gone (thrown out, placed or back in the bag).
+export type HandCard = { piece: Piece; held: boolean }
+
+const RULES_HELP_KEY = 'earendel:rules-help'
+
+function readRulesHelpShown(): boolean {
+    try {
+        return localStorage.getItem(RULES_HELP_KEY) !== 'off'
+    } catch {
+        return true
+    }
+}
 
 export class EarendelGameSession extends GameSession<EarendelGameState, HydratedEarendelGameState> {
     private selection: EarendelSelection = $state({})
@@ -145,7 +204,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     movingFrom: AxialCoordinates | undefined = $derived.by(() => {
         const origin = this.originChoice
         const playerId = this.myPlayer?.id
-        if (!origin || !playerId || this.activePower || !this.isMovingForTechnology) {
+        if (!origin || !playerId || this.activePower || !this.isDrifting) {
             return undefined
         }
         return legalMovesFor(this.gameState.board, playerId).some((move) =>
@@ -161,6 +220,197 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     })
 
     heldPieces: Piece[] = $derived(this.gameState.heldPieces)
+
+    // The turn's hand: every ship drawn this turn, held or gone, so a ship that was thrown out,
+    // placed or returned to the bag stays in the hand face down rather than vanishing.
+    // Before the first turn: each player, last first, stows one more ship in their bag and
+    // then places a free station (rules.md, Setup).
+    isStowing: boolean = $derived(this.gameState.machineState === MachineState.StowingShip)
+
+    isOpening: boolean = $derived(
+        this.isStowing || this.gameState.machineState === MachineState.PlacingOpeningStation
+    )
+
+    // The game is still opening (`Board`): its assembly is playing, or the title stands over the
+    // built board waiting for Play. The panel says and offers nothing until it ends.
+    boardAssembling: boolean = $state(false)
+
+    // The title over the board on a first opening: while the board builds, then with its Play
+    // and Overview buttons once it is built.
+    titleStage: 'hidden' | 'building' | 'ready' = $state('hidden')
+
+    // Play: the title goes and the game begins.
+    beginPlay() {
+        this.titleStage = 'hidden'
+        this.boardAssembling = false
+    }
+
+    // The rules overview, opened from the title or the header.
+    overviewShown: boolean = $state(false)
+
+    // Whether stow cards that arrive now were brought by live play (a rival's opening done, or
+    // the board just built) and so arrive with their reveal. Cards that come back by undo, on
+    // leaving history or on reload are simply there, face up.
+    private stowRevealDue = false
+
+    announceStowReveal() {
+        this.stowRevealDue = true
+    }
+
+    takeStowReveal(): boolean {
+        const due = this.stowRevealDue
+        this.stowRevealDue = false
+        return due
+    }
+
+    // The ships the player may stow, as they would look in hand.
+    stowableShips: { choice: StowChoice; piece: Piece }[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || !this.isMyTurn || !this.validActionTypes.includes(ActionType.StowShip)) {
+            return []
+        }
+        return Object.values(StowChoice).map((choice) => ({
+            choice,
+            piece: { id: `stow-${choice}`, playerId, ...stowedShipKind(choice) }
+        }))
+    })
+
+    async stowShip(choice: StowChoice) {
+        if (this.stowableShips.length === 0) return
+        const action = this.createPlayerAction(StowShip, { choice })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    turnHand: HandCard[] = $derived.by(() => {
+        // The opening station is placed from the board, never shown as a card.
+        if (this.isOpening) return []
+        // The turn's actions by index: a turn can end without an action of its own, so the turn
+        // manager's record of where this one began is the boundary.
+        const start = this.gameState.turnManager.currentTurn()?.start
+        if (start === undefined) return []
+        const drawn: Piece[] = []
+        for (const action of this.actions) {
+            if (action.index === undefined) continue
+            if (action.index < start || action.index >= this.gameState.actionCount) continue
+            if (isDrawPieces(action)) drawn.push(...(action.metadata?.drawn ?? []))
+        }
+        const held = new Set(this.gameState.heldPieces.map((piece) => piece.id))
+        // A laid tile's extra ship is drawn outside the turn's draw.
+        const extra = this.gameState.heldPieces.filter(
+            (piece) => !drawn.some((card) => card.id === piece.id)
+        )
+        return [...drawn, ...extra].map((piece) => ({ piece, held: held.has(piece.id) }))
+    })
+
+    // The technologies the player could use this moment, each with what a click on it does: the
+    // action panel's chips and the player's own panel play them alike.
+    powerActivators: Map<TechnologyEffectKind, () => void> = $derived.by(() => {
+        const offered: [boolean, TechnologyEffectKind, () => void][] = [
+            [
+                this.torpedoFighter !== undefined,
+                TechnologyEffectKind.GammaTorpedo,
+                () => this.armTorpedo()
+            ],
+            [
+                this.canUseLogisticsUpgrade,
+                TechnologyEffectKind.LogisticsUpgrade,
+                () => this.useLogisticsUpgrade()
+            ],
+            [
+                this.canUseUpdatedLogistics,
+                TechnologyEffectKind.UpdatedLogistics,
+                () => this.choosePower(Power.Logistics)
+            ],
+            [
+                this.canUseTacticalShift,
+                TechnologyEffectKind.MoveFriendlyPiece,
+                () => this.choosePower(Power.Shift)
+            ],
+            [
+                this.canUseWarpDrive,
+                TechnologyEffectKind.WarpDrive,
+                () => this.choosePower(Power.Warp)
+            ],
+            [
+                this.canUseDimensionalRift,
+                TechnologyEffectKind.DimensionalRift,
+                () => this.choosePower(Power.Rift)
+            ],
+            [
+                this.canUseSpoofedOrders,
+                TechnologyEffectKind.SpoofedOrders,
+                () => this.choosePower(Power.Spoof)
+            ],
+            [
+                this.canUseConscription,
+                TechnologyEffectKind.Conscription,
+                () => this.useConscription()
+            ],
+            [
+                this.canUseColonyShip,
+                TechnologyEffectKind.ColonyShip,
+                () => this.choosePower(Power.Colony)
+            ],
+            [
+                this.canUseFactoryOverride,
+                TechnologyEffectKind.FactoryOverride,
+                () => this.useFactoryOverride()
+            ],
+            [
+                this.canUseAsteroidField,
+                TechnologyEffectKind.AsteroidField,
+                () => this.choosePower(Power.Asteroid)
+            ],
+            [
+                this.canUseSecurityBreach,
+                TechnologyEffectKind.SecurityBreach,
+                () => this.choosePower(Power.Breach)
+            ],
+            [
+                this.canUseBeyondTheFrontier,
+                TechnologyEffectKind.GrowBoard,
+                () => this.useBeyondTheFrontier()
+            ],
+            [
+                this.canUseTacticalFeint,
+                TechnologyEffectKind.TacticalFeint,
+                () => this.choosePower(Power.Feint)
+            ],
+            [
+                this.canUseImmediateDownload,
+                TechnologyEffectKind.ImmediateDownload,
+                () => this.choosePower(Power.Download)
+            ],
+            [
+                this.canUseTradeRouteWormhole,
+                TechnologyEffectKind.TradeRouteWormhole,
+                () => this.choosePower(Power.Wormhole)
+            ]
+        ]
+        return new Map(
+            offered
+                .filter(([usable]) => usable)
+                .map(([, kind, activate]): [TechnologyEffectKind, () => void] => [kind, activate])
+        )
+    })
+
+    // The probes that went into orbit this turn and what for, said above the board for everyone
+    // (rules.md, Exploration): the history is not the only place so large a moment is told.
+    // A note lasts until the next piece is played.
+    orbitNotes: OrbitNote[] = $derived.by(() => {
+        if (this.isViewingHistory) return []
+        const start = this.gameState.turnManager.currentTurn()?.start
+        if (start === undefined) return []
+        return orbitNotes(
+            this.actions.filter(
+                (action) =>
+                    action.index !== undefined &&
+                    action.index >= start &&
+                    action.index < this.gameState.actionCount
+            )
+        )
+    })
 
     drawnPiece: Piece | undefined = $derived.by(() => {
         const held = this.gameState.heldPieces
@@ -189,8 +439,320 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     canArmRailgun: boolean = $derived.by(() => {
         const playerId = this.myPlayer?.id
-        if (!playerId || this.attackTargets.length === 0) return false
+        if (!playerId || this.attackTargets.length === 0 || this.torpedoPending) return false
         return canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.Railgun)
+    })
+
+    // Gamma Torpedo: armed while a fighter is in hand, it goes down beside a station and strikes.
+    torpedoArmed: boolean = $derived(this.activePower === Power.Torpedo)
+
+    canArmTorpedo: boolean = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || !this.isPlacing || this.pieceToPlace?.type !== PieceType.Fighter) {
+            return false
+        }
+        if (!canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.GammaTorpedo)) {
+            return false
+        }
+        return this.torpedoPlacements.length > 0
+    })
+
+    // A held fighter that could be placed as a torpedo, chosen for placement or not: the Gamma
+    // Torpedo is offered as soon as it could be used, so the player need not pick the fighter
+    // first to find it.
+    torpedoFighter: Piece | undefined = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || !this.isPlacing || this.chosenSpecialId) return undefined
+        if (!canUseCooldownEffect(this.gameState, playerId, TechnologyEffectKind.GammaTorpedo)) {
+            return undefined
+        }
+        return this.heldPieces.find(
+            (piece) =>
+                piece.type === PieceType.Fighter &&
+                legalPlacementsFor(this.gameState.board, playerId, piece).some(
+                    (coords) => torpedoTargets(this.gameState.board, coords).length > 0
+                )
+        )
+    })
+
+    // Arms the torpedo, choosing the fighter for placement first if another ship was chosen.
+    armTorpedo() {
+        const fighter = this.torpedoFighter
+        if (!fighter || !this.canChoose) return
+        if (this.torpedoArmed) {
+            this.choosePower(Power.Torpedo)
+            return
+        }
+        if (this.pieceToPlace?.id !== fighter.id) this.chooseHeld(fighter.id)
+        this.choosePower(Power.Torpedo)
+    }
+
+    // The legal hexes for the fighter that have a station beside them.
+    torpedoPlacements: AxialCoordinates[] = $derived.by(() =>
+        this.placementHexes.filter(
+            (coords) => torpedoTargets(this.gameState.board, coords).length > 0
+        )
+    )
+
+    // A torpedo just placed is waiting to strike: it cannot hold fire, spread or railgun.
+    torpedoPending: boolean = $derived.by(() => {
+        const pending = this.pendingAttack
+        return pending !== undefined && isTorpedoAt(this.gameState.board, pending.fighterCoords)
+    })
+
+    canHoldFire: boolean = $derived.by(() => this.attackTargets.length > 0 && !this.torpedoPending)
+
+    // Elevated technologies (rules.md): the face-up row, with where each ended up once spent.
+    elevatedCards: { color: PlanetColor; card: TechnologyCard; housed?: AxialCoordinates }[] =
+        $derived.by(() => {
+            const chosen = this.gameState.elevatedTechnologies ?? {}
+            return PLANET_COLORS.flatMap((color) => {
+                const technologyId = chosen[color]
+                if (!technologyId) return []
+                const housed = planetCoordinates(this.gameState.board).find(
+                    (planet) => getHex(this.gameState.board, planet)?.technologyId === technologyId
+                )
+                return [
+                    { color, card: technologyCard(technologyId), ...(housed ? { housed } : {}) }
+                ]
+            })
+        })
+
+    // The special-piece technologies in play this game (rules.md, Granted pieces), one per
+    // category in the categories' order; empty when every piece is in the deck.
+    piecesInPlay: { category: TechnologyCategory; kind: TechnologyEffectKind }[] = $derived.by(
+        () => {
+            const chosen = this.gameState.pieceTechnologies ?? {}
+            return Object.values(TechnologyCategory).flatMap((category) => {
+                const kind = chosen[category]
+                return kind ? [{ category, kind }] : []
+            })
+        }
+    )
+
+    // An elevated event being resolved: who picks, and what the picker may take.
+    eventKind: TechnologyEffectKind | undefined = $derived(this.gameState.pendingEvent?.kind)
+
+    eventName: string = $derived.by(() =>
+        this.eventKind ? TECHNOLOGY_EFFECT_INFO[this.eventKind].name : ''
+    )
+
+    // Who is picking now, or the discoverer while the order is still theirs to set.
+    eventPicker: string | undefined = $derived.by(() => {
+        const pending = this.gameState.pendingEvent
+        if (!pending) return undefined
+        return pending.order ? pending.order[0] : pending.discovererId
+    })
+
+    isChoosingEventOrder: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.ChooseEventOrder)
+    )
+
+    // The others lined up after the discoverer so far, in the order chosen.
+    eventOrderDraft: string[] = $derived.by(() =>
+        this.isChoosingEventOrder && this.canChoose ? (this.selection.order?.value ?? []) : []
+    )
+
+    eventOrderCandidates: string[] = $derived.by(() => {
+        if (!this.isChoosingEventOrder) return []
+        const me = this.myPlayer?.id
+        return this.gameState.players
+            .map((player) => player.playerId)
+            .filter((playerId) => playerId !== me && !this.eventOrderDraft.includes(playerId))
+    })
+
+    addToEventOrder(playerId: string) {
+        if (!this.eventOrderCandidates.includes(playerId)) return
+        this.select('order', [...this.eventOrderDraft, playerId])
+    }
+
+    get canConfirmEventOrder(): boolean {
+        return this.isChoosingEventOrder && this.eventOrderCandidates.length === 0
+    }
+
+    async chooseEventOrder() {
+        if (!this.canConfirmEventOrder || !this.myPlayer) return
+        const action = this.createPlayerAction(ChooseEventOrder, {
+            order: [this.myPlayer.id, ...$state.snapshot(this.eventOrderDraft)]
+        })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    isPickingEvent: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.EventPick)
+    )
+
+    bombardmentTargets: AxialCoordinates[] = $derived.by(() => {
+        const me = this.myPlayer?.id
+        if (!me || !this.isPickingEvent) return []
+        if (this.eventKind !== TechnologyEffectKind.OrbitalBombardment) return []
+        return bombardmentTargets(this.gameState, me)
+    })
+
+    stormOrigins: AxialCoordinates[] = $derived.by(() => {
+        const me = this.myPlayer?.id
+        if (!me || !this.isPickingEvent) return []
+        if (this.eventKind !== TechnologyEffectKind.WormholeStorm) return []
+        return stormOrigins(this.gameState, me).filter(
+            (from) => stormDestinations(this.gameState, from).length > 0
+        )
+    })
+
+    stormFrom: AxialCoordinates | undefined = $derived.by(() =>
+        this.stormOrigins.length === 1 ? this.stormOrigins[0] : this.validOrigin(this.stormOrigins)
+    )
+
+    stormDestinations: AxialCoordinates[] = $derived.by(() =>
+        this.stormFrom ? stormDestinations(this.gameState, this.stormFrom) : []
+    )
+
+    salvageChoices: TechnologyCard[] = $derived.by(() => {
+        const me = this.myPlayer?.id
+        if (!me || !this.isPickingEvent) return []
+        if (this.eventKind !== TechnologyEffectKind.SalvageRights) return []
+        return salvageChoices(this.gameState, me).map(technologyCard)
+    })
+
+    interceptTargets: AxialCoordinates[] = $derived.by(() => {
+        const me = this.myPlayer?.id
+        const pending = this.gameState.pendingEvent
+        if (!me || !pending || !this.isPickingEvent) return []
+        if (this.eventKind !== TechnologyEffectKind.SignalIntercept) return []
+        return interceptTargets(this.gameState, pending, me)
+    })
+
+    // Shipyard World: the units still on offer, by the technology that grants each.
+    shipyardChoices: TechnologyEffectKind[] = $derived.by(() => {
+        const pending = this.gameState.pendingEvent
+        if (!pending || !this.isPickingEvent) return []
+        if (this.eventKind !== TechnologyEffectKind.ShipyardWorld) return []
+        return shipyardChoices(pending)
+    })
+
+    // The hexes the current pick may take.
+    eventHexes: AxialCoordinates[] = $derived.by(() => {
+        switch (this.eventKind) {
+            case TechnologyEffectKind.OrbitalBombardment:
+                return this.bombardmentTargets
+            case TechnologyEffectKind.WormholeStorm:
+                return this.stormFrom ? this.stormDestinations : this.stormOrigins
+            case TechnologyEffectKind.SignalIntercept:
+                return this.interceptTargets
+            default:
+                return []
+        }
+    })
+
+    async eventPick(choice: EventChoice) {
+        if (!this.isPickingEvent) return
+        const action = this.createPlayerAction(EventPick, { ...choice })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    private async onEventClick(coords: AxialCoordinates) {
+        const among = (candidates: AxialCoordinates[]) =>
+            candidates.some((candidate) => sameCoordinates(candidate, coords))
+        switch (this.eventKind) {
+            case TechnologyEffectKind.OrbitalBombardment:
+            case TechnologyEffectKind.SignalIntercept:
+                if (among(this.eventHexes)) await this.eventPick({ coords })
+                return
+            case TechnologyEffectKind.WormholeStorm: {
+                const from = this.stormFrom
+                if (from && among(this.stormDestinations)) {
+                    await this.eventPick({ from, to: coords })
+                    return
+                }
+                this.toggleOrigin(coords, this.stormOrigins)
+                return
+            }
+        }
+    }
+
+    // A line under the prompt whenever a global in force is changing what the player sees, with
+    // the global's name as a chip that explains it (rules.md, Elevated technologies).
+    ruleNotes: { kind: TechnologyEffectKind; before: string; after: string }[] = $derived.by(() => {
+        if (!this.isMyTurn || this.isViewingHistory) return []
+        const board = this.gameState.board
+        const notes: { kind: TechnologyEffectKind; before: string; after: string }[] = []
+
+        if (
+            this.isPlacing &&
+            ruleInForce(board, TechnologyEffectKind.Overdrive) &&
+            isDraftThree(this.primaryGame.config) &&
+            !this.gameState.shipPlacedThisTurn &&
+            this.heldPieces.length > 2
+        ) {
+            notes.push({
+                kind: TechnologyEffectKind.Overdrive,
+                before: 'No discard this turn:',
+                after: 'places every drawn ship.'
+            })
+        }
+
+        if (this.isDrifting) {
+            notes.push({
+                kind: TechnologyEffectKind.FreeDrift,
+                before: 'A free step before placing, thanks to',
+                after: '.'
+            })
+        }
+
+        if (
+            this.attackTargets.length > 0 &&
+            !this.torpedoPending &&
+            ruleInForce(board, TechnologyEffectKind.NoQuarter) &&
+            this.attackTargets.some((target) => isEscorted(board, target))
+        ) {
+            notes.push({
+                kind: TechnologyEffectKind.NoQuarter,
+                before: 'Escorted ships are in reach:',
+                after: 'protects nobody.'
+            })
+        }
+
+        if (this.isDiscarding && ruleInForce(board, TechnologyEffectKind.Reinforcements)) {
+            notes.push({
+                kind: TechnologyEffectKind.Reinforcements,
+                before: 'The discarded ship goes back into your bag, under',
+                after: '.'
+            })
+        }
+
+        const me = this.myPlayer?.id
+        if (
+            me &&
+            this.isPlacing &&
+            ruleInForce(board, TechnologyEffectKind.SharedScience) &&
+            this.pendingClaims.some(
+                (claim) =>
+                    claim.playerId === me &&
+                    neighborsOf(claim.coords).some((neighbor) => {
+                        const piece = getHex(board, neighbor)?.piece
+                        return piece?.type === PieceType.Probe && piece.playerId !== me
+                    })
+            )
+        ) {
+            notes.push({
+                kind: TechnologyEffectKind.SharedScience,
+                before: "Rivals' probes beside your claimed planets will learn the technology too, under",
+                after: '.'
+            })
+        }
+
+        return notes
+    })
+
+    private playerName(playerId: string): string {
+        return this.primaryGame.players.find((player) => player.id === playerId)?.name ?? 'A player'
+    }
+
+    torpedoTurnsLeft: number = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId) return 0
+        return turnsUntilReady(this.gameState, playerId, TechnologyEffectKind.GammaTorpedo)
     })
 
     railgunTargets: AxialCoordinates[] = $derived.by(() => {
@@ -227,7 +789,11 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     canPlaySpecial: boolean = $derived.by(
-        () => this.isPlacing && this.bonusPlacementHexes.length === 0
+        () =>
+            this.isPlacing &&
+            !this.isOpening &&
+            this.bonusPlacementHexes.length === 0 &&
+            !this.gameState.shipPlacedThisTurn
     )
 
     pieceToPlace: Piece | undefined = $derived.by(() => {
@@ -254,7 +820,17 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     )
 
     // A ship may be placed and no technology is being chosen, so hovering previews a placement.
-    previewingPlacement: boolean = $derived(this.isPlacing && this.activePower === undefined)
+    // An armed torpedo is still a placement, previewed with the stations it could strike.
+    previewingPlacement: boolean = $derived(
+        this.isPlacing && (this.activePower === undefined || this.torpedoArmed)
+    )
+
+    // Placing a ship anywhere it may go: the player knows where, so the board marks nothing. A
+    // torpedo, or the ship owed on a new tile, is a special case whose hexes are marked.
+    ordinaryPlacement: boolean = $derived.by(
+        () =>
+            this.previewingPlacement && !this.torpedoArmed && this.bonusPlacementHexes.length === 0
+    )
 
     // Not auto-selected even when only one: skipping is always allowed.
     choosablePlanets: AxialCoordinates[] = $derived.by(() => {
@@ -290,14 +866,6 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     technologyDeckCount: number = $derived(this.gameState.technologyDeck.remaining)
 
-    setAsideCards: TechnologyCard[] = $derived.by(() => {
-        const pending = this.gameState.pendingExploration
-        if (!pending?.revealed) return []
-
-        const choosable = new Set(pending.candidates ?? [])
-        return pending.revealed.filter((id) => !choosable.has(id)).map(technologyCard)
-    })
-
     explorationChoice: { from: AxialCoordinates; to: AxialCoordinates[] } | undefined = $derived.by(
         () => {
             const pending = this.gameState.pendingExploration
@@ -324,11 +892,64 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     stationTubes: StationTube[] = $derived(stationTubesOf(this.gameState.board))
 
+    // Hexes the ship in hand cannot enter: an enemy interdictor's neighbors for any ship, and
+    // the hexes two enemy stations watch for a probe.
     hexesClosedToMe: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
-        if (!playerId || this.pieceToPlace?.type !== PieceType.Probe) return []
-        return hexesClosedToProbesOf(this.gameState.board, playerId)
+        const piece = this.pieceToPlace
+        if (!playerId || !piece || !this.isPlacing) return []
+        const interdicted = hexesInterdictedFor(this.gameState.board, playerId)
+        if (piece.type !== PieceType.Probe) return interdicted
+        return [...interdicted, ...hexesClosedToProbesOf(this.gameState.board, playerId)]
     })
+
+    // Nebula Seeding: the player's seeders lay a hex each at the turn's start.
+    isSeeding: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.SeedNebula)
+    )
+
+    seedingHexes: AxialCoordinates[] = $derived.by(() => {
+        const pending = this.gameState.pendingSeeding
+        if (!this.isSeeding || !pending) return []
+        return pending.seeders.flatMap((seeder) => seedableHexes(this.gameState.board, seeder))
+    })
+
+    async seedNebula(hex: AxialCoordinates) {
+        const pending = this.gameState.pendingSeeding
+        if (!this.isSeeding || !pending) return
+        const seeder = pending.seeders.find((at) =>
+            seedableHexes(this.gameState.board, at).some((candidate) =>
+                sameCoordinates(candidate, hex)
+            )
+        )
+        if (!seeder) return
+        const action = this.createPlayerAction(SeedNebula, { seeder, hex })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    async skipSeeding() {
+        if (!this.isSeeding) return
+        const action = this.createPlayerAction(SeedNebula, {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Artificial World: the planet just placed waits for its color.
+    canFoundPlanet: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.FoundPlanet)
+    )
+
+    foundingHex: AxialCoordinates | undefined = $derived(
+        this.canFoundPlanet ? this.gameState.pendingFounding?.coords : undefined
+    )
+
+    async foundPlanet(color: PlanetColor) {
+        if (!this.canFoundPlanet) return
+        const action = this.createPlayerAction(FoundPlanet, { color })
+        this.resetAction()
+        await this.applyAction(action)
+    }
 
     isPlacingTile: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.PlaceTile)
@@ -360,13 +981,14 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return openHexesOfTile(this.gameState.board, tileId)
     })
 
-    isMovingForTechnology: boolean = $derived(
+    // Free Drift's step (rules.md, Elevated technologies): the one move a turn can owe.
+    isDrifting: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.MovePiece)
     )
 
     movableHexes: AxialCoordinates[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
-        if (!this.isMovingForTechnology || !playerId) return []
+        if (!this.isDrifting || !playerId) return []
 
         if (this.movingFrom) return destinationsFrom(this.gameState.board, this.movingFrom)
 
@@ -374,24 +996,39 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return moves.map((move) => move.from)
     })
 
+    // A mark says the player may act on that hex, so none shows while a change is still being
+    // presented: the terraformed planet's ring is gone before its wipe plays.
     highlightedHexes: AxialCoordinates[] = $derived.by(() =>
-        highlightedHexesOf({
-            feint: this.choosingFeint ? this.feintHexes : undefined,
-            wormhole: this.choosingWormhole ? this.wormholeHexes : undefined,
-            download: this.choosingDownload ? this.downloadHexes : undefined,
-            updatedLogistics: this.choosingUpdatedLogistics ? this.wakeableFighters : undefined,
-            tileOrigins: this.isPlacingTile ? this.tileOrigins : undefined,
-            bonusPlacement: this.bonusPlacementHexes.length > 0 ? this.placementHexes : undefined,
-            technologyMove: this.isMovingForTechnology ? this.movableHexes : undefined,
-            terraform: this.canTerraform
-                ? this.terraformPlanet
-                    ? [this.terraformPlanet]
-                    : this.terraformPlanets
-                : undefined,
-            survey: this.choosablePlanets.length > 0 ? this.choosablePlanets : undefined,
-            attack: this.attackTargets.length > 0 ? this.attackTargets : undefined,
-            placement: this.placementHexes
-        })
+        this.updatingVisibleState
+            ? []
+            : highlightedHexesOf({
+                  event: this.isPickingEvent ? this.eventHexes : undefined,
+                  seeding: this.isSeeding ? this.seedingHexes : undefined,
+                  founding: this.foundingHex ? [this.foundingHex] : undefined,
+                  shift: this.choosingShift ? this.shiftHexes : undefined,
+                  warp: this.choosingWarp ? this.warpHexes : undefined,
+                  rift: this.choosingRift ? this.riftHexes : undefined,
+                  spoof: this.choosingSpoof ? this.spoofHexes : undefined,
+                  feint: this.choosingFeint ? this.feintHexes : undefined,
+                  wormhole: this.choosingWormhole ? this.wormholeHexes : undefined,
+                  download: this.choosingDownload ? this.downloadHexes : undefined,
+                  updatedLogistics: this.choosingUpdatedLogistics
+                      ? this.wakeableFighters
+                      : undefined,
+                  colony: this.choosingColony ? this.settleablePlanets : undefined,
+                  tileOrigins: this.isPlacingTile ? this.tileOrigins : undefined,
+                  bonusPlacement:
+                      this.bonusPlacementHexes.length > 0 ? this.placementHexes : undefined,
+                  technologyMove: this.isDrifting ? this.movableHexes : undefined,
+                  terraform: this.canTerraform
+                      ? this.terraformPlanet
+                          ? [this.terraformPlanet]
+                          : this.terraformPlanets
+                      : undefined,
+                  survey: this.choosablePlanets.length > 0 ? this.choosablePlanets : undefined,
+                  attack: this.attackTargets.length > 0 ? this.attackTargets : undefined,
+                  placement: this.torpedoArmed ? this.torpedoPlacements : this.placementHexes
+              })
     )
 
     private placementHexes: AxialCoordinates[] = $derived.by(() => {
@@ -409,9 +1046,42 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.hexesClosedToMe.some((blocked) => sameCoordinates(blocked, coords))
     }
 
+    // The ground every interdictor on the board holds, anyone's, for everyone at all times: the
+    // open hexes beside it. A standing signal, apart from the red outline of what is closed to
+    // the ship in hand.
+    interdictedGround: Set<number> = $derived.by(() => {
+        const board = this.gameState.board
+        const ground = new Set<number>()
+        for (const hex of Object.values(board.hexes)) {
+            if (hex.piece?.type !== PieceType.Interdictor) continue
+            for (const neighbor of neighborsOf(hex.coords)) {
+                if (getHex(board, neighbor)?.kind === HexKind.Open) ground.add(hexKey(neighbor))
+            }
+        }
+        return ground
+    })
+
+    // Every interdictor's ground together with the hex it stands on: the region whose outside
+    // the board draws brightest.
+    interdictedRegion: AxialCoordinates[] = $derived.by(() => {
+        const board = this.gameState.board
+        return Object.values(board.hexes)
+            .filter(
+                (hex) =>
+                    hex.piece?.type === PieceType.Interdictor ||
+                    this.interdictedGround.has(hexKey(hex.coords))
+            )
+            .map((hex) => hex.coords)
+    })
+
+    isInterdictedGround(coords: AxialCoordinates): boolean {
+        return this.interdictedGround.has(hexKey(coords))
+    }
+
     previewTargetsFor(coords: AxialCoordinates): AxialCoordinates[] {
         const piece = this.pieceToPlace
         if (!piece || piece.type !== PieceType.Fighter || !this.previewingPlacement) return []
+        if (this.torpedoArmed) return torpedoTargets(this.gameState.board, coords)
 
         const board = structuredClone($state.snapshot(this.gameState.board))
         const hex = board.hexes[hexKey(coords)]
@@ -461,6 +1131,18 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         this.resetAction()
         await this.applyAction(action)
     }
+
+    // Every player's points and where they come from, if the game ended now.
+    scoreBreakdown: ScoreBreakdown[] = $derived.by(() =>
+        scoreBreakdown(
+            this.actions,
+            this.gameState.players.map((player) => ({
+                playerId: player.playerId,
+                score: player.score
+            })),
+            planetPointsByPlayer(this.gameState.board)
+        )
+    )
 
     // Claims that would pay if settled now, so one whose probes were destroyed or outnumbered
     // stops showing until it is regained.
@@ -532,7 +1214,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 neighborsOf(coords)
                     .filter((neighbor) => {
                         const piece = getHex(this.gameState.board, neighbor)?.piece
-                        return piece?.type === PieceType.Probe && piece.playerId === playerId
+                        return (
+                            piece?.type === PieceType.Probe &&
+                            piece.playerId === playerId &&
+                            // A probe committed to another planet counts nothing here.
+                            (!piece.surveying || sameCoordinates(piece.surveying, coords))
+                        )
                     })
                     .map((probe) => ({ planet: coords, probe, playerId }))
             )
@@ -557,7 +1244,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         await this.applyAction(action)
     }
 
-    // A terraformer just placed may recolour one planet beside it (rules.md, Terraformer).
+    // A terraformer just placed may recolor one planet beside it (rules.md, Terraformer).
     canTerraform: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.Terraform)
     )
@@ -597,6 +1284,319 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (!this.canEndTurn) return
 
         const action = this.createPlayerAction(EndTurn, {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Tactical Shift: one of the player's pieces, then the empty hex beside it to step into.
+    canUseTacticalShift: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseTacticalShift)
+    )
+
+    choosingShift: boolean = $derived(this.activePower === Power.Shift)
+
+    shiftablePieces: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseTacticalShift || !this.myPlayer) return []
+        const origins = legalMovesFor(this.gameState.board, this.myPlayer.id).map(
+            (move) => move.from
+        )
+        return origins.filter(
+            (origin, index) =>
+                origins.findIndex((other) => sameCoordinates(other, origin)) === index
+        )
+    })
+
+    shiftFrom: AxialCoordinates | undefined = $derived(
+        this.choosingShift ? this.validOrigin(this.shiftablePieces) : undefined
+    )
+
+    shiftHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingShift) return []
+        return this.shiftFrom
+            ? destinationsFrom(this.gameState.board, this.shiftFrom)
+            : this.shiftablePieces
+    })
+
+    private async onShiftClick(coords: AxialCoordinates) {
+        const from = this.shiftFrom
+        if (
+            from &&
+            destinationsFrom(this.gameState.board, from).some((target) =>
+                sameCoordinates(target, coords)
+            )
+        ) {
+            await this.useTacticalShift(from, coords)
+            return
+        }
+        this.toggleOrigin(coords, this.shiftablePieces)
+    }
+
+    async useTacticalShift(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseTacticalShift) return
+
+        const action = this.createPlayerAction(UseTacticalShift, { from, to })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Warp Drive: one of the player's pieces, then the empty hex it comes out on, however far.
+    canUseWarpDrive: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseWarpDrive)
+    )
+
+    choosingWarp: boolean = $derived(this.activePower === Power.Warp)
+
+    warpablePieces: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseWarpDrive || !this.myPlayer) return []
+        const origins = legalWarpsFor(this.gameState.board, this.myPlayer.id).map(
+            (move) => move.from
+        )
+        return origins.filter(
+            (origin, index) =>
+                origins.findIndex((other) => sameCoordinates(other, origin)) === index
+        )
+    })
+
+    warpFrom: AxialCoordinates | undefined = $derived(
+        this.choosingWarp ? this.validOrigin(this.warpablePieces) : undefined
+    )
+
+    warpHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingWarp) return []
+        return this.warpFrom
+            ? warpDestinationsFrom(this.gameState.board, this.warpFrom)
+            : this.warpablePieces
+    })
+
+    private async onWarpClick(coords: AxialCoordinates) {
+        const from = this.warpFrom
+        if (
+            from &&
+            warpDestinationsFrom(this.gameState.board, from).some((target) =>
+                sameCoordinates(target, coords)
+            )
+        ) {
+            await this.useWarpDrive(from, coords)
+            return
+        }
+        this.toggleOrigin(coords, this.warpablePieces)
+    }
+
+    async useWarpDrive(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseWarpDrive) return
+
+        const action = this.createPlayerAction(UseWarpDrive, { from, to })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Dimensional Rift: one of the player's pieces on the border, then the empty border hex it
+    // comes out on.
+    canUseDimensionalRift: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseDimensionalRift)
+    )
+
+    choosingRift: boolean = $derived(this.activePower === Power.Rift)
+
+    riftablePieces: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseDimensionalRift || !this.myPlayer) return []
+        const origins = legalRiftsFor(this.gameState.board, this.myPlayer.id).map(
+            (move) => move.from
+        )
+        return origins.filter(
+            (origin, index) =>
+                origins.findIndex((other) => sameCoordinates(other, origin)) === index
+        )
+    })
+
+    riftFrom: AxialCoordinates | undefined = $derived(
+        this.choosingRift ? this.validOrigin(this.riftablePieces) : undefined
+    )
+
+    riftHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingRift) return []
+        return this.riftFrom
+            ? riftDestinationsFrom(this.gameState.board, this.riftFrom)
+            : this.riftablePieces
+    })
+
+    private async onRiftClick(coords: AxialCoordinates) {
+        const from = this.riftFrom
+        if (
+            from &&
+            riftDestinationsFrom(this.gameState.board, from).some((target) =>
+                sameCoordinates(target, coords)
+            )
+        ) {
+            await this.useDimensionalRift(from, coords)
+            return
+        }
+        this.toggleOrigin(coords, this.riftablePieces)
+    }
+
+    async useDimensionalRift(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseDimensionalRift) return
+
+        const action = this.createPlayerAction(UseDimensionalRift, { from, to })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Spoofed Orders: a rival's piece beside one of the player's own, then the empty hex beside
+    // it to send it into.
+    canUseSpoofedOrders: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseSpoofedOrders)
+    )
+
+    choosingSpoof: boolean = $derived(this.activePower === Power.Spoof)
+
+    spoofablePieces: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseSpoofedOrders || !this.myPlayer) return []
+        return spoofablePieces(this.gameState.board, this.myPlayer.id)
+    })
+
+    spoofFrom: AxialCoordinates | undefined = $derived(
+        this.choosingSpoof ? this.validOrigin(this.spoofablePieces) : undefined
+    )
+
+    spoofHexes: AxialCoordinates[] = $derived.by(() => {
+        if (!this.choosingSpoof) return []
+        return this.spoofFrom
+            ? destinationsFrom(this.gameState.board, this.spoofFrom)
+            : this.spoofablePieces
+    })
+
+    private async onSpoofClick(coords: AxialCoordinates) {
+        const from = this.spoofFrom
+        if (
+            from &&
+            destinationsFrom(this.gameState.board, from).some((target) =>
+                sameCoordinates(target, coords)
+            )
+        ) {
+            await this.useSpoofedOrders(from, coords)
+            return
+        }
+        this.toggleOrigin(coords, this.spoofablePieces)
+    }
+
+    async useSpoofedOrders(from: AxialCoordinates, to: AxialCoordinates) {
+        if (!this.canUseSpoofedOrders) return
+
+        const action = this.createPlayerAction(UseSpoofedOrders, { from, to })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Conscription: one click takes back what this turn's draft threw out of the game.
+    canUseConscription: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseConscription)
+    )
+
+    async useConscription() {
+        if (!this.canUseConscription) return
+
+        const action = this.createPlayerAction(UseConscription, {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Colony Ship: chosen from the panel, then one of the planets the player controls.
+    canUseColonyShip: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseColonyShip)
+    )
+
+    choosingColony: boolean = $derived(this.activePower === Power.Colony)
+
+    settleablePlanets: AxialCoordinates[] = $derived.by(() => {
+        if (!this.canUseColonyShip || !this.myPlayer) return []
+        return settleablePlanets(this.gameState, this.myPlayer.id)
+    })
+
+    async useColonyShip(planet: AxialCoordinates) {
+        if (!this.canUseColonyShip) return
+
+        const action = this.createPlayerAction(UseColonyShip, { planet })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Factory Override: one click draws two more ships into the hand.
+    canUseFactoryOverride: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseFactoryOverride)
+    )
+
+    async useFactoryOverride() {
+        if (!this.canUseFactoryOverride) return
+
+        const action = this.createPlayerAction(UseFactoryOverride, {})
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Asteroid Field: chosen from the panel, then one of three ships to build three of.
+    canUseAsteroidField: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseAsteroidField)
+    )
+
+    choosingAsteroid: boolean = $derived(this.activePower === Power.Asteroid)
+
+    // The ships an Asteroid Field could build, as they would look in hand.
+    asteroidShips: { choice: StowChoice; piece: Piece }[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || !this.choosingAsteroid) return []
+        return Object.values(StowChoice).map((choice) => ({
+            choice,
+            piece: { id: `asteroid-${choice}`, playerId, ...stowedShipKind(choice) }
+        }))
+    })
+
+    async useAsteroidField(choice: StowChoice) {
+        if (!this.canUseAsteroidField) return
+
+        const action = this.createPlayerAction(UseAsteroidField, { choice })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // Security Breach: chosen from the panel, then the opponent whose bag takes the Scrap.
+    canUseSecurityBreach: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseSecurityBreach)
+    )
+
+    choosingBreach: boolean = $derived(this.activePower === Power.Breach)
+
+    breachTargets: string[] = $derived.by(() => {
+        const playerId = this.myPlayer?.id
+        if (!playerId || !this.choosingBreach) return []
+        return this.gameState.players
+            .map((player) => player.playerId)
+            .filter((candidate) => candidate !== playerId)
+    })
+
+    async useSecurityBreach(targetPlayerId: string) {
+        if (!this.canUseSecurityBreach) return
+
+        const action = this.createPlayerAction(UseSecurityBreach, { targetPlayerId })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // The ship drawn with a tile, waiting to follow it onto the board.
+    tileShip: Piece | undefined = $derived.by(() => {
+        const pieceId = this.gameState.bonusPlacementPieceId
+        return pieceId ? this.gameState.heldPieces.find((piece) => piece.id === pieceId) : undefined
+    })
+
+    // Beyond the Frontier: one click draws the tile and its ship; the tile is then laid.
+    canUseBeyondTheFrontier: boolean = $derived(
+        this.isMyTurn && this.validActionTypes.includes(ActionType.UseBeyondTheFrontier)
+    )
+
+    async useBeyondTheFrontier() {
+        if (!this.canUseBeyondTheFrontier || !this.canChoose) return
+
+        const action = this.createPlayerAction(UseBeyondTheFrontier, {})
         this.resetAction()
         await this.applyAction(action)
     }
@@ -642,7 +1642,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     choosingWormhole: boolean = $derived(this.activePower === Power.Wormhole)
 
-    travellableShips: AxialCoordinates[] = $derived.by(() => {
+    travelableShips: AxialCoordinates[] = $derived.by(() => {
         if (!this.canUseTradeRouteWormhole || !this.myPlayer) return []
         return wormholableShips(this.gameState.board, this.myPlayer.id)
     })
@@ -654,12 +1654,12 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     wormholeFrom: AxialCoordinates | undefined = $derived(
-        this.choosingWormhole ? this.validOrigin(this.travellableShips) : undefined
+        this.choosingWormhole ? this.validOrigin(this.travelableShips) : undefined
     )
 
     wormholeHexes: AxialCoordinates[] = $derived.by(() => {
         if (!this.choosingWormhole) return []
-        return this.wormholeFrom ? this.wormholeExits(this.wormholeFrom) : this.travellableShips
+        return this.wormholeFrom ? this.wormholeExits(this.wormholeFrom) : this.travelableShips
     })
 
     private async onWormholeClick(coords: AxialCoordinates) {
@@ -668,7 +1668,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             await this.useTradeRouteWormhole(from, coords)
             return
         }
-        this.toggleOrigin(coords, this.travellableShips)
+        this.toggleOrigin(coords, this.travelableShips)
     }
 
     canUseImmediateDownload: boolean = $derived(
@@ -748,23 +1748,73 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     }
 
     prompt: string = $derived.by(() => {
-        if (!this.isMyTurn) return 'Waiting for the other players.'
+        if (!this.isMyTurn) {
+            const picker = this.eventPicker
+            if (picker && this.eventName) {
+                return this.gameState.pendingEvent?.order
+                    ? `${this.eventName} — ${this.playerName(picker)} is picking.`
+                    : `${this.eventName} — ${this.playerName(picker)} is setting the order of picks.`
+            }
+            if (this.isOpening) {
+                const opener = this.gameState.activePlayerIds[0]
+                if (!opener) return 'The opening.'
+                return this.isStowing
+                    ? `The opening — ${this.playerName(opener)} is stowing an extra ship in their bag.`
+                    : `The opening — ${this.playerName(opener)} is placing their free station.`
+            }
+            return 'Waiting for the other players.'
+        }
+        if (this.isStowing) {
+            return 'The opening — choose one extra ship to stow in your bag, unseen by the other players. Then you place your free station.'
+        }
+        if (this.isOpening) {
+            return 'The opening — place your free station on any open hex. It scores nothing now; later stations that join it will.'
+        }
+        if (this.isSeeding) {
+            return this.seedingHexes.length > 0
+                ? 'Your nebula seeder may lay nebula on an empty hex beside it — click the hex, or leave it.'
+                : 'Your nebula seeders have nowhere left to lay.'
+        }
+        if (this.canFoundPlanet) {
+            return 'Choose the color of your new planet.'
+        }
+        if (this.isChoosingEventOrder) {
+            return this.canConfirmEventOrder
+                ? `${this.eventName} — you pick first. Confirm the order, or Undo to change it.`
+                : `${this.eventName} — you pick first. Click the others in the order they follow.`
+        }
+        if (this.isPickingEvent) {
+            switch (this.eventKind) {
+                case TechnologyEffectKind.OrbitalBombardment:
+                    return 'Orbital Targeting — click an enemy probe or fighter to destroy.'
+                case TechnologyEffectKind.WormholeStorm:
+                    return this.stormFrom
+                        ? 'Wormhole Storm — click an empty hex beside a planet to set it down.'
+                        : 'Wormhole Storm — click one of your pieces to move.'
+                case TechnologyEffectKind.SalvageRights:
+                    return 'Salvage Rights — choose a discarded technology to gain.'
+                case TechnologyEffectKind.SignalIntercept:
+                    return 'Signal Intercept — click an explored planet to take its technology.'
+                case TechnologyEffectKind.ShipyardWorld:
+                    return 'Shipyard World — choose a unit from the alien stock.'
+            }
+        }
         if (this.canTerraform) {
             return this.terraformPlanet
-                ? "Your terraformer may change this planet's colour — choose the new colour, or leave it as it is."
+                ? "Your terraformer may change this planet's color — choose the new color, or leave it as it is."
                 : 'Your terraformer may change one planet beside it — click the planet, or leave them as they are.'
         }
-        if (this.choosablePlanets.length > 0) {
-            return this.choosablePlanets.length > 1
-                ? 'Your probes lead on more than one planet — choose one to survey, or skip.'
-                : 'Your probes lead on this planet — survey it, or skip.'
-        }
+        // The survey prompt is a sentence with its buttons inside it, written by the panel.
+        if (this.choosablePlanets.length > 0) return ''
         if (this.technologyChoices.length > 0) {
             return this.technologyChoices.length > 1 && this.technologyChoices.every(isElevated)
                 ? 'Two elevated technologies — choose which one this planet holds.'
                 : 'Choose the technology this planet will hold.'
         }
         if (this.attackTargets.length > 0) {
+            if (this.torpedoPending) {
+                return 'Your torpedo is down — click the station it strikes. Both leave the game.'
+            }
             if (this.railgunArmed) {
                 return this.railgunTargets.length > 0
                     ? 'Railgun armed — ringed targets are destroyed outright rather than damaged.'
@@ -777,23 +1827,49 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (this.spreading) {
             return this.spreadTargets.length > 1
                 ? `Full Torpedo Spread — ${this.spreadTargets.length} targets picked. Fire, or keep choosing.`
-                : 'Full Torpedo Spread — click the neighbours to hit. A spread needs at least two.'
+                : 'Full Torpedo Spread — click the neighbors to hit. A spread needs at least two.'
         }
         if (this.choosingDownload) {
             if (this.downloadFrom) {
-                return 'Immediate Download — click a planet that one can see to take its technology.'
+                return 'Immediate Download — click a planet within three hexes of that one to take its technology.'
             }
             return this.downloadAnchors.length === 0
-                ? 'None of your Download planets can see a technology you could take.'
+                ? 'None of your Download planets has a technology you could take within three hexes.'
                 : 'Immediate Download — click the planet holding your Download.'
         }
         if (this.choosingWormhole) {
             if (this.wormholeFrom) {
                 return 'Trade Route Wormhole — click where it comes out. Click your own ship again to change it.'
             }
-            return this.travellableShips.length === 0
+            return this.travelableShips.length === 0
                 ? 'None of your ships beside a planet has a route to travel.'
                 : 'Trade Route Wormhole — click one of your highlighted ships to send it.'
+        }
+        if (this.choosingRift) {
+            return this.riftFrom
+                ? 'Dimensional Rift — click a highlighted empty hex on the border for it to come out on; it counts as newly placed there. Click your piece again to change it.'
+                : 'Dimensional Rift — click one of your highlighted pieces on the border of the map.'
+        }
+        if (this.choosingWarp) {
+            return this.warpFrom
+                ? 'Warp Drive — click any highlighted empty hex for it to come out on; it counts as newly placed there. Click your piece again to change it.'
+                : 'Warp Drive — click one of your highlighted pieces to send it through empty space.'
+        }
+        if (this.choosingShift) {
+            return this.shiftFrom
+                ? 'Tactical Shift — click the empty hex beside it to step into; it counts as newly placed there. Click your piece again to change it.'
+                : 'Tactical Shift — click one of your highlighted pieces to move it one hex.'
+        }
+        if (this.choosingAsteroid) {
+            return 'Asteroid Field — choose the ship to build: three of it go into your bag, unseen by the other players.'
+        }
+        if (this.choosingBreach) {
+            return 'Security Breach — choose the opponent whose bag takes the Scrap.'
+        }
+        if (this.choosingSpoof) {
+            return this.spoofFrom
+                ? "Spoofed Orders — click the empty hex beside it to send it into. Click the rival's piece again to change it."
+                : "Spoofed Orders — click a highlighted rival's piece beside one of yours to send it one hex."
         }
         if (this.choosingFeint) {
             if (this.feintFrom) {
@@ -801,7 +1877,10 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             }
             return this.feintableShips.length === 0
                 ? 'None of your ships has an enemy beside it.'
-                : 'Tactical Feint — click one of your highlighted ships to swap it with a neighbour.'
+                : 'Tactical Feint — click one of your highlighted ships to swap it with a neighbor.'
+        }
+        if (this.choosingColony) {
+            return 'Colony Ship — click one of your highlighted planets to settle it. It counts as one of your stations from then on.'
         }
         if (this.choosingUpdatedLogistics) {
             return this.wakeableFighters.length === 0
@@ -811,61 +1890,95 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (this.isPlacingTile) {
             return this.tileOrigins.length === 0
                 ? 'No room for the tile turned this way — rotate it.'
-                : 'That technology grows the map — rotate the tile if you like, then lay it.'
+                : `${TECHNOLOGY_EFFECT_INFO[TechnologyEffectKind.GrowBoard].name} grows the map — ${this.tileShip ? `you drew a ${describePiece(this.tileShip)} to place on the new tile. Rotate` : 'rotate'} the tile if you like, then lay it.`
         }
         if (this.bonusPlacementHexes.length > 0) {
             const piece = this.drawnPiece
             return piece
-                ? `You drew a ${describePiece(piece)} with the tile — it must land on the new tile.`
+                ? `Place your ${describePiece(piece)} on the new tile.`
                 : 'Place the drawn ship on the new tile.'
         }
-        if (this.isMovingForTechnology) {
+        if (this.isDrifting) {
             return this.movingFrom
-                ? 'Now choose where it steps, or hold position.'
-                : 'That technology may move one of your pieces — choose which, or hold position.'
+                ? 'Choose where it steps, or hold position.'
+                : 'Step one of your pieces one hex, or hold position.'
         }
         if (this.canEndTurn) {
             return 'Your ships are placed — use a technology while it can still act, or end your turn.'
         }
         if (this.canDraw) {
-            return `Your turn — draw ${this.drawCount} ${this.drawCount === 1 ? 'ship' : 'ships'} when you are ready.`
+            return `Click the bag to draw ${this.drawCount} ${this.drawCount === 1 ? 'ship' : 'ships'}.`
         }
         if (this.isDiscarding) {
+            // The draft comes before everything else in the turn. A Deep Scanner's extra ship
+            // leaves a second discard to make; under Global Recycling the discard is not lost.
+            const again = this.turnHand.some((card) => !card.held)
+            const discard = `${again ? 'Now discard one more' : 'First, discard one'} of your drawn cards`
+            if (ruleInForce(this.gameState.board, TechnologyEffectKind.Reinforcements)) {
+                return this.canUseLogisticsUpgrade
+                    ? `${discard} back into your bag, or use Logistics Upgrade to keep them all.`
+                    : `${discard} back into your bag.`
+            }
             return this.canUseLogisticsUpgrade
-                ? 'Three drawn — throw one out, or spend a Logistics Upgrade to keep all three.'
-                : 'Three drawn — throw one out of the game, then place the other two.'
+                ? `${discard} from the game, or use Logistics Upgrade to keep them all.`
+                : `${discard} from the game.`
         }
         if (this.isPlacing) {
             const piece = this.pieceToPlace
+            const hasSpecial = (this.myPlayerState?.specialPieces.length ?? 0) > 0
+            const orSpecial =
+                hasSpecial && this.canPlaySpecial ? ', or play a special piece instead' : ''
             if (!piece) {
                 return this.heldPieces.length > 1
-                    ? 'Choose which ship to place.'
+                    ? `Place ${this.heldChoice()}${orSpecial}.`
                     : 'Nothing to place.'
             }
-            if (piece.type === PieceType.Probe && this.hexesClosedToMe.length > 0) {
-                return `You drew a ${describePiece(piece)}. The wavy lines are closed to it — anything else may pass.`
+            if (this.hexesClosedToMe.length > 0) {
+                return piece.type === PieceType.Probe
+                    ? `Place your ${describePiece(piece)}. The red hexes are closed to it.`
+                    : `Place your ${describePiece(piece)}. The red hexes are closed to your ships.`
             }
             if (this.chosenSpecialId) {
                 return `Place your ${describePiece(piece)} — your draw goes back in the bag.`
             }
-            const hasSpecial = (this.myPlayerState?.specialPieces.length ?? 0) > 0
-            return hasSpecial && this.canPlaySpecial
-                ? `You drew a ${describePiece(piece)}. Place it, or play a special piece instead.`
-                : `You drew a ${describePiece(piece)}. Place it.`
+            if (this.torpedoArmed) {
+                return 'Gamma Torpedo armed — place the fighter beside a station to destroy them both.'
+            }
+            if (orSpecial) return `Place your ${describePiece(piece)}${orSpecial}.`
+            return this.canArmTorpedo
+                ? `Place your ${describePiece(piece)}, or arm the Gamma Torpedo first.`
+                : `Place your ${describePiece(piece)}.`
         }
         return ''
     })
+
+    // The ships in hand as a choice: "your station or your probe", "one of your fighters",
+    // "your station, your probe or one of your fighters".
+    private heldChoice(): string {
+        const counts = new Map<string, number>()
+        for (const piece of this.heldPieces) {
+            const name = describePiece(piece)
+            counts.set(name, (counts.get(name) ?? 0) + 1)
+        }
+        const parts = [...counts.entries()].map(([name, count]) =>
+            count > 1 ? `one of your ${name}s` : `your ${name}`
+        )
+        if (parts.length <= 1) return parts[0] ?? 'a ship'
+        return `${parts.slice(0, -1).join(', ')} or ${parts[parts.length - 1]}`
+    }
 
     async place(coords: AxialCoordinates) {
         if (!this.isPlacing) return
 
         const specialId = this.chosenSpecialId
         const pieceId = specialId ?? this.pinnedHeldId ?? this.drawnPiece?.id
+        const torpedo = this.torpedoArmed
         const action = this.createPlayerAction(PlacePiece, {
             type: ActionType.PlacePiece,
             coords,
             pieceSource: specialId ? PieceSource.Special : PieceSource.Bag,
-            ...(pieceId ? { pieceId } : {})
+            ...(pieceId ? { pieceId } : {}),
+            ...(torpedo ? { torpedo } : {})
         })
 
         this.resetAction()
@@ -905,6 +2018,56 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             this.chosenSpecialId === pieceId ? undefined : { source: 'special', pieceId }
         )
     }
+
+    // A Scrap is played from the hand with one click: it turns over and is gone.
+    async playScrap(pieceId: string) {
+        if (!this.isMyTurn || !this.validActionTypes.includes(ActionType.PlayScrap)) return
+
+        const action = this.createPlayerAction(PlayScrap, { pieceId })
+        this.resetAction()
+        await this.applyAction(action)
+    }
+
+    // The Rules pills: on unless the player has turned them off, remembered in this browser.
+    rulesHelpShown: boolean = $state(readRulesHelpShown())
+
+    toggleRulesHelp() {
+        this.rulesHelpShown = !this.rulesHelpShown
+        try {
+            localStorage.setItem(RULES_HELP_KEY, this.rulesHelpShown ? 'on' : 'off')
+        } catch {
+            // Storage may be unavailable (a private window, blocked site data): the choice then
+            // lasts for this visit alone.
+        }
+    }
+
+    // The note for the decision in front of the player, while the Rules pills are on.
+    rulesHelp: RulesHelp | undefined = $derived.by(() => {
+        if (!this.rulesHelpShown || !this.isMyTurn) return undefined
+        const placing = this.isPlacing
+        return rulesHelpFor({
+            stowing: this.isStowing,
+            openingStation: this.isOpening && !this.isStowing,
+            drawing: this.canDraw,
+            choosingEventOrder: this.isChoosingEventOrder,
+            event: this.isPickingEvent ? this.eventKind : undefined,
+            layingTile: this.isPlacingTile,
+            drifting: this.isDrifting,
+            seeding: this.isSeeding,
+            founding: this.canFoundPlanet,
+            terraforming: this.canTerraform,
+            surveying: this.choosablePlanets.length > 0,
+            choosingTechnology: this.technologyChoices.length > 0,
+            torpedoStrike: this.torpedoPending,
+            attacking: this.attackTargets.length > 0,
+            discarding: this.isDiscarding,
+            power: this.activePower,
+            placing,
+            piece: placing ? this.pieceToPlace : undefined,
+            tileShip: placing && this.bonusPlacementHexes.length > 0,
+            endingTurn: this.canEndTurn
+        })
+    })
 
     canPlaceHeld(piece: Piece): boolean {
         const playerId = this.myPlayer?.id
@@ -1001,7 +2164,30 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
     async onBoardClick(coords: AxialCoordinates, touch = false) {
         if (this.busy) return
 
+        if (this.isPickingEvent) {
+            await this.onEventClick(coords)
+            return
+        }
+        if (this.isSeeding) {
+            if (this.seedingHexes.some((hex) => sameCoordinates(hex, coords))) {
+                await this.seedNebula(coords)
+            }
+            return
+        }
+
         switch (this.activePower) {
+            case Power.Shift:
+                await this.onShiftClick(coords)
+                return
+            case Power.Warp:
+                await this.onWarpClick(coords)
+                return
+            case Power.Rift:
+                await this.onRiftClick(coords)
+                return
+            case Power.Spoof:
+                await this.onSpoofClick(coords)
+                return
             case Power.Feint:
                 await this.onFeintClick(coords)
                 return
@@ -1010,6 +2196,11 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                 return
             case Power.Download:
                 await this.onDownloadClick(coords)
+                return
+            case Power.Colony:
+                if (this.settleablePlanets.some((planet) => sameCoordinates(planet, coords))) {
+                    await this.useColonyShip(coords)
+                }
                 return
             case Power.Logistics:
                 if (this.wakeableFighters.some((fighter) => sameCoordinates(fighter, coords))) {
@@ -1021,6 +2212,15 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
                     this.toggleSpreadTarget(coords)
                 }
                 return
+            case Power.Torpedo:
+                if (this.isHighlighted(coords)) {
+                    if (touch && !this.isPreviewing(coords)) {
+                        this.select('preview', coords)
+                        return
+                    }
+                    await this.place(coords)
+                }
+                return
         }
 
         if (this.isPlacingTile) {
@@ -1028,7 +2228,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             return
         }
 
-        if (this.isMovingForTechnology) {
+        if (this.isDrifting) {
             const from = this.movingFrom
             if (from && this.movableHexes.some((hex) => sameCoordinates(hex, coords))) {
                 await this.movePiece(coords)
@@ -1072,8 +2272,9 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             this.pinnedPlanet && sameCoordinates(this.pinnedPlanet, coords) ? undefined : coords
     }
 
-    override beforeNewState(_transition: PresentedTransition) {
+    override beforeNewState(transition: PresentedTransition) {
         this.resetAction()
+        this.stowRevealDue = transition.kind === 'own-action' || transition.kind === 'other-action'
     }
 
     override async undo() {
@@ -1112,10 +2313,18 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     private originCandidates(power: Power): AxialCoordinates[] {
         switch (power) {
+            case Power.Shift:
+                return this.shiftablePieces
+            case Power.Warp:
+                return this.warpablePieces
+            case Power.Rift:
+                return this.riftablePieces
+            case Power.Spoof:
+                return this.spoofablePieces
             case Power.Feint:
                 return this.feintableShips
             case Power.Wormhole:
-                return this.travellableShips
+                return this.travelableShips
             case Power.Download:
                 return this.downloadAnchors
             default:
@@ -1125,18 +2334,34 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     private isPowerAvailable(power: Power): boolean {
         switch (power) {
+            case Power.Shift:
+                return this.canUseTacticalShift
+            case Power.Warp:
+                return this.canUseWarpDrive
+            case Power.Rift:
+                return this.canUseDimensionalRift
+            case Power.Spoof:
+                return this.canUseSpoofedOrders
+            case Power.Asteroid:
+                return this.canUseAsteroidField
+            case Power.Breach:
+                return this.canUseSecurityBreach
             case Power.Feint:
                 return this.canUseTacticalFeint
             case Power.Wormhole:
                 return this.canUseTradeRouteWormhole
             case Power.Download:
                 return this.canUseImmediateDownload
+            case Power.Colony:
+                return this.canUseColonyShip
             case Power.Logistics:
                 return this.canUseUpdatedLogistics
             case Power.Spread:
                 return this.canSpread
             case Power.Railgun:
                 return this.canArmRailgun
+            case Power.Torpedo:
+                return this.canArmTorpedo
         }
     }
 }

@@ -6,7 +6,9 @@ import { hexGeometry } from '$lib/utils/hexDefinition.js'
 import { ElementRegistry } from './elementRegistry.js'
 
 export const ORBIT_RADIUS = 33
-export const ORBITER_SCALE = 0.35
+// How far a probe shrinks on its way in, to about the size of the dot that takes its place.
+export const ORBITER_SCALE = 0.25
+export const ORBIT_DOT_RADIUS = 5
 export const ORBIT_PERIOD = 40 // seconds per revolution, matching orbit-spin in Board
 const ORBIT_DURATION = 0.7
 const WITHDRAW_DURATION = 0.3
@@ -17,7 +19,7 @@ export function beamKey(probe: AxialCoordinates, planet: AxialCoordinates): stri
     return `${hexKey(probe)}>${hexKey(planet)}`
 }
 
-// Where the k-th of n orbiters sits around its planet before the orbit's own rotation.
+// Where the k-th of n dots sits around its planet before the orbit's own rotation.
 export function orbitSlot(planet: AxialCoordinates, index: number, count: number) {
     const center = hexGeometry(planet).center
     const angle = -Math.PI / 2 + (2 * Math.PI * index) / count
@@ -28,6 +30,11 @@ export function orbitSlot(planet: AxialCoordinates, index: number, count: number
     }
 }
 
+// A planet's orbit shows one dot for each player with probes in it, in the order they arrived.
+export function orbitingPlayers(orbiters: readonly { playerId: string }[]): string[] {
+    return [...new Set(orbiters.map((probe) => probe.playerId))]
+}
+
 type NewOrbiter = { pieceId: string; planet: AxialCoordinates; index: number; count: number }
 
 function newOrbiters(from: EarendelBoard, to: EarendelBoard): NewOrbiter[] {
@@ -36,24 +43,38 @@ function newOrbiters(from: EarendelBoard, to: EarendelBoard): NewOrbiter[] {
         const before = new Set(
             (from.hexes[hexKey(hex.coords)]?.orbiters ?? []).map((probe) => probe.id)
         )
-        return orbiters.flatMap((probe, index) =>
+        // Each new orbiter heads for its player's dot, which probes of one player share.
+        const players = orbitingPlayers(orbiters)
+        return orbiters.flatMap((probe) =>
             before.has(probe.id)
                 ? []
-                : [{ pieceId: probe.id, planet: hex.coords, index, count: orbiters.length }]
+                : [
+                      {
+                          pieceId: probe.id,
+                          planet: hex.coords,
+                          index: players.indexOf(probe.playerId),
+                          count: players.length
+                      }
+                  ]
         )
     })
 }
 
-// The orbit's current rotation, in radians, read from its running CSS animation.
-function currentRotation(element: Element | undefined): number {
+// How far round the orbit will have turned when a flight of this length lands, in radians: its
+// rotation now, read from its running CSS animation, plus what it turns meanwhile. A planet's
+// first orbiter has no orbit yet, and one mounts unturned with the new state; under reduced
+// motion the orbit stands still. Either way the slot is where it is drawn.
+function rotationAtLanding(element: Element | undefined, flight: number): number {
     if (!element) return 0
-    const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
-    return Math.atan2(matrix.b, matrix.a)
+    const style = getComputedStyle(element)
+    if (style.animationName === 'none') return 0
+    const matrix = new DOMMatrixReadOnly(style.transform)
+    return Math.atan2(matrix.b, matrix.a) + (2 * Math.PI * flight) / ORBIT_PERIOD
 }
 
 // A probe whose claim paid first draws its beams back into itself, then flies from its hex into
-// the planet's orbit, shrinking as it goes, and lands where its orbiter will be drawn once the new
-// state is shown.
+// the planet's orbit, shrinking as it goes, and lands where its player's dot will be drawn once the
+// new state is shown.
 export class OrbitAnimator {
     readonly orbits = new ElementRegistry<SVGGElement>()
     readonly beams = new ElementRegistry<SVGPolygonElement>()
@@ -101,9 +122,10 @@ export class OrbitAnimator {
             }
 
             // The orbit keeps turning while the probe flies, so aim where the slot will be.
-            const turned =
-                currentRotation(this.orbits.get(String(hexKey(orbiter.planet)))) +
-                (2 * Math.PI * (flightStart + duration)) / ORBIT_PERIOD
+            const turned = rotationAtLanding(
+                this.orbits.get(String(hexKey(orbiter.planet))),
+                flightStart + duration
+            )
             const center = hexGeometry(orbiter.planet).center
             const slot = orbitSlot(orbiter.planet, orbiter.index, orbiter.count)
             const angle = slot.angle + turned

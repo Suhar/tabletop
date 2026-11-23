@@ -60,18 +60,23 @@ export class ExploringStateHandler implements MachineStateHandler<
         switch (true) {
             case isChoosePlanet(action): {
                 if (!action.coords) {
-                    return endPlacement(gameState, context, action)
+                    return endPlacement(gameState, context)
                 }
                 return MachineState.Exploring
             }
             case isChooseTechnology(action): {
+                if (gameState.pendingEvent) {
+                    return gameState.pendingEvent.order
+                        ? MachineState.ResolvingEvent
+                        : MachineState.ChoosingEventOrder
+                }
                 if (gameState.pendingTile) {
                     return MachineState.PlacingTile
                 }
                 if (gameState.pendingTechnology) {
                     return MachineState.ResolvingTechnology
                 }
-                return endPlacement(gameState, context, action)
+                return endPlacement(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

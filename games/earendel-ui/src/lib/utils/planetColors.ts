@@ -1,6 +1,6 @@
 import { PlanetColor } from '@tabletop/earendel'
 
-// Cool colours only: every player colour is warm (see EarendelColors).
+// Cool colors only: every player color is warm (see EarendelColors).
 export const PLANET_FILL: Record<PlanetColor, string> = {
     [PlanetColor.Periwinkle]: '#859bfd',
     [PlanetColor.Aqua]: '#22d6fd',

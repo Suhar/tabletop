@@ -5,7 +5,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Piece } from '../model/pieces.js'
 import { OrbitedProbe } from '../model/exploration.js'
-import { drawCountForPlayer } from '../util/turn.js'
+import { drawCountForPlayer, keepCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
 import { refreshPlanetControl } from '../util/control.js'
 import { earendelConfig } from '../definition/config.js'
@@ -17,7 +17,11 @@ export const DrawPiecesMetadata = Type.Object({
     drawn: Type.Optional(Type.Array(Piece)),
     technologiesClaimed: Type.Optional(Type.Array(Type.String())),
     technologiesLapsed: Type.Optional(Type.Array(Type.String())),
-    orbited: Type.Optional(Type.Array(OrbitedProbe))
+    orbited: Type.Optional(Type.Array(OrbitedProbe)),
+    // Shared Science: rivals with a probe beside a paid planet who gained its technology too.
+    shared: Type.Optional(
+        Type.Array(Type.Object({ playerId: Type.String(), technologyId: Type.String() }))
+    )
 })
 
 export type DrawPieces = Type.Static<typeof DrawPieces>
@@ -65,7 +69,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         const {
             gained: technologiesClaimed,
             lapsed: technologiesLapsed,
-            orbited
+            orbited,
+            shared
         } = claimProbeTechnologies(state, this.playerId)
 
         const playerState = state.getPlayerState(this.playerId)
@@ -78,15 +83,19 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             state.heldPieces.push(piece)
         }
 
-        // Recorded now: claimed technologies may detour the turn before the discard.
-        state.draftPending = state.heldPieces.length > 1
+        // Recorded now: a drift step or a seeder may detour the turn before the discard. Under
+        // Overdrive (rules.md, Elevated technologies) every drawn ship is placed.
+        state.draftPending =
+            state.heldPieces.length >
+            keepCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
 
-        this.revealsInfo = state.heldPieces.length > 0 || state.pendingTile !== undefined
+        this.revealsInfo = state.heldPieces.length > 0
         this.metadata = {
             drawn: [...state.heldPieces],
             ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {}),
             ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {}),
-            ...(orbited.length > 0 ? { orbited } : {})
+            ...(orbited.length > 0 ? { orbited } : {}),
+            ...(shared.length > 0 ? { shared } : {})
         }
         this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }

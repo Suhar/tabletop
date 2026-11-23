@@ -19,12 +19,17 @@ import {
 // One planet per tile, settled by simulation (rules.md, Setup).
 export const PLANETS_PER_TILE = 1
 
-export const TILES_PER_PLAYER = 3
+export const TILES_PER_PLAYER = 4
+
+// Beside those, tiles of open space alone: room to maneuver that no planet anchors
+// (rules.md, Setup).
+export const BLANK_TILES_PER_PLAYER = 1
 
 export const PLAYTEST_TILES_PER_PLAYER = 7
 
 export type BoardSetupOptions = {
     tilesPerPlayer?: number
+    blankTilesPerPlayer?: number
     planetsPerTile?: number
 }
 
@@ -37,8 +42,8 @@ const JITTER = 2.5
 // Distance across counts for less than distance down, so boards lean wide like the table.
 const WIDTH_BIAS = 1.7
 
-// Hex centres in units of the hex size, flat-topped.
-function centreOf({ q, r }: AxialCoordinates): { x: number; y: number } {
+// Hex centers in units of the hex size, flat-topped.
+function centerOf({ q, r }: AxialCoordinates): { x: number; y: number } {
     return { x: 1.5 * q, y: Math.sqrt(3) * (r + q / 2) }
 }
 
@@ -62,7 +67,7 @@ export function startingTilePlacements(tileCount: number, prng: Prng): TilePlace
     occupy(first)
 
     while (placements.length < tileCount) {
-        const hexes = Object.values(board.hexes).map((hex) => centreOf(hex.coords))
+        const hexes = Object.values(board.hexes).map((hex) => centerOf(hex.coords))
         const middle = {
             x: hexes.reduce((sum, c) => sum + c.x, 0) / hexes.length,
             y: hexes.reduce((sum, c) => sum + c.y, 0) / hexes.length
@@ -103,7 +108,7 @@ function spreadOf(
     footprint: AxialCoordinates[],
     distance: (c: { x: number; y: number }) => number
 ): number {
-    return footprint.reduce((sum, coords) => sum + distance(centreOf(coords)), 0) / footprint.length
+    return footprint.reduce((sum, coords) => sum + distance(centerOf(coords)), 0) / footprint.length
 }
 
 // Empty hexes the tile would close in on every side.
@@ -121,20 +126,20 @@ function holesLeftBy(board: EarendelBoard, footprint: AxialCoordinates[]): numbe
     return [...around.values()].filter((coords) => neighborsOf(coords).every(isFilled)).length
 }
 
-// Planet colours are dealt from an even pool, so each colour turns up equally often, give or
-// take one, and land at random; then planets of one colour that sit within two hexes of each
+// Planet colors are dealt from an even pool, so each color turns up equally often, give or
+// take one, and land at random; then planets of one color that sit within two hexes of each
 // other are pulled apart, and nothing more, so chains between partners stay within reach.
 export const MIN_PARTNER_GAP = 3
 
-function balancedColours(planetCount: number, prng: Prng): PlanetColor[] {
+function balancedColors(planetCount: number, prng: Prng): PlanetColor[] {
     const order = [...PLANET_COLORS]
     shuffle(order, prng.random)
-    const colours = Array.from(
+    const colors = Array.from(
         { length: planetCount },
         (_unused, index) => order[index % order.length]
     )
-    shuffle(colours, prng.random)
-    return colours
+    shuffle(colors, prng.random)
+    return colors
 }
 
 export function buildStartingBoard(
@@ -149,29 +154,39 @@ export function buildStartingBoard(
         TILE_HEX_OFFSETS.length
     )
 
-    const tiles = startingTilePlacements(playerCount * tilesPerPlayer, prng).map((placement) =>
-        tileFootprint(placement.origin, placement.rotation)
-    )
-    const colours = balancedColours(tiles.length * planetsPerTile, prng)
+    const blankTilesPerPlayer = options.blankTilesPerPlayer ?? BLANK_TILES_PER_PLAYER
+
+    const tiles = startingTilePlacements(
+        playerCount * (tilesPerPlayer + blankTilesPerPlayer),
+        prng
+    ).map((placement) => tileFootprint(placement.origin, placement.rotation))
+
+    // Which tiles are blank is settled at random, wherever on the map they fell.
+    const order = tiles.map((_unused, tile) => tile)
+    shuffle(order, prng.random)
+    const blank = new Set(order.slice(0, playerCount * blankTilesPerPlayer))
+
+    const colors = balancedColors((tiles.length - blank.size) * planetsPerTile, prng)
     const planets: SeededPlanet[] = tiles.flatMap((footprint, tile) => {
+        if (blank.has(tile)) return []
         const hexes = [...footprint]
         shuffle(hexes, prng.random)
         return hexes.slice(0, planetsPerTile).map((coords) => ({
             tile,
             coords,
-            colour: colours.pop() ?? PLANET_COLORS[0]
+            color: colors.pop() ?? PLANET_COLORS[0]
         }))
     })
 
     separatePartners(planets, tiles)
 
-    const planetAt = new Map(planets.map((planet) => [hexKey(planet.coords), planet.colour]))
+    const planetAt = new Map(planets.map((planet) => [hexKey(planet.coords), planet.color]))
     tiles.forEach((footprint, tile) => {
         const tileId = `tile-${tile}`
         for (const coords of footprint) {
-            const colour = planetAt.get(hexKey(coords))
-            board.hexes[hexKey(coords)] = colour
-                ? { coords, tileId, kind: HexKind.Planet, color: colour }
+            const color = planetAt.get(hexKey(coords))
+            board.hexes[hexKey(coords)] = color
+                ? { coords, tileId, kind: HexKind.Planet, color: color }
                 : { coords, tileId, kind: HexKind.Open }
         }
     })
@@ -179,7 +194,7 @@ export function buildStartingBoard(
     return board
 }
 
-type SeededPlanet = { tile: number; coords: AxialCoordinates; colour: PlanetColor }
+type SeededPlanet = { tile: number; coords: AxialCoordinates; color: PlanetColor }
 
 const SEPARATE_ROUNDS = 20
 
@@ -187,20 +202,20 @@ export function hexSteps(a: AxialCoordinates, b: AxialCoordinates): number {
     return (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2
 }
 
-// How far same-coloured planets fall short of the gap, summed over every such pair.
+// How far same-colored planets fall short of the gap, summed over every such pair.
 function shortfall(planets: SeededPlanet[]): number {
     let total = 0
     for (let i = 0; i < planets.length; i++) {
         for (let j = i + 1; j < planets.length; j++) {
-            if (planets[i].colour !== planets[j].colour) continue
+            if (planets[i].color !== planets[j].color) continue
             total += Math.max(0, MIN_PARTNER_GAP - hexSteps(planets[i].coords, planets[j].coords))
         }
     }
     return total
 }
 
-// Swaps two planets' colours, or moves a planet within its tile, whenever that shrinks the
-// shortfall, and stops once no partners are too close. Colour counts stay as dealt.
+// Swaps two planets' colors, or moves a planet within its tile, whenever that shrinks the
+// shortfall, and stops once no partners are too close. Color counts stay as dealt.
 function separatePartners(planets: SeededPlanet[], tiles: AxialCoordinates[][]) {
     let current = shortfall(planets)
     for (let round = 0; round < SEPARATE_ROUNDS && current > 0; round++) {
@@ -208,14 +223,14 @@ function separatePartners(planets: SeededPlanet[], tiles: AxialCoordinates[][]) 
 
         for (let i = 0; i < planets.length && current > 0; i++) {
             for (let j = i + 1; j < planets.length && current > 0; j++) {
-                if (planets[i].colour === planets[j].colour) continue
-                ;[planets[i].colour, planets[j].colour] = [planets[j].colour, planets[i].colour]
+                if (planets[i].color === planets[j].color) continue
+                ;[planets[i].color, planets[j].color] = [planets[j].color, planets[i].color]
                 const next = shortfall(planets)
                 if (next < current) {
                     current = next
                     improved = true
                 } else {
-                    ;[planets[i].colour, planets[j].colour] = [planets[j].colour, planets[i].colour]
+                    ;[planets[i].color, planets[j].color] = [planets[j].color, planets[i].color]
                 }
             }
         }

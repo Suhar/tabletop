@@ -16,6 +16,22 @@ import { AttackSpread } from '../actions/attackSpread.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { EndTurn } from '../actions/endTurn.js'
 import { Terraform } from '../actions/terraform.js'
+import { ChooseEventOrder } from '../actions/chooseEventOrder.js'
+import { EventPick } from '../actions/eventPick.js'
+import { SeedNebula } from '../actions/seedNebula.js'
+import { FoundPlanet } from '../actions/foundPlanet.js'
+import { StowShip } from '../actions/stowShip.js'
+import { UseTacticalShift } from '../actions/useTacticalShift.js'
+import { UseBeyondTheFrontier } from '../actions/useBeyondTheFrontier.js'
+import { UseSpoofedOrders } from '../actions/useSpoofedOrders.js'
+import { UseAsteroidField } from '../actions/useAsteroidField.js'
+import { UseSecurityBreach } from '../actions/useSecurityBreach.js'
+import { PlayScrap } from '../actions/playScrap.js'
+import { UseWarpDrive } from '../actions/useWarpDrive.js'
+import { UseDimensionalRift } from '../actions/useDimensionalRift.js'
+import { UseConscription } from '../actions/useConscription.js'
+import { UseFactoryOverride } from '../actions/useFactoryOverride.js'
+import { UseColonyShip } from '../actions/useColonyShip.js'
 
 export const EarendelApiActions = {
     [ActionType.DrawPieces]: DrawPieces,
@@ -34,5 +50,21 @@ export const EarendelApiActions = {
     [ActionType.PlacePiece]: PlacePiece,
     [ActionType.Pass]: Pass,
     [ActionType.EndTurn]: EndTurn,
-    [ActionType.Terraform]: Terraform
+    [ActionType.Terraform]: Terraform,
+    [ActionType.ChooseEventOrder]: ChooseEventOrder,
+    [ActionType.EventPick]: EventPick,
+    [ActionType.SeedNebula]: SeedNebula,
+    [ActionType.FoundPlanet]: FoundPlanet,
+    [ActionType.StowShip]: StowShip,
+    [ActionType.UseTacticalShift]: UseTacticalShift,
+    [ActionType.UseBeyondTheFrontier]: UseBeyondTheFrontier,
+    [ActionType.UseSpoofedOrders]: UseSpoofedOrders,
+    [ActionType.UseAsteroidField]: UseAsteroidField,
+    [ActionType.UseSecurityBreach]: UseSecurityBreach,
+    [ActionType.PlayScrap]: PlayScrap,
+    [ActionType.UseWarpDrive]: UseWarpDrive,
+    [ActionType.UseDimensionalRift]: UseDimensionalRift,
+    [ActionType.UseConscription]: UseConscription,
+    [ActionType.UseFactoryOverride]: UseFactoryOverride,
+    [ActionType.UseColonyShip]: UseColonyShip
 }

@@ -2,7 +2,7 @@ import * as Type from 'typebox'
 import { AxialCoordinates } from '@tabletop/common'
 import { PlanetColor } from './board.js'
 
-// A pair of same-coloured planets joined by a chain, and the player who joined it. Each pair pays
+// A pair of same-colored planets joined by a chain, and the player who joined it. Each pair pays
 // once, ever (rules.md, Chains).
 export type TradeRoute = Type.Static<typeof TradeRoute>
 export const TradeRoute = Type.Object({

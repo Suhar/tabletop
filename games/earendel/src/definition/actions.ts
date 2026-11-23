@@ -15,5 +15,21 @@ export enum ActionType {
     PlacePiece = 'placePiece',
     Pass = 'pass',
     EndTurn = 'endTurn',
-    Terraform = 'terraform'
+    Terraform = 'terraform',
+    ChooseEventOrder = 'chooseEventOrder',
+    EventPick = 'eventPick',
+    SeedNebula = 'seedNebula',
+    FoundPlanet = 'foundPlanet',
+    StowShip = 'stowShip',
+    UseTacticalShift = 'useTacticalShift',
+    UseBeyondTheFrontier = 'useBeyondTheFrontier',
+    UseSpoofedOrders = 'useSpoofedOrders',
+    UseAsteroidField = 'useAsteroidField',
+    UseSecurityBreach = 'useSecurityBreach',
+    PlayScrap = 'playScrap',
+    UseWarpDrive = 'useWarpDrive',
+    UseDimensionalRift = 'useDimensionalRift',
+    UseConscription = 'useConscription',
+    UseFactoryOverride = 'useFactoryOverride',
+    UseColonyShip = 'useColonyShip'
 }

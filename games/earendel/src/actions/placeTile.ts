@@ -14,18 +14,19 @@ import { Tile } from '../model/tile.js'
 import {
     canPlaceTileAt,
     legalTilePlacements,
-    openHexesOfTile,
     placeTileOnBoard,
     TILE_ROTATIONS
 } from '../util/tilePlacement.js'
 import { returnToBag } from '../model/bags.js'
+import { legalPlacementsOnTile } from '../util/placement.js'
 
 export type PlaceTileMetadata = Type.Static<typeof PlaceTileMetadata>
 export const PlaceTileMetadata = Type.Object({
     tile: Type.Optional(Tile),
     rotation: Type.Optional(Type.Number()),
     noTilePlaced: Type.Optional(Type.Boolean()),
-    noShipPlaced: Type.Optional(Type.Boolean())
+    noShipPlaced: Type.Optional(Type.Boolean()),
+    tileClosedToShip: Type.Optional(Type.Boolean())
 })
 
 export type PlaceTile = Type.Static<typeof PlaceTile>
@@ -35,8 +36,6 @@ export const PlaceTile = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.PlaceTile),
             playerId: Type.String(),
-            // The tile became public when its technology was chosen; only a drawn ship reveals here.
-            revealsInfo: Type.Optional(Type.Boolean()),
             coords: Type.Optional(AxialCoordinates),
             rotation: Type.Optional(Type.Number()),
             metadata: Type.Optional(PlaceTileMetadata)
@@ -53,7 +52,6 @@ export function isPlaceTile(action?: GameAction): action is PlaceTile {
 export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implements PlaceTile {
     declare type: ActionType.PlaceTile
     declare playerId: string
-    declare revealsInfo?: boolean
     declare coords?: AxialCoordinates
     declare rotation?: number
     declare metadata?: PlaceTileMetadata
@@ -71,8 +69,22 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         const pending = state.pendingTile
         assertExists(pending, 'PlaceTile requires a pending tile')
 
+        // The ship that follows was drawn with the tile (rules.md, One-shot technologies).
+        const drawn = state.heldPieces.find((piece) => piece.id === state.bonusPlacementPieceId)
+        const returnDrawn = () => {
+            if (!drawn) return
+            state.heldPieces = state.heldPieces.filter((piece) => piece.id !== drawn.id)
+            state.bonusPlacementPieceId = undefined
+            returnToBag(
+                state.getPlayerState(this.playerId).bag,
+                [drawn],
+                state.getProtectedPrng().random
+            )
+        }
+
         if (!this.coords) {
             state.pendingTile = undefined
+            returnDrawn()
             refreshPlanetControl(state)
 
             this.metadata = { noTilePlaced: true }
@@ -81,24 +93,22 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
 
         placeTileOnBoard(state.board, pending.tile, this.coords, this.rotation ?? 0)
 
-        const playerState = state.getPlayerState(this.playerId)
-        const drawn = playerState.drawFromBag()
-        const room = openHexesOfTile(state.board, pending.tile.id).length > 0
+        const room =
+            drawn !== undefined &&
+            legalPlacementsOnTile(state.board, this.playerId, drawn, pending.tile.id).length > 0
 
-        if (drawn && room) {
-            state.heldPieces.push(drawn)
+        if (room) {
             state.bonusPlacementTileId = pending.tile.id
-            state.bonusPlacementPieceId = drawn.id
-        } else if (drawn) {
-            returnToBag(playerState.bag, [drawn], state.getProtectedPrng().random)
+        } else {
+            returnDrawn()
         }
 
         state.pendingTile = undefined
-        this.revealsInfo = drawn !== undefined
         this.metadata = {
             tile: pending.tile,
             rotation: this.rotation ?? 0,
-            ...(drawn && room ? {} : { noShipPlaced: true })
+            ...(drawn && room ? {} : { noShipPlaced: true }),
+            ...(drawn && !room ? { tileClosedToShip: true } : {})
         }
     }
 

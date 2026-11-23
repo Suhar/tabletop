@@ -6,11 +6,20 @@
         center,
         color,
         hub = false,
+        founding = false,
         linkedAngles = []
-    }: { center: Point; color: string; hub?: boolean; linkedAngles?: number[] } = $props()
+    }: {
+        center: Point
+        color: string
+        hub?: boolean
+        // The free station placed at the opening: a faint dotted orbit, no pods, so the hub's
+        // ring stays the hub's.
+        founding?: boolean
+        linkedAngles?: number[]
+    } = $props()
 
-    // Flat-topped hexes put the six neighbours at 30° plus multiples of 60°.
-    const NEIGHBOUR_ANGLES = Array.from(
+    // Flat-topped hexes put the six neighbors at 30° plus multiples of 60°.
+    const NEIGHBOR_ANGLES = Array.from(
         { length: 6 },
         (_unused, i) => Math.PI / 6 + (Math.PI / 3) * i
     )
@@ -21,9 +30,9 @@
 
     let coreRadius = $derived(stationCoreRadius(hub))
 
-    // A side joined to a neighbouring station by a girder gives up its docking stub.
+    // A side joined to a neighboring station by a girder gives up its docking stub.
     let stubs = $derived(
-        NEIGHBOUR_ANGLES.filter(
+        NEIGHBOR_ANGLES.filter(
             (angle) => !linkedAngles.some((linked) => angleBetween(angle, linked) < 0.1)
         ).map((angle) => ({
             x: center.x + (coreRadius + 3) * Math.cos(angle),
@@ -77,6 +86,20 @@
     </g>
 {/if}
 
+{#if founding && !hub}
+    <circle
+        class="founding-orbit"
+        cx={center.x}
+        cy={center.y}
+        r="27"
+        fill="none"
+        stroke={color}
+        stroke-opacity="0.5"
+        stroke-width="1.2"
+        stroke-dasharray="1.5 4.5"
+    />
+{/if}
+
 <polygon points={octagon(coreRadius)} fill={color}></polygon>
 {#if hub}
     <circle cx={center.x} cy={center.y} r="6" fill="#fff6d8" fill-opacity="0.9" />
@@ -98,8 +121,15 @@
         }
     }
 
+    .founding-orbit {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: hub-turn 90s linear infinite;
+    }
+
     @media (prefers-reduced-motion: reduce) {
-        .hub-ring {
+        .hub-ring,
+        .founding-orbit {
             animation: none;
         }
     }

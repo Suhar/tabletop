@@ -34,6 +34,10 @@ export class StartOfTurnStateHandler implements MachineStateHandler<
         const nextPlayerId = gameState.turnManager.startNextTurn(gameState.actionCount)
         gameState.activePlayerIds = [nextPlayerId]
         gameState.heldPieces = []
+        gameState.shipPlacedThisTurn = undefined
+        gameState.discardedThisTurn = undefined
+        gameState.driftedThisTurn = undefined
+        gameState.seededThisTurn = undefined
     }
 
     onAction(
@@ -42,7 +46,7 @@ export class StartOfTurnStateHandler implements MachineStateHandler<
     ): MachineState {
         switch (true) {
             case isDrawPieces(action): {
-                return afterDraw(context.gameState, context, action)
+                return afterDraw(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

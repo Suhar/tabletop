@@ -47,7 +47,7 @@ export class ResolvingTechnologyStateHandler implements MachineStateHandler<
     ): MachineState {
         switch (true) {
             case isMovePiece(action): {
-                return afterTechnologyEffect(action, context.gameState, context)
+                return afterTechnologyEffect(context.gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

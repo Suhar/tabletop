@@ -8,7 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { AttackPiece } from './attackPiece.js'
 import { isUseTacticalFeint, UseTacticalFeint } from './useTacticalFeint.js'
 import { ChoosePlanet } from './choosePlanet.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 import { controllerKey } from '../util/control.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
@@ -45,9 +45,7 @@ function scenario(mine: PieceType, theirs: PieceType, level?: PieceLevel) {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.TacticalFeint
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.TacticalFeint)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Station),
         ship(playerId, PieceType.Station),
@@ -98,6 +96,19 @@ describe('Tactical Feint', () => {
 
         expect(game.state.board.hexes[hexKey(at(0, 0))].piece).toBeUndefined()
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+    })
+
+    it('frees a probe from the planet it surveyed when it is swapped away', () => {
+        const { game, mover, other } = scenario(PieceType.Probe, PieceType.Probe)
+        game.state.board.hexes[hexKey(at(0, 0))].piece!.surveying = at(-1, 0)
+        game.state.board.hexes[hexKey(at(1, 0))].piece!.surveying = at(2, 0)
+
+        game.run(UseTacticalFeint, feint(mover, at(0, 0), at(1, 0)))
+
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece).toMatchObject({ playerId: mover })
+        expect(game.state.board.hexes[hexKey(at(1, 0))].piece?.surveying).toBeUndefined()
+        expect(game.state.board.hexes[hexKey(at(0, 0))].piece).toMatchObject({ playerId: other })
+        expect(game.state.board.hexes[hexKey(at(0, 0))].piece?.surveying).toBeUndefined()
     })
 
     it('explores from a probe swapped in beside an unexplored planet', () => {
@@ -205,7 +216,7 @@ describe('Tactical Feint', () => {
 
     it('is not offered at all without the technology', () => {
         const { game, mover } = scenario(PieceType.Station, PieceType.Probe)
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = []
+        game.state.players.find((p) => p.playerId === mover)!.technologies = []
 
         expect(game.validActionsFor(mover)).not.toContain(ActionType.UseTacticalFeint)
     })

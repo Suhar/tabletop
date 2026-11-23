@@ -3,7 +3,7 @@ import type { AxialCoordinates } from '@tabletop/common'
 import { EarendelBoard, HexKind, hexKey, isOpenHex, neighborsOf, planetControl } from './board.js'
 import { PieceType } from './pieces.js'
 
-// A planet at the origin, with its six neighbours as open space - the smallest board that
+// A planet at the origin, with its six neighbors as open space - the smallest board that
 // can exercise control.
 function boardWithPlanetAtOrigin(): EarendelBoard {
     const origin: AxialCoordinates = { q: 0, r: 0 }

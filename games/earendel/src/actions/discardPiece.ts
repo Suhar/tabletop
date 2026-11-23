@@ -3,11 +3,18 @@ import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { Piece } from '../model/pieces.js'
+import { earendelConfig } from '../definition/config.js'
+import { keepCountForPlayer } from '../util/turn.js'
+import { Piece, PieceType } from '../model/pieces.js'
+import { returnToBag } from '../model/bags.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { ruleInForce } from '../util/rules.js'
 
 export type DiscardPieceMetadata = Type.Static<typeof DiscardPieceMetadata>
 export const DiscardPieceMetadata = Type.Object({
     discarded: Type.Optional(Piece),
+    // Global Recycling, or Scrap: it went back into its owner's bag instead of out of the game.
+    recycled: Type.Optional(Type.Boolean()),
     nothingToDiscard: Type.Optional(Type.Boolean())
 })
 
@@ -43,32 +50,58 @@ export class HydratedDiscardPiece
         super(data, DiscardPieceValidator)
     }
 
-    apply(state: HydratedEarendelGameState, _context?: MachineContext) {
-        const invalidReason = this.invalidDiscardPieceReason(state)
+    apply(state: HydratedEarendelGameState, context?: MachineContext) {
+        const invalidReason = this.invalidDiscardPieceReason(state, context)
         if (invalidReason) {
             throw Error(`Invalid DiscardPiece action: ${invalidReason}`)
         }
 
         if (!this.pieceId) {
+            // Nothing to throw out: the draft is done.
+            state.draftPending = false
             this.metadata = { nothingToDiscard: true }
             return
         }
 
         const index = state.heldPieces.findIndex((piece) => piece.id === this.pieceId)
         const [discarded] = state.heldPieces.splice(index, 1)
-        state.draftPending = false
+        // A Deep Scanner's extra ship means a second discard before the draft is done.
+        state.draftPending =
+            state.heldPieces.length >
+            keepCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
 
-        this.metadata = { discarded }
+        // Global Recycling: the thrown-out ship is shuffled back into the bag it came from, as
+        // Scrap always is (rules.md, One-shot technologies).
+        const recycled =
+            discarded.type === PieceType.Scrap ||
+            ruleInForce(state.board, TechnologyEffectKind.Reinforcements)
+        if (recycled) {
+            returnToBag(
+                state.getPlayerState(this.playerId).bag,
+                [discarded],
+                state.getProtectedPrng().random
+            )
+        }
+
+        if (!recycled) {
+            state.discardedThisTurn = [...(state.discardedThisTurn ?? []), discarded]
+        }
+
+        this.metadata = { discarded, ...(recycled ? { recycled } : {}) }
     }
 
-    isValidDiscardPiece(state: HydratedEarendelGameState): boolean {
-        return this.invalidDiscardPieceReason(state) === undefined
+    isValidDiscardPiece(state: HydratedEarendelGameState, context?: MachineContext): boolean {
+        return this.invalidDiscardPieceReason(state, context) === undefined
     }
 
-    invalidDiscardPieceReason(state: HydratedEarendelGameState): string | undefined {
+    invalidDiscardPieceReason(
+        state: HydratedEarendelGameState,
+        context?: MachineContext
+    ): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        if (state.heldPieces.length <= 1) {
+        const keep = keepCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
+        if (state.heldPieces.length <= keep) {
             return this.pieceId ? 'There is nothing to discard.' : undefined
         }
 

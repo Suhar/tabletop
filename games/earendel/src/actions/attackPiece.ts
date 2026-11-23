@@ -13,10 +13,11 @@ import { refreshPlanetControl } from '../util/control.js'
 import { ActionType } from '../definition/actions.js'
 
 import { Piece } from '../model/pieces.js'
-import { AttackOutcome, attackOutcomeAt, resolveShot } from '../util/attack.js'
+import { AttackOutcome, attackOutcomeAt, isTorpedoAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import { salvageDestroyed } from '../util/elevated.js'
 
 export type AttackPieceMetadata = Type.Static<typeof AttackPieceMetadata>
 export const AttackPieceMetadata = Type.Object({
@@ -24,6 +25,10 @@ export const AttackPieceMetadata = Type.Object({
     target: Type.Optional(Piece),
     damaged: Type.Optional(Type.Boolean()),
     railgun: Type.Optional(Type.Boolean()),
+    // The strike was a Gamma Torpedo's: the fighter that fired is gone too.
+    torpedo: Type.Optional(Piece),
+    // Salvage Operations: destroyed ships a drone's owner took into their bag.
+    salvaged: Type.Optional(Type.Array(Type.Object({ piece: Piece, playerId: Type.String() }))),
     levelAfter: Type.Optional(Type.Number()),
     declined: Type.Optional(Type.Boolean())
 })
@@ -87,13 +92,23 @@ export class HydratedAttackPiece
         const result = resolveShot(state.board, pending.fighterCoords, this.coords, railgun)
         assertExists(result, 'Validated targets hold a piece')
 
+        const salvaged = salvageDestroyed(
+            state,
+            [
+                ...(result.damaged ? [] : [{ piece: result.target, at: this.coords }]),
+                ...(result.spent ? [{ piece: result.spent, at: pending.fighterCoords }] : [])
+            ],
+            this.playerId
+        )
         refreshPlanetControl(state)
 
         state.pendingAttack = undefined
         this.metadata = {
             target: result.target,
             ...(result.damaged ? { damaged: true, levelAfter: result.levelAfter } : {}),
-            ...(railgun ? { railgun: true } : {})
+            ...(railgun ? { railgun: true } : {}),
+            ...(result.spent ? { torpedo: result.spent } : {}),
+            ...(salvaged.length > 0 ? { salvaged } : {})
         }
         this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
@@ -107,7 +122,11 @@ export class HydratedAttackPiece
         if (!pending) return 'No fighter of yours is waiting to fire.'
         if (pending.playerId !== this.playerId) return "That fighter isn't yours."
 
-        if (!this.coords) return undefined
+        if (!this.coords) {
+            return isTorpedoAt(state.board, pending.fighterCoords)
+                ? 'A torpedo cannot hold fire: choose the station it strikes.'
+                : undefined
+        }
 
         if (!pending.targets.some((target) => sameCoordinates(target, this.coords))) {
             return 'That piece is out of reach, or too strong for this fighter to touch.'

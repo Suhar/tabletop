@@ -77,6 +77,7 @@ export class HydratedUseTradeRouteWormhole
         assertExists(piece, 'Trade Route Wormhole moves a piece of yours')
 
         delete fromHex.piece
+        delete piece.surveying
         state.board.hexes[hexKey(this.to)].piece = piece
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TradeRouteWormhole)
@@ -126,7 +127,7 @@ export class HydratedUseTradeRouteWormhole
             return 'That ship has nowhere to travel to.'
         }
         if (!destinations.some((destination) => sameCoordinates(destination, this.to))) {
-            return 'A wormhole only reaches an empty hex beside a different planet of the same colour.'
+            return 'A wormhole only reaches an empty hex beside a different planet of the same color.'
         }
 
         return undefined

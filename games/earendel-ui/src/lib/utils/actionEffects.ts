@@ -4,9 +4,14 @@ import {
     getHex,
     isAttackPiece,
     isAttackSpread,
+    isEventPick,
     isPlacePiece,
     isUseTacticalFeint,
     isUseTradeRouteWormhole,
+    isUseTacticalShift,
+    isUseColonyShip,
+    isUseWarpDrive,
+    isUseDimensionalRift,
     type ScoredChain
 } from '@tabletop/earendel'
 
@@ -17,7 +22,10 @@ export type ScoreSource = {
     playerId: string
 }
 
-export type Shot = { coords: AxialCoordinates; destroyed: boolean }
+// A torpedo's shot is the impact: it blasts at the station, once the torpedo has run into it.
+export type Shot = { coords: AxialCoordinates; destroyed: boolean; torpedo?: boolean }
+
+export type TorpedoStrike = { pieceId: string; from: AxialCoordinates; to: AxialCoordinates }
 
 export type PieceMove = { pieceId: string; from: AxialCoordinates; to: AxialCoordinates }
 
@@ -52,13 +60,25 @@ function arrivalOf(
     if (isUseTradeRouteWormhole(action) || isUseTacticalFeint(action)) {
         return { coords: action.to, ...action.metadata }
     }
+    if (isUseTacticalShift(action) || isUseWarpDrive(action) || isUseDimensionalRift(action)) {
+        return { coords: action.to, ...action.metadata }
+    }
+    if (isUseColonyShip(action)) return { coords: action.planet, ...action.metadata }
     return undefined
 }
 
 export function shotsOf(action: GameAction, before: EarendelBoard): Shot[] {
     if (isAttackPiece(action)) {
         if (!action.coords || action.metadata?.declined) return []
+        const strike = torpedoStrikeOf(action, before)
+        if (strike) return [{ coords: strike.to, destroyed: true, torpedo: true }]
         return [{ coords: action.coords, destroyed: !action.metadata?.damaged }]
+    }
+    // A bombardment's pick blows its target up where it stood.
+    if (isEventPick(action)) {
+        return action.coords && action.metadata?.destroyed
+            ? [{ coords: action.coords, destroyed: true }]
+            : []
     }
     if (isAttackSpread(action)) {
         return action.targets.flatMap((coords) => {
@@ -68,6 +88,19 @@ export function shotsOf(action: GameAction, before: EarendelBoard): Shot[] {
         })
     }
     return []
+}
+
+// The torpedo a strike set off: where it stood on the board before, and the station it ran into.
+export function torpedoStrikeOf(
+    action: GameAction,
+    before: EarendelBoard
+): TorpedoStrike | undefined {
+    if (!isAttackPiece(action) || !action.coords) return undefined
+    const torpedo = action.metadata?.torpedo
+    if (!torpedo) return undefined
+    const launched = Object.values(before.hexes).find((hex) => hex.piece?.id === torpedo.id)
+    if (!launched) return undefined
+    return { pieceId: torpedo.id, from: launched.coords, to: action.coords }
 }
 
 export function pieceMovesBetween(from: EarendelBoard, to: EarendelBoard): PieceMove[] {

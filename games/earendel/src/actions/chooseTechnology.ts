@@ -3,14 +3,22 @@ import { Compile } from 'typebox/compile'
 import { assertExists, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex, hexKey } from '../model/board.js'
-import { isElevated, matchesColor } from '../model/technology.js'
-import { technologyCard } from '../model/technologyCards.js'
+import { putUnder } from '../model/bags.js'
+import { hexKey } from '../model/board.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { OrbitedProbe } from '../model/exploration.js'
+import { fireElevatedCard, isElevatedCardId } from '../util/elevated.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
     technologyId: Type.Optional(Type.String()),
-    noTechnologyAvailable: Type.Optional(Type.Boolean())
+    noTechnologyAvailable: Type.Optional(Type.Boolean()),
+    // An elevated card: the planet is spent for everyone and its event begins.
+    elevated: Type.Optional(Type.Boolean()),
+    event: Type.Optional(Type.Enum(TechnologyEffectKind)),
+    // Whether every player picks, or the discoverer alone (a rule's single pick).
+    everyone: Type.Optional(Type.Boolean()),
+    orbited: Type.Optional(Type.Array(OrbitedProbe))
 })
 
 export type ChooseTechnology = Type.Static<typeof ChooseTechnology>
@@ -58,7 +66,10 @@ export class HydratedChooseTechnology
         const revealed = pending.revealed ?? []
         const chosen = revealed.find((id) => id === this.technologyId)
 
-        if (chosen) {
+        let fired: ReturnType<typeof fireElevatedCard> | undefined
+        if (chosen && isElevatedCardId(chosen)) {
+            fired = fireElevatedCard(state, this.playerId, planet, pending.probeCoords, chosen)
+        } else if (chosen) {
             state.board.hexes[hexKey(planet)].technologyId = chosen
 
             state.probeClaims.push({
@@ -68,11 +79,31 @@ export class HydratedChooseTechnology
             })
         }
 
-        state.technologyDiscard.push(...revealed.filter((id) => id !== chosen))
+        // Only what was offered and passed over is discarded. Cards turned over on the way,
+        // which the planet could not take, go back under the deck (rules.md, Exploration).
+        const offered = new Set(pending.candidates ?? [])
+        state.technologyDiscard.push(...revealed.filter((id) => offered.has(id) && id !== chosen))
+        putUnder(
+            state.technologyDeck,
+            revealed.filter((id) => !offered.has(id)),
+            state.getProtectedPrng().random
+        )
 
         state.pendingExploration = undefined
 
-        this.metadata = chosen ? { technologyId: chosen } : { noTechnologyAvailable: true }
+        this.metadata = chosen
+            ? {
+                  technologyId: chosen,
+                  ...(fired
+                      ? {
+                            elevated: true,
+                            event: fired.event,
+                            everyone: fired.everyone,
+                            ...(fired.orbited.length > 0 ? { orbited: fired.orbited } : {})
+                        }
+                      : {})
+              }
+            : { noTechnologyAvailable: true }
     }
 
     isValidChooseTechnology(state: HydratedEarendelGameState): boolean {
@@ -93,19 +124,6 @@ export class HydratedChooseTechnology
         if (!this.technologyId) return 'No technology was chosen.'
 
         if (!candidates.includes(this.technologyId)) {
-            const color = getHex(state.board, pending.exploringPlanet)?.color
-            const wanted = (pending.revealed ?? []).includes(this.technologyId)
-                ? technologyCard(this.technologyId)
-                : undefined
-
-            if (
-                wanted &&
-                color &&
-                matchesColor(wanted, color) &&
-                candidates.map(technologyCard).some(isElevated)
-            ) {
-                return 'An elevated technology was revealed, so a standard one cannot be taken.'
-            }
             return "That technology isn't one of the cards revealed for this planet."
         }
 

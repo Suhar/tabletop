@@ -1,35 +1,24 @@
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
-import {
-    HydratedUseUpdatedLogistics,
-    isUseUpdatedLogistics
-} from '../actions/useUpdatedLogistics.js'
-import { HydratedUseTacticalFeint, isUseTacticalFeint } from '../actions/useTacticalFeint.js'
-import {
-    HydratedUseTradeRouteWormhole,
-    isUseTradeRouteWormhole
-} from '../actions/useTradeRouteWormhole.js'
-import {
-    HydratedUseImmediateDownload,
-    isUseImmediateDownload
-} from '../actions/useImmediateDownload.js'
 import { canUseCooldownEffect } from '../util/cooldowns.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedPass, isPass, Pass } from '../actions/pass.js'
+import { HydratedPlayScrap, isPlayScrap } from '../actions/playScrap.js'
+import { canConscript } from '../actions/useConscription.js'
+import { canOverrideFactory } from '../actions/useFactoryOverride.js'
+import { settleablePlanets } from '../actions/useColonyShip.js'
+import { PieceType } from '../model/pieces.js'
 import { endPlacement } from '../util/turn.js'
-import { stateAfterTechnologyUse } from './technologyUse.js'
-import { hasAnyPlacement } from '../util/placement.js'
+import { isTechnologyUse, stateAfterTechnologyUse, type TechnologyUse } from './technologyUse.js'
+import { canGrowBoard } from '../actions/useBeyondTheFrontier.js'
+import { legalMovesFor, legalRiftsFor, legalWarpsFor } from '../util/movement.js'
+import { spoofablePieces } from '../util/spoofing.js'
+import { hasAnyPlacement, playableSpecials } from '../util/placement.js'
 
-type PlacingPieceAction =
-    | HydratedPlacePiece
-    | HydratedPass
-    | HydratedUseUpdatedLogistics
-    | HydratedUseTacticalFeint
-    | HydratedUseTradeRouteWormhole
-    | HydratedUseImmediateDownload
+type PlacingPieceAction = HydratedPlacePiece | HydratedPlayScrap | HydratedPass | TechnologyUse
 
 export class PlacingPieceStateHandler implements MachineStateHandler<
     PlacingPieceAction,
@@ -49,10 +38,21 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
     ): ActionType[] {
         return [
             ActionType.PlacePiece,
+            ActionType.PlayScrap,
             ActionType.UseUpdatedLogistics,
             ActionType.UseTacticalFeint,
             ActionType.UseTradeRouteWormhole,
             ActionType.UseImmediateDownload,
+            ActionType.UseTacticalShift,
+            ActionType.UseWarpDrive,
+            ActionType.UseConscription,
+            ActionType.UseFactoryOverride,
+            ActionType.UseColonyShip,
+            ActionType.UseDimensionalRift,
+            ActionType.UseBeyondTheFrontier,
+            ActionType.UseSpoofedOrders,
+            ActionType.UseAsteroidField,
+            ActionType.UseSecurityBreach,
             ActionType.Pass
         ].filter((actionType) => this.isValidActionType(actionType, playerId, context))
     }
@@ -76,7 +76,7 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
             gameState.board,
             playerId,
             gameState.heldPieces,
-            gameState.getPlayerState(playerId).specialPieces
+            playableSpecials(gameState, playerId)
         )
 
         if (stuck) {
@@ -91,13 +91,11 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
         const gameState = context.gameState
 
         switch (true) {
-            case isUseUpdatedLogistics(action):
-            case isUseImmediateDownload(action):
-            case isUseTradeRouteWormhole(action):
-            case isUseTacticalFeint(action): {
+            case isTechnologyUse(action): {
                 return stateAfterTechnologyUse(action, gameState, context)
             }
             case isPlacePiece(action): {
+                if (gameState.pendingFounding) return MachineState.FoundingPlanet
                 if (gameState.pendingTerraform) return MachineState.Terraforming
                 if (gameState.pendingExploration) {
                     return MachineState.Exploring
@@ -105,7 +103,10 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                 if (gameState.pendingAttack) {
                     return MachineState.Attacking
                 }
-                return endPlacement(gameState, context, action)
+                return endPlacement(gameState, context)
+            }
+            case isPlayScrap(action): {
+                return endPlacement(gameState, context)
             }
             case isPass(action): {
                 return MachineState.EndOfGame
@@ -129,12 +130,20 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
             gameState.board,
             playerId,
             gameState.heldPieces,
-            playerState.specialPieces
+            playableSpecials(gameState, playerId)
         )
 
         switch (actionType) {
             case ActionType.PlacePiece: {
-                return canPlace
+                return hasAnyPlacement(
+                    gameState.board,
+                    playerId,
+                    gameState.heldPieces.filter((piece) => piece.type !== PieceType.Scrap),
+                    playableSpecials(gameState, playerId)
+                )
+            }
+            case ActionType.PlayScrap: {
+                return gameState.heldPieces.some((piece) => piece.type === PieceType.Scrap)
             }
             case ActionType.UseImmediateDownload: {
                 return (
@@ -143,6 +152,84 @@ export class PlacingPieceStateHandler implements MachineStateHandler<
                     gameState.pendingTechnology === undefined &&
                     gameState.pendingTile === undefined &&
                     playerState.hasStoredEffect(TechnologyEffectKind.ImmediateDownload)
+                )
+            }
+            case ActionType.UseDimensionalRift: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.DimensionalRift) &&
+                    legalRiftsFor(gameState.board, playerId).length > 0
+                )
+            }
+            case ActionType.UseColonyShip: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.ColonyShip) &&
+                    settleablePlanets(gameState, playerId).length > 0
+                )
+            }
+            case ActionType.UseFactoryOverride: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    canOverrideFactory(gameState, playerId)
+                )
+            }
+            case ActionType.UseConscription: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    canConscript(gameState, playerId)
+                )
+            }
+            case ActionType.UseWarpDrive: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.WarpDrive) &&
+                    legalWarpsFor(gameState.board, playerId).length > 0
+                )
+            }
+            case ActionType.UseTacticalShift: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.MoveFriendlyPiece) &&
+                    legalMovesFor(gameState.board, playerId).length > 0
+                )
+            }
+            case ActionType.UseSecurityBreach: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.SecurityBreach)
+                )
+            }
+            case ActionType.UseAsteroidField: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.AsteroidField)
+                )
+            }
+            case ActionType.UseSpoofedOrders: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.SpoofedOrders) &&
+                    spoofablePieces(gameState.board, playerId).length > 0
+                )
+            }
+            case ActionType.UseBeyondTheFrontier: {
+                return (
+                    gameState.pendingAttack === undefined &&
+                    gameState.pendingExploration === undefined &&
+                    gameState.pendingTechnology === undefined &&
+                    gameState.pendingTile === undefined &&
+                    playerState.hasStoredEffect(TechnologyEffectKind.GrowBoard) &&
+                    canGrowBoard(gameState)
                 )
             }
             case ActionType.UseTradeRouteWormhole: {

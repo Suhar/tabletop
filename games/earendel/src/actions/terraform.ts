@@ -19,7 +19,7 @@ export const TerraformMetadata = Type.Object({
     declined: Type.Optional(Type.Boolean())
 })
 
-// A terraformer just placed recolours one planet beside it, or the player leaves them all be.
+// A terraformer just placed recolors one planet beside it, or the player leaves them all be.
 export type Terraform = Type.Static<typeof Terraform>
 export const Terraform = Type.Evaluate(
     Type.Intersect([
@@ -81,13 +81,13 @@ export class HydratedTerraform extends HydratableAction<typeof Terraform> implem
         const target = this.planet
         if (!target && !this.color) return undefined
         if (!target || !this.color) {
-            return 'Terraforming names both the planet and its new colour.'
+            return 'Terraforming names both the planet and its new color.'
         }
         if (!pending.planets.some((planet) => sameCoordinates(planet, target))) {
             return 'That planet is not beside the terraformer, or another terraformer already touches it.'
         }
         if (getHex(state.board, target)?.color === this.color) {
-            return 'A terraformer changes a planet to another colour.'
+            return 'A terraformer changes a planet to another color.'
         }
         return undefined
     }

@@ -6,7 +6,7 @@ import { ActionType } from '../definition/actions.js'
 import { EarendelBoard, HexKind, hexKey, neighborsOf } from '../model/board.js'
 import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
 import { HydratedPlacePiece, PieceSource } from './placePiece.js'
-import { stackedBag } from '../util/testHarness.js'
+import { stackedBag } from '../testing/testHarness.js'
 
 const ORIGIN: AxialCoordinates = { q: 0, r: 0 }
 
@@ -33,7 +33,6 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
             specialPieces: [],
             technologies: [],
             storedEffects: [],
-            cooldownEffects: [],
             cooldowns: {},
             score: 0
         })),
@@ -148,7 +147,7 @@ describe('HydratedPlacePiece', () => {
     it('offers an explored planet only for a technology the player lacks', () => {
         const state = buildState()
         state.board.hexes[hexKey(ORIGIN)].explored = true
-        state.board.hexes[hexKey(ORIGIN)].technologyId = 'tech-0'
+        state.board.hexes[hexKey(ORIGIN)].technologyId = 'updatedLogistics-1'
 
         const action = makePlacePiece('p1', neighborsOf(ORIGIN)[0])
         action.apply(state)
@@ -161,8 +160,8 @@ describe('HydratedPlacePiece', () => {
     it('offers no explored planet with nothing on it to win', () => {
         const held = buildState()
         held.board.hexes[hexKey(ORIGIN)].explored = true
-        held.board.hexes[hexKey(ORIGIN)].technologyId = 'tech-0'
-        held.getPlayerState('p1').technologies = ['tech-0']
+        held.board.hexes[hexKey(ORIGIN)].technologyId = 'updatedLogistics-1'
+        held.getPlayerState('p1').technologies = ['updatedLogistics-1']
         // Explored, but the deck had nothing for it.
         const empty = buildState()
         empty.board.hexes[hexKey(ORIGIN)].explored = true
@@ -179,7 +178,7 @@ describe('HydratedPlacePiece', () => {
     it('does not offer a planet the player already has a claim waiting on', () => {
         const state = buildState()
         state.board.hexes[hexKey(ORIGIN)].explored = true
-        state.board.hexes[hexKey(ORIGIN)].technologyId = 'tech-0'
+        state.board.hexes[hexKey(ORIGIN)].technologyId = 'updatedLogistics-1'
         state.board.hexes[hexKey(neighborsOf(ORIGIN)[3])].piece = {
             id: 'p1-old-probe',
             playerId: 'p1',

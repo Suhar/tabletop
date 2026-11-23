@@ -1,7 +1,7 @@
 import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, neighborsOf } from '../model/board.js'
-import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
+import { type EarendelBoard, getHex, neighborsThrough } from '../model/board.js'
+import { CARRIER_LEVEL, type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 
 export function probeInfluence(
     board: EarendelBoard,
@@ -10,12 +10,20 @@ export function probeInfluence(
 ): Record<string, number> {
     const influence: Record<string, number> = {}
     const add = (piece: Piece) => {
+        // A carrier counts as a probe of CARRIER_LEVEL on every planet beside it.
+        if (piece.type === PieceType.Carrier) {
+            influence[piece.playerId] = (influence[piece.playerId] ?? 0) + CARRIER_LEVEL
+            return
+        }
         if (piece.type !== PieceType.Probe) return
+        // A probe that surveyed another planet is committed there and counts nowhere else.
+        if (piece.surveying && !sameCoordinates(piece.surveying, planet)) return
         influence[piece.playerId] =
             (influence[piece.playerId] ?? 0) + (piece.level ?? PieceLevel.Two)
     }
 
-    for (const neighbor of neighborsOf(planet)) {
+    // Through a gate pair, what stands beside one gate stands beside the other.
+    for (const neighbor of neighborsThrough(board, planet)) {
         if (arriving && sameCoordinates(neighbor, arriving.coords)) {
             add(arriving.piece)
             continue

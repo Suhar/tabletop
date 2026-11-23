@@ -7,7 +7,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from './placePiece.js'
 import { AttackSpread } from './attackSpread.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -19,7 +19,7 @@ const ship = (playerId: string, type: PieceType, level?: PieceLevel): Piece => (
     ...(level ? { level } : {})
 })
 
-// A hex with all six neighbours, so a spread has something to spread across.
+// A hex with all six neighbors, so a spread has something to spread across.
 function ring(center: AxialCoordinates): EarendelBoard {
     const board: EarendelBoard = { hexes: {} }
     const steps = [
@@ -53,9 +53,7 @@ function scenario() {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.FullTorpedoSpread
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.FullTorpedoSpread)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Fighter, PieceLevel.Three),
         ship(playerId, PieceType.Station),
@@ -73,7 +71,7 @@ function scenario() {
 }
 
 describe('Full Torpedo Spread', () => {
-    it('hits every named neighbour at once', () => {
+    it('hits every named neighbor at once', () => {
         const { game, mover } = scenario()
         expect(game.state.machineState).toBe(MachineState.Attacking)
         expect(game.validActionsFor(mover)).toContain(ActionType.AttackSpread)
@@ -91,7 +89,7 @@ describe('Full Torpedo Spread', () => {
         expect(game.state.pendingAttack).toBeUndefined()
     })
 
-    it('hits ANY, not only all - a spared neighbour is left standing', () => {
+    it('hits ANY, not only all - a spared neighbor is left standing', () => {
         const { game, mover } = scenario()
 
         game.run(AttackSpread, {

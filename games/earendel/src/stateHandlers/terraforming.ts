@@ -5,7 +5,7 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedTerraform, isTerraform } from '../actions/terraform.js'
 import { endPlacement } from '../util/turn.js'
 
-// A terraformer has just arrived beside a planet it may recolour.
+// A terraformer has just arrived beside a planet it may recolor.
 export class TerraformingStateHandler implements MachineStateHandler<
     HydratedTerraform,
     HydratedEarendelGameState
@@ -39,6 +39,6 @@ export class TerraformingStateHandler implements MachineStateHandler<
         context: MachineContext<HydratedEarendelGameState>
     ): MachineState {
         if (!isTerraform(action)) throw Error('Invalid action type')
-        return endPlacement(context.gameState, context, action)
+        return endPlacement(context.gameState, context)
     }
 }

@@ -4,6 +4,12 @@ import { HydratedPlacePiece, isPlacePiece } from '../actions/placePiece.js'
 import { HydratedChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { HydratedChooseTechnology, isChooseTechnology } from '../actions/chooseTechnology.js'
 import { HydratedPass, isPass } from '../actions/pass.js'
+import { HydratedPlayScrap, isPlayScrap } from '../actions/playScrap.js'
+import { HydratedUseConscription, isUseConscription } from '../actions/useConscription.js'
+import { HydratedUseColonyShip, isUseColonyShip } from '../actions/useColonyShip.js'
+import { HydratedUseFactoryOverride, isUseFactoryOverride } from '../actions/useFactoryOverride.js'
+import { HydratedUseWarpDrive, isUseWarpDrive } from '../actions/useWarpDrive.js'
+import { HydratedUseDimensionalRift, isUseDimensionalRift } from '../actions/useDimensionalRift.js'
 import { HydratedEndTurn, isEndTurn } from '../actions/endTurn.js'
 import { HydratedTerraform, isTerraform } from '../actions/terraform.js'
 import { HydratedAttackPiece, isAttackPiece } from '../actions/attackPiece.js'
@@ -25,6 +31,19 @@ import {
     HydratedUseUpdatedLogistics,
     isUseUpdatedLogistics
 } from '../actions/useUpdatedLogistics.js'
+import { HydratedChooseEventOrder, isChooseEventOrder } from '../actions/chooseEventOrder.js'
+import { HydratedEventPick, isEventPick } from '../actions/eventPick.js'
+import { HydratedSeedNebula, isSeedNebula } from '../actions/seedNebula.js'
+import { HydratedFoundPlanet, isFoundPlanet } from '../actions/foundPlanet.js'
+import { HydratedStowShip, isStowShip } from '../actions/stowShip.js'
+import { HydratedUseSpoofedOrders, isUseSpoofedOrders } from '../actions/useSpoofedOrders.js'
+import { HydratedUseAsteroidField, isUseAsteroidField } from '../actions/useAsteroidField.js'
+import { HydratedUseSecurityBreach, isUseSecurityBreach } from '../actions/useSecurityBreach.js'
+import { HydratedUseTacticalShift, isUseTacticalShift } from '../actions/useTacticalShift.js'
+import {
+    HydratedUseBeyondTheFrontier,
+    isUseBeyondTheFrontier
+} from '../actions/useBeyondTheFrontier.js'
 import {
     HydratedUseLogisticsUpgrade,
     isUseLogisticsUpgrade
@@ -75,8 +94,56 @@ export class EarendelHydrator implements GameHydrator<
             case isMovePiece(data): {
                 return new HydratedMovePiece(data)
             }
+            case isChooseEventOrder(data): {
+                return new HydratedChooseEventOrder(data)
+            }
+            case isEventPick(data): {
+                return new HydratedEventPick(data)
+            }
+            case isSeedNebula(data): {
+                return new HydratedSeedNebula(data)
+            }
+            case isFoundPlanet(data): {
+                return new HydratedFoundPlanet(data)
+            }
+            case isStowShip(data): {
+                return new HydratedStowShip(data)
+            }
+            case isUseTacticalShift(data): {
+                return new HydratedUseTacticalShift(data)
+            }
+            case isUseBeyondTheFrontier(data): {
+                return new HydratedUseBeyondTheFrontier(data)
+            }
+            case isUseSpoofedOrders(data): {
+                return new HydratedUseSpoofedOrders(data)
+            }
+            case isUseAsteroidField(data): {
+                return new HydratedUseAsteroidField(data)
+            }
+            case isUseSecurityBreach(data): {
+                return new HydratedUseSecurityBreach(data)
+            }
             case isAttackPiece(data): {
                 return new HydratedAttackPiece(data)
+            }
+            case isUseDimensionalRift(data): {
+                return new HydratedUseDimensionalRift(data)
+            }
+            case isUseWarpDrive(data): {
+                return new HydratedUseWarpDrive(data)
+            }
+            case isUseFactoryOverride(data): {
+                return new HydratedUseFactoryOverride(data)
+            }
+            case isUseColonyShip(data): {
+                return new HydratedUseColonyShip(data)
+            }
+            case isUseConscription(data): {
+                return new HydratedUseConscription(data)
+            }
+            case isPlayScrap(data): {
+                return new HydratedPlayScrap(data)
             }
             case isPass(data): {
                 return new HydratedPass(data)

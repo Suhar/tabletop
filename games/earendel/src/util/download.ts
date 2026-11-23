@@ -3,7 +3,8 @@ import { getHex, HexKind, planetCoordinates } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
-import { planetsInSightOf } from './lineOfSight.js'
+import { DOWNLOAD_RANGE } from '../model/pieces.js'
+import { hexDistance } from './specials.js'
 
 export function downloadAnchorsFor(
     state: HydratedEarendelGameState,
@@ -28,7 +29,11 @@ export function downloadTargetsFrom(
 ): AxialCoordinates[] {
     const held = new Set(state.getPlayerState(playerId).technologies)
 
-    return planetsInSightOf(state.board, anchor).filter((coords) => {
+    // Reach is distance alone (rules.md, Immediate Download): nothing between the two planets
+    // matters, and no jammer interrupts it.
+    return planetCoordinates(state.board).filter((coords) => {
+        const distance = hexDistance(anchor, coords)
+        if (distance === 0 || distance > DOWNLOAD_RANGE) return false
         const hex = getHex(state.board, coords)
         if (hex?.kind !== HexKind.Planet) return false
         if (!hex.explored || !hex.technologyId) return false

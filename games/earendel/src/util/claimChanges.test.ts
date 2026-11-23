@@ -4,7 +4,7 @@ import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { ActionType } from '../definition/actions.js'
 import { isPlacePiece, PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 // A placement that changes who leads a claimed planet records it, so the history can say so.
 
@@ -18,7 +18,7 @@ const probe = (playerId: string): Piece => ({
     level: PieceLevel.Two
 })
 
-// An explored Teal planet at (0, 0) holding tech-3, with open space all round it.
+// An explored Teal planet at (0, 0) holding fullTorpedoSpread-1, with open space all round it.
 function scenario(pieces: Array<[AxialCoordinates, (mover: string, other: string) => Piece]>) {
     const game = new TestGame()
     const mover = game.activePlayerId
@@ -36,7 +36,7 @@ function scenario(pieces: Array<[AxialCoordinates, (mover: string, other: string
         kind: HexKind.Planet,
         color: PlanetColor.Teal,
         explored: true,
-        technologyId: 'tech-3'
+        technologyId: 'fullTorpedoSpread-1'
     }
     for (const [coords, make] of pieces) board.hexes[hexKey(coords)].piece = make(mover, other)
     game.state.board = board
@@ -60,13 +60,20 @@ function scenario(pieces: Array<[AxialCoordinates, (mover: string, other: string
 describe('claim changes in the history', () => {
     it('records a claim a placement breaks', () => {
         const { game, other, placeProbe } = scenario([[at(1, 0), (_mover, other) => probe(other)]])
-        game.state.probeClaims = [{ playerId: other, coords: at(0, 0), technologyId: 'tech-3' }]
+        game.state.probeClaims = [
+            { playerId: other, coords: at(0, 0), technologyId: 'fullTorpedoSpread-1' }
+        ]
 
         // Drawing level with the claimant's probe means they no longer lead.
         const placed = placeProbe(at(0, 1))
 
         expect(placed?.metadata?.claimsBroken).toEqual([
-            { playerId: other, coords: at(0, 0), technologyId: 'tech-3', color: PlanetColor.Teal }
+            {
+                playerId: other,
+                coords: at(0, 0),
+                technologyId: 'fullTorpedoSpread-1',
+                color: PlanetColor.Teal
+            }
         ])
         expect(placed?.metadata?.claimsRestored).toBeUndefined()
     })
@@ -76,20 +83,29 @@ describe('claim changes in the history', () => {
             [at(1, 0), (mover) => probe(mover)],
             [at(0, -1), (_mover, other) => probe(other)]
         ])
-        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: 'tech-3' }]
+        game.state.probeClaims = [
+            { playerId: mover, coords: at(0, 0), technologyId: 'fullTorpedoSpread-1' }
+        ]
 
         // Tied, the claim would lapse; a second probe takes the lead back.
         const placed = placeProbe(at(0, 1))
 
         expect(placed?.metadata?.claimsRestored).toEqual([
-            { playerId: mover, coords: at(0, 0), technologyId: 'tech-3', color: PlanetColor.Teal }
+            {
+                playerId: mover,
+                coords: at(0, 0),
+                technologyId: 'fullTorpedoSpread-1',
+                color: PlanetColor.Teal
+            }
         ])
         expect(placed?.metadata?.claimsBroken).toBeUndefined()
     })
 
     it('records nothing when no claim changes hands', () => {
         const { game, other, placeProbe } = scenario([[at(1, 0), (_mover, other) => probe(other)]])
-        game.state.probeClaims = [{ playerId: other, coords: at(0, 0), technologyId: 'tech-3' }]
+        game.state.probeClaims = [
+            { playerId: other, coords: at(0, 0), technologyId: 'fullTorpedoSpread-1' }
+        ]
 
         const placed = placeProbe(at(2, 2))
 

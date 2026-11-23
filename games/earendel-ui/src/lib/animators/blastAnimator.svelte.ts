@@ -5,8 +5,9 @@ import { tick } from 'svelte'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
 import { shotsOf } from '$lib/utils/actionEffects.js'
 import { ElementRegistry } from './elementRegistry.js'
+import { TORPEDO_IMPACT } from './torpedoAnimator.svelte.js'
 
-export type Blast = { key: string; at: Point; destroyed: boolean }
+export type Blast = { key: string; at: Point; destroyed: boolean; torpedo: boolean }
 
 export class BlastAnimator {
     blasts: Blast[] = $state([])
@@ -30,7 +31,8 @@ export class BlastAnimator {
         this.blasts = shots.map((shot, index) => ({
             key: `${action.id}-${index}`,
             at: hexGeometry(shot.coords).center,
-            destroyed: shot.destroyed
+            destroyed: shot.destroyed,
+            torpedo: shot.torpedo === true
         }))
 
         await tick()
@@ -40,7 +42,9 @@ export class BlastAnimator {
             const element = this.elements.get(blast.key)
             if (!element) continue
 
-            const boom = blast.destroyed ? 1 : 0.55
+            // A torpedo's blast is bigger, and waits for the torpedo to arrive.
+            const boom = blast.torpedo ? 1.4 : blast.destroyed ? 1 : 0.55
+            const at = blast.torpedo ? TORPEDO_IMPACT : 0
             const flash = element.querySelector('[data-blast="flash"]')
             const ring = element.querySelector('[data-blast="ring"]')
             const sparks = element.querySelector('[data-blast="sparks"]')
@@ -56,7 +60,7 @@ export class BlastAnimator {
                         duration: blast.destroyed ? 0.38 : 0.32,
                         ease: 'power2.out'
                     },
-                    0
+                    at
                 )
             }
             if (ring) {
@@ -69,15 +73,15 @@ export class BlastAnimator {
                         duration: blast.destroyed ? 0.78 : 0.32,
                         ease: 'power2.out'
                     },
-                    0
+                    at
                 )
             }
             if (sparks) {
                 timeline.fromTo(
                     sparks,
                     { ...origin, scale: 0.4, opacity: 1 },
-                    { scale: 1.9, opacity: 0, duration: 0.62, ease: 'power2.out' },
-                    0
+                    { scale: 1.9 * boom, opacity: 0, duration: 0.62, ease: 'power2.out' },
+                    at
                 )
             }
         }

@@ -8,7 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { AttackPiece } from '../actions/attackPiece.js'
 import { canUseCooldownEffect, turnsUntilReady } from './cooldowns.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -46,9 +46,7 @@ function scenario() {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.Railgun
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.Railgun)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Fighter, PieceLevel.Three),
         ship(playerId, PieceType.Station),
@@ -186,7 +184,7 @@ describe('Railgun', () => {
 
     it('cannot be used without holding it, nor while its timer runs', () => {
         const { game, mover } = scenario()
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = []
+        game.state.players.find((p) => p.playerId === mover)!.technologies = []
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -220,9 +218,7 @@ describe('Railgun', () => {
         }
         game.state.board = board
         game.state.technologyDeck = stackedBag([])
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-            TechnologyEffectKind.Railgun
-        ]
+        game.giveTechnology(mover, TechnologyEffectKind.Railgun)
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Three),
             ship(playerId, PieceType.Station)
@@ -269,9 +265,7 @@ describe('Railgun', () => {
         }
         game.state.board = board
         game.state.technologyDeck = stackedBag([])
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-            TechnologyEffectKind.Railgun
-        ]
+        game.giveTechnology(mover, TechnologyEffectKind.Railgun)
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Fighter, PieceLevel.Two),
             ship(playerId, PieceType.Station)

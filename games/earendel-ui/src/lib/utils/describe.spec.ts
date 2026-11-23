@@ -68,11 +68,13 @@ describe('describeAction', () => {
                     {
                         playerId: 'p2',
                         coords: { q: 0, r: 0 },
-                        technologyId: 'tech-3',
+                        technologyId: 'fullTorpedoSpread-1',
                         color: PlanetColor.Teal
                     }
                 ],
-                claimsRestored: [{ playerId: 'p1', coords: { q: 2, r: 0 }, technologyId: 'tech-3' }]
+                claimsRestored: [
+                    { playerId: 'p1', coords: { q: 2, r: 0 }, technologyId: 'fullTorpedoSpread-1' }
+                ]
             }
         }
         const names: Record<string, string> = { p2: 'Bob' }

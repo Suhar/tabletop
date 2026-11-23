@@ -1,4 +1,4 @@
-import type { GameAction } from '@tabletop/common'
+import { ActionSource, type GameAction } from '@tabletop/common'
 import {
     claimChangesOf,
     type ClaimChange,
@@ -8,7 +8,12 @@ import {
     isChooseTechnology,
     isDrawPieces,
     isEndTurn,
+    isEventPick,
     isMovePiece,
+    isUseTacticalShift,
+    isUseWarpDrive,
+    isUseDimensionalRift,
+    isUseSpoofedOrders,
     isPass,
     isPlacePiece,
     isTerraform,
@@ -31,7 +36,29 @@ export function rationaleFor(
 ): string[] {
     const lines: string[] = []
 
-    if (isPlacePiece(action) || isUseTacticalFeint(action) || isUseTradeRouteWormhole(action)) {
+    if (
+        isPlacePiece(action) ||
+        isUseTacticalFeint(action) ||
+        isUseTradeRouteWormhole(action) ||
+        isUseTacticalShift(action) ||
+        isUseWarpDrive(action) ||
+        isUseDimensionalRift(action)
+    ) {
+        if (isUseDimensionalRift(action)) {
+            lines.push(
+                'A Dimensional Rift carries a piece from one hex on the outer border of the map to another, and it counts as newly placed where it comes out, so it scores, explores and attacks as if it had just arrived.'
+            )
+        }
+        if (isUseWarpDrive(action)) {
+            lines.push(
+                'A piece moved by Warp Drive travels through empty space and counts as newly placed where it lands, so it scores, explores and attacks as if it had just arrived.'
+            )
+        }
+        if (isUseTacticalShift(action)) {
+            lines.push(
+                'A piece moved by Tactical Shift counts as newly placed, so it scores, explores and attacks as if it had just arrived.'
+            )
+        }
         if (isUseTacticalFeint(action)) {
             lines.push(
                 'A feinted ship counts as newly placed, so it scores, explores and attacks as if it had just arrived.'
@@ -39,13 +66,18 @@ export function rationaleFor(
         }
         if (isUseTradeRouteWormhole(action)) {
             lines.push(
-                'A wormhole carries a ship between two planets of the same colour, and the ship counts as newly placed.'
+                'A wormhole carries a ship between two planets of the same color, and the ship counts as newly placed.'
             )
         }
         lines.push(
             ...stationLines(action.metadata?.stationGroupPoints, action.metadata?.stationComplex)
         )
         lines.push(...chainLines(action.metadata?.chains))
+        if (isPlacePiece(action) && action.metadata?.torpedo) {
+            lines.push(
+                'A fighter placed as a Gamma Torpedo is not a ship arriving: it scores and explores nothing, and must strike a station beside it.'
+            )
+        }
         if ((action.metadata?.probeDestinations?.length ?? 0) > 0) {
             lines.push(
                 'The probe gave its player the strict lead beside a planet they could survey, so surveying was offered.'
@@ -54,7 +86,11 @@ export function rationaleFor(
     }
 
     if (isAttackPiece(action) && action.metadata?.target) {
-        if (action.metadata.railgun) {
+        if (action.metadata.torpedo) {
+            lines.push(
+                'A Gamma Torpedo is the one thing that removes a station: a fighter placed as a torpedo destroys one station beside it and itself, through any escort.'
+            )
+        } else if (action.metadata.railgun) {
             lines.push('The Railgun made the hit destroy its target outright, whatever its health.')
         } else if (action.metadata.damaged) {
             lines.push(
@@ -67,9 +103,21 @@ export function rationaleFor(
         }
     }
 
+    if (isChooseTechnology(action) && action.metadata?.elevated) {
+        lines.push(
+            "An elevated card belongs to its world, not the explorer: it is spent for everyone at once, and the discoverer's prize is picking first."
+        )
+    }
+
+    if (isEventPick(action)) {
+        lines.push(
+            "Each player in the discoverer's chosen order takes one pick; picks are exclusive, and a player with nothing to pick is passed over."
+        )
+    }
+
     if (isAttackSpread(action)) {
         lines.push(
-            'A Full Torpedo Spread fires at each chosen neighbour in turn, each hit resolved as an ordinary shot.'
+            'A Full Torpedo Spread fires at each chosen neighbor in turn, each hit resolved as an ordinary shot.'
         )
     }
 
@@ -93,7 +141,18 @@ export function rationaleFor(
 
     if (isChooseTechnology(action) && action.metadata?.technologyId) {
         lines.push(
-            "Surveying stakes a claim: the technology is gained at the start of this player's next turn, if their probes still strictly lead the planet then."
+            "Surveying stakes a claim: the technology is gained at the start of this player's next turn, if their probes still strictly lead the planet then.",
+            'Probes add to the lead according to their level, and friendly probes can stack.'
+        )
+    }
+
+    if (
+        isChooseTechnology(action) &&
+        action.metadata?.technologyId &&
+        action.source === ActionSource.System
+    ) {
+        lines.push(
+            'The survey offered only one technology, so there was nothing to choose: it was taken automatically.'
         )
     }
 
@@ -103,9 +162,15 @@ export function rationaleFor(
         )
     }
 
+    if (isUseSpoofedOrders(action)) {
+        lines.push(
+            "Spoofed Orders moves a rival's piece that stands beside one of the player's own into an adjacent empty hex. The piece is moved, not placed, so it scores, explores and attacks nothing."
+        )
+    }
+
     if (isMovePiece(action) && action.metadata?.piece) {
         lines.push(
-            'Tactical Shift moves a friendly piece into an adjacent empty hex. Unlike a feint or a wormhole, the move does not count as placing it.'
+            'Free Drift steps a friendly piece into an adjacent empty hex. Unlike a Tactical Shift, a feint or a wormhole, the step does not count as placing it.'
         )
     }
 
@@ -115,17 +180,19 @@ export function rationaleFor(
 
     if (isUseImmediateDownload(action)) {
         lines.push(
-            'Immediate Download takes the technology of an explored planet in clear sight of the planet holding the Download, and it is ready at once.'
+            'Immediate Download takes the technology of an explored planet within three hexes of the planet holding the Download, whatever lies between, and it is theirs to use now or later, with no wait.'
         )
     }
 
     if (isUseLogisticsUpgrade(action)) {
-        lines.push('A Logistics Upgrade keeps the ship a drafted turn would otherwise throw out.')
+        lines.push(
+            'Logistics Upgrade keeps the ship a drafted turn would otherwise discard. It is then out of use for three of its owner’s turns.'
+        )
     }
 
     if (isTerraform(action) && action.metadata?.toColor) {
         lines.push(
-            'A terraformer placed beside a planet that no other terraformer touches may change that planet to another colour, for good.'
+            'A terraformer placed beside a planet that no other terraformer touches may change that planet to another color, for good.'
         )
     }
 

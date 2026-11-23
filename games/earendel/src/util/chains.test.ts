@@ -5,15 +5,15 @@ import { PieceType } from '../model/pieces.js'
 import { chainsCompletedBy, planetPairKey, triangular } from './chains.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
-// Hexes are axial with neighbours at (±1,0), (0,±1), (1,-1), (-1,1), so stepping q by one
+// Hexes are axial with neighbors at (±1,0), (0,±1), (1,-1), (-1,1), so stepping q by one
 // walks a straight line - which is all these layouts need.
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
 type Spec = { planet?: PlanetColor; ship?: string }
 
-// A board written out hex by hex: `planet` makes it a planet of that colour, `ship` puts that
+// A board written out hex by hex: `planet` makes it a planet of that color, `ship` puts that
 // player's ship on open space, and a bare entry is empty open space.
 function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
     const board: EarendelBoard = { hexes: {} }
@@ -47,7 +47,7 @@ describe('triangular', () => {
 })
 
 describe('chainsCompletedBy', () => {
-    it('scores a single ship that touches two planets of one colour', () => {
+    it('scores a single ship that touches two planets of one color', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
@@ -76,7 +76,7 @@ describe('chainsCompletedBy', () => {
         expect(chains[0].points).toBe(3)
     })
 
-    it('ignores planets of different colours', () => {
+    it('ignores planets of different colors', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],

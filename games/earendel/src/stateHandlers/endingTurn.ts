@@ -3,13 +3,9 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { HydratedEndTurn, isEndTurn } from '../actions/endTurn.js'
-import { isUseUpdatedLogistics } from '../actions/useUpdatedLogistics.js'
-import { isUseTacticalFeint } from '../actions/useTacticalFeint.js'
-import { isUseTradeRouteWormhole } from '../actions/useTradeRouteWormhole.js'
-import { isUseImmediateDownload } from '../actions/useImmediateDownload.js'
 import { usableTechnologies } from '../util/usableTechnology.js'
 import { finishTurn } from '../util/turn.js'
-import { stateAfterTechnologyUse, type TechnologyUse } from './technologyUse.js'
+import { isTechnologyUse, stateAfterTechnologyUse, type TechnologyUse } from './technologyUse.js'
 
 type EndingTurnAction = HydratedEndTurn | TechnologyUse
 
@@ -52,10 +48,7 @@ export class EndingTurnStateHandler implements MachineStateHandler<
             case isEndTurn(action): {
                 return finishTurn(gameState, context)
             }
-            case isUseUpdatedLogistics(action):
-            case isUseTacticalFeint(action):
-            case isUseTradeRouteWormhole(action):
-            case isUseImmediateDownload(action): {
+            case isTechnologyUse(action): {
                 return stateAfterTechnologyUse(action, gameState, context)
             }
             default: {

@@ -8,7 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { UseTacticalFeint } from '../actions/useTacticalFeint.js'
 import { EndTurn } from '../actions/endTurn.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 // A turn whose ships are all placed stays open while a technology could still act (rules.md,
 // Ending a turn).
@@ -45,9 +45,7 @@ function scenario({ enemyBeside }: { enemyBeside: boolean }) {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.TacticalFeint
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.TacticalFeint)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Station),
         ship(playerId, PieceType.Station),

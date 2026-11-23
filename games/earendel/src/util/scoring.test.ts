@@ -6,7 +6,7 @@ import { planetPointsByPlayer } from './scoring.js'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -91,7 +91,7 @@ describe('planetPointsByPlayer', () => {
         expect(planetPointsByPlayer(board)).toEqual({ p1: 2 })
     })
 
-    it('gives a stronger neighbour the planet outright', () => {
+    it('gives a stronger neighbor the planet outright', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: ['p1', PieceType.Fighter] }],

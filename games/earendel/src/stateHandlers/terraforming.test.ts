@@ -10,10 +10,10 @@ import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { isTerraform, Terraform } from '../actions/terraform.js'
 import { attackOutcome } from '../util/attack.js'
 import { grantTechnology } from '../util/technologyGrants.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 // rules.md, Terraformer: placed beside a planet no other terraformer touches, it may change that
-// planet's colour.
+// planet's color.
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -76,7 +76,7 @@ function scenario(pieces: Array<[AxialCoordinates, (mover: string, other: string
     return { game, mover, other, placeTerraformer, terraform }
 }
 
-const colourAt = (board: EarendelBoard, coords: AxialCoordinates) =>
+const colorAt = (board: EarendelBoard, coords: AxialCoordinates) =>
     board.hexes[hexKey(coords)].color
 
 describe('Terraformer', () => {
@@ -92,7 +92,7 @@ describe('Terraformer', () => {
         ])
     })
 
-    it('may recolour a planet beside it that no terraformer touches', () => {
+    it('may recolor a planet beside it that no terraformer touches', () => {
         const { game, mover, placeTerraformer, terraform } = scenario()
 
         placeTerraformer(at(1, 0))
@@ -102,7 +102,7 @@ describe('Terraformer', () => {
 
         const done = terraform(at(0, 0), PlanetColor.Violet)
 
-        expect(colourAt(game.state.board, at(0, 0))).toBe(PlanetColor.Violet)
+        expect(colorAt(game.state.board, at(0, 0))).toBe(PlanetColor.Violet)
         expect(done?.metadata).toEqual({ fromColor: PlanetColor.Teal, toColor: PlanetColor.Violet })
         expect(game.state.pendingTerraform).toBeUndefined()
         expect(game.state.machineState).not.toBe(MachineState.Terraforming)
@@ -114,11 +114,11 @@ describe('Terraformer', () => {
         placeTerraformer(at(1, 0))
         const done = terraform()
 
-        expect(colourAt(game.state.board, at(0, 0))).toBe(PlanetColor.Teal)
+        expect(colorAt(game.state.board, at(0, 0))).toBe(PlanetColor.Teal)
         expect(done?.metadata).toEqual({ declined: true })
     })
 
-    it('refuses a planet it is not beside, or its own colour', () => {
+    it('refuses a planet it is not beside, or its own color', () => {
         const { placeTerraformer, terraform } = scenario()
 
         placeTerraformer(at(1, 0))
@@ -136,7 +136,7 @@ describe('Terraformer', () => {
 
         expect(game.state.pendingTerraform).toBeUndefined()
         expect(game.state.machineState).not.toBe(MachineState.Terraforming)
-        expect(colourAt(game.state.board, at(0, 0))).toBe(PlanetColor.Teal)
+        expect(colorAt(game.state.board, at(0, 0))).toBe(PlanetColor.Teal)
     })
 
     it('counts 1 toward control and cannot be attacked', () => {

@@ -6,10 +6,11 @@ import { hexGeometry } from '$lib/utils/hexDefinition.js'
 import { scoreSourcesOf, type ScoreSource } from '$lib/utils/actionEffects.js'
 import { ElementRegistry } from './elementRegistry.js'
 
-export type ScoreFloat = Omit<ScoreSource, 'coords'> & { key: string; at: Point }
+// One float per scoring action: everything the action earned, summed. History tells the rest.
+export type ScoreFloat = Pick<ScoreSource, 'points' | 'playerId'> & { key: string; at: Point }
 
 const RISE = 70
-const STACK_GAP = 30
+const DURATION = 1.6
 
 export class ScoreFloatAnimator {
     floats: ScoreFloat[] = $state([])
@@ -28,16 +29,15 @@ export class ScoreFloatAnimator {
         const sources = scoreSourcesOf(action)
         if (sources.length === 0) return
 
-        this.floats = sources.map((source, index) => {
-            const center = hexGeometry(source.coords).center
-            return {
-                key: `${action.id}-${index}`,
-                points: source.points,
-                caption: source.caption,
-                playerId: source.playerId,
-                at: { x: center.x, y: center.y - index * STACK_GAP }
+        const center = hexGeometry(sources[0].coords).center
+        this.floats = [
+            {
+                key: action.id,
+                points: sources.reduce((sum, source) => sum + source.points, 0),
+                playerId: sources[0].playerId,
+                at: { x: center.x, y: center.y }
             }
-        })
+        ]
 
         await tick()
 
@@ -48,11 +48,11 @@ export class ScoreFloatAnimator {
             timeline.fromTo(
                 element,
                 { y: 0, opacity: 0 },
-                { y: -RISE, duration: 0.8, ease: 'power1.out' },
+                { y: -RISE, duration: DURATION, ease: 'power1.out' },
                 0
             )
-            timeline.to(element, { opacity: 1, duration: 0.12 }, 0)
-            timeline.to(element, { opacity: 0, duration: 0.25 }, 0.55)
+            timeline.to(element, { opacity: 1, duration: 0.15 }, 0)
+            timeline.to(element, { opacity: 0, duration: 0.45 }, DURATION - 0.5)
         }
 
         animationContext.afterAnimations(() => {

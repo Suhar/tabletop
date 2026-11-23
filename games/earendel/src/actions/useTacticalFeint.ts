@@ -82,6 +82,9 @@ export class HydratedUseTacticalFeint
 
         toHex.piece = mine
         fromHex.piece = theirs
+        // Both ships have moved: a probe's survey no longer binds it to one planet.
+        delete mine.surveying
+        delete theirs.surveying
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TacticalFeint)
 

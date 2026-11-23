@@ -1,19 +1,23 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, hexKey, neighborsOf } from '../model/board.js'
+import { type EarendelBoard, getHex, hexKey, neighborsThrough } from '../model/board.js'
 import { isStationHub, PieceType } from '../model/pieces.js'
 import type { StationComplexSummary } from '../model/stationComplex.js'
 import { isSightAnchor, sightLinkedStations } from './lineOfSight.js'
 
 // A player's stations and relays joined to the station at coords by touch or by sight, through
-// any chain of links.
+// any chain of links. A planet the player has settled is a station that joins by touch alone.
 function complexAnchors(
     board: EarendelBoard,
     playerId: string,
     coords: AxialCoordinates
 ): AxialCoordinates[] {
+    // Gates of the owner's join a complex by touch, as one place, though they never score.
     const isOwnAnchor = (at: AxialCoordinates) => {
+        if (isColonyOf(board, at, playerId)) return true
         const piece = getHex(board, at)?.piece
-        return piece?.playerId === playerId && isSightAnchor(piece)
+        return (
+            piece?.playerId === playerId && (isSightAnchor(piece) || piece.type === PieceType.Gate)
+        )
     }
 
     if (!isOwnAnchor(coords) || !isStation(board, coords)) return []
@@ -25,7 +29,10 @@ function complexAnchors(
     for (let at = queue.shift(); at !== undefined; at = queue.shift()) {
         joined.push(at)
 
-        const linked = [...neighborsOf(at).filter(isOwnAnchor), ...sightLinkedStations(board, at)]
+        const linked = [
+            ...neighborsThrough(board, at).filter(isOwnAnchor),
+            ...sightLinkedStations(board, at)
+        ]
 
         for (const next of linked) {
             const key = hexKey(next)
@@ -38,8 +45,14 @@ function complexAnchors(
     return joined
 }
 
+function isColonyOf(board: EarendelBoard, at: AxialCoordinates, playerId: string): boolean {
+    return getHex(board, at)?.colony === playerId
+}
+
+// A station, or a settled planet, which scores as one. Only its owner's complexes reach it.
 function isStation(board: EarendelBoard, at: AxialCoordinates): boolean {
-    return getHex(board, at)?.piece?.type === PieceType.Station
+    const hex = getHex(board, at)
+    return hex?.piece?.type === PieceType.Station || hex?.colony !== undefined
 }
 
 // The stations of the complex at coords; its relays link it but only stations score.

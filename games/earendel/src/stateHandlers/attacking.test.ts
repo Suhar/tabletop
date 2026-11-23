@@ -8,7 +8,7 @@ import { attackableTargets } from '../util/attack.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DrawPieces } from '../actions/drawPieces.js'
 import { AttackPiece } from '../actions/attackPiece.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -339,7 +339,7 @@ describe('a fighter arriving', () => {
         const [mover, blocker, bystander] = game.state.turnManager.turnOrder
 
         game.state.board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'tech-3' }],
+            [at(0, 0), { planet: PlanetColor.Periwinkle, technologyId: 'fullTorpedoSpread-1' }],
             // The bystander surveyed the planet, but the blocker's probe has since drawn level,
             // so as things stand the bystander's claim would lapse.
             [at(1, 0), { ship: ship(blocker, PieceType.Probe, PieceLevel.Two) }],
@@ -349,7 +349,9 @@ describe('a fighter arriving', () => {
             [at(5, 5), {}],
             [at(6, 5), {}]
         ])
-        game.state.probeClaims = [{ playerId: bystander, coords: at(0, 0), technologyId: 'tech-3' }]
+        game.state.probeClaims = [
+            { playerId: bystander, coords: at(0, 0), technologyId: 'fullTorpedoSpread-1' }
+        ]
         game.state.technologyDeck = stackedBag([])
         game.state.tileSupply = stackedBag([])
         // A level 3 fighter, since only a bigger fighter can remove the level 2 blocker.
@@ -389,7 +391,7 @@ describe('a fighter arriving', () => {
 
         // And now it is the bystander's turn, so the claim pays.
         game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: bystander })
-        expect(held(bystander)).toEqual(['tech-3'])
+        expect(held(bystander)).toEqual(['fullTorpedoSpread-1'])
         expect(held(mover)).toEqual([])
     })
 
@@ -435,7 +437,7 @@ describe('a fighter arriving', () => {
 })
 
 describe('the starting bag', () => {
-    it('deals the levelled types evenly between the two levels', () => {
+    it('deals the leveled types evenly between the two levels', () => {
         const game = new TestGame()
         // A player who hasn't taken a turn yet, so their bag is still whole - the player on
         // turn has already drawn.

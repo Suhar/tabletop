@@ -5,7 +5,7 @@ import { PieceLevel, type Piece, PieceType } from '../model/pieces.js'
 import { hubMultiplier, stationGroupPoints } from './stations.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -248,7 +248,7 @@ describe('Station Hub', () => {
 
 describe('scoring stations in play', () => {
     it('pays the complex AND a chain when one station does both jobs', () => {
-        // Two stations already linked by a wavy line, and two planets of one colour waiting to
+        // Two stations already linked by a wavy line, and two planets of one color waiting to
         // be joined. The new station lands where it does both at once, and is paid under both
         // rules - they are separate rules, and a station is a ship like any other for chains.
         const game = new TestGame()

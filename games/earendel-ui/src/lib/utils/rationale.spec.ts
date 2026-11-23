@@ -53,7 +53,9 @@ describe('rationaleFor', () => {
                         points: 6
                     }
                 ],
-                claimsBroken: [{ playerId: 'p2', coords: { q: 1, r: 1 }, technologyId: 'tech-0' }]
+                claimsBroken: [
+                    { playerId: 'p2', coords: { q: 1, r: 1 }, technologyId: 'updatedLogistics-1' }
+                ]
             }
         }
         const lines = rationaleFor(placed, (id) => (id === 'p2' ? 'Bob' : id))

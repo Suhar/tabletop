@@ -1,15 +1,32 @@
 import { assert, validateGameResult } from '@tabletop/common'
 import { describe, expect, it } from 'vitest'
 import { isDrawPieces } from '../actions/drawPieces.js'
+import { isPlacePiece } from '../actions/placePiece.js'
+import { isStowShip } from '../actions/stowShip.js'
+import { PLANET_COLORS } from '../model/planetColor.js'
 import { EarendelGameStateValidator } from '../model/gameState.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { TestGame } from '../util/testHarness.js'
-import { playRandomGame } from '../util/simulate.js'
-import { type EarendelGameConfig, FULL_DECK, TurnStyle } from './config.js'
+import { TestGame } from '../testing/testHarness.js'
+import { playRandomGame } from '../testing/simulate.js'
+import {
+    type EarendelGameConfig,
+    ElevatedChoice,
+    elevatedOptionId,
+    FULL_DECK,
+    PiecesInPlay,
+    TurnStyle
+} from './config.js'
 import { EarendelRuntime } from './runtime.js'
 
 const masterSeed = '0123456789abcdef0123456789abcdef'
 const TURN_STYLES = [TurnStyle.DraftThree, TurnStyle.SinglePiece]
+// The game as it is offered opens with the stowed ships and free stations; the single-piece
+// style is kept for tests alone, so it is played without the opening.
+const PLAYED_GAMES = [
+    { turnStyle: TurnStyle.DraftThree, openingStations: true },
+    { turnStyle: TurnStyle.DraftThree, openingStations: false },
+    { turnStyle: TurnStyle.SinglePiece, openingStations: false }
+]
 
 function playerIds(count: number): string[] {
     return Array.from({ length: count }, (_, index) => `p${index + 1}`)
@@ -22,16 +39,33 @@ function rotations(ids: string[]): string[][] {
 describe.each([2, 3, 4, 5])('Earendel tournaments with %i players', (count) => {
     // A turn opens with its player drawing, so the order of draws is the order of turns. Two full
     // rounds are checked so the order is shown to carry on, not merely to start right.
-    it.each(TURN_STYLES)(
-        'honours every assigned seat through a finished game (%s)',
-        (turnStyle) => {
+    it.each(PLAYED_GAMES)(
+        'honors every assigned seat through a finished game (%o)',
+        ({ turnStyle, openingStations }) => {
             for (const order of rotations(playerIds(count).reverse())) {
                 const summary = playRandomGame(count, 7, {
                     turnStyle,
+                    openingStations,
                     start: { masterSeed, startingPositions: { playerIds: order } }
                 })
                 expect(summary.finished).toBe(true)
                 expect(summary.finalState.turnManager.turnOrder).toEqual(order)
+
+                // The opening runs the assigned order backwards: the last seat stows and places
+                // first, each player doing both before the next, and the first seat still takes
+                // the first turn.
+                const lastFirst = [...order].reverse()
+                const stowers = summary.actions.filter(isStowShip).map((action) => action.playerId)
+                const founders = summary.actions
+                    .filter((action) => isPlacePiece(action) && action.metadata?.founding)
+                    .map((action) => action.playerId)
+                expect(stowers).toEqual(openingStations ? lastFirst : [])
+                expect(founders).toEqual(openingStations ? lastFirst : [])
+                if (openingStations) {
+                    expect(
+                        summary.actions.slice(0, 2 * count).map((action) => action.playerId)
+                    ).toEqual(lastFirst.flatMap((playerId) => [playerId, playerId]))
+                }
 
                 const drawers = summary.actions
                     .filter(isDrawPieces)
@@ -57,21 +91,33 @@ describe.each([2, 3, 4, 5])('Earendel tournaments with %i players', (count) => {
                     expect(finalScores[winner]).toBe(best)
                 }
             }
-        }
+        },
+        120000
     )
 
-    // Both options change setup: the turn style decides the opening state, the deck option what
-    // the technology deck holds.
+    // Every option changes setup: the opening option decides the first state, the deck option
+    // and the units in play what the technology deck holds, each color's elevated option which
+    // elevated card it gets.
     const decks: NonNullable<EarendelGameConfig['technologyDeck']>[] = [
         FULL_DECK,
         ...Object.values(TechnologyEffectKind)
     ]
-    const configs: EarendelGameConfig[] = TURN_STYLES.flatMap((turnStyle) =>
-        decks.map((technologyDeck) => ({ turnStyle, technologyDeck }))
-    )
+    const elevatedAll = (choice: ElevatedChoice): EarendelGameConfig =>
+        Object.fromEntries(PLANET_COLORS.map((color) => [elevatedOptionId(color), choice]))
+    const configs: EarendelGameConfig[] = [
+        ...TURN_STYLES.flatMap((turnStyle) =>
+            decks.map((technologyDeck) => ({ turnStyle, technologyDeck }))
+        ),
+        ...[true, false].map((openingStations) => ({ openingStations })),
+        ...Object.values(PiecesInPlay).map((piecesInPlay) => ({ piecesInPlay })),
+        ...Object.values(ElevatedChoice).map(elevatedAll)
+    ]
 
     it.each(configs)('changes nothing but turn order for an assigned seat (%o)', (config) => {
+        // The harness turns the opening off unless a config asks for it; what is stored on the
+        // game is what the initializer reads.
         const { game } = new TestGame(count, 7, config)
+        expect(game.config).toMatchObject(config)
         const initializer = EarendelRuntime.initializer
         const uninitialized = new TestGame(count, 7, config).engine.generateUninitializedState(
             game,
@@ -93,9 +139,9 @@ describe.each([2, 3, 4, 5])('Earendel tournaments with %i players', (count) => {
             const assigned = initialize(order)
             expect(initialize(order)).toEqual(assigned)
             expect(assigned.turnManager.turnOrder).toEqual(order)
-            expect(assigned.activePlayerIds).toEqual(
-                normal.activePlayerIds.length ? [order[0]] : []
-            )
+            // Setup names nobody to act: the first state does, from the turn order.
+            expect(assigned.activePlayerIds).toEqual(normal.activePlayerIds)
+            expect(assigned.machineState).toBe(normal.machineState)
 
             // Players are stored in turn order; everything about each player is otherwise the
             // same, and so is everything outside the players.

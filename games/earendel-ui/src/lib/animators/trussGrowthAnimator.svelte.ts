@@ -1,6 +1,7 @@
 import type { AnimationContext } from '@tabletop/frontend-components'
 import type { AxialCoordinates, GameAction, Point } from '@tabletop/common'
 import { type EarendelBoard, getHex, type HydratedEarendelGameState } from '@tabletop/earendel'
+import { gsap } from 'gsap'
 import { tick } from 'svelte'
 import { ElementRegistry } from './elementRegistry.js'
 import { hexGeometry } from '$lib/utils/hexDefinition.js'
@@ -12,7 +13,7 @@ export type GrowingTruss = {
     playerId: string
     // The girder as the board will draw it, so the swap to the real one is seamless.
     girder: { start: Point; end: Point }
-    // The clip grows from the new station's end towards the station it joins.
+    // The clip grows from the new station's end toward the station it joins.
     start: Point
     length: number
     degrees: number
@@ -31,6 +32,8 @@ export class TrussGrowthAnimator {
 
     readonly clips = new ElementRegistry<SVGRectElement>()
     readonly girders = new ElementRegistry<SVGGElement>()
+
+    constructor(private readonly shownBoard: () => EarendelBoard) {}
 
     async onGameStateChange({
         to,
@@ -58,8 +61,13 @@ export class TrussGrowthAnimator {
             )
         }
 
-        const before = new Set(stationTubesOf(from.board).map(stationTubeKey))
-        const made = stationTubesOf(to.board).filter((tube) => !before.has(stationTubeKey(tube)))
+        // Stood in against the board on show, not this step's start: while a run of actions
+        // plays, the board on show is still the one from before the first of them, so a girder
+        // an earlier step grew stays drawn, full length, while a later step animates.
+        const shown = new Set(stationTubesOf(this.shownBoard()).map(stationTubeKey))
+        // Keyed as the growing trusses are, so a girder this step did not make is known as one.
+        const before = new Set(stationTubesOf(from.board).map(trussKey))
+        const made = stationTubesOf(to.board).filter((tube) => !shown.has(stationTubeKey(tube)))
         if (made.length === 0) return
 
         const changed = (coords: AxialCoordinates) =>
@@ -80,6 +88,10 @@ export class TrussGrowthAnimator {
         for (const truss of growing) {
             const clip = this.clips.get(truss.key)
             if (!clip) continue
+            if (before.has(truss.key)) {
+                gsap.set(clip, { attr: { width: truss.length + 2 * CLIP_OVERREACH } })
+                continue
+            }
             timeline.fromTo(
                 clip,
                 { attr: { width: 0 } },
@@ -112,11 +124,15 @@ function girderEnds(tube: StationTube): { start: Point; end: Point } {
     )
 }
 
+// A truss's key: its tube's hex keys joined with a dash, so it is safe inside a clip-path url().
+function trussKey(tube: StationTube): string {
+    return stationTubeKey(tube).replace(':', '-')
+}
+
 function growingTruss(tube: StationTube, oriented: StationTube): GrowingTruss {
     const { start, end } = girderEnds(oriented)
     return {
-        // Hex keys joined with a dash, so the key is safe inside a clip-path url().
-        key: stationTubeKey(tube).replace(':', '-'),
+        key: trussKey(tube),
         playerId: tube.playerId,
         girder: girderEnds(tube),
         start,

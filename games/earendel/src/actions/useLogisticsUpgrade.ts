@@ -4,6 +4,7 @@ import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { TechnologyEffectKind } from '../model/technology.js'
+import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 
 export type UseLogisticsUpgradeMetadata = Type.Static<typeof UseLogisticsUpgradeMetadata>
 export const UseLogisticsUpgradeMetadata = Type.Object({
@@ -28,6 +29,8 @@ export function isUseLogisticsUpgrade(action?: GameAction): action is UseLogisti
     return action?.type === ActionType.UseLogisticsUpgrade
 }
 
+// Logistics Upgrade (rules.md, Cooldown effects): used in place of the draft's discard, so the
+// turn places every ship it drew.
 export class HydratedUseLogisticsUpgrade
     extends HydratableAction<typeof UseLogisticsUpgrade>
     implements UseLogisticsUpgrade
@@ -46,7 +49,7 @@ export class HydratedUseLogisticsUpgrade
             throw Error(`Invalid UseLogisticsUpgrade action: ${invalidReason}`)
         }
 
-        state.getPlayerState(this.playerId).spendStoredEffect(TechnologyEffectKind.LogisticsUpgrade)
+        startCooldown(state, this.playerId, TechnologyEffectKind.LogisticsUpgrade)
 
         this.metadata = { piecesKept: state.heldPieces.length }
         state.draftPending = false
@@ -59,12 +62,8 @@ export class HydratedUseLogisticsUpgrade
     invalidUseLogisticsUpgradeReason(state: HydratedEarendelGameState): string | undefined {
         if (!state.activePlayerIds.includes(this.playerId)) return "It isn't your turn."
 
-        if (
-            !state
-                .getPlayerState(this.playerId)
-                .hasStoredEffect(TechnologyEffectKind.LogisticsUpgrade)
-        ) {
-            return 'You have no Logistics Upgrade to spend.'
+        if (!canUseCooldownEffect(state, this.playerId, TechnologyEffectKind.LogisticsUpgrade)) {
+            return 'You have no Logistics Upgrade ready to use.'
         }
 
         if (state.heldPieces.length <= 1) {

@@ -11,6 +11,10 @@ import { ScoredChain } from '../model/chains.js'
 import { returnToBag } from '../model/bags.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
 import { StationComplexSummary } from '../model/stationComplex.js'
+import { torpedoTargets } from '../util/attack.js'
+import { interdictedFor } from '../util/specials.js'
+import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 
 // Not `source`: GameAction already has a `source` (User vs System).
 export enum PieceSource {
@@ -22,6 +26,10 @@ export type PlacePieceMetadata = Type.Static<typeof PlacePieceMetadata>
 export const PlacePieceMetadata = Type.Object({
     ...ClaimChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
+    // The fighter went down as a Gamma Torpedo, with its strike still to choose.
+    torpedo: Type.Optional(Type.Boolean()),
+    // The free station placed before the first turn (rules.md, Setup).
+    founding: Type.Optional(Type.Boolean()),
     returnedToBag: Type.Optional(Piece),
     chains: Type.Optional(Type.Array(ScoredChain)),
     stationGroupPoints: Type.Optional(Type.Number()),
@@ -39,6 +47,8 @@ export const PlacePiece = Type.Evaluate(
             coords: AxialCoordinates,
             pieceSource: Type.Enum(PieceSource),
             pieceId: Type.Optional(Type.String()),
+            // Places the fighter as a Gamma Torpedo (rules.md): it then strikes a station beside it.
+            torpedo: Type.Optional(Type.Boolean()),
             metadata: Type.Optional(PlacePieceMetadata)
         })
     ])
@@ -56,6 +66,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
     declare coords: AxialCoordinates
     declare pieceSource: PieceSource
     declare pieceId?: string
+    declare torpedo?: boolean
     declare metadata?: PlacePieceMetadata
 
     constructor(data: PlacePiece) {
@@ -78,6 +89,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         if (this.pieceSource === PieceSource.Bag) {
             const index = heldIndex(state, this.pieceId)
             piece = state.heldPieces.splice(index, 1)[0]
+            state.shipPlacedThisTurn = true
         } else {
             piece = playerState.specialPieces.splice(
                 playerState.specialPieces.findIndex((candidate) => candidate.id === this.pieceId),
@@ -91,6 +103,27 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             }
         }
 
+        if (piece.type === PieceType.ArtificialPlanet) {
+            // Not a ship arriving: it waits for its color, then becomes the planet itself.
+            state.board.hexes[hexKey(this.coords)].piece = piece
+            state.pendingFounding = { playerId: this.playerId, coords: this.coords }
+            this.metadata = { pieceType: piece.type }
+            return
+        }
+
+        if (this.torpedo) {
+            // A torpedo is not a ship arriving: it neither scores nor explores, it only strikes.
+            state.board.hexes[hexKey(this.coords)].piece = { ...piece, torpedo: true }
+            startCooldown(state, this.playerId, TechnologyEffectKind.GammaTorpedo)
+            state.pendingAttack = {
+                playerId: this.playerId,
+                fighterCoords: this.coords,
+                targets: torpedoTargets(state.board, this.coords)
+            }
+            this.metadata = { pieceType: piece.type, torpedo: true }
+            return
+        }
+
         state.board.hexes[hexKey(this.coords)].piece = piece
 
         const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
@@ -101,6 +134,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         this.metadata = {
             pieceType: piece.type,
+            ...(piece.founding ? { founding: true } : {}),
             ...(returnedToBag ? { returnedToBag } : {}),
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
             ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
@@ -139,6 +173,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             if (!piece) return "That ship isn't one of the ones you are holding."
         } else {
             if (!this.pieceId) return 'No special piece was chosen.'
+            if (state.shipPlacedThisTurn) {
+                return 'A special piece is played instead of your draw, not once part of it is placed.'
+            }
             piece = playerState.specialPieces.find((candidate) => candidate.id === this.pieceId)
             if (!piece) return "That special piece isn't in front of you."
         }
@@ -161,6 +198,20 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             probeBlockedBy(state.board, this.coords, this.playerId)
         ) {
             return 'Two enemy stations watch that space — no probe of yours can enter it.'
+        }
+
+        if (interdictedFor(state.board, this.coords, this.playerId)) {
+            return 'An enemy interdictor closes that space to your ships.'
+        }
+
+        if (this.torpedo) {
+            if (piece.type !== PieceType.Fighter) return 'Only a fighter can become a torpedo.'
+            if (!canUseCooldownEffect(state, this.playerId, TechnologyEffectKind.GammaTorpedo)) {
+                return 'Your Gamma Torpedo is not ready.'
+            }
+            if (torpedoTargets(state.board, this.coords).length === 0) {
+                return 'A torpedo must go down beside a station to strike.'
+            }
         }
 
         return undefined

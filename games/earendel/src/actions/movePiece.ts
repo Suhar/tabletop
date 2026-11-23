@@ -74,14 +74,13 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         const piece = origin.piece
         assertExists(piece, 'MovePiece moves a piece')
         origin.piece = undefined
+        delete piece.surveying
         state.board.hexes[hexKey(this.to)].piece = piece
 
         state.pendingTechnology = undefined
         refreshPlanetControl(state)
 
-        this.metadata = {
-            piece
-        }
+        this.metadata = { piece }
         this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 

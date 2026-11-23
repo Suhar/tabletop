@@ -1,5 +1,5 @@
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, type Hex, hexKey, neighborsOf } from '../model/board.js'
+import { type EarendelBoard, getHex, type Hex, hexKey, neighborsThrough } from '../model/board.js'
 
 export function connectedGroup(
     board: EarendelBoard,
@@ -16,7 +16,7 @@ export function connectedGroup(
     for (let coords = queue.shift(); coords !== undefined; coords = queue.shift()) {
         group.push(coords)
 
-        for (const neighbor of neighborsOf(coords)) {
+        for (const neighbor of neighborsThrough(board, coords)) {
             const key = hexKey(neighbor)
             if (seen.has(key)) continue
 

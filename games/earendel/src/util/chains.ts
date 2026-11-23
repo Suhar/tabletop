@@ -5,7 +5,7 @@ import {
     getHex,
     HexKind,
     hexKey,
-    neighborsOf,
+    neighborsThrough,
     type PlanetColor
 } from '../model/board.js'
 import type { ScoredChain } from '../model/chains.js'
@@ -35,7 +35,7 @@ function planetsTouching(
     const seen = new Set<number>()
 
     for (const coords of component) {
-        for (const neighbor of neighborsOf(coords)) {
+        for (const neighbor of neighborsThrough(board, coords)) {
             const hex = getHex(board, neighbor)
             if (hex?.kind !== HexKind.Planet || hex.color === undefined) continue
             if (seen.has(hexKey(neighbor))) continue
@@ -51,13 +51,14 @@ function planetsTouching(
 }
 
 function chainLength(
+    board: EarendelBoard,
     component: AxialCoordinates[],
     from: AxialCoordinates,
     to: AxialCoordinates
 ): number | undefined {
     const inComponent = new Set(component.map(hexKey))
     const touches = (coords: AxialCoordinates, planet: AxialCoordinates) =>
-        neighborsOf(coords).some((neighbor) => sameCoordinates(neighbor, planet))
+        neighborsThrough(board, coords).some((neighbor) => sameCoordinates(neighbor, planet))
 
     const reached = new Set<number>()
     const queue: { coords: AxialCoordinates; distance: number }[] = []
@@ -73,7 +74,7 @@ function chainLength(
         const { coords, distance } = step
         if (touches(coords, to)) return distance
 
-        for (const neighbor of neighborsOf(coords)) {
+        for (const neighbor of neighborsThrough(board, coords)) {
             const key = hexKey(neighbor)
             if (!inComponent.has(key) || reached.has(key)) continue
             reached.add(key)
@@ -104,7 +105,7 @@ export function chainsCompletedBy(
                 const pairKey = planetPairKey(planets[i], planets[j])
                 if (scored.has(pairKey)) continue
 
-                const length = chainLength(component, planets[i], planets[j])
+                const length = chainLength(board, component, planets[i], planets[j])
                 if (length === undefined) continue
 
                 scored.add(pairKey)

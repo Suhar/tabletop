@@ -9,7 +9,7 @@ import { focusedCardId } from '../model/technologyCards.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { ChoosePlanet, isChoosePlanet } from '../actions/choosePlanet.js'
 import { ChooseTechnology } from '../actions/chooseTechnology.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const PLANET_A: AxialCoordinates = { q: 0, r: 0 }
 // A hex touching PLANET_A - where a probe goes to reach it.
@@ -40,11 +40,21 @@ function testBoard({ secondPlanet = false } = {}): EarendelBoard {
     return board
 }
 
+// Each copy a different technology, since a reveal offers each technology once (rules.md,
+// Exploration).
+const KINDS = [
+    TechnologyEffectKind.Railgun,
+    TechnologyEffectKind.GammaTorpedo,
+    TechnologyEffectKind.UpdatedLogistics,
+    TechnologyEffectKind.FullTorpedoSpread,
+    TechnologyEffectKind.TacticalFeint
+]
+
 function card(color: PlanetColor, copy = 0): string {
-    return focusedCardId(TechnologyEffectKind.Railgun, color, copy)
+    return focusedCardId(KINDS[copy % KINDS.length], color, copy)
 }
 
-const PERIWINKLE_AND_VIOLET = 'tech-15'
+const PERIWINKLE_AND_VIOLET = 'spoofedOrders-1'
 
 function probe(playerId: string, level = PieceLevel.Two): Piece {
     return { id: `${playerId}-probe`, playerId, type: PieceType.Probe, level }
@@ -172,11 +182,11 @@ describe('the turn spine', () => {
 
         expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBe(PERIWINKLE_AND_VIOLET)
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
-        // Everything else that was turned over goes to the discard, matches included.
-        expect(game.state.technologyDiscard).toEqual([
-            card(PlanetColor.Periwinkle, 1),
-            card(PlanetColor.Teal)
-        ])
+        // The match that was offered and passed over is discarded. The card of the wrong color,
+        // turned over on the way, goes back under the deck.
+        expect(game.state.technologyDiscard).toEqual([card(PlanetColor.Periwinkle, 1)])
+        expect(game.state.technologyDeck.items[0]).toBe(card(PlanetColor.Teal))
+        expect(game.state.technologyDeck.remaining).toBe(game.state.technologyDeck.items.length)
         expect(game.state.pendingExploration).toBeUndefined()
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
         expect(game.activePlayerId).not.toBe(mover)
@@ -199,7 +209,7 @@ describe('the turn spine', () => {
 
         expect(game.state.machineState).toBe(MachineState.Exploring)
         expect(game.validActionsFor(mover)).toEqual([ActionType.ChoosePlanet])
-        // Nothing is revealed yet - the colour of the planet decides what the flip looks for.
+        // Nothing is revealed yet - the color of the planet decides what the flip looks for.
         expect(game.state.pendingExploration?.revealed).toBeUndefined()
 
         game.run(ChoosePlanet, {
@@ -456,7 +466,7 @@ describe('the turn spine', () => {
         ).toBe(true)
     })
 
-    it('explores with nothing to house when the deck has no card of the planet’s colour', () => {
+    it('explores with nothing to house when the deck has no card of the planet’s color', () => {
         const game = scenario({
             bag: (playerId) => [probe(playerId), fighter(playerId)],
             deck: [card(PlanetColor.Teal)]
@@ -476,7 +486,10 @@ describe('the turn spine', () => {
         // holds nothing.
         expect(game.state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
         expect(game.state.board.hexes[hexKey(PLANET_A)].technologyId).toBeUndefined()
-        expect(game.state.technologyDiscard).toEqual([card(PlanetColor.Teal)])
+        // Nothing was offered, so nothing is discarded: the one card turned over goes back under
+        // the deck.
+        expect(game.state.technologyDiscard).toEqual([])
+        expect(game.state.technologyDeck).toEqual(stackedBag([card(PlanetColor.Teal)]))
         expect(game.state.machineState).toBe(MachineState.StartOfTurn)
     })
 

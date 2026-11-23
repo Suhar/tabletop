@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { playRandomGame } from './util/simulate.js'
+import { playRandomGame } from './testing/simulate.js'
 import { PLAYTEST_TILES_PER_PLAYER } from './util/boardSetup.js'
 
 const SEEDS = [1, 2, 3, 4, 5]
@@ -40,9 +40,9 @@ describe('a whole game, played at random', () => {
     })
 
     it('almost always ends on an empty bag at the playtest board size', { timeout: 120000 }, () => {
-        // The settled board is 3 tiles per player (rules.md). At 7, games end on an empty bag
-        // rather than on a player unable to place; if this ratio slips, the board no longer
-        // holds the bags.
+        // The settled board is 4 tiles per player (rules.md). At 7, nearly every game ends on an
+        // empty bag rather than on a player unable to place; if this ratio slips, the board no
+        // longer holds the bags.
         const summaries = [2, 3, 4, 5].flatMap((playerCount) =>
             SEEDS.map((seed) =>
                 playRandomGame(playerCount, seed, {
@@ -63,16 +63,22 @@ describe('a whole game, played at random', () => {
         expect(mostLeftBehind).toBeLessThan(14)
     })
 
-    it('explores a good share of the planets and pays chains without being swamped by them', () => {
-        // Not assertions about balance, which is a playtest question - just a tripwire for a
-        // sizing change that quietly turns the game into something else.
-        // Chains are an achievement, so any one game may score none; three games should not.
-        const summaries = [1, 2, 3].map((seed) =>
-            playRandomGame(3, seed, { tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER })
-        )
-        for (const summary of summaries) {
-            expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
+    it(
+        'explores a good share of the planets and pays chains without being swamped by them',
+        { timeout: 120000 },
+        () => {
+            // Not assertions about balance, which is a playtest question - just a tripwire for a
+            // sizing change that quietly turns the game into something else.
+            // Chains are an achievement, so any one game may score none; three games should not.
+            const summaries = [1, 2, 3].map((seed) =>
+                playRandomGame(3, seed, { tilesPerPlayer: PLAYTEST_TILES_PER_PLAYER })
+            )
+            for (const summary of summaries) {
+                expect(summary.planetsExplored).toBeGreaterThan(summary.planetsTotal / 4)
+            }
+            expect(
+                summaries.reduce((sum, summary) => sum + summary.chainsScored, 0)
+            ).toBeGreaterThan(0)
         }
-        expect(summaries.reduce((sum, summary) => sum + summary.chainsScored, 0)).toBeGreaterThan(0)
-    })
+    )
 })

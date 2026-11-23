@@ -8,7 +8,7 @@
     const step = $derived(latestHistoryStep(gameSession.actions))
 </script>
 
-<div class="flex flex-col items-center gap-1 py-2 text-white text-sm sm:text-base min-h-[2.5rem]">
+<div class="flex min-h-[2rem] flex-col items-center gap-1 py-1 text-sm text-white sm:text-base">
     {#each step as action (action.id)}
         <ActionDescription {action} justify="center" />
     {:else}

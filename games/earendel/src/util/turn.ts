@@ -1,20 +1,49 @@
-import type { GameAction, MachineContext } from '@tabletop/common'
+import type { MachineContext } from '@tabletop/common'
 import { MachineState } from '../definition/states.js'
-import { drawCountFor, earendelConfig, type EarendelGameConfig } from '../definition/config.js'
+import {
+    DRAFT_DISCARDS,
+    drawCountFor,
+    earendelConfig,
+    type EarendelGameConfig,
+    hasOpeningStations,
+    isDraftThree
+} from '../definition/config.js'
+import { scannerBonus, seedersReady } from './specials.js'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { activateNextTechnologyEffect } from './technologyGrants.js'
 import { usableTechnologies } from './usableTechnology.js'
+import { ruleInForce } from './rules.js'
+import { TechnologyEffectKind } from '../model/technology.js'
+import { elevatedCardId } from '../model/technologyCards.js'
+import { legalMovesFor } from './movement.js'
 
 export function turnStartState(_config?: EarendelGameConfig): MachineState {
     return MachineState.StartOfTurn
 }
 
+// Where a game begins: with the opening when the option is on, else the first turn.
+export function openingState(config?: EarendelGameConfig): MachineState {
+    return hasOpeningStations(config) ? MachineState.StowingShip : turnStartState(config)
+}
+
+// Deep Scan adds a ship to the draw and one to the discard, so what is kept is unchanged.
 export function drawCountForPlayer(
-    _state: HydratedEarendelGameState,
+    state: HydratedEarendelGameState,
+    playerId: string,
+    config?: EarendelGameConfig
+): number {
+    return drawCountFor(config) + scannerBonus(state.board, playerId)
+}
+
+// How many drawn ships the player places: the draw less the draft's discard, or all of a plain
+// draw under Overdrive (rules.md, Elevated technologies).
+export function keepCountForPlayer(
+    state: HydratedEarendelGameState,
     _playerId: string,
     config?: EarendelGameConfig
 ): number {
-    return drawCountFor(config)
+    const base = drawCountFor(config)
+    if (ruleInForce(state.board, TechnologyEffectKind.Overdrive)) return base
+    return isDraftThree(config) ? base - DRAFT_DISCARDS : base
 }
 
 export function isEndOfGame(state: HydratedEarendelGameState): boolean {
@@ -31,43 +60,59 @@ export function pendingTechnologyEffectState(
 
 export function afterDraw(
     state: HydratedEarendelGameState,
-    context?: MachineContext<HydratedEarendelGameState>,
-    action?: GameAction
+    context?: MachineContext<HydratedEarendelGameState>
 ): MachineState {
-    const effect = pendingTechnologyEffectState(state) ?? nextOwedEffect(state, action)
+    const effect = pendingTechnologyEffectState(state)
     if (effect) return effect
+    const drift = freeDriftState(state)
+    if (drift) return drift
+    const seeding = seedingState(state)
+    if (seeding) return seeding
     if (state.draftPending) return MachineState.DraftingPieces
 
-    return endPlacement(state, context, action)
+    return endPlacement(state, context)
 }
 
-function nextOwedEffect(
-    state: HydratedEarendelGameState,
-    action?: GameAction
-): MachineState | undefined {
-    if (!activateNextTechnologyEffect(state)) return undefined
-    if (state.pendingTile && action) action.revealsInfo = true
-    return pendingTechnologyEffectState(state)
+// Nebula Seeding (rules.md, Granted pieces): once a turn, before the draft, each of the player's
+// seeders with laying left may turn an empty hex beside it into nebula.
+function seedingState(state: HydratedEarendelGameState): MachineState | undefined {
+    if (state.seededThisTurn) return undefined
+    const playerId = state.turnManager.currentTurn()?.playerId
+    if (!playerId) return undefined
+    const seeders = seedersReady(state.board, playerId)
+    if (seeders.length === 0) return undefined
+    state.seededThisTurn = true
+    state.pendingSeeding = { playerId, seeders }
+    return MachineState.Seeding
 }
 
-// A tile drawn from the hidden supply is revealed, so the action that led to it cannot be
-// undone.
+// Free Drift (rules.md, Elevated technologies): once a turn, before the draft, the player may
+// step one piece. Offered as a technology move so the same action and screen serve it.
+function freeDriftState(state: HydratedEarendelGameState): MachineState | undefined {
+    if (state.driftedThisTurn) return undefined
+    if (!ruleInForce(state.board, TechnologyEffectKind.FreeDrift)) return undefined
+    const playerId = state.turnManager.currentTurn()?.playerId
+    if (!playerId || legalMovesFor(state.board, playerId).length === 0) return undefined
+    state.driftedThisTurn = true
+    state.pendingTechnology = {
+        playerId,
+        technologyId: elevatedCardId(TechnologyEffectKind.FreeDrift)
+    }
+    return MachineState.ResolvingTechnology
+}
+
+// Where the turn goes once a tile is laid or a drift step taken: back to wherever it was.
 export function afterTechnologyEffect(
-    action: GameAction,
     state: HydratedEarendelGameState,
     context?: MachineContext<HydratedEarendelGameState>
 ): MachineState {
-    return afterDraw(state, context, action)
+    return afterDraw(state, context)
 }
 
 export function endPlacement(
     state: HydratedEarendelGameState,
-    context?: MachineContext<HydratedEarendelGameState>,
-    action?: GameAction
+    context?: MachineContext<HydratedEarendelGameState>
 ): MachineState {
-    const effect = nextOwedEffect(state, action)
-    if (effect) return effect
-
     if (state.heldPieces.length > 0) {
         return MachineState.PlacingPiece
     }

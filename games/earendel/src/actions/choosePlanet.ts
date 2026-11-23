@@ -11,6 +11,7 @@ import {
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex } from '../model/board.js'
+import { PieceType, PieceLevel } from '../model/pieces.js'
 import { choosableFrom } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
 import { markExplored } from '../util/exploration.js'
@@ -77,6 +78,10 @@ export class HydratedChoosePlanet
 
         pending.exploringPlanet = this.coords
 
+        // From now on the probe's influence counts on this planet alone.
+        const probe = getHex(state.board, pending.probeCoords)?.piece
+        if (probe?.type === PieceType.Probe) probe.surveying = this.coords
+
         const planet = getHex(state.board, this.coords)
         assertExists(planet, 'Validated: candidate planets are on the board')
         if (planet.explored) {
@@ -89,12 +94,12 @@ export class HydratedChoosePlanet
 
         markExplored(state.board, this.coords)
 
-        assertExists(planet.color, 'Planets have a colour')
+        assertExists(planet.color, 'Planets have a color')
         const piles = { deck: state.technologyDeck, discard: state.technologyDiscard }
         const result = revealForExploration(
             piles,
             planet.color,
-            pending.probeLevel,
+            probe?.level ?? PieceLevel.Two,
             state.getProtectedPrng()
         )
         state.technologyDeck = piles.deck

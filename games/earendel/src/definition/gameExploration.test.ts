@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EarendelGameStateValidator } from '../model/gameState.js'
-import { TestGame } from '../util/testHarness.js'
+import { TestGame } from '../testing/testHarness.js'
 import { EarendelGameExploration } from './gameExploration.js'
 
 const masterSeed = '0123456789abcdef0123456789abcdef'

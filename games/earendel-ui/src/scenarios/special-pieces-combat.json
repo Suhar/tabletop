@@ -1,0 +1,1137 @@
+{
+ "game": {
+  "id": "scenario-special-pieces-combat",
+  "typeId": "earendel",
+  "status": "started",
+  "isPublic": false,
+  "deleted": false,
+  "ownerId": "p1",
+  "name": "Special pieces: combat and the bag",
+  "players": [
+   {
+    "id": "p1",
+    "isHuman": true,
+    "name": "Player 2",
+    "status": "joined"
+   },
+   {
+    "id": "p2",
+    "isHuman": true,
+    "name": "Player 1",
+    "status": "joined"
+   }
+  ],
+  "config": {
+   "openingStations": false,
+   "turnStyle": "draftThree"
+  },
+  "hotseat": true,
+  "createdAt": "2026-11-15T23:27:49.590Z",
+  "winningPlayerIds": [],
+  "seed": 3632721043,
+  "startedAt": "2026-11-15T23:27:49.590Z",
+  "protectedInformation": true,
+  "activePlayerIds": [
+   "p2"
+  ]
+ },
+ "state": {
+  "systemVersion": 3,
+  "id": "n6qUQPl0Acfmfm_6JtmL0",
+  "gameId": "scenario-special-pieces-combat",
+  "seed": 3632721043,
+  "prng": {
+   "seed": 3632721043,
+   "invocations": 523
+  },
+  "protectedPrng": {
+   "algorithm": "chacha20-v1",
+   "seed": "39f2593bbbedaa1d20e8766de4dd52d07c2bcf1b7a61b2f132cbe47d5ed314a3",
+   "invocations": 197
+  },
+  "masterSeed": "5614cee908574aece7820da55f8cd3aa",
+  "activePlayerIds": [
+   "p2"
+  ],
+  "winningPlayerIds": [],
+  "actionCount": 0,
+  "actionChecksum": 0,
+  "players": [
+   {
+    "playerId": "p2",
+    "color": "red",
+    "bag": {
+     "items": [
+      {
+       "id": "p2-fighter-349",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p2-fighter-348",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p2-fighter-347",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p2-fighter-346",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p2-fighter-345",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p2-fighter-344",
+       "playerId": "p2",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p2-probe-343",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p2-probe-342",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p2-probe-341",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p2-probe-340",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p2-probe-339",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p2-probe-338",
+       "playerId": "p2",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p2-station-337",
+       "playerId": "p2",
+       "type": "station"
+      },
+      {
+       "id": "p2-station-336",
+       "playerId": "p2",
+       "type": "station"
+      },
+      {
+       "id": "p2-station-335",
+       "playerId": "p2",
+       "type": "station"
+      },
+      {
+       "id": "p2-station-334",
+       "playerId": "p2",
+       "type": "station"
+      },
+      {
+       "id": "p2-station-333",
+       "playerId": "p2",
+       "type": "station"
+      }
+     ],
+     "remaining": 17
+    },
+    "specialPieces": [],
+    "technologies": [
+     "carrierDoctrine-teal-0",
+     "deepScan-teal-0"
+    ],
+    "storedEffects": [],
+    "cooldowns": {},
+    "score": 0
+   },
+   {
+    "playerId": "p1",
+    "color": "pink",
+    "bag": {
+     "items": [
+      {
+       "id": "p1-fighter-370",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p1-fighter-369",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p1-fighter-368",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p1-fighter-367",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p1-fighter-366",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 3
+      },
+      {
+       "id": "p1-fighter-365",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p1-probe-364",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p1-probe-363",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p1-probe-362",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p1-probe-361",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p1-probe-360",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 3
+      },
+      {
+       "id": "p1-probe-359",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p1-station-358",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-station-357",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-station-356",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-station-355",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-station-354",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-fighter-353",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 2
+      },
+      {
+       "id": "p1-station-352",
+       "playerId": "p1",
+       "type": "station"
+      },
+      {
+       "id": "p1-probe-351",
+       "playerId": "p1",
+       "type": "probe",
+       "level": 2
+      },
+      {
+       "id": "p1-fighter-350",
+       "playerId": "p1",
+       "type": "fighter",
+       "level": 3
+      }
+     ],
+     "remaining": 21
+    },
+    "specialPieces": [],
+    "technologies": [
+     "bastionWorks-teal-0",
+     "jammerArray-teal-0",
+     "salvageOperations-teal-0"
+    ],
+    "storedEffects": [],
+    "cooldowns": {},
+    "score": 0
+   }
+  ],
+  "machineState": "DraftingPieces",
+  "heldPieces": [
+   {
+    "id": "p2-fighter-329",
+    "playerId": "p2",
+    "type": "fighter",
+    "level": 3
+   },
+   {
+    "id": "p2-probe-330",
+    "playerId": "p2",
+    "type": "probe",
+    "level": 2
+   },
+   {
+    "id": "p2-station-331",
+    "playerId": "p2",
+    "type": "station"
+   },
+   {
+    "id": "p2-fighter-332",
+    "playerId": "p2",
+    "type": "fighter",
+    "level": 2
+   }
+  ],
+  "turnManager": {
+   "series": [
+    {
+     "type": "turn",
+     "playerId": "p2",
+     "start": 0
+    }
+   ],
+   "turnOrder": [
+    "p2",
+    "p1"
+   ],
+   "turnCounts": {
+    "p1": 0,
+    "p2": 0
+   }
+  },
+  "board": {
+   "hexes": {
+    "0": {
+     "coords": {
+      "q": 0,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "2": {
+     "coords": {
+      "q": 0,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "3": {
+     "coords": {
+      "q": 1,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-probe-319",
+      "playerId": "p1",
+      "type": "probe",
+      "level": 2
+     }
+    },
+    "4": {
+     "coords": {
+      "q": 1,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-bastion-320",
+      "playerId": "p1",
+      "type": "bastion"
+     }
+    },
+    "8": {
+     "coords": {
+      "q": 0,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "9": {
+     "coords": {
+      "q": 1,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "10": {
+     "coords": {
+      "q": 2,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "planet",
+     "color": "violet"
+    },
+    "11": {
+     "coords": {
+      "q": 2,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "12": {
+     "coords": {
+      "q": 2,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-salvageDrone-327",
+      "playerId": "p1",
+      "type": "salvageDrone"
+     }
+    },
+    "18": {
+     "coords": {
+      "q": 0,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p2-deepScanner-326",
+      "playerId": "p2",
+      "type": "deepScanner"
+     }
+    },
+    "19": {
+     "coords": {
+      "q": 1,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "20": {
+     "coords": {
+      "q": 2,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "21": {
+     "coords": {
+      "q": 3,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "22": {
+     "coords": {
+      "q": 3,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "23": {
+     "coords": {
+      "q": 3,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-probe-328",
+      "playerId": "p1",
+      "type": "probe",
+      "level": 2
+     }
+    },
+    "24": {
+     "coords": {
+      "q": 3,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "32": {
+     "coords": {
+      "q": 0,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "33": {
+     "coords": {
+      "q": 1,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "34": {
+     "coords": {
+      "q": 2,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "35": {
+     "coords": {
+      "q": 3,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "planet",
+     "color": "teal"
+    },
+    "36": {
+     "coords": {
+      "q": 4,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "37": {
+     "coords": {
+      "q": 4,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "38": {
+     "coords": {
+      "q": 4,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "39": {
+     "coords": {
+      "q": 4,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-station-323",
+      "playerId": "p1",
+      "type": "station"
+     }
+    },
+    "40": {
+     "coords": {
+      "q": 4,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "50": {
+     "coords": {
+      "q": 0,
+      "r": 5
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "51": {
+     "coords": {
+      "q": 1,
+      "r": 5
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "52": {
+     "coords": {
+      "q": 2,
+      "r": 5
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "53": {
+     "coords": {
+      "q": 3,
+      "r": 5
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "55": {
+     "coords": {
+      "q": 5,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "56": {
+     "coords": {
+      "q": 5,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-jammer-325",
+      "playerId": "p1",
+      "type": "jammer"
+     }
+    },
+    "57": {
+     "coords": {
+      "q": 5,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "58": {
+     "coords": {
+      "q": 5,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "59": {
+     "coords": {
+      "q": 5,
+      "r": 4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "72": {
+     "coords": {
+      "q": 0,
+      "r": 6
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "73": {
+     "coords": {
+      "q": 1,
+      "r": 6
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "78": {
+     "coords": {
+      "q": 6,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "79": {
+     "coords": {
+      "q": 6,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "80": {
+     "coords": {
+      "q": 6,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "81": {
+     "coords": {
+      "q": 6,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-station-324",
+      "playerId": "p1",
+      "type": "station"
+     }
+    },
+    "105": {
+     "coords": {
+      "q": 7,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "106": {
+     "coords": {
+      "q": 7,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "107": {
+     "coords": {
+      "q": 7,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "108": {
+     "coords": {
+      "q": 7,
+      "r": 3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "136": {
+     "coords": {
+      "q": 8,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "137": {
+     "coords": {
+      "q": 8,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "138": {
+     "coords": {
+      "q": 8,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "171": {
+     "coords": {
+      "q": 9,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "172": {
+     "coords": {
+      "q": 9,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "173": {
+     "coords": {
+      "q": 9,
+      "r": 2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "210": {
+     "coords": {
+      "q": 10,
+      "r": 0
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "211": {
+     "coords": {
+      "q": 10,
+      "r": 1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "10.5": {
+     "coords": {
+      "q": 2,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "21.5": {
+     "coords": {
+      "q": 3,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "37.5": {
+     "coords": {
+      "q": 4,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "36.5": {
+     "coords": {
+      "q": 4,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "56.5": {
+     "coords": {
+      "q": 5,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p1-probe-322",
+      "playerId": "p1",
+      "type": "probe",
+      "level": 2
+     }
+    },
+    "55.5": {
+     "coords": {
+      "q": 5,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "80.5": {
+     "coords": {
+      "q": 6,
+      "r": -3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "79.5": {
+     "coords": {
+      "q": 6,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "planet",
+     "color": "periwinkle"
+    },
+    "78.5": {
+     "coords": {
+      "q": 6,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "107.5": {
+     "coords": {
+      "q": 7,
+      "r": -3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "106.5": {
+     "coords": {
+      "q": 7,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open",
+     "piece": {
+      "id": "p2-carrier-321",
+      "playerId": "p2",
+      "type": "carrier"
+     }
+    },
+    "105.5": {
+     "coords": {
+      "q": 7,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "139.5": {
+     "coords": {
+      "q": 8,
+      "r": -4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "138.5": {
+     "coords": {
+      "q": 8,
+      "r": -3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "137.5": {
+     "coords": {
+      "q": 8,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "136.5": {
+     "coords": {
+      "q": 8,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "174.5": {
+     "coords": {
+      "q": 9,
+      "r": -4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "173.5": {
+     "coords": {
+      "q": 9,
+      "r": -3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "172.5": {
+     "coords": {
+      "q": 9,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "171.5": {
+     "coords": {
+      "q": 9,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "214.5": {
+     "coords": {
+      "q": 10,
+      "r": -5
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "213.5": {
+     "coords": {
+      "q": 10,
+      "r": -4
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "212.5": {
+     "coords": {
+      "q": 10,
+      "r": -3
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "211.5": {
+     "coords": {
+      "q": 10,
+      "r": -2
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    },
+    "210.5": {
+     "coords": {
+      "q": 10,
+      "r": -1
+     },
+     "tileId": "tile-0",
+     "kind": "open"
+    }
+   }
+  },
+  "technologyDeck": {
+   "items": [
+    "conscription-1",
+    "colonyShip-1",
+    "moveFriendlyPiece-2",
+    "elevated-shipyardWorld",
+    "elevated-orbitalBombardment",
+    "securityBreach-1",
+    "asteroidField-1",
+    "updatedLogistics-2",
+    "warpDrive-2",
+    "dimensionalRift-1",
+    "securityBreach-2",
+    "tradeRouteWormhole-2",
+    "growBoard-2",
+    "railgun-1",
+    "railgun-2",
+    "asteroidField-2",
+    "immediateDownload-1",
+    "gateNetwork-2",
+    "interdiction-1",
+    "elevated-freeDrift",
+    "factoryOverride-1",
+    "stationUpgrade-2",
+    "carrierDoctrine-1",
+    "updatedLogistics-1",
+    "elevated-salvageRights",
+    "immediateDownload-2",
+    "growBoard-1",
+    "gateNetwork-1",
+    "fullTorpedoSpread-1",
+    "gammaTorpedo-2",
+    "elevated-signalIntercept",
+    "gammaTorpedo-1",
+    "relayNetwork-1",
+    "logisticsUpgrade-2",
+    "warpDrive-1",
+    "tacticalFeint-1",
+    "logisticsUpgrade-1",
+    "conscription-2",
+    "factoryOverride-2",
+    "spoofedOrders-2",
+    "moveFriendlyPiece-1",
+    "tacticalFeint-2",
+    "dimensionalRift-2",
+    "carrierDoctrine-2",
+    "relayNetwork-2",
+    "spoofedOrders-1",
+    "tradeRouteWormhole-1",
+    "fullTorpedoSpread-2",
+    "interdiction-2",
+    "stationUpgrade-1",
+    "colonyShip-2"
+   ],
+   "remaining": 51
+  },
+  "elevatedTechnologies": {
+   "periwinkle": "elevated-signalIntercept",
+   "aqua": "elevated-freeDrift",
+   "mint": "elevated-salvageRights",
+   "teal": "elevated-shipyardWorld",
+   "violet": "elevated-orbitalBombardment"
+  },
+  "pieceTechnologies": {
+   "belligerence": "bastionWorks",
+   "mobility": "gateNetwork",
+   "acquisitions": "salvageOperations",
+   "espionage": "jammerArray",
+   "expansion": "stationUpgrade"
+  },
+  "technologyDiscard": [],
+  "tileSupply": {
+   "items": [
+    {
+     "id": "spare-tile-0",
+     "planetOffset": 2,
+     "color": "teal"
+    },
+    {
+     "id": "spare-tile-3",
+     "planetOffset": 3,
+     "color": "teal"
+    },
+    {
+     "id": "spare-tile-2",
+     "planetOffset": 3,
+     "color": "teal"
+    },
+    {
+     "id": "spare-tile-1",
+     "planetOffset": 0,
+     "color": "aqua"
+    }
+   ],
+   "remaining": 4
+  },
+  "planetControllers": {
+   "10": "p1",
+   "35": "p1"
+  },
+  "tradeRoutes": [],
+  "probeClaims": [],
+  "draftPending": true
+ },
+ "actions": []
+}

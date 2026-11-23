@@ -13,6 +13,9 @@ import {
 import type * as Type from 'typebox'
 import { Value } from 'typebox/value'
 import { EarendelRuntime } from '../definition/runtime.js'
+import { PlanetColor } from '../model/planetColor.js'
+import { storedEffectOf, type TechnologyEffectKind } from '../model/technology.js'
+import { focusedCardId, technologyCard } from '../model/technologyCards.js'
 import { type EarendelGameConfig, TurnStyle } from '../definition/config.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
 import type { Piece } from '../model/pieces.js'
@@ -38,6 +41,11 @@ export class TestGame {
         config: EarendelGameConfig = { turnStyle: TurnStyle.SinglePiece },
         start: GameStartOptions = {}
     ) {
+        // The rule tests begin at the first draw; a test of the opening asks for it.
+        config = { openingStations: false, ...config }
+        // The engine draws every seed from the master seed and makes a fresh one when none is
+        // given, so a test's seed must supply it or no two runs would play the same game.
+        start = { masterSeed: Math.abs(Math.trunc(seed)).toString(16).padStart(32, '0'), ...start }
         const players: Player[] = Array.from({ length: playerCount }, (_, index) => ({
             id: `p${index + 1}`,
             isHuman: true,
@@ -120,6 +128,21 @@ export class TestGame {
         this.state = result.updatedState
         this.processed.push(...result.processedActions)
         return result.processedActions
+    }
+
+    // Hands a player technologies outright, as cards of one color, without the survey and the
+    // round's wait that would earn them.
+    giveTechnology(playerId: string, ...kinds: TechnologyEffectKind[]) {
+        const player = this.state.players.find((candidate) => candidate.playerId === playerId)
+        assertExists(player, `No player ${playerId}`)
+        const held = (kind: TechnologyEffectKind) =>
+            player.technologies.filter((id) => technologyCard(id).effect === kind).length
+        for (const kind of kinds) {
+            const technologyId = focusedCardId(kind, PlanetColor.Teal, held(kind))
+            player.technologies.push(technologyId)
+            const stored = storedEffectOf(technologyCard(technologyId))
+            if (stored) player.storedEffects.push(stored)
+        }
     }
 
     validActionsFor(playerId: string): string[] {

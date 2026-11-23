@@ -11,14 +11,15 @@ import { HydratedTechnologyDeck } from '../model/bags.js'
 import type { PendingExploration } from '../model/exploration.js'
 import { HydratedChoosePlanet } from './choosePlanet.js'
 import { HydratedChooseTechnology } from './chooseTechnology.js'
-import { stackedBag } from '../util/testHarness.js'
+import { stackedBag } from '../testing/testHarness.js'
 
 const PLANET_A: AxialCoordinates = { q: 0, r: 0 }
 const PLANET_B: AxialCoordinates = { q: 3, r: 0 }
 const PROBE_HEX = neighborsOf(PLANET_A)[0]
+// Three technologies: a reveal offers each technology once (rules.md, Exploration).
 const PERIWINKLE_1 = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 1)
-const PERIWINKLE_2 = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 2)
-const HELD = focusedCardId(TechnologyEffectKind.Railgun, PlanetColor.Periwinkle, 3)
+const PERIWINKLE_2 = focusedCardId(TechnologyEffectKind.GammaTorpedo, PlanetColor.Periwinkle, 2)
+const HELD = focusedCardId(TechnologyEffectKind.UpdatedLogistics, PlanetColor.Periwinkle, 3)
 
 function board(): EarendelBoard {
     const hexes: EarendelBoard['hexes'] = {
@@ -55,7 +56,6 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
             specialPieces: [],
             technologies: [],
             storedEffects: [],
-            cooldownEffects: [],
             cooldowns: {},
             score: 0
         })),
@@ -85,7 +85,6 @@ function unsettled(): PendingExploration {
     return {
         playerId: 'p1',
         probeCoords: PROBE_HEX,
-        probeLevel: PieceLevel.Two,
         candidatePlanets: [PLANET_A]
     }
 }
@@ -144,6 +143,8 @@ describe('HydratedChoosePlanet', () => {
         action.apply(state)
 
         expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.id).toBe('probe')
+        // The probe is now committed to this planet: its influence counts nowhere else.
+        expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.surveying).toEqual(PLANET_A)
         expect(state.board.hexes[hexKey(PLANET_A)].explored).toBe(true)
         // Level two: two matching cards, which here is the whole deck.
         expect(state.pendingExploration?.candidates).toEqual([PERIWINKLE_1, PERIWINKLE_2])
@@ -159,6 +160,7 @@ describe('HydratedChoosePlanet', () => {
 
         expect(action.metadata).toEqual({ declined: true })
         expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.id).toBe('probe')
+        expect(state.board.hexes[hexKey(PROBE_HEX)].piece?.surveying).toBeUndefined()
         expect(state.board.hexes[hexKey(PLANET_A)].explored).toBeUndefined()
         expect(state.technologyDeck.remaining).toBe(2)
         expect(state.pendingExploration).toBeUndefined()
@@ -235,7 +237,7 @@ describe('HydratedChooseTechnology', () => {
     })
 
     it('takes nothing, and only nothing, when the reveal produced no candidates', () => {
-        // A planet whose colour the deck couldn't match: explored, but with nothing to house.
+        // A planet whose color the deck couldn't match: explored, but with nothing to house.
         const state = buildState(unsettled())
         state.technologyDeck = new HydratedTechnologyDeck(stackedBag([]))
         choosePlanet('p1', PLANET_A).apply(state)

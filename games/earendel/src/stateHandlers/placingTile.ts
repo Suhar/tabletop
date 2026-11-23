@@ -52,7 +52,7 @@ export class PlacingTileStateHandler implements MachineStateHandler<
                 if (gameState.bonusPlacementTileId) {
                     return MachineState.PlacingBonusPiece
                 }
-                return afterTechnologyEffect(action, gameState, context)
+                return afterTechnologyEffect(gameState, context)
             }
             default: {
                 throw Error('Invalid action type')

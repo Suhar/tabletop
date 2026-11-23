@@ -1,6 +1,6 @@
 import * as Type from 'typebox'
 import { AxialCoordinates } from '@tabletop/common'
-import { Piece, PieceLevel } from './pieces.js'
+import { Piece } from './pieces.js'
 
 export type PendingTechnology = Type.Static<typeof PendingTechnology>
 export const PendingTechnology = Type.Object({
@@ -28,14 +28,13 @@ export type PendingExploration = Type.Static<typeof PendingExploration>
 export const PendingExploration = Type.Object({
     playerId: Type.String(),
     probeCoords: AxialCoordinates,
-    probeLevel: Type.Enum(PieceLevel),
     candidatePlanets: Type.Array(AxialCoordinates),
     exploringPlanet: Type.Optional(AxialCoordinates),
     revealed: Type.Optional(Type.Array(Type.String())),
     candidates: Type.Optional(Type.Array(Type.String()))
 })
 
-// A terraformer just placed beside planets no other terraformer touches: it may recolour one.
+// A terraformer just placed beside planets no other terraformer touches: it may recolor one.
 export type PendingTerraform = Type.Static<typeof PendingTerraform>
 export const PendingTerraform = Type.Object({
     playerId: Type.String(),

@@ -1,7 +1,7 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import type { HydratedEarendelGameState } from './../model/gameState.js'
 import { getHex } from '../model/board.js'
-import { PieceLevel, PieceType } from '../model/pieces.js'
+import { PieceType } from '../model/pieces.js'
 import { attackableTargets } from './attack.js'
 import { chainsCompletedBy, planetPairKey } from './chains.js'
 import { refreshPlanetControl } from './control.js'
@@ -32,16 +32,15 @@ export function resolveArrival(
         throw Error('resolveArrival called for a hex with no ship on it')
     }
 
-    const stationPoints =
-        piece.type === PieceType.Station ? stationGroupPoints(state.board, playerId, coords) : 0
+    // An opening station scores nothing on arrival (rules.md, Setup); it still counts toward
+    // control and is a station for every placement that follows.
+    const scores = piece.type === PieceType.Station && !piece.founding
+    const stationPoints = scores ? stationGroupPoints(state.board, playerId, coords) : 0
     playerState.score += stationPoints
-    const complex =
-        piece.type === PieceType.Station
-            ? stationComplexSummary(state.board, playerId, coords)
-            : undefined
+    const complex = scores ? stationComplexSummary(state.board, playerId, coords) : undefined
 
     const joined = state.tradeRoutes.map((route) => planetPairKey(...route.planets))
-    const chains = chainsCompletedBy(state.board, playerId, coords, joined)
+    const chains = piece.founding ? [] : chainsCompletedBy(state.board, playerId, coords, joined)
     for (const chain of chains) {
         playerState.score += chain.points
         state.tradeRoutes.push({ planets: chain.planets, playerId })
@@ -57,7 +56,6 @@ export function resolveArrival(
         state.pendingExploration = {
             playerId,
             probeCoords: coords,
-            probeLevel: piece.level ?? PieceLevel.Two,
             candidatePlanets: destinations
         }
     }

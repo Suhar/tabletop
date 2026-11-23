@@ -11,15 +11,13 @@ import {
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex } from '../model/board.js'
-import { hasImmediateEffect, TechnologyEffectKind } from '../model/technology.js'
-import { technologyCard } from '../model/technologyCards.js'
+import { TechnologyEffectKind } from '../model/technology.js'
 import { downloadAnchorsFor, downloadTargetsFrom } from '../util/download.js'
-import { activateTechnologyEffect, grantTechnology } from '../util/technologyGrants.js'
+import { grantTechnology } from '../util/technologyGrants.js'
 
 export type UseImmediateDownloadMetadata = Type.Static<typeof UseImmediateDownloadMetadata>
 export const UseImmediateDownloadMetadata = Type.Object({
-    technologyId: Type.Optional(Type.String()),
-    resolvedAtOnce: Type.Optional(Type.Boolean())
+    technologyId: Type.Optional(Type.String())
 })
 
 export type UseImmediateDownload = Type.Static<typeof UseImmediateDownload>
@@ -71,17 +69,7 @@ export class HydratedUseImmediateDownload
 
         grantTechnology(state, this.playerId, technologyId)
 
-        const resolvedAtOnce = hasImmediateEffect(technologyCard(technologyId))
-        if (resolvedAtOnce) {
-            activateTechnologyEffect(state, { playerId: this.playerId, technologyId })
-        }
-
-        if (state.pendingTile) this.revealsInfo = true
-
-        this.metadata = {
-            technologyId,
-            ...(resolvedAtOnce ? { resolvedAtOnce } : {})
-        }
+        this.metadata = { technologyId }
     }
 
     isValidUseImmediateDownload(state: HydratedEarendelGameState): boolean {
@@ -112,10 +100,10 @@ export class HydratedUseImmediateDownload
 
         const targets = downloadTargetsFrom(state, this.playerId, this.from)
         if (targets.length === 0) {
-            return 'Nothing that planet can see holds a technology you could take.'
+            return 'Nothing within three hexes of that planet holds a technology you could take.'
         }
         if (!targets.some((target) => sameCoordinates(target, this.to))) {
-            return 'That planet is not an explored planet in clear line of sight with a technology new to you.'
+            return 'That planet is not an explored planet within three hexes with a technology new to you.'
         }
 
         return undefined

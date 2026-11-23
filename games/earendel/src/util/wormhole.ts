@@ -10,6 +10,7 @@ import {
 } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { probeBlockedBy } from './lineOfSight.js'
+import { interdictedFor } from './specials.js'
 
 export function planetsBeside(board: EarendelBoard, coords: AxialCoordinates): Hex[] {
     return neighborsOf(coords)
@@ -42,6 +43,7 @@ export function wormholeDestinations(
         .filter(
             (hex) => piece.type !== PieceType.Probe || !probeBlockedBy(board, hex.coords, playerId)
         )
+        .filter((hex) => !interdictedFor(board, hex.coords, playerId))
         .map((hex) => hex.coords)
 }
 

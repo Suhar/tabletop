@@ -9,12 +9,18 @@ import { assertExists, Game, Player, HydratedTurnManager, shuffle } from '@table
 import { HydratedEarendelGameState, EarendelGameState } from '../model/gameState.js'
 import { HydratedEarendelPlayerState, EarendelPlayerState } from '../model/playerState.js'
 
-import { turnStartState } from '../util/turn.js'
+import { openingState } from '../util/turn.js'
 import { buildBag } from '../util/bag.js'
 import { buildStartingBoard } from '../util/boardSetup.js'
 import { buildTileSupply } from '../util/tilePlacement.js'
-import { buildFocusedTechnologyDeck, buildTechnologyDeck } from '../util/technologyDeck.js'
-import { earendelConfig, type EarendelGameConfig, FULL_DECK } from './config.js'
+import {
+    buildFocusedTechnologyDeck,
+    buildTechnologyDeck,
+    selectPieceTechnologies
+} from '../util/technologyDeck.js'
+import { earendelConfig, type EarendelGameConfig, FULL_DECK, PiecesInPlay } from './config.js'
+import type { TechnologyCategory, TechnologyEffectKind } from '../model/technology.js'
+import { selectElevatedCards } from '../util/elevated.js'
 import { EarendelColors } from './colors.js'
 
 export class EarendelGameInitializer
@@ -46,17 +52,28 @@ export class EarendelGameInitializer
         }
 
         const config = earendelConfig(game.config)
+        const elevatedTechnologies = selectElevatedCards(config, secret)
+        const pieceTechnologies = selectPieceTechnologies(
+            secret,
+            config.piecesInPlay ?? PiecesInPlay.Basic
+        )
+        const deck = [
+            ...buildDeckFor(config, secret, pieceTechnologies),
+            ...Object.values(elevatedTechnologies)
+        ]
+        shuffle(deck, secret.random)
 
         const earendelGameState: EarendelGameState = Object.assign(state, {
             players: orderedPlayers,
-            machineState: turnStartState(config),
+            machineState: openingState(config),
             heldPieces: [],
             turnManager: turnManager,
             board: buildStartingBoard(game.players.length, prng),
-            technologyDeck: fullBag(buildDeckFor(config, secret)),
+            technologyDeck: fullBag(deck),
+            elevatedTechnologies,
+            ...(pieceTechnologies ? { pieceTechnologies } : {}),
             technologyDiscard: [],
             tileSupply: fullBag(buildTileSupply(game.players.length, secret)),
-            queuedTechnologyEffects: [],
             planetControllers: {},
             tradeRoutes: [],
             probeClaims: []
@@ -77,7 +94,6 @@ export class EarendelGameInitializer
                 specialPieces: [],
                 technologies: [],
                 storedEffects: [],
-                cooldownEffects: [],
                 cooldowns: {},
                 score: 0
             })
@@ -87,11 +103,15 @@ export class EarendelGameInitializer
     }
 }
 
-function buildDeckFor(config: EarendelGameConfig, prng: Prng) {
+function buildDeckFor(
+    config: EarendelGameConfig,
+    prng: Prng,
+    pieces?: Partial<Record<TechnologyCategory, TechnologyEffectKind>>
+) {
     const choice = config.technologyDeck ?? FULL_DECK
 
     return choice === FULL_DECK
-        ? buildTechnologyDeck(prng)
+        ? buildTechnologyDeck(prng, pieces)
         : buildFocusedTechnologyDeck(prng, choice)
 }
 

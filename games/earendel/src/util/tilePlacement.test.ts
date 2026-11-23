@@ -23,10 +23,10 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { PlaceTile } from '../actions/placeTile.js'
-import { ChoosePlanet } from '../actions/choosePlanet.js'
-import { DrawPieces } from '../actions/drawPieces.js'
+import { DiscardPiece } from '../actions/discardPiece.js'
+import { isUseBeyondTheFrontier, UseBeyondTheFrontier } from '../actions/useBeyondTheFrontier.js'
 import { TurnStyle } from '../definition/config.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 const FRONTIER = focusedCardId(TechnologyEffectKind.GrowBoard, PlanetColor.Periwinkle, 0)
@@ -213,32 +213,25 @@ describe('growing the board in play', () => {
         return { game, mover, other }
     }
 
-    // Surveys the planet, hands the turn round, then opens the mover's next turn - the moment
-    // the claim falls due, the probe still leading, and the tile is handed over.
-    function exploreAndComeRound(game: TestGame, mover: string, other: string) {
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: mover,
-            coords: at(1, 0),
-            pieceSource: PieceSource.Bag
+    // The mover holds Beyond the Frontier and spends it: the turn's ship is drawn first (a
+    // technology is used once the draw is in hand), then the tile is handed over.
+    function useFrontier(game: TestGame, mover: string) {
+        game.giveTechnology(mover, TechnologyEffectKind.GrowBoard)
+        return game.run(UseBeyondTheFrontier, {
+            type: ActionType.UseBeyondTheFrontier,
+            playerId: mover
         })
-        // Sending the probe is never automatic, even to the only planet in reach.
-        game.run(ChoosePlanet, { type: ActionType.ChoosePlanet, playerId: mover, coords: at(0, 0) })
-        game.run(PlacePiece, {
-            type: ActionType.PlacePiece,
-            playerId: other,
-            coords: at(5, 5),
-            pieceSource: PieceSource.Bag
-        })
-        return game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: mover })
     }
 
     it('lays a tile and then places a drawn ship on it', () => {
-        const { game, mover, other } = scenario()
+        const { game, mover } = scenario()
 
-        // The probe explores and houses the card, but the technology is only gained once the
-        // probe lead has lasted to the mover's next turn - and the tile arrives with it.
-        exploreAndComeRound(game, mover, other)
+        // Spending the technology draws the tile and hands it over to be laid.
+        const used = useFrontier(game, mover).find(isUseBeyondTheFrontier)
+        expect(used?.revealsInfo).toBe(true)
+        expect(game.state.players.find((p) => p.playerId === mover)!.storedEffects).not.toContain(
+            TechnologyEffectKind.GrowBoard
+        )
 
         expect(game.state.machineState).toBe(MachineState.PlacingTile)
         expect(game.validActionsFor(mover)).toEqual([ActionType.PlaceTile])
@@ -257,9 +250,8 @@ describe('growing the board in play', () => {
         expect(game.state.bonusPlacementTileId).toBe('spare-0')
         expect(game.state.heldPieces.length).toBeGreaterThan(0)
 
-        // The ship has to be named now: claiming the technology happens BEFORE the turn's own
-        // placement, so the player is still holding the ship they drew when the tile's bonus
-        // ship arrives, and two in hand is ambiguous.
+        // The ship has to be named now: the player is still holding the ship they drew for the
+        // turn when the tile's bonus ship arrives, and two in hand is ambiguous.
         const onTile = openHexesOfTile(game.state.board, 'spare-0')
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -271,16 +263,16 @@ describe('growing the board in play', () => {
 
         expect(game.state.board.hexes[hexKey(onTile[0])].piece?.playerId).toBe(mover)
         expect(game.state.bonusPlacementTileId).toBeUndefined()
-        // Still their turn: the tile and its bonus ship were claimed at the top of the turn,
-        // so the ship they drew for the turn itself is still in hand and still owed a hex.
+        // Still their turn: the ship they drew for the turn itself is still in hand and still
+        // owed a hex.
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
         expect(game.activePlayerId).toBe(mover)
     })
 
     it('refuses to put the drawn ship anywhere but the new tile', () => {
-        const { game, mover, other } = scenario()
+        const { game, mover } = scenario()
 
-        exploreAndComeRound(game, mover, other)
+        useFrontier(game, mover)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -301,12 +293,12 @@ describe('growing the board in play', () => {
     })
 
     it('refuses a special piece in place of the ship drawn with the tile', () => {
-        const { game, mover, other } = scenario()
+        const { game, mover } = scenario()
         game.state.players.find((p) => p.playerId === mover)!.specialPieces = [
             ship(mover, PieceType.Station)
         ]
 
-        exploreAndComeRound(game, mover, other)
+        useFrontier(game, mover)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -333,9 +325,9 @@ describe('growing the board in play', () => {
     it('offers PlacePiece as a valid action while the tile ship is owed', () => {
         // The board asks the engine what is legal rather than matching machine states by
         // name, so this is the check that keeps the two in step.
-        const { game, mover, other } = scenario()
+        const { game, mover } = scenario()
 
-        exploreAndComeRound(game, mover, other)
+        useFrontier(game, mover)
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
             type: ActionType.PlaceTile,
@@ -348,10 +340,9 @@ describe('growing the board in play', () => {
         expect(game.validActionsFor(mover)).toContain(ActionType.PlacePiece)
     })
 
-    it('hands the tile over on a DRAFTED turn too', () => {
+    it('waits for the draft discard on a DRAFTED turn, then hands the tile over', () => {
         // Every other test here runs the single-piece style, but DraftThree is the configured
-        // default - so this is the shape a real game actually takes, with three ships in hand and
-        // a discard still owed while the tile is being laid.
+        // default - so this is the shape a real game actually takes.
         const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
         const mover = game.activePlayerId
 
@@ -359,29 +350,13 @@ describe('growing the board in play', () => {
         for (const coords of tileFootprint(at(0, 0))) {
             board.hexes[hexKey(coords)] = { coords, tileId: 'start', kind: HexKind.Open }
         }
-        board.hexes[hexKey(at(0, 0))] = {
-            coords: at(0, 0),
-            tileId: 'start',
-            kind: HexKind.Planet,
-            color: PlanetColor.Periwinkle,
-            explored: true,
-            technologyId: FRONTIER
-        }
-        // Surveyed by the mover's probe last turn, which still leads, so the claim falls due as
-        // the turn opens.
-        board.hexes[hexKey(at(0, 1))] = {
-            coords: at(0, 1),
-            tileId: 'start',
-            kind: HexKind.Open,
-            piece: ship(mover, PieceType.Probe, PieceLevel.Two)
-        }
         game.state.board = board
-        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: FRONTIER }]
         game.state.technologyDeck = stackedBag([])
         game.state.technologyDiscard = []
         game.state.tileSupply = stackedBag([
             { id: 'spare-0', planetOffset: 0, color: PlanetColor.Teal }
         ])
+        game.giveTechnology(mover, TechnologyEffectKind.GrowBoard)
         game.stackBags((playerId) => [
             ship(playerId, PieceType.Station),
             ship(playerId, PieceType.Station),
@@ -389,12 +364,21 @@ describe('growing the board in play', () => {
             ship(playerId, PieceType.Station)
         ])
 
-        // stackBags opens the turn, so the claim has already happened: the tile is in hand before
-        // the player has been asked to discard anything.
+        // stackBags opens the turn: three ships in hand and a discard owed, and no technology
+        // may be used until it is made.
+        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
+        expect(game.validActionsFor(mover)).not.toContain(ActionType.UseBeyondTheFrontier)
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.validActionsFor(mover)).toContain(ActionType.UseBeyondTheFrontier)
+        game.run(UseBeyondTheFrontier, { type: ActionType.UseBeyondTheFrontier, playerId: mover })
         expect(game.state.machineState).toBe(MachineState.PlacingTile)
         expect(game.state.pendingTile?.tile.id).toBe('spare-0')
-        expect(game.state.heldPieces).toHaveLength(3)
-        expect(game.state.draftPending).toBe(true)
 
         const first = legalTilePlacements(game.state.board)[0]
         game.run(PlaceTile, {
@@ -404,7 +388,7 @@ describe('growing the board in play', () => {
             rotation: first.rotation
         })
 
-        // The tile owes a ship, which is placed before the draft resumes.
+        // The tile owes a ship, placed before the turn's own two.
         expect(game.state.machineState).toBe(MachineState.PlacingBonusPiece)
         const onTile = openHexesOfTile(game.state.board, 'spare-0')
         game.run(PlacePiece, {
@@ -415,24 +399,23 @@ describe('growing the board in play', () => {
             pieceId: game.state.bonusPlacementPieceId
         })
 
-        // And only now the discard the turn still owed - not skipped by the detour.
-        expect(game.state.machineState).toBe(MachineState.DraftingPieces)
-        expect(game.state.draftPending).toBe(true)
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.heldPieces).toHaveLength(2)
     })
 
-    it('comes to nothing when the supply is empty', () => {
-        const { game, mover, other } = scenario(0)
+    it('cannot be spent while the supply is empty, and is kept for later', () => {
+        const { game, mover } = scenario(0)
+        game.giveTechnology(mover, TechnologyEffectKind.GrowBoard)
 
-        const processed = exploreAndComeRound(game, mover, other)
-
-        // The technology is still gained - it is theirs for scoring and for the ledger - but
-        // with no tile to draw it hands over nothing, and the turn carries on to its placement
-        // rather than stalling on an effect that cannot happen.
-        expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([
-            FRONTIER
-        ])
-        expect(processed.map((action) => action.type)).toEqual([ActionType.DrawPieces])
-        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
-        expect(game.state.pendingTile).toBeUndefined()
+        expect(game.validActionsFor(mover)).not.toContain(ActionType.UseBeyondTheFrontier)
+        expect(() =>
+            game.run(UseBeyondTheFrontier, {
+                type: ActionType.UseBeyondTheFrontier,
+                playerId: mover
+            })
+        ).toThrow()
+        expect(game.state.players.find((p) => p.playerId === mover)!.storedEffects).toContain(
+            TechnologyEffectKind.GrowBoard
+        )
     })
 })

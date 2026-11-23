@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameAction } from '@tabletop/common'
-import { playRandomGame } from './simulate.js'
-import { TestGame } from './testHarness.js'
+import { playRandomGame } from '../testing/simulate.js'
+import { TestGame } from '../testing/testHarness.js'
 import { TurnStyle } from '../definition/config.js'
 import type { EarendelGameState } from '../model/gameState.js'
 

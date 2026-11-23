@@ -21,18 +21,18 @@
                 : ''}"
             onclick={() => (pinned = !pinned)}
         >
-            deck {gameSession.technologyDeckCount} · spent {gameSession.discardedTechnologyCount}
+            {gameSession.technologyDeckCount} in draw · {gameSession.discardedTechnologyCount} in discard
         </button>
 
         {#if hovered || pinned}
             <div
-                class="absolute bottom-full left-2 right-2 z-30 mb-1 rounded-lg border border-white/25 bg-[#0d1424]/95 p-2 text-left shadow-xl"
+                class="absolute bottom-full left-2 right-2 z-30 mb-1 rounded-lg border border-white/25 bg-[#0d1424]/75 backdrop-blur-sm p-2 text-left shadow-xl"
             >
                 {#if gameSession.discardedTechnologies.length === 0}
                     <div class="opacity-70">Nothing discarded yet.</div>
                 {:else}
                     <div class="mb-1 opacity-70">
-                        Spent technologies — reshuffled into the deck when it runs dry.
+                        The discard — reshuffled into the draw pile when it runs dry.
                     </div>
                     <div class="max-h-[13rem] overflow-auto">
                         {#each gameSession.discardedTechnologies as group (group.name)}

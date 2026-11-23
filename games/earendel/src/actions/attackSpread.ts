@@ -14,12 +14,15 @@ import { ActionType } from '../definition/actions.js'
 
 import { Piece } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { resolveShot } from '../util/attack.js'
+import { isTorpedoAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import { salvageDestroyed } from '../util/elevated.js'
 
 export type AttackSpreadMetadata = Type.Static<typeof AttackSpreadMetadata>
 export const AttackSpreadMetadata = Type.Object({
+    // Salvage Operations: destroyed ships a drone's owner took into their bag.
+    salvaged: Type.Optional(Type.Array(Type.Object({ piece: Piece, playerId: Type.String() }))),
     ...ClaimChangeMetadata,
     hits: Type.Optional(
         Type.Array(
@@ -78,6 +81,7 @@ export class HydratedAttackSpread
 
         // In the order given: escorts are judged as each shot lands (rules.md, Escort).
         const hits: NonNullable<AttackSpreadMetadata['hits']> = []
+        const destroyedAt: { piece: Piece; at: AxialCoordinates }[] = []
         for (const target of this.targets) {
             const result = resolveShot(state.board, pending.fighterCoords, target)
             if (!result) continue
@@ -85,12 +89,17 @@ export class HydratedAttackSpread
                 target: result.target,
                 ...(result.damaged ? { damaged: true, levelAfter: result.levelAfter } : {})
             })
+            if (!result.damaged) destroyedAt.push({ piece: result.target, at: target })
         }
 
+        const salvaged = salvageDestroyed(state, destroyedAt, this.playerId)
         refreshPlanetControl(state)
 
         state.pendingAttack = undefined
-        this.metadata = { hits }
+        this.metadata = {
+            hits,
+            ...(salvaged.length > 0 ? { salvaged } : {})
+        }
         this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
     }
 
@@ -105,6 +114,9 @@ export class HydratedAttackSpread
 
         if (!canUseCooldownEffect(state, this.playerId, TechnologyEffectKind.FullTorpedoSpread)) {
             return 'Your Full Torpedo Spread is not ready.'
+        }
+        if (isTorpedoAt(state.board, pending.fighterCoords)) {
+            return 'A torpedo strikes one station; it cannot spread.'
         }
 
         if (this.targets.length === 0) {

@@ -10,8 +10,8 @@ import {
     EarendelProjectedStateValidator,
     type EarendelGameState
 } from '../model/gameState.js'
-import { TestGame } from '../util/testHarness.js'
-import { playRandomGame } from '../util/simulate.js'
+import { TestGame } from '../testing/testHarness.js'
+import { playRandomGame } from '../testing/simulate.js'
 import { isDrawPieces } from '../actions/drawPieces.js'
 import { isChoosePlanet } from '../actions/choosePlanet.js'
 
@@ -95,7 +95,7 @@ describe('Earendel visibility', () => {
             expect(state.technologyDeck.items).toHaveLength(state.technologyDeck.remaining)
             expect(state.tileSupply.items).toHaveLength(state.tileSupply.remaining)
 
-            // The random state that shuffles them is neutralised, and the seed is gone.
+            // The random state that shuffles them is neutralized, and the seed is gone.
             expect(view.protectedPrng).toEqual({ seed: 0, invocations: 0 })
             expect(view).not.toHaveProperty('masterSeed')
 
@@ -119,7 +119,10 @@ describe('Earendel visibility', () => {
             // Nothing hidden leaks anywhere else in the view.
             const encoded = JSON.stringify(view)
             for (const tile of state.tileSupply.items) expect(encoded).not.toContain(tile.id)
+            // The elevated cards are face up from the start, so their ids are no secret.
+            const faceUp = Object.values(state.elevatedTechnologies ?? {})
             for (const technologyId of state.technologyDeck.items) {
+                if (faceUp.includes(technologyId)) continue
                 expect(encoded).not.toContain(`"${technologyId}"`)
             }
         })

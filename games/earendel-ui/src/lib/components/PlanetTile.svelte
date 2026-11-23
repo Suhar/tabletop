@@ -9,7 +9,8 @@
         points,
         inset,
         marked = false,
-        copy = ''
+        copy = '',
+        still = false
     }: {
         hex: Hex
         center: Point
@@ -20,6 +21,9 @@
         marked?: boolean
         // Keeps a copy's clip path id from clashing with the tile it copies.
         copy?: string
+        // Holds the planet's motion at its starting pose, so a tile mounted in its place takes
+        // over without a jump.
+        still?: boolean
     } = $props()
 
     let planetColor = $derived(hex.color ? PLANET_FILL[hex.color] : '#1b2436')
@@ -27,7 +31,8 @@
     let bodyOpacity = $derived(hex.explored ? 1 : 0.45)
     let dash = $derived(hex.explored ? '' : '5 4')
     let spin = $derived(
-        `transform-box: view-box; transform-origin: ${center.x}px ${center.y}px;`
+        `transform-box: view-box; transform-origin: ${center.x}px ${center.y}px;` +
+            (still ? ' animation-play-state: paused;' : '')
     )
 </script>
 
@@ -40,7 +45,7 @@
     stroke="#2b3752"
     stroke-width="2"
 />
-<!-- Inset so a neighbour drawn later cannot paint over half of the line. -->
+<!-- Inset so a neighbor drawn later cannot paint over half of the line. -->
 <polygon
     points={inset}
     fill="none"

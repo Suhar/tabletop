@@ -1,9 +1,10 @@
 import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
-import { type EarendelBoard, getHex, HexKind, hexKey, neighborsOf } from '../model/board.js'
+import { type EarendelBoard, getHex, HexKind, hexKey, neighborsThrough } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 import { probeLeaderOf } from './probes.js'
+import { quarantined } from './specials.js'
 
 // Also previews: a probe not yet standing on `coords` is counted there.
 export function probeDestinations(
@@ -17,9 +18,10 @@ export function probeDestinations(
     const arriving = onBoard ? undefined : { coords, piece }
     const held = state.getPlayerState(piece.playerId).technologies
 
-    return neighborsOf(coords).filter((neighbor) => {
+    return neighborsThrough(state.board, coords).filter((neighbor) => {
         const hex = getHex(state.board, neighbor)
         if (hex?.kind !== HexKind.Planet) return false
+        if (quarantined(state.board, neighbor)) return false
         if (probeLeaderOf(state.board, neighbor, arriving) !== piece.playerId) return false
         if (
             state.probeClaims.some(

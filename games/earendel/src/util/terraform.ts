@@ -6,7 +6,7 @@ function isTerraformer(board: EarendelBoard, coords: AxialCoordinates): boolean 
     return getHex(board, coords)?.piece?.type === PieceType.Terraformer
 }
 
-// The planets a terraformer at coords may recolour: those beside it that no other terraformer
+// The planets a terraformer at coords may recolor: those beside it that no other terraformer
 // touches (rules.md, Terraformer).
 export function terraformablePlanets(
     board: EarendelBoard,

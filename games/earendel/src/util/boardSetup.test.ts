@@ -3,6 +3,7 @@ import { Prng } from '@tabletop/common'
 import { HexKind, hexKey, neighborsOf } from '../model/board.js'
 import { TILE_HEX_OFFSETS } from '../model/tile.js'
 import {
+    BLANK_TILES_PER_PLAYER,
     buildStartingBoard,
     MIN_PARTNER_GAP,
     PLANETS_PER_TILE,
@@ -66,39 +67,39 @@ describe('startingTilePlacements', () => {
     })
 })
 
-describe('planet colours', () => {
+describe('planet colors', () => {
     const hexSteps = (a: { q: number; r: number }, b: { q: number; r: number }) =>
         (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2
 
-    const planetsByColour = (playerCount: number, seed: number) => {
+    const planetsByColor = (playerCount: number, seed: number) => {
         const board = buildStartingBoard(playerCount, new Prng({ seed, invocations: 0 }))
-        const byColour = new Map<string, { q: number; r: number }[]>()
+        const byColor = new Map<string, { q: number; r: number }[]>()
         for (const hex of Object.values(board.hexes)) {
             if (hex.kind !== HexKind.Planet || !hex.color) continue
-            byColour.set(hex.color, [...(byColour.get(hex.color) ?? []), hex.coords])
+            byColor.set(hex.color, [...(byColor.get(hex.color) ?? []), hex.coords])
         }
-        return byColour
+        return byColor
     }
 
-    it('deals every colour equally often, give or take one', () => {
+    it('deals every color equally often, give or take one', () => {
         for (const playerCount of [2, 3, 4, 5]) {
             for (const seed of [1, 2, 3]) {
-                const counts = [...planetsByColour(playerCount, seed).values()].map(
+                const counts = [...planetsByColor(playerCount, seed).values()].map(
                     (planets) => planets.length
                 )
                 const total = playerCount * TILES_PER_PLAYER * PLANETS_PER_TILE
                 expect(counts.reduce((sum, count) => sum + count, 0)).toBe(total)
                 expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
-                // With at least five planets, every colour is on the board.
+                // With at least five planets, every color is on the board.
                 expect(counts).toHaveLength(Math.min(5, total))
             }
         }
     })
 
-    it('keeps planets of one colour at least three hexes apart', () => {
+    it('keeps planets of one color at least three hexes apart', () => {
         for (const playerCount of [2, 3, 4, 5]) {
             for (const seed of [1, 2, 3, 4, 5]) {
-                for (const planets of planetsByColour(playerCount, seed).values()) {
+                for (const planets of planetsByColor(playerCount, seed).values()) {
                     for (let i = 0; i < planets.length; i++) {
                         for (let j = i + 1; j < planets.length; j++) {
                             expect(
@@ -122,11 +123,26 @@ describe('buildStartingBoard', () => {
             byTile.set(hex.tileId, [...(byTile.get(hex.tileId) ?? []), hex.kind])
         }
 
-        expect(byTile.size).toBe(4 * TILES_PER_PLAYER)
-        for (const kinds of byTile.values()) {
+        expect(byTile.size).toBe(4 * (TILES_PER_PLAYER + BLANK_TILES_PER_PLAYER))
+        const planetCounts = [...byTile.values()].map((kinds) => {
             expect(kinds).toHaveLength(TILE_HEX_OFFSETS.length)
-            expect(kinds.filter((kind) => kind === HexKind.Planet)).toHaveLength(PLANETS_PER_TILE)
-        }
+            return kinds.filter((kind) => kind === HexKind.Planet).length
+        })
+        // One blank tile per player, of open space alone; every other tile has its planets.
+        expect(planetCounts.filter((count) => count === 0)).toHaveLength(4 * BLANK_TILES_PER_PLAYER)
+        expect(planetCounts.filter((count) => count === PLANETS_PER_TILE)).toHaveLength(
+            4 * TILES_PER_PLAYER
+        )
+    })
+
+    it('adds no blank tiles when asked for none', () => {
+        const board = buildStartingBoard(3, new Prng({ seed: 7, invocations: 0 }), {
+            blankTilesPerPlayer: 0
+        })
+        const tiles = new Set(Object.values(board.hexes).map((hex) => hex.tileId))
+        const planets = Object.values(board.hexes).filter((hex) => hex.kind === HexKind.Planet)
+        expect(tiles.size).toBe(3 * TILES_PER_PLAYER)
+        expect(planets).toHaveLength(3 * TILES_PER_PLAYER * PLANETS_PER_TILE)
     })
 
     it('varies which hexes are planets from tile to tile', () => {

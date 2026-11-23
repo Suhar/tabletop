@@ -1,18 +1,13 @@
-import { assertExists, type AxialCoordinates } from '@tabletop/common'
+import { assertExists, type AxialCoordinates, sameCoordinates } from '@tabletop/common'
 import { getHex, neighborsOf } from '../model/board.js'
 import { refreshPlanetControl } from './control.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
-import {
-    cooldownEffectOf,
-    grantedPieceOf,
-    hasImmediateEffect,
-    storedEffectOf,
-    TechnologyEffectKind
-} from '../model/technology.js'
+import { grantedPieceOf, storedEffectOf, TechnologyEffectKind } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
-import type { OrbitedProbe, PendingTechnology } from '../model/exploration.js'
+import type { OrbitedProbe } from '../model/exploration.js'
 import { probeLeaderOf } from './probes.js'
-import { drawIfAny } from '../model/bags.js'
+import { ruleInForce } from './rules.js'
+import { quarantined } from './specials.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 
 export function probeTechnologiesFor(
@@ -29,6 +24,8 @@ export function probeTechnologiesFor(
         const technologyId = getHex(state.board, claim.coords)?.technologyId
         if (technologyId !== claim.technologyId) continue
         if (held.includes(technologyId) || gained.includes(technologyId)) continue
+        // A quarantined planet's claims wait, neither paying nor lapsing.
+        if (quarantined(state.board, claim.coords)) continue
 
         if (probeLeaderOf(state.board, claim.coords) === playerId) {
             gained.push(technologyId)
@@ -56,6 +53,8 @@ function sendProbesToOrbit(
             const hex = getHex(state.board, from)
             const probe = hex?.piece
             if (!hex || probe?.type !== PieceType.Probe || probe.playerId !== playerId) continue
+            // A probe committed to another planet counts nothing here and stays where it is.
+            if (probe.surveying && !sameCoordinates(probe.surveying, planet)) continue
             hex.piece = undefined
             planetHex.orbiters = [...(planetHex.orbiters ?? []), probe]
             orbited.push({ probe, from, planet })
@@ -77,90 +76,91 @@ export function grantTechnology(
     const stored = storedEffectOf(card)
     if (stored) playerState.storedEffects.push(stored)
 
-    const repeatable = cooldownEffectOf(card)
-    if (repeatable && !playerState.cooldownEffects.includes(repeatable)) {
-        playerState.cooldownEffects.push(repeatable)
-    }
-
     const granted = grantedPieceOf(card)
-    if (granted) {
-        const piece = grantedPiece(granted, playerId, card.id)
-        if (piece) playerState.specialPieces.push(piece)
-    }
+    if (granted) playerState.specialPieces.push(...grantedPieces(granted, playerId, card.id))
 }
 
-function grantedPiece(
+// The piece each technology grants; a gate pair comes from Gate Network, handled apart.
+export const GRANTED_TYPES: Partial<Record<TechnologyEffectKind, PieceType>> = {
+    [TechnologyEffectKind.RelayNetwork]: PieceType.Relay,
+    [TechnologyEffectKind.Terraforming]: PieceType.Terraformer,
+    [TechnologyEffectKind.Interdiction]: PieceType.Interdictor,
+    [TechnologyEffectKind.BastionWorks]: PieceType.Bastion,
+    [TechnologyEffectKind.CarrierDoctrine]: PieceType.Carrier,
+    [TechnologyEffectKind.DeepScan]: PieceType.DeepScanner,
+    [TechnologyEffectKind.Quarantine]: PieceType.QuarantineBeacon,
+    [TechnologyEffectKind.JammerArray]: PieceType.Jammer,
+    [TechnologyEffectKind.ArtificialWorld]: PieceType.ArtificialPlanet,
+    [TechnologyEffectKind.NebulaSeeding]: PieceType.NebulaSeeder,
+    [TechnologyEffectKind.SalvageOperations]: PieceType.SalvageDrone
+}
+
+// The pieces a technology grants (rules.md, Granted pieces): one, or a gate pair.
+export function grantedPieces(
     kind: TechnologyEffectKind,
     playerId: string,
     technologyId: string
-): Piece | undefined {
+): Piece[] {
     if (kind === TechnologyEffectKind.StationUpgrade) {
-        return {
-            id: `${playerId}-hub-${technologyId}`,
+        return [
+            { id: `${playerId}-hub-${technologyId}`, playerId, type: PieceType.Station, hub: true }
+        ]
+    }
+    if (kind === TechnologyEffectKind.GateNetwork) {
+        const pairId = `${playerId}-gates-${technologyId}`
+        return [1, 2].map((n) => ({
+            id: `${pairId}-${n}`,
             playerId,
-            type: PieceType.Station,
-            hub: true
-        }
+            type: PieceType.Gate,
+            pairId
+        }))
     }
-    if (kind === TechnologyEffectKind.RelayNetwork) {
-        return { id: `${playerId}-relay-${technologyId}`, playerId, type: PieceType.Relay }
-    }
-    if (kind === TechnologyEffectKind.Terraforming) {
-        return {
-            id: `${playerId}-terraformer-${technologyId}`,
-            playerId,
-            type: PieceType.Terraformer
-        }
-    }
-    return undefined
+    const type = GRANTED_TYPES[kind]
+    if (!type) return []
+    return [{ id: `${playerId}-${type}-${technologyId}`, playerId, type }]
 }
+
+export type SharedTechnology = { playerId: string; technologyId: string }
 
 export function claimProbeTechnologies(
     state: HydratedEarendelGameState,
     playerId: string
-): { gained: string[]; lapsed: string[]; orbited: OrbitedProbe[] } {
+): { gained: string[]; lapsed: string[]; orbited: OrbitedProbe[]; shared: SharedTechnology[] } {
     const { gained, lapsed, researched } = probeTechnologiesFor(state, playerId)
-    state.probeClaims = state.probeClaims.filter((claim) => claim.playerId !== playerId)
+    // Settled claims are spent; a quarantined one waits for the beacon to go.
+    state.probeClaims = state.probeClaims.filter(
+        (claim) => claim.playerId !== playerId || quarantined(state.board, claim.coords)
+    )
     const orbited = sendProbesToOrbit(state, playerId, researched)
 
-    const effects: PendingTechnology[] = []
+    const shared: SharedTechnology[] = []
 
-    for (const technologyId of gained) {
+    gained.forEach((technologyId, index) => {
         grantTechnology(state, playerId, technologyId)
 
-        if (hasImmediateEffect(technologyCard(technologyId))) {
-            effects.push({ playerId, technologyId })
+        // Shared Science (rules.md, Elevated technologies): the moment the claimant's probes go
+        // into orbit, every rival with a probe beside the planet learns the technology too.
+        if (ruleInForce(state.board, TechnologyEffectKind.SharedScience)) {
+            for (const rivalId of probeOwnersBeside(state, researched[index], playerId)) {
+                if (state.getPlayerState(rivalId).technologies.includes(technologyId)) continue
+                grantTechnology(state, rivalId, technologyId)
+                shared.push({ playerId: rivalId, technologyId })
+            }
         }
-    }
+    })
 
-    const [first, ...rest] = effects
-    state.queuedTechnologyEffects = rest
-    if (first) activateTechnologyEffect(state, first)
-
-    return { gained, lapsed, orbited }
+    return { gained, lapsed, orbited, shared }
 }
 
-export function activateTechnologyEffect(
+function probeOwnersBeside(
     state: HydratedEarendelGameState,
-    effect: PendingTechnology
-) {
-    if (technologyCard(effect.technologyId).effect === TechnologyEffectKind.GrowBoard) {
-        const tile = drawIfAny(state.tileSupply)
-        if (tile) state.pendingTile = { playerId: effect.playerId, tile }
-        return
+    planet: AxialCoordinates,
+    except: string
+): string[] {
+    const owners = new Set<string>()
+    for (const neighbor of neighborsOf(planet)) {
+        const piece = getHex(state.board, neighbor)?.piece
+        if (piece?.type === PieceType.Probe && piece.playerId !== except) owners.add(piece.playerId)
     }
-    state.pendingTechnology = effect
-}
-
-export function activateNextTechnologyEffect(state: HydratedEarendelGameState): boolean {
-    const [next, ...rest] = state.queuedTechnologyEffects
-    if (!next) return false
-
-    state.queuedTechnologyEffects = rest
-    activateTechnologyEffect(state, next)
-
-    if (!state.pendingTile && !state.pendingTechnology) {
-        return activateNextTechnologyEffect(state)
-    }
-    return true
+    return [...owners]
 }

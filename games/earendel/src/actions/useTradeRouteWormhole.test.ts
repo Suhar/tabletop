@@ -8,7 +8,7 @@ import { MachineState } from '../definition/states.js'
 import { isUseTradeRouteWormhole, UseTradeRouteWormhole } from './useTradeRouteWormhole.js'
 import { ChoosePlanet } from './choosePlanet.js'
 import { wormholeDestinations } from '../util/wormhole.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -54,9 +54,7 @@ function scenario(mine: PieceType = PieceType.Station, level?: PieceLevel) {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.TradeRouteWormhole
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.TradeRouteWormhole)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Station),
         ship(playerId, PieceType.Station),
@@ -74,7 +72,7 @@ const hop = (playerId: string, from: AxialCoordinates, to: AxialCoordinates) => 
 })
 
 describe('Trade Route Wormhole', () => {
-    it('sends a ship to the far planet of the same colour', () => {
+    it('sends a ship to the far planet of the same color', () => {
         const { game, mover } = scenario()
 
         expect(game.validActionsFor(mover)).toContain(ActionType.UseTradeRouteWormhole)
@@ -89,12 +87,12 @@ describe('Trade Route Wormhole', () => {
         expect(game.activePlayerId).toBe(mover)
     })
 
-    it('offers only hexes beside a different planet of a colour the ship can travel on', () => {
+    it('offers only hexes beside a different planet of a color the ship can travel on', () => {
         const { game, mover } = scenario()
         const destinations = wormholeDestinations(game.state.board, at(0, 0), mover)
 
-        // Beside the far periwinkle planet, and nothing else: the teal planet is a colour this ship
-        // isn't standing next to, and the near periwinkle's own neighbours are a different hex to look
+        // Beside the far periwinkle planet, and nothing else: the teal planet is a color this ship
+        // isn't standing next to, and the near periwinkle's own neighbors are a different hex to look
         // at the SAME planet from, which is not a route.
         expect(destinations.map((coords) => hexKey(coords)).sort()).toEqual(
             [hexKey(at(10, 0)), hexKey(at(12, 0))].sort()
@@ -103,14 +101,14 @@ describe('Trade Route Wormhole', () => {
 
     it('arrives as if newly placed, scoring its new station complex', () => {
         const { game, mover } = scenario()
-        // A station of the mover's already sitting beside the far periwinkle planet, so the traveller
+        // A station of the mover's already sitting beside the far periwinkle planet, so the traveler
         // joins a complex on landing.
         game.state.board.hexes[hexKey(at(12, 0))].piece = ship(mover, PieceType.Station)
         const before = game.state.players.find((p) => p.playerId === mover)!.score
 
         game.run(UseTradeRouteWormhole, hop(mover, at(0, 0), at(10, 0)))
 
-        // (10,0) doesn't touch (12,0), so this is not the complex - it is the traveller alone,
+        // (10,0) doesn't touch (12,0), so this is not the complex - it is the traveler alone,
         // paying 1 for itself.
         expect(game.state.players.find((p) => p.playerId === mover)!.score).toBe(before + 1)
     })
@@ -143,7 +141,7 @@ describe('Trade Route Wormhole', () => {
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
 
-    it('arrives shooting when the traveller is a fighter', () => {
+    it('arrives shooting when the traveler is a fighter', () => {
         const { game, mover, other } = scenario(PieceType.Fighter, PieceLevel.Three)
         game.state.board.hexes[hexKey(at(12, 0))].piece = ship(other, PieceType.Probe)
 
@@ -205,7 +203,7 @@ describe('Trade Route Wormhole', () => {
 
     it('is not offered at all without the technology', () => {
         const { game, mover } = scenario()
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = []
+        game.state.players.find((p) => p.playerId === mover)!.technologies = []
 
         expect(game.validActionsFor(mover)).not.toContain(ActionType.UseTradeRouteWormhole)
     })

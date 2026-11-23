@@ -5,7 +5,7 @@ import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
 import { hexesClosedToProbesOf, probeBlockedBy, sightLines } from './lineOfSight.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece, HydratedPlacePiece } from '../actions/placePiece.js'
-import { TestGame, stackedBag } from './testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 

@@ -9,12 +9,20 @@ import {
 } from '@tabletop/frontend-components'
 
 export enum Power {
+    Shift = 'shift',
+    Warp = 'warp',
+    Rift = 'rift',
+    Colony = 'colony',
+    Spoof = 'spoof',
+    Asteroid = 'asteroid',
+    Breach = 'breach',
     Feint = 'feint',
     Wormhole = 'wormhole',
     Download = 'download',
     Logistics = 'logistics',
     Spread = 'spread',
-    Railgun = 'railgun'
+    Railgun = 'railgun',
+    Torpedo = 'torpedo'
 }
 
 export type PieceChoice = { source: 'held' | 'special'; pieceId: string }
@@ -22,6 +30,8 @@ export type PieceChoice = { source: 'held' | 'special'; pieceId: string }
 export type EarendelSelectionValues = {
     piece: PieceChoice
     power: Power
+    // The players an elevated event's discoverer has lined up after themselves, so far.
+    order: string[]
     rotation: number
     origin: AxialCoordinates
     targets: AxialCoordinates[]
@@ -33,6 +43,7 @@ export type EarendelSelection = StagedSelectionState<EarendelSelectionValues>
 export const EarendelStageOrder = [
     'piece',
     'power',
+    'order',
     'rotation',
     'origin',
     'targets',

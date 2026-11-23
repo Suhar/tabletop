@@ -5,13 +5,15 @@ import { MachineState } from '../definition/states.js'
 import { TurnStyle } from '../definition/config.js'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
-import { MovePiece } from '../actions/movePiece.js'
+import { UseTacticalShift } from '../actions/useTacticalShift.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { DiscardPiece } from '../actions/discardPiece.js'
+import { DrawPieces } from '../actions/drawPieces.js'
 import { UseLogisticsUpgrade } from '../actions/useLogisticsUpgrade.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { focusedCardId } from '../model/technologyCards.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
+import { canUseCooldownEffect } from '../util/cooldowns.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 const SHIFT = focusedCardId(TechnologyEffectKind.MoveFriendlyPiece, PlanetColor.Periwinkle, 0)
@@ -190,11 +192,10 @@ describe('a drafted turn', () => {
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
     })
 
-    it('places all three when a Logistics Upgrade is spent', () => {
+    it('places all three when a Logistics Upgrade is used', () => {
         const game = draftGame()
         const mover = game.activePlayerId
-        const moverState = () => game.state.players.find((p) => p.playerId === mover)!
-        moverState().storedEffects = [TechnologyEffectKind.LogisticsUpgrade]
+        game.giveTechnology(mover, TechnologyEffectKind.LogisticsUpgrade)
 
         expect(game.validActionsFor(mover)).toContain(ActionType.UseLogisticsUpgrade)
 
@@ -203,10 +204,12 @@ describe('a drafted turn', () => {
             playerId: mover
         })
 
-        // Nothing thrown away, and the charge is spent.
+        // Nothing thrown away, and the timer is running.
         expect((used as UseLogisticsUpgrade).metadata?.piecesKept).toBe(3)
         expect(game.state.heldPieces).toHaveLength(3)
-        expect(moverState().storedEffects).toEqual([])
+        expect(
+            canUseCooldownEffect(game.hydrated, mover, TechnologyEffectKind.LogisticsUpgrade)
+        ).toBe(false)
         expect(game.state.machineState).toBe(MachineState.PlacingPiece)
 
         // Three placements this turn, not two - the turn runs until the hand empties, so this
@@ -225,7 +228,7 @@ describe('a drafted turn', () => {
         expect(game.activePlayerId).not.toBe(mover)
     })
 
-    it('is not offered without the charge, and cannot be spent twice', () => {
+    it('is not offered without the technology, and rests once used', () => {
         const game = draftGame()
         const mover = game.activePlayerId
 
@@ -237,12 +240,10 @@ describe('a drafted turn', () => {
             })
         ).toThrow()
 
-        game.state.players.find((p) => p.playerId === mover)!.storedEffects = [
-            TechnologyEffectKind.LogisticsUpgrade
-        ]
+        game.giveTechnology(mover, TechnologyEffectKind.LogisticsUpgrade)
         game.run(UseLogisticsUpgrade, { type: ActionType.UseLogisticsUpgrade, playerId: mover })
 
-        // One time only.
+        // On its timer now.
         expect(() =>
             game.run(UseLogisticsUpgrade, {
                 type: ActionType.UseLogisticsUpgrade,
@@ -251,11 +252,10 @@ describe('a drafted turn', () => {
         ).toThrow()
     })
 
-    it('resolves a claimed technology BEFORE asking for a discard', () => {
-        // Order matters here twice over. A technology claimed at the top of the turn acts first,
-        // because it can hand over a tile, a hub or a move - any of which changes what the hand
-        // is worth, and being made to throw a ship away before seeing that is choosing blind.
-        // And the held ships must survive a technology interrupting the drafted turn.
+    it('claims a technology on the draw, then asks for the discard, then lets it be used', () => {
+        // A technology claimed at the top of the turn is in hand before the discard is chosen,
+        // so the player knows what they hold when they throw a ship away. Nothing is owed at
+        // once: a one-shot technology waits to be used, and may be used once the draft is done.
         const game = new TestGame(2, 1, { turnStyle: TurnStyle.DraftThree })
         const mover = game.activePlayerId
 
@@ -297,24 +297,16 @@ describe('a drafted turn', () => {
         // No explicit draw: stackBags opens the turn through the engine, so the draw - and with
         // it the claim - has already happened by this point.
         //
-        // The technology is claimed and owed straight away, with all three ships still in hand
-        // and the discard still to come.
+        // The technology is claimed and kept, with all three ships still in hand and the
+        // discard asked for at once.
         expect(game.state.players.find((p) => p.playerId === mover)!.technologies).toEqual([SHIFT])
-        expect(game.state.machineState).toBe(MachineState.ResolvingTechnology)
-        expect(game.state.heldPieces).toHaveLength(3)
-        expect(game.state.draftPending).toBe(true)
-
-        game.run(MovePiece, {
-            type: ActionType.MovePiece,
-            playerId: mover,
-            from: at(5, 3),
-            to: at(6, 3)
-        })
-
-        // Only now is the player asked to give one up - and all three are still there to choose
-        // between.
+        expect(game.state.players.find((p) => p.playerId === mover)!.storedEffects).toEqual([
+            TechnologyEffectKind.MoveFriendlyPiece
+        ])
         expect(game.state.machineState).toBe(MachineState.DraftingPieces)
         expect(game.state.heldPieces).toHaveLength(3)
+        expect(game.state.draftPending).toBe(true)
+        expect(game.validActionsFor(mover)).not.toContain(ActionType.UseTacticalShift)
 
         game.run(DiscardPiece, {
             type: ActionType.DiscardPiece,
@@ -328,6 +320,16 @@ describe('a drafted turn', () => {
             `${mover}-fighter`,
             `${mover}-probe`
         ])
+
+        // Usable now, before the turn's ships: the held ships survive it.
+        game.run(UseTacticalShift, {
+            type: ActionType.UseTacticalShift,
+            playerId: mover,
+            from: at(5, 3),
+            to: at(6, 3)
+        })
+        expect(game.state.machineState).toBe(MachineState.PlacingPiece)
+        expect(game.state.heldPieces).toHaveLength(2)
 
         game.run(PlacePiece, {
             type: ActionType.PlacePiece,
@@ -361,5 +363,77 @@ describe('a drafted turn', () => {
         simple.state.board = emptyBoard()
         simple.stackBags((playerId) => Array.from({ length: 9 }, () => station(playerId)))
         expect(bagRemaining(simple, simple.activePlayerId)).toBe(8)
+    })
+})
+
+describe('a special piece in a drafted turn', () => {
+    function withSpecial(game: TestGame, playerId: string) {
+        const special = { id: `${playerId}-relay`, playerId, type: PieceType.Relay }
+        game.state.players.find((p) => p.playerId === playerId)!.specialPieces = [special]
+        return special
+    }
+
+    it('may not follow a drafted ship: once one is down, the turn finishes with the draft', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+        const special = withSpecial(game, mover)
+
+        game.run(DiscardPiece, {
+            type: ActionType.DiscardPiece,
+            playerId: mover,
+            pieceId: game.state.heldPieces[0].id
+        })
+        game.run(PlacePiece, {
+            type: ActionType.PlacePiece,
+            playerId: mover,
+            coords: { q: 0, r: 0 },
+            pieceSource: PieceSource.Bag,
+            pieceId: game.state.heldPieces[0].id
+        })
+
+        expect(game.state.shipPlacedThisTurn).toBe(true)
+        expect(game.validActionsFor(mover)).toContain(ActionType.PlacePiece)
+        expect(() =>
+            game.run(PlacePiece, {
+                type: ActionType.PlacePiece,
+                playerId: mover,
+                coords: { q: 1, r: 0 },
+                pieceSource: PieceSource.Special,
+                pieceId: special.id
+            })
+        ).toThrow(/instead of your draw/)
+        expect(game.state.players.find((p) => p.playerId === mover)!.specialPieces).toEqual([
+            special
+        ])
+    })
+
+    it('is open again on the player’s next turn', () => {
+        const game = draftGame()
+        const mover = game.activePlayerId
+        withSpecial(game, mover)
+
+        for (const turn of [0, 1]) {
+            const playerId = game.activePlayerId
+            if (game.state.machineState === MachineState.StartOfTurn) {
+                game.run(DrawPieces, { type: ActionType.DrawPieces, playerId })
+            }
+            game.run(DiscardPiece, {
+                type: ActionType.DiscardPiece,
+                playerId,
+                pieceId: game.state.heldPieces[0].id
+            })
+            for (const q of [0, 1]) {
+                game.run(PlacePiece, {
+                    type: ActionType.PlacePiece,
+                    playerId,
+                    coords: { q: q + turn * 2, r: 0 },
+                    pieceSource: PieceSource.Bag,
+                    pieceId: game.state.heldPieces[0].id
+                })
+            }
+        }
+
+        expect(game.activePlayerId).toBe(mover)
+        expect(game.state.shipPlacedThisTurn).toBeUndefined()
     })
 })

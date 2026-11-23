@@ -7,7 +7,7 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { AttackPiece } from './attackPiece.js'
 import { UseUpdatedLogistics } from './useUpdatedLogistics.js'
-import { TestGame, stackedBag } from '../util/testHarness.js'
+import { TestGame, stackedBag } from '../testing/testHarness.js'
 
 const at = (q: number, r: number): AxialCoordinates => ({ q, r })
 
@@ -41,9 +41,7 @@ function scenario() {
     game.state.board = board
     game.state.technologyDeck = stackedBag([])
     game.state.tileSupply = stackedBag([])
-    game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = [
-        TechnologyEffectKind.UpdatedLogistics
-    ]
+    game.giveTechnology(mover, TechnologyEffectKind.UpdatedLogistics)
     game.stackBags((playerId) => [
         ship(playerId, PieceType.Station),
         ship(playerId, PieceType.Station),
@@ -131,7 +129,7 @@ describe('Updated Logistics', () => {
 
     it('is not offered at all without the technology', () => {
         const { game, mover } = scenario()
-        game.state.players.find((p) => p.playerId === mover)!.cooldownEffects = []
+        game.state.players.find((p) => p.playerId === mover)!.technologies = []
 
         expect(game.validActionsFor(mover)).not.toContain(ActionType.UseUpdatedLogistics)
     })

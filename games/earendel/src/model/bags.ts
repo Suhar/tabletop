@@ -1,4 +1,4 @@
-import { DrawBag, HydratedDrawBag, type RandomFunction } from '@tabletop/common'
+import { DrawBag, HydratedDrawBag, type RandomFunction, shuffle } from '@tabletop/common'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { Piece } from './pieces.js'
@@ -53,4 +53,17 @@ export function returnToBag<T, U extends Type.TSchema>(
 ) {
     for (const item of items) bag.addItem(item)
     bag.shuffle(random)
+}
+
+// Items go under the pile, shuffled among themselves, so they are the last to be drawn and none
+// can be tracked to its place. A draw takes from the end of the list, so the bottom is its start.
+export function putUnder<T, U extends Type.TSchema>(
+    bag: HydratedDrawBag<T, U>,
+    items: T[],
+    random: RandomFunction
+) {
+    const under = structuredClone(items)
+    shuffle(under, random)
+    bag.items.unshift(...under)
+    bag.remaining += under.length
 }

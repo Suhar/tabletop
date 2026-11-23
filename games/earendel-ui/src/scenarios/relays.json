@@ -22,13 +22,14 @@
    }
   ],
   "config": {
+   "openingStations": false,
    "turnStyle": "draftThree"
   },
   "hotseat": true,
-  "createdAt": "2026-11-02T01:39:18.305Z",
+  "createdAt": "2026-11-15T23:27:49.458Z",
   "winningPlayerIds": [],
-  "seed": 268272886,
-  "startedAt": "2026-11-02T01:39:18.306Z",
+  "seed": 3409858267,
+  "startedAt": "2026-11-15T23:27:49.458Z",
   "protectedInformation": true,
   "activePlayerIds": [
    "p2"
@@ -36,19 +37,19 @@
  },
  "state": {
   "systemVersion": 3,
-  "id": "zk2bXqJbz5SvJdCbZmW-e",
+  "id": "NYNLDNI0BkIkG3O10jsjp",
   "gameId": "scenario-relays",
-  "seed": 268272886,
+  "seed": 3409858267,
   "prng": {
-   "seed": 268272886,
-   "invocations": 327
+   "seed": 3409858267,
+   "invocations": 501
   },
   "protectedPrng": {
    "algorithm": "chacha20-v1",
-   "seed": "d271bdab01cf879d8c2c67686460863289c165581dd5cab032e75669ff12ee56",
-   "invocations": 72
+   "seed": "0670a076e238a8722c9a592835ac57a23dde4e2e374b3655e78a4238fc1e16f3",
+   "invocations": 197
   },
-  "masterSeed": "eeb13f48cc5f38669ea2cc999a7f3825",
+  "masterSeed": "8ccf32db958d03ec96e00caf1adf941a",
   "activePlayerIds": [
    "p2"
   ],
@@ -58,7 +59,7 @@
   "players": [
    {
     "playerId": "p2",
-    "color": "red",
+    "color": "yellow",
     "bag": {
      "items": [
       {
@@ -174,13 +175,12 @@
      "relayNetwork-teal-2"
     ],
     "storedEffects": [],
-    "cooldownEffects": [],
     "cooldowns": {},
     "score": 0
    },
    {
     "playerId": "p1",
-    "color": "yellow",
+    "color": "pink",
     "bag": {
      "items": [
       {
@@ -306,7 +306,6 @@
      "relayNetwork-teal-1"
     ],
     "storedEffects": [],
-    "cooldownEffects": [],
     "cooldowns": {},
     "score": 0
    }
@@ -1041,56 +1040,100 @@
   },
   "technologyDeck": {
    "items": [
-    "tech-19",
-    "tech-14",
-    "tech-13",
-    "tech-2",
-    "tech-17",
-    "tech-8",
-    "tech-4",
-    "tech-9",
-    "tech-1",
-    "tech-5",
-    "tech-10",
-    "tech-18",
-    "tech-3",
-    "tech-11",
-    "tech-0",
-    "tech-7",
-    "tech-12",
-    "tech-16",
-    "tech-6",
-    "tech-15"
+    "updatedLogistics-1",
+    "relayNetwork-2",
+    "logisticsUpgrade-2",
+    "securityBreach-1",
+    "asteroidField-2",
+    "moveFriendlyPiece-1",
+    "interdiction-1",
+    "gateNetwork-2",
+    "tacticalFeint-2",
+    "tradeRouteWormhole-2",
+    "gammaTorpedo-1",
+    "fullTorpedoSpread-1",
+    "carrierDoctrine-1",
+    "updatedLogistics-2",
+    "interdiction-2",
+    "asteroidField-1",
+    "stationUpgrade-2",
+    "conscription-2",
+    "dimensionalRift-2",
+    "railgun-2",
+    "colonyShip-2",
+    "spoofedOrders-2",
+    "fullTorpedoSpread-2",
+    "tradeRouteWormhole-1",
+    "relayNetwork-1",
+    "immediateDownload-2",
+    "immediateDownload-1",
+    "warpDrive-2",
+    "factoryOverride-1",
+    "elevated-reinforcements",
+    "elevated-signalIntercept",
+    "elevated-orbitalBombardment",
+    "gammaTorpedo-2",
+    "growBoard-2",
+    "dimensionalRift-1",
+    "spoofedOrders-1",
+    "gateNetwork-1",
+    "carrierDoctrine-2",
+    "elevated-salvageRights",
+    "railgun-1",
+    "growBoard-1",
+    "tacticalFeint-1",
+    "conscription-1",
+    "logisticsUpgrade-1",
+    "stationUpgrade-1",
+    "securityBreach-2",
+    "moveFriendlyPiece-2",
+    "warpDrive-1",
+    "colonyShip-1",
+    "factoryOverride-2",
+    "elevated-wormholeStorm"
    ],
-   "remaining": 20
+   "remaining": 51
+  },
+  "elevatedTechnologies": {
+   "periwinkle": "elevated-signalIntercept",
+   "aqua": "elevated-wormholeStorm",
+   "mint": "elevated-salvageRights",
+   "teal": "elevated-reinforcements",
+   "violet": "elevated-orbitalBombardment"
+  },
+  "pieceTechnologies": {
+   "belligerence": "interdiction",
+   "mobility": "gateNetwork",
+   "acquisitions": "carrierDoctrine",
+   "espionage": "relayNetwork",
+   "expansion": "stationUpgrade"
   },
   "technologyDiscard": [],
   "tileSupply": {
    "items": [
     {
-     "id": "spare-tile-3",
+     "id": "spare-tile-0",
      "planetOffset": 1,
-     "color": "aqua"
+     "color": "periwinkle"
     },
     {
      "id": "spare-tile-2",
-     "planetOffset": 1,
-     "color": "mint"
+     "planetOffset": 3,
+     "color": "violet"
     },
     {
-     "id": "spare-tile-0",
-     "planetOffset": 0,
-     "color": "mint"
+     "id": "spare-tile-3",
+     "planetOffset": 3,
+     "color": "teal"
     },
     {
      "id": "spare-tile-1",
-     "planetOffset": 2,
-     "color": "teal"
+     "planetOffset": 0,
+     "color": "aqua"
     }
    ],
    "remaining": 4
   },
-  "queuedTechnologyEffects": [],
   "planetControllers": {
    "3": "p2",
    "80": "p1",

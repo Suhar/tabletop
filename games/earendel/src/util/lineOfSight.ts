@@ -1,6 +1,7 @@
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, HEX_STEPS, HexKind, hexKey } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
+import { jammedAt } from './specials.js'
 
 type Sighting = { piece: Piece; coords: AxialCoordinates }
 
@@ -19,7 +20,7 @@ function piecesAlong(
 
     for (;;) {
         const hex = getHex(board, coords)
-        if (!hex || hex.kind === HexKind.Planet) return found
+        if (!hex || hex.kind !== HexKind.Open) return found
         if (hex.piece) {
             found.push({ piece: hex.piece, coords, clear })
             clear = false
@@ -47,12 +48,12 @@ export function probeBlockedBy(
     playerId: string
 ): string | undefined {
     for (let axis = 0; axis < 3; axis++) {
-        const one = piecesAlong(board, coords, HEX_STEPS[axis]).filter(
-            (seen) => isSightAnchor(seen.piece) && seen.piece.playerId !== playerId
-        )
-        const other = piecesAlong(board, coords, HEX_STEPS[axis + 3]).filter(
-            (seen) => isSightAnchor(seen.piece) && seen.piece.playerId !== playerId
-        )
+        const sighted = (seen: Along) =>
+            isSightAnchor(seen.piece) &&
+            seen.piece.playerId !== playerId &&
+            !jammedAt(board, seen.coords)
+        const one = piecesAlong(board, coords, HEX_STEPS[axis]).filter(sighted)
+        const other = piecesAlong(board, coords, HEX_STEPS[axis + 3]).filter(sighted)
 
         for (const a of one) {
             for (const b of other) {
@@ -76,6 +77,8 @@ function ownPiecesInSight(
 ): AxialCoordinates[] {
     const piece = getHex(board, coords)?.piece
     if (!piece) return []
+    // A jammed anchor sees nothing, and is seen by nothing.
+    if (isSightAnchor(piece) && jammedAt(board, coords)) return []
 
     return HEX_STEPS.flatMap((step) =>
         piecesAlong(board, coords, step)
@@ -83,7 +86,8 @@ function ownPiecesInSight(
                 (seen) =>
                     seen.piece.playerId === piece.playerId &&
                     wanted(seen.piece) &&
-                    holds(piece, seen)
+                    holds(piece, seen) &&
+                    !(isSightAnchor(seen.piece) && jammedAt(board, seen.coords))
             )
             .map((seen) => seen.coords)
     )
@@ -114,7 +118,7 @@ export function sightLinkedStations(
     coords: AxialCoordinates
 ): AxialCoordinates[] {
     const anchor = getHex(board, coords)?.piece
-    if (!anchor || !isSightAnchor(anchor)) return []
+    if (!anchor || !isSightAnchor(anchor) || jammedAt(board, coords)) return []
 
     return HEX_STEPS.flatMap((step) => {
         const next = { q: coords.q + step.q, r: coords.r + step.r }
@@ -124,34 +128,11 @@ export function sightLinkedStations(
                     !(seen.coords.q === next.q && seen.coords.r === next.r) &&
                     isSightAnchor(seen.piece) &&
                     seen.piece.playerId === anchor.playerId &&
-                    holds(anchor, seen)
+                    holds(anchor, seen) &&
+                    !jammedAt(board, seen.coords)
             )
             .map((seen) => seen.coords)
     })
-}
-
-export function planetsInSightOf(
-    board: EarendelBoard,
-    coords: AxialCoordinates
-): AxialCoordinates[] {
-    const seen: AxialCoordinates[] = []
-
-    for (const step of HEX_STEPS) {
-        let at = { q: coords.q + step.q, r: coords.r + step.r }
-
-        for (;;) {
-            const hex = getHex(board, at)
-            if (!hex) break
-            if (hex.kind === HexKind.Planet) {
-                seen.push(hex.coords)
-                break
-            }
-            if (hex.piece) break
-            at = { q: at.q + step.q, r: at.r + step.r }
-        }
-    }
-
-    return seen
 }
 
 export type SightLine = {
