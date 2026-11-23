@@ -369,7 +369,6 @@
          beside the cards, which slide left to make room, so the cards are never pushed out of
          the bar; with no hand they take the rows under the notes. -->
     {#snippet choices()}
-
         {#if gameSession.isChoosingEventOrder}
             <!-- The discoverer goes first; the others are lined up in the order clicked. -->
             <div class="flex flex-wrap items-center justify-center gap-2 text-sm">

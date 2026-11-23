@@ -1,14 +1,15 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     type GameAction,
     type HydratedGameState
 } from '@tabletop/common'
 import { recordStockAction } from '../stock/stockRoundRules.js'
+import { markTurnPurchase } from '../stock/sharePurchase.js'
 import type { StockRules } from '../stock/stockRules.js'
 import {
     PrivateExchangeDetails,
@@ -19,7 +20,7 @@ import {
 import type { PrivateRules, PrivateState } from './privateRules.js'
 export const ExchangePrivate = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('ExchangePrivate'),
         privateCompanyId: Type.String(),
         certificateId: Type.String(),
@@ -71,8 +72,9 @@ function applyExchange(
         details.exemptOwnershipLimit,
         stockRules
     )
-    if (state.machineState === 'StockRound' && details.stockAction === 'additional')
-        recordStockAction(state, request.playerId, stockRules.round)
+    if (state.machineState !== 'StockRound' || details.stockAction === 'none') return
+    if (details.stockAction === 'purchase') markTurnPurchase(state)
+    recordStockAction(state, request.playerId, stockRules.round)
 }
 
 export class HydratedExchangePrivate

@@ -16,7 +16,8 @@ import {
     privateExchangeOffers,
     type EighteenXXTitleRules,
     type PrivateExchangeRequest,
-    currentPrivateRevenue
+    privateIncome,
+    type StepAction
 } from '@tabletop/18xx'
 import type { ModuleSession } from './moduleSession.js'
 import { singleChoice } from './stagedSelection.svelte.js'
@@ -35,7 +36,10 @@ export type PrivatesSession = ModuleSession<
         | 'companyRules'
         | 'outOfTurnPrivatePowers'
         | 'privatePowerRules'
-    >
+    > &
+        Partial<Pick<EighteenXXTitleRules, 'operatingRules'>> & {
+            privateExchangeActions?: readonly Pick<StepAction<never>, 'type'>[]
+        }
 >
 
 function sameExchange(a: PrivateExchangeRequest, b: PrivateExchangeRequest) {
@@ -50,24 +54,33 @@ export class PrivatesModule {
     readonly exchangeChoice = singleChoice<PrivateExchangeRequest>()
     constructor(private readonly session: PrivatesSession) {}
 
+    /** A title with exchanges of its own lists them all together, the family's among them. */
+    private titleListsExchanges = $derived.by(
+        () => !!this.session.rules.privateExchangeActions?.length
+    )
     companies = $derived.by(() =>
         this.session.state.companies
             .filter((company) => company.kind === 'private')
             .map((company) => ({
                 ...company,
-                revenue: currentPrivateRevenue(
+                revenue: privateIncome(
                     this.session.state,
-                    this.session.rules.stockRules.charters,
+                    {
+                        charters: this.session.rules.stockRules.charters,
+                        privateIncome: this.session.rules.operatingRules?.privateIncome
+                    },
                     company.id
                 ),
-                description: this.session.rules.privateRules.description(
-                    this.session.state,
-                    company.id
-                )
+                description: this.description(company.id)
             }))
     )
+    /** The title's description of a company sold like a private, a minor in an auction too. */
+    description(companyId: string): string {
+        return this.session.rules.privateRules.description(this.session.state, companyId)
+    }
     hasExchanges = $derived.by(() => {
         const { state, rules } = this.session
+        if (this.titleListsExchanges) return false
         return state.companies.some(
             (company) =>
                 company.kind === 'private' &&
@@ -78,6 +91,7 @@ export class PrivatesModule {
     private exchangesBlocked = $derived.by(() => {
         const { state, rules } = this.session
         return (
+            this.titleListsExchanges ||
             !this.session.interactive ||
             pendingCompanyDecision(state) ||
             !!nextCompanyToFloat(state, rules.companyRules)
@@ -166,6 +180,10 @@ export class PrivatesModule {
     async confirmExchange() {
         const request = this.exchangeSelection
         assert(request, 'Choose an available private exchange')
+        await this.submitExchange(request)
+    }
+    /** Sends an exchange, in turn for a player on turn and sequenced for any other. */
+    async submitExchange(request: PrivateExchangeRequest) {
         assert(
             this.session.canActFor(request.playerId),
             'Only the owning player can confirm this exchange'

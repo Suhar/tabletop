@@ -11,7 +11,9 @@ import {
     isDataEvent,
     isDiscontinuityEvent,
     NotificationChannel,
-    IndexedDbGameStore
+    IndexedDbGameStore,
+    localGameRecord,
+    storeLocalGame
 } from '@tabletop/frontend-components'
 import {
     type GameCreationOptions,
@@ -26,6 +28,7 @@ import {
     type HydratedGameState,
     GameEngine,
     createGameFork,
+    linkGameContinuation,
     GameForkError,
     GameStorage,
     GameCategory,
@@ -35,6 +38,8 @@ import {
     isListedPublicGame,
     isYourTurnNotification,
     omitGameState,
+    sameSeatAccounts,
+    type SeriesActivity,
     type UndoVotePreview,
     type User
 } from '@tabletop/common'
@@ -44,6 +49,8 @@ import { SvelteMap } from 'svelte/reactivity'
 import type { NotificationService } from './notificationService.svelte'
 import { isUsersGameTurn, isUsersNonHotseatTurn } from '$lib/utils/dashboardGames'
 import { compareGameInvitations } from '$lib/utils/gameInvitation'
+import { gamePageDependency } from '$lib/utils/gamePage'
+import { invalidate } from '$app/navigation'
 
 import type { LibraryService } from './libraryService.svelte'
 import { readStoredValue, removeStoredValue, writeStoredValue } from '$lib/utils/storedValue'
@@ -125,6 +132,13 @@ export class GameService implements GameServiceInterface {
             .slice(0, 20)
     )
 
+    finishedLocalGames: Game[] = $derived(
+        Array.from(this.localGamesById.values()).filter(
+            (game) =>
+                game.status === GameStatus.Finished && game.category !== GameCategory.Exploration
+        )
+    )
+
     openGamesByTitleId: Map<string, Game[]> = new SvelteMap()
 
     constructor(
@@ -172,7 +186,7 @@ export class GameService implements GameServiceInterface {
         }
         const sessionUser = this.authorizationService.getSessionUser()
         let fetched: { games: Game[]; localGames: Game[] } | undefined
-        let changes: GameListChange[] = []
+        let changes: GameListChange[]
         do {
             this.reloadRequested = false
             changes = []
@@ -241,12 +255,28 @@ export class GameService implements GameServiceInterface {
     ): Promise<{ games: Game[]; localGames: Game[] } | undefined> {
         const [games, localGames] = await Promise.all([
             this.api.getMyGames('current'),
-            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
+            sessionUser ? this.findLocalGames(sessionUser) : []
         ])
         if (this.authorizationService.getSessionUser()?.id !== sessionUser?.id) {
             return undefined
         }
         return { games, localGames }
+    }
+
+    private async findLocalGames(user: User): Promise<Game[]> {
+        const games = await this.localGameStore.findGamesForUser(user)
+        return Promise.all(games.map((game) => this.withFinishedOutcome(game)))
+    }
+
+    /**
+     * Saves before the fix for finished hotseat games left them started, with nobody to move.
+     * Their state still holds the result.
+     */
+    private async withFinishedOutcome(game: Game): Promise<Game> {
+        if (game.status !== GameStatus.Started || game.activePlayerIds?.length) return game
+        const state = await this.localGameStore.loadGameState(game.id)
+        if (!state?.result) return game
+        return localGameRecord(game, state, game.updatedAt ?? game.createdAt)
     }
 
     private applyStoredCurrentGames() {
@@ -267,6 +297,16 @@ export class GameService implements GameServiceInterface {
     async loadOpenGames(titleId: string) {
         const response = await this.api.getOpenGames(titleId)
         this.openGamesByTitleId.set(titleId, response)
+    }
+
+    async loadSeriesActivity(seriesId: string, titleIds: string[]): Promise<SeriesActivity> {
+        const activity = await this.api.getSeriesActivity(seriesId)
+        for (const titleId of titleIds)
+            this.openGamesByTitleId.set(
+                titleId,
+                activity.open.filter((game) => game.typeId === titleId)
+            )
+        return activity
     }
 
     async loadGame(id: string, options: GetGameOptions = {}): Promise<GameLoadResult> {
@@ -320,12 +360,18 @@ export class GameService implements GameServiceInterface {
             const runtime = await definition.runtime()
             const gameDefinition = { info: definition.info, runtime }
             const initializedGame = runtime.initializer.initializeGame(game, gameDefinition)
+            const continuation = await linkGameContinuation(
+                initializedGame,
+                options?.continueFromGameId,
+                gameDefinition,
+                async (sourceGameId) => (await this.localGameStore.loadGameData(sourceGameId)).game
+            )
 
             const engine = new GameEngine(runtime)
-            const { startedGame, initialState } = engine.startGame(
-                initializedGame,
-                options?.masterSeed
-            )
+            const { startedGame, initialState } = engine.startGame(initializedGame, {
+                masterSeed: options?.masterSeed,
+                continuation
+            })
 
             startedGame.activePlayerIds = initialState.activePlayerIds
 
@@ -385,32 +431,9 @@ export class GameService implements GameServiceInterface {
         return updatedGame
     }
 
-    async saveGameLocally({
-        game,
-        state,
-        actions
-    }: {
-        game: Game
-        state: GameState
-        actions: GameAction[]
-    }) {
-        const gameData = structuredClone(game)
-        const stateData = structuredClone(state)
-        const actionsData = actions.map((action) => structuredClone(action))
-
-        gameData.activePlayerIds = stateData.activePlayerIds
-
-        if (game.storage !== GameStorage.Local) {
-            throw new Error('Can only save local games locally')
-        }
-
-        await validateLocalGameState(this.libraryService, gameData, stateData)
-        await this.localGameStore.storeGameData({
-            game: gameData,
-            actions: actionsData,
-            state: stateData
-        })
-        this.localGamesById.set(gameData.id, gameData)
+    async saveGameLocally(save: { game: Game; state: GameState; actions: GameAction[] }) {
+        const saved = await storeLocalGame(this.localGameStore, this.libraryService, save)
+        this.localGamesById.set(saved.id, saved)
     }
 
     async deleteGame(gameId: string): Promise<void> {
@@ -463,6 +486,12 @@ export class GameService implements GameServiceInterface {
         return updatedGame
     }
 
+    async requestCall(game: Game, declaredWinnerId?: string): Promise<Game> {
+        const updatedGame = await this.api.requestCall(game, declaredWinnerId)
+        this.upsertCachedGame(updatedGame)
+        return updatedGame
+    }
+
     async approveVote(game: Game, voteId: string): Promise<Game> {
         const updatedGame = await this.api.approveVote(game, voteId)
         this.upsertCachedGame(updatedGame)
@@ -506,11 +535,10 @@ export class GameService implements GameServiceInterface {
             ) {
                 this.removeFromPublicCache(game.id)
             } else {
-                const titleGames = (this.openGamesByTitleId.get(game.typeId) || []).filter(
-                    (g) => g.id !== game.id
-                )
-
-                titleGames.push(game)
+                const titleGames = [...(this.openGamesByTitleId.get(game.typeId) ?? [])]
+                const index = titleGames.findIndex((existing) => existing.id === game.id)
+                if (index === -1) titleGames.push(game)
+                else titleGames[index] = game
                 this.openGamesByTitleId.set(game.typeId, titleGames)
             }
 
@@ -579,6 +607,7 @@ export class GameService implements GameServiceInterface {
             ) {
                 this.changesDuringLoad?.push({ game, removed: false })
                 this.upsertCachedGame(game)
+                this.reloadOpenGameAfterSeatHandover(game)
             } else if (notification.action === GameNotificationAction.Delete) {
                 this.changesDuringLoad?.push({ game, removed: true })
                 this.removeFromPrivateCache(game.id)
@@ -587,6 +616,14 @@ export class GameService implements GameServiceInterface {
         } else if (isDiscontinuityEvent(event) && event.channel === NotificationChannel.User) {
             await this.loadGames()
         }
+    }
+
+    // The open Game Session keeps its own Game and perspective, so a seat changing hands
+    // needs a new session rather than an update to this one.
+    private reloadOpenGameAfterSeatHandover(game: Game) {
+        const open = this.currentGameSession?.game
+        if (open?.id !== game.id || sameSeatAccounts(open.players, game.players)) return
+        void invalidate(gamePageDependency(game.id))
     }
 
     private isGameNotification(notification: Notification): notification is GameNotification {

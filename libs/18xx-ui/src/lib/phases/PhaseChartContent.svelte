@@ -1,9 +1,18 @@
 <script lang="ts">
+    import { chainSidewaysScroll } from '@tabletop/frontend-components'
     import type { Cash } from '@tabletop/18xx'
     import type { MoneyFormat } from '../presentation/money.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
+    import PhaseText from './PhaseText.svelte'
     import { TileColors } from '../tiles/tilePresentation.js'
-    import type { PhaseChartData, PhaseChartDepotState } from './phaseChart.js'
+    import {
+        certificateRemaining,
+        marketCertificates,
+        phaseName,
+        trainRosterRows,
+        type PhaseChartData,
+        type PhaseChartDepotState
+    } from './phaseChart.js'
     let {
         money,
         chart,
@@ -30,18 +39,22 @@
         bank?: { cash: Cash['amount']; broken: boolean }
     } = $props()
     const currentPhase = $derived(chart.phases.find((phase) => phase.id === currentPhaseId))
+    const namePhase = (phaseId: string) => phaseName(chart, phaseId)
+    const rosterRows = $derived(trainRosterRows(chart.trains))
+    const openMarket = $derived(marketCertificates(depotState))
+    const showsUpgrades = $derived(chart.trains.some((train) => train.upgrades?.length))
 </script>
 
 <div class="phase-chart-content" class:depot={depotOnly} class:on-board={onBoard}>
     <div class="charts">
         {#if !depotOnly}
-            <section aria-label="Phases">
+            <section aria-label="Phases" {@attach chainSidewaysScroll}>
                 <table>
                     <thead
                         ><tr
-                            ><th>Phase</th><th>Tiles</th><th>ORs</th><th>Train limit</th><th
-                                >Rusts</th
-                            ><th>Notes</th></tr
+                            ><th>Phase</th><th>Tiles</th>{#if !chart.operatingRoundsHidden}<th
+                                    >ORs</th
+                                >{/if}<th>Train limit</th><th>Rusts</th><th>Notes</th></tr
                         ></thead
                     >
                     <tbody>
@@ -52,7 +65,7 @@
                             >
                                 <th scope="row"
                                     ><TrainBadge
-                                        name={phase.id}
+                                        name={namePhase(phase.id)}
                                         color={phaseColors[phase.id]}
                                     /></th
                                 >
@@ -70,7 +83,9 @@
                                             ></span>{/each}
                                     </span></td
                                 >
-                                <td class="number">{phase.operatingRounds}</td>
+                                {#if !chart.operatingRoundsHidden}<td class="number"
+                                        >{phase.operatingRounds}</td
+                                    >{/if}
                                 <td class="number">{phase.trainLimit}</td>
                                 <td
                                     ><span class="badges">
@@ -83,7 +98,13 @@
                                         {:else}<span class="muted">—</span>{/each}
                                     </span></td
                                 >
-                                <td class="phase-notes">{phase.notes ?? ''}</td>
+                                <td class="phase-notes"
+                                    ><PhaseText
+                                        text={phase.notes ?? ''}
+                                        {phaseColors}
+                                        phaseName={namePhase}
+                                    /></td
+                                >
                             </tr>
                         {/each}
                     </tbody>
@@ -93,7 +114,7 @@
         {#if onBoard && currentPhase}<div class="phase-summary">
                 <span class="summary-item"
                     ><span class="summary-label">Phase</span><TrainBadge
-                        name={currentPhase.id}
+                        name={namePhase(currentPhase.id)}
                         color={phaseColors[currentPhase.id]}
                     /></span
                 >
@@ -112,54 +133,98 @@
                         ></span
                     >{/if}
             </div>{/if}
-        <section aria-label="Train roster">
+        <section aria-label="Train roster" {@attach chainSidewaysScroll}>
             <table>
                 <thead
                     ><tr
-                        ><th>Train</th><th class="money">Price</th><th class="number">Remaining</th
-                        ><th>Obsoleted / rusted by</th></tr
+                        ><th>Train</th><th class="money">Price</th>{#if showsUpgrades}<th
+                                class="money"
+                                title="What trading this train in for a newer one costs">Upgrade</th
+                            >{/if}<th class="number">Remaining</th>{#if openMarket.length}<th
+                                class="number">Market</th
+                            >{/if}<th class="number">Rusted by</th></tr
                     ></thead
                 >
                 <tbody>
-                    {#each chart.trains as train, index (train.id)}
-                        {@const faces = chart.trains.filter(
-                            (face) => face.supplyId === train.supplyId
-                        )}
+                    {#each rosterRows as { faces, remainingRowSpan, rustRowSpan } (faces[0].id)}
+                        {@const train = faces[0]}
                         {@const remaining = depotState.depot.remaining(
                             depotState.inventory,
                             train.id
                         )}
+                        {@const inMarket = certificateRemaining(openMarket, train.id)}
                         {@const current =
-                            depotState.availableDefinitionIds.includes(train.id) && remaining !== 0}
+                            remaining !== 0 &&
+                            faces.some((face) =>
+                                depotState.availableDefinitionIds.includes(face.id)
+                            )}
                         <tr
                             class:current
                             aria-current={current ? 'step' : undefined}
-                            class:exhausted={remaining === 0}
+                            class:exhausted={remaining === 0 && inMarket === 0}
                         >
                             <th scope="row"
-                                ><TrainBadge name={train.name} color={trainColors[train.id]} /></th
+                                ><span class="badges"
+                                    >{#each faces as face (face.id)}<TrainBadge
+                                            name={face.name}
+                                            color={trainColors[face.id]}
+                                        />{#each face.marks ?? [] as mark (mark.description)}<span
+                                                class="train-mark"
+                                                title={mark.description}
+                                                aria-label={mark.description}
+                                                ><img
+                                                    src={mark.imageUrl}
+                                                    alt=""
+                                                />{#if mark.label}<span>{mark.label}</span
+                                                    >{/if}</span
+                                            >{/each}{/each}</span
+                                ></th
                             >
                             <td class="money">{money(train.price)}</td>
-                            {#if index === 0 || chart.trains[index - 1].supplyId !== train.supplyId}
+                            {#if showsUpgrades}<td class="money"
+                                    >{#if train.upgrades?.length}<span class="upgrades"
+                                            >{#each train.upgrades as upgrade (upgrade.definitionId)}<span
+                                                    class="upgrade"
+                                                    aria-label={`To a ${depotState.depot.trainDefinition(upgrade.definitionId).name} for ${money(upgrade.price)}`}
+                                                    ><TrainBadge
+                                                        name={depotState.depot.trainDefinition(
+                                                            upgrade.definitionId
+                                                        ).name}
+                                                        color={trainColors[upgrade.definitionId]}
+                                                    />{money(upgrade.price)}</span
+                                                >{/each}</span
+                                        >{:else}<span class="muted">–</span>{/if}</td
+                                >{/if}
+                            {#if remainingRowSpan}
                                 <td
                                     class="number"
-                                    rowspan={faces.length}
-                                    title={faces.length > 1
-                                        ? 'Shared certificates: choose either face'
+                                    rowspan={remainingRowSpan}
+                                    title={remainingRowSpan > 1 || faces.length > 1
+                                        ? 'Shared certificates: choose one face'
                                         : undefined}
                                     >{remaining === 'unlimited' ? '∞' : remaining}</td
                                 >
+                                {#if openMarket.length}<td
+                                        class="number"
+                                        rowspan={remainingRowSpan}
+                                        title={inMarket
+                                            ? 'Discarded to the open market, for sale'
+                                            : undefined}>{inMarket || ''}</td
+                                    >{/if}
                             {/if}
-                            <td
-                                >{#if train.rustTrainIds.length}<span class="badges"
-                                        >{#each train.rustTrainIds as trainId (trainId)}<TrainBadge
-                                                name={trainId}
-                                                color={trainColors[trainId]}
-                                            />{/each}{#if train.rustNote}<span class="rust-mark"
-                                                >*</span
-                                            >{/if}</span
-                                    >{:else}<span class="muted">Permanent</span>{/if}</td
-                            >
+                            {#if rustRowSpan}
+                                <td class="number" rowspan={rustRowSpan}
+                                    >{#if train.rustTrainIds.length}<span class="badges"
+                                            >{#each train.rustTrainIds as trainId (trainId)}<TrainBadge
+                                                    name={depotState.depot.trainDefinition(trainId)
+                                                        .name}
+                                                    color={trainColors[trainId]}
+                                                />{/each}{#if train.rustNote}<span class="rust-mark"
+                                                    >*</span
+                                                >{/if}</span
+                                        >{:else}<span class="muted">Permanent</span>{/if}</td
+                                >
+                            {/if}
                         </tr>
                     {/each}
                 </tbody>
@@ -170,9 +235,11 @@
         {#each [...new Set(chart.trains.flatMap( (train) => (train.rustNote ? [train.rustNote] : []) ))] as note (note)}<p
             >
                 <span class="rust-mark">*</span>
-                {note}
+                <PhaseText text={note} {phaseColors} phaseName={namePhase} />
             </p>{/each}
-        {#if !depotOnly}{#each chart.notes as note, index (index)}<p>{note}</p>{/each}{/if}
+        {#if !depotOnly}{#each chart.notes as note, index (index)}<p>
+                    <PhaseText text={note} {phaseColors} phaseName={namePhase} />
+                </p>{/each}{/if}
     </div>
 </div>
 
@@ -279,6 +346,32 @@
         display: flex;
         gap: 3px;
         align-items: center;
+    }
+    .number .badges {
+        justify-content: center;
+    }
+    .upgrades {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+    }
+    .upgrade {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        white-space: nowrap;
+    }
+    .train-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .train-mark img {
+        height: 15px;
+        width: auto;
     }
     /* An asterisk sits at cap height; drop it to the middle of the badges beside it. */
     .rust-mark {

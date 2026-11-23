@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { RevenueStageColors } from '../colors/revenueStageColors.js'
     import type { MoneyFormat } from '../presentation/money.js'
     import { onMount } from 'svelte'
     import { ScalingWrapper } from '@tabletop/frontend-components'
@@ -13,13 +14,16 @@
         appearance,
         revenueStageColors,
         artwork,
+        tileGroups,
         onclose
     }: {
         money: MoneyFormat
         artwork?: BoardArtwork
         preview: HistoricalMap
         appearance: TileAppearance
-        revenueStageColors?: Readonly<Record<string, string>>
+        revenueStageColors?: RevenueStageColors
+        /** Hexes one tile covers together, outlined as one where a lay covered them. */
+        tileGroups?: readonly (readonly string[])[]
         onclose: () => void
     } = $props()
     let dialog: HTMLDialogElement
@@ -61,6 +65,7 @@
         <ScalingWrapper
             maxScale={2}
             bind:this={wrapper}
+            renderAtViewScale
             justify="center"
             controls="bottom-left"
             overpan="both"
@@ -75,6 +80,7 @@
                 outlinedLocationIds={preview.outlinedLocationIds}
                 maskUnavailableLocations={preview.kind === 'run'}
                 highlightedLocationIds={preview.locations}
+                tileGroups={preview.kind === 'track lay' ? tileGroups : undefined}
                 {appearance}
                 {revenueStageColors}
                 hexDiameter={140}

@@ -1,18 +1,14 @@
 import type {
-    GameState,
     Tournament,
     CorrectTournamentResultRequest,
     TournamentList,
     TournamentListQuery,
     TournamentSchedule,
     TournamentGameLink,
+    TournamentTable,
+    TiebreakRule,
     User
 } from '@tabletop/common'
-
-export type FinalScoreResolver = (
-    typeId: string,
-    readState: () => Promise<GameState>
-) => Promise<Record<string, number> | undefined>
 
 export interface TournamentStore {
     create(tournament: Tournament, user: User | undefined): Promise<Tournament>
@@ -37,6 +33,17 @@ export interface TournamentStore {
         user: User | undefined,
         now: number
     ): Promise<Tournament>
+    /**
+     * Appends a Knockout's due Tables to its Schedule and reserves them, if the Schedule still
+     * holds the given number of Tables; otherwise leaves both unchanged.
+     */
+    extendSchedule(
+        tournamentId: string,
+        scheduleId: string,
+        knownTables: number,
+        tables: TournamentTable[],
+        now: number
+    ): Promise<Tournament>
     correctResult(
         id: string,
         request: CorrectTournamentResultRequest,
@@ -48,7 +55,7 @@ export interface TournamentStore {
         revision: number,
         user: User,
         now: number,
-        finalScores: FinalScoreResolver
+        tiebreakRule: TiebreakRule | undefined
     ): Promise<Tournament>
     administratorIds(): Promise<string[]>
 }

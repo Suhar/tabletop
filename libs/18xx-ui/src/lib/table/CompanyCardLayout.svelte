@@ -1,6 +1,28 @@
+<script lang="ts" module>
+    // WebKit restyles the whole page whenever a wheel listener is added or removed, so one
+    // listener, added as the first row mounts and kept, hands each wheel to the mounted row under
+    // it; rows come and go from the set (docs/phone-rendering.md).
+    const wheelRows = new Map<HTMLElement, (event: WheelEvent) => void>()
+    let listening = false
+    function dispatchWheel(event: WheelEvent) {
+        const target = event.target
+        if (!(target instanceof Node)) return
+        for (const [row, onWheel] of wheelRows)
+            if (row.contains(target)) {
+                onWheel(event)
+                return
+            }
+    }
+    function listenForWheels() {
+        if (listening) return
+        listening = true
+        window.addEventListener('wheel', dispatchWheel, { passive: false })
+    }
+</script>
+
 <script lang="ts">
     import type { Snippet } from 'svelte'
-    import { wheelDeltaUnit } from '@tabletop/frontend-components'
+    import { chainSidewaysScroll, wheelDeltaUnit } from '@tabletop/frontend-components'
     import ViewSwitch from './ViewSwitch.svelte'
 
     let {
@@ -8,13 +30,16 @@
         wrap,
         onToggleWrap,
         wide,
-        onToggleWide
+        onToggleWide,
+        unstartedSwitch
     }: {
         children: Snippet
         wrap: boolean
         onToggleWrap: () => void
         wide: boolean
         onToggleWide: () => void
+        /** Whether companies no one has started are shown too, where there are any to show. */
+        unstartedSwitch?: { enabled: boolean; toggle: () => void }
     } = $props()
 
     function scrollRowOnWheel(row: HTMLElement) {
@@ -29,13 +54,23 @@
             event.preventDefault()
             row.scrollLeft += distance
         }
-        row.addEventListener('wheel', onWheel, { passive: false })
-        return () => row.removeEventListener('wheel', onWheel)
+        wheelRows.set(row, onWheel)
+        listenForWheels()
+        return () => wheelRows.delete(row)
     }
 </script>
 
 <div class="company-card-layout">
     <div class="company-card-tools">
+        {#if unstartedSwitch}<ViewSwitch
+                small
+                enabled={unstartedSwitch.enabled}
+                onToggle={unstartedSwitch.toggle}
+                label="Unstarted"
+                title={unstartedSwitch.enabled
+                    ? 'Companies not yet started are shown, greyed. Click to hide them.'
+                    : 'Only started companies are shown. Click to show the rest, greyed.'}
+            />{/if}
         <ViewSwitch
             small
             enabled={wide}
@@ -59,8 +94,9 @@
         class="company-cards"
         class:wrap
         class:wide
-        aria-label="Started companies"
+        aria-label={unstartedSwitch?.enabled ? 'Companies' : 'Started companies'}
         {@attach scrollRowOnWheel}
+        {@attach chainSidewaysScroll}
     >
         {@render children()}
     </div>

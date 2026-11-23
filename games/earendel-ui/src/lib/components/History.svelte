@@ -108,7 +108,9 @@
                             </button>
                         {/if}
                         {#if reasons.length > 0 && reasonsOpen}
-                            <ul class="mt-1 list-disc space-y-1 pl-4 text-left text-xs text-gray-300">
+                            <ul
+                                class="mt-1 list-disc space-y-1 pl-4 text-left text-xs text-gray-300"
+                            >
                                 {#each reasons as reason, index (index)}
                                     <li>{reason}</li>
                                 {/each}

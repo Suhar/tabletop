@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+    RailwayMap,
+    StandardTileCatalog,
+    TileSet,
+    TrackConstruction,
+    createSeparateCitiesTileFace,
+    createTrackTileFace,
+    type TrackLayDetails
+} from '@tabletop/18xx'
+import { assertExists } from '@tabletop/common'
+import {
     TestCompanyId,
     TestPlayerId,
     TestTrackHomeLocationId,
@@ -21,12 +31,52 @@ const noPrivateAction: PrivateActions = {
     titlePower: undefined
 }
 
+type Board = {
+    map: RailwayMap
+    rules: TrackSession['rules']['trackRules']
+    homeNodeId: string
+}
+
+// The home hex holds two cities with no track, the station in the first, as 1830's Buffalo.
+function trackLessTwoCityHome(): { tileSet: TileSet; board: Board } {
+    const tileSet = new TileSet(
+        { id: 'test-two-city', entries: [{ id: 'oo', faceDefinitionIds: ['18xx:59'], count: 1 }] },
+        [StandardTileCatalog]
+    )
+    const map = new RailwayMap({
+        ...minimalTrackMap.definition,
+        locations: minimalTrackMap.definition.locations.map((location) =>
+            location.id === TestTrackHomeLocationId
+                ? {
+                      ...location,
+                      preprintedTile: createSeparateCitiesTileFace(
+                          'yellow',
+                          [
+                              { edges: [], revenue: 0, stationSlots: 1 },
+                              { edges: [], revenue: 0, stationSlots: 1 }
+                          ],
+                          ['OO']
+                      )
+                  }
+                : { ...location, preprintedTile: createTrackTileFace('white', []) }
+        )
+    })
+    const rules = {
+        ...minimalTrackRules(tileSet),
+        map,
+        availableColors: () => ['green'],
+        useful: () => true
+    }
+    return { tileSet, board: { map, rules, homeNodeId: 'city-0' } }
+}
+
 function laying(
     tileSet = minimalTrackTileSet,
     valid = ['LayTile', 'FinishTrack'],
     availability = {},
     privateActions = noPrivateAction,
-    privatePowerRules: TrackSession['rules']['privatePowerRules'] = noPrivateTrack
+    privatePowerRules: TrackSession['rules']['privatePowerRules'] = noPrivateTrack,
+    board: Board = { map: minimalTrackMap, rules: minimalTrackRules(tileSet), homeNodeId: 'city' }
 ) {
     const base = minimalPlayState()
     const state: TrackSession['state'] = {
@@ -42,7 +92,7 @@ function laying(
                 id: `${TestCompanyId}:home`,
                 companyId: TestCompanyId,
                 status: 'placed',
-                position: { locationId: TestTrackHomeLocationId, nodeId: 'city', slot: 0 }
+                position: { locationId: TestTrackHomeLocationId, nodeId: board.homeNodeId, slot: 0 }
             }
         ]
     }
@@ -50,13 +100,13 @@ function laying(
     const decisions = { selectPrivateTile: () => {}, confirm: async () => {} }
     const harness = testSession(
         state,
-        { trackRules: minimalTrackRules(tileSet), privatePowerRules },
+        { trackRules: board.rules, privatePowerRules },
         valid,
         availability
     )
     const module = new TrackModule(
         harness.session,
-        () => ({ map: minimalTrackMap, tileSet }),
+        () => ({ map: board.map, tileSet }),
         privateActions,
         decisions,
         () => locationsChosen++
@@ -64,7 +114,77 @@ function laying(
     return { ...harness, module, locationsChosen: () => locationsChosen }
 }
 
+/** A stock round in which the title asks for one lay at a single hex, such as 1860's home tile. */
+function titleLaying() {
+    const base = minimalPlayState()
+    const trackStep = { companyId: TestCompanyId, lays: [], completed: false }
+    const state: TrackSession['state'] = {
+        ...base,
+        machineState: 'StockRound',
+        companies: base.companies.map((company) => ({ ...company, floated: true })),
+        cash: [...base.cash, { owner: { kind: 'company', companyId: TestCompanyId }, amount: 100 }],
+        tileInventory: minimalTrackTileSet.createInventory(),
+        usedPrivatePowerIds: [],
+        stations: [
+            {
+                id: `${TestCompanyId}:home`,
+                companyId: TestCompanyId,
+                status: 'placed',
+                position: { locationId: TestTrackHomeLocationId, nodeId: 'city', slot: 0 }
+            }
+        ]
+    }
+    const rules = {
+        trackRules: minimalTrackRules(minimalTrackTileSet),
+        privatePowerRules: noPrivateTrack
+    }
+    const construction = new TrackConstruction({ ...state, trackStep }, rules.trackRules)
+    const locationId = minimalTrackMap.definition.locations
+        .map((location) => location.id)
+        .find((id) => construction.choices(id).length > 0)
+    assertExists(locationId, 'The test map offers a lay')
+    const committed: TrackLayDetails[] = []
+    const harness = testSession(state, rules, ['SellShares'])
+    const module = new TrackModule(
+        harness.session,
+        () => ({ map: minimalTrackMap, tileSet: minimalTrackTileSet }),
+        noPrivateAction,
+        { selectPrivateTile: () => {}, confirm: async () => {} },
+        () => {},
+        () => true,
+        () => ({
+            construction: {
+                choices: (id) => (id === locationId ? construction.choices(id) : []),
+                canReach: (id) => id === locationId,
+                evaluate: (request) => construction.evaluate(request),
+                inventoryAfter: (details) => construction.inventoryAfter(details),
+                stationsAfter: (details) => construction.stationsAfter(details)
+            },
+            commit: async (details) => {
+                committed.push(details)
+            }
+        })
+    )
+    return { module, locationId, committed, applied: harness.applied }
+}
+
 describe('TrackModule', () => {
+    it('offers a lay the title asks for outside the track step, committed through the title', async () => {
+        const { module, locationId, committed, applied } = titleLaying()
+        expect(module.showChoices).toBe(true)
+        expect(module.canBuild).toBe(true)
+        expect(module.locationIds).toEqual([locationId])
+        expect(module.reachableLocationIds).toEqual([])
+        module.selectLocation(locationId)
+        module.previewTile(module.tiles[0].id)
+        expect(module.preview?.locationId).toBe(locationId)
+        expect(module.consentersToAsk).toEqual([])
+        await module.confirm()
+        expect(committed.map((details) => details.locationId)).toEqual([locationId])
+        expect(applied).toEqual([])
+        expect(module.selection).toEqual({})
+    })
+
     it('offers only locations with a legal lay and none outside the track step', () => {
         const { module } = laying()
         expect(module.locationIds.length).toBeGreaterThan(0)
@@ -125,6 +245,29 @@ describe('TrackModule', () => {
         expect(first).toBeDefined()
         module.rotatePreview()
         expect(module.preview?.rotation).not.toBe(first)
+    })
+
+    it('steps through each city the home station may take before turning the tile', () => {
+        const { tileSet, board } = trackLessTwoCityHome()
+        const { module } = laying(tileSet, undefined, undefined, undefined, undefined, board)
+        module.selectLocation(TestTrackHomeLocationId)
+        expect(module.preview?.definitionId).toBe('18xx:59')
+        const layouts = module.placements.map(
+            (placement) => `${placement.rotation}/${placement.nodeMapping['city-0']}`
+        )
+        expect(new Set(layouts).size).toBe(layouts.length)
+        expect(layouts.length).toBe(
+            2 * new Set(module.placements.map((placement) => placement.rotation)).size
+        )
+        const seen: string[] = []
+        for (const _ of layouts) {
+            seen.push(`${module.preview?.rotation}/${module.preview?.nodeMapping['city-0']}`)
+            module.rotatePreview()
+        }
+        expect(seen).toEqual(layouts)
+        expect(`${module.preview?.rotation}/${module.preview?.nodeMapping['city-0']}`).toBe(
+            layouts[0]
+        )
     })
 
     it('choosing another location restarts the selection', () => {

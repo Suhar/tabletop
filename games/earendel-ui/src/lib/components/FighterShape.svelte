@@ -47,18 +47,19 @@
                 stroke-width="2.4"
                 stroke-linejoin="round"
                 stroke-linecap="round"
-            />
+            ></path>
         {:else}
-            <path d="M-2,8 L0,20 L2,8 Z" fill={color} fill-opacity="0.45" />
-            <path d="M-1,8 L0,14 L1,8 Z" fill="#fff3cc" fill-opacity="0.8" />
+            <path d="M-2,8 L0,20 L2,8 Z" fill={color} fill-opacity="0.45"></path>
+            <path d="M-1,8 L0,14 L1,8 Z" fill="#fff3cc" fill-opacity="0.8"></path>
         {/if}
-        <path d={silhouette.body} fill={color} />
+        <path d={silhouette.body} fill={color}></path>
         {#each silhouette.windows ?? [] as window, pane (pane)}
-            <path d={window} fill="#fff3cc" fill-opacity="0.85" />
+            <path d={window} fill="#fff3cc" fill-opacity="0.85"></path>
         {/each}
         {#if torpedo}
-            <path d="M0,-13 L3,0 L-3,0 Z" fill={WARHEAD} />
-            <circle r="12" fill="none" stroke={WARHEAD} stroke-width="1.5" stroke-opacity="0.7" />
+            <path d="M0,-13 L3,0 L-3,0 Z" fill={WARHEAD}></path>
+            <circle r="12" fill="none" stroke={WARHEAD} stroke-width="1.5" stroke-opacity="0.7"
+            ></circle>
         {/if}
     </g>
 {/each}

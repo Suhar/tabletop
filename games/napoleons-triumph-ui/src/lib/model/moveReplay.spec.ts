@@ -1,25 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { assertExists, type GameAction, type Point } from '@tabletop/common'
+import {
+    Visibility,
+    assertExists,
+    type BoundingBox,
+    type GameAction,
+    type Point
+} from '@tabletop/common'
 import {
     ActionType,
     CommandKind,
     FeintEnd,
+    NapoleonsTriumphRuntime,
     Side,
+    type Face,
     type MoveOrder
 } from '@tabletop/napoleons-triumph'
 import {
+    RIDDEN_IN,
     TestGame,
     arrangeBattlefield,
     cavalry,
-    infantry
+    infantry,
+    waitOffMap
 } from '@tabletop/napoleons-triumph/testing'
-import { APPROACH_GEOMETRY, BOARD_HEIGHT, BOARD_WIDTH } from '$lib/map/boardGeometry.js'
+import {
+    APPROACH_GEOMETRY,
+    BOARD_HEIGHT,
+    BOARD_WIDTH,
+    LOCALE_GEOMETRY
+} from '$lib/map/boardGeometry.js'
 import { coveredBy } from '$lib/utils/blockShape.js'
 import { BoardView, toView, viewRotation } from '$lib/utils/boardView.js'
 import { layoutPieces } from '$lib/utils/pieceLayout.js'
 import { BattleRole } from './battleStage.js'
 import { AttackMarkKind } from './attackMark.js'
-import { moveReplayOf, moveReplayScene, type MoveReplay } from './moveReplay.js'
+import {
+    moveReplayOf,
+    moveReplayScene,
+    standingOf,
+    type MoveReplay,
+    type MoveReplayScene,
+    type RecordedGame,
+    type Standing
+} from './moveReplay.js'
 import { TargetKind, moveTargets } from './targets.js'
 
 const NORTH = viewRotation(BoardView.North)
@@ -35,14 +58,31 @@ class Recorded {
         return processed[0]
     }
 
-    replayOf(action: GameAction): MoveReplay | undefined {
-        return moveReplayOf({ state: this.game.state, actions: this.actions }, action.id, CAPTION)
+    replayOf(action: GameAction, viewer?: Side): MoveReplay | undefined {
+        return moveReplayOf(viewer ? this.seenBy(viewer) : this.record, action.id, CAPTION)
     }
 
-    replay(action: GameAction): MoveReplay {
-        const replay = this.replayOf(action)
+    replay(action: GameAction, viewer?: Side): MoveReplay {
+        const replay = this.replayOf(action, viewer)
         assertExists(replay, 'Expected the action to be replayed')
         return replay
+    }
+
+    private get record(): RecordedGame {
+        return { state: this.game.state, actions: this.actions }
+    }
+
+    /** The record as the player of that side reads it, with the other side's hidden faces left out. */
+    private seenBy(viewer: Side): RecordedGame {
+        const history = Visibility.projectActionHistory({
+            currentState: this.game.canonical,
+            startIndex: this.game.state.actionCount - this.actions.length,
+            actions: this.actions,
+            visibility: NapoleonsTriumphRuntime.visibility,
+            perspective: { kind: 'player', playerId: this.game.playerOf(viewer) },
+            game: this.game.game
+        })
+        return { state: history.currentState, actions: history.actions }
     }
 }
 
@@ -71,6 +111,18 @@ function langeronTo94(recorded: Recorded): GameAction {
 }
 
 const idsOf = (blocks: readonly { unit: { id: string } }[]) => blocks.map((block) => block.unit.id)
+
+const spriteUnitIds = (scene: MoveReplayScene) =>
+    scene.sprites.flatMap((sprite) => sprite.group.units.map((unit) => unit.id))
+
+/** The point of the board, turned as the scene is, lies within the scene's frame. */
+function expectFramed(focus: BoundingBox, point: Point, rotation = NORTH) {
+    const onScreen = toView(point, rotation)
+    expect(onScreen.x).toBeGreaterThan(focus.x)
+    expect(onScreen.x).toBeLessThan(focus.x + focus.width)
+    expect(onScreen.y).toBeGreaterThan(focus.y)
+    expect(onScreen.y).toBeLessThan(focus.y + focus.height)
+}
 
 describe('what the history can replay', () => {
     it('is a move, with the pieces as they stood before and after it', () => {
@@ -166,6 +218,149 @@ describe('what the history can replay', () => {
         expect(idsOf(moved.left)).toEqual(['F-inf'])
         expect(moved.arrows).toHaveLength(1)
         expect(moved.attackMark).toBeUndefined()
+    })
+
+    it('is cavalry taking a locale by road, with its arrow along the road through the locale it attacked from', () => {
+        const recorded = deployed()
+        arrangeBattlefield(recorded.game, [
+            { id: 'A-cav', side: Side.Allied, face: cavalry(2), locale: 74 },
+            { id: 'F-inf', side: Side.French, face: infantry(2), locale: 72 }
+        ])
+        recorded.actions.length = 0
+        const rider = { kind: CommandKind.Unit, unitIds: ['A-cav'] }
+        recorded.act(ActionType.ThreatenAttack, Side.Allied, {
+            approach: recorded.game.hydrated.map.approachBetween(73, 72).id,
+            plan: rider
+        })
+        recorded.act(ActionType.Retreat, Side.French, {
+            losses: { 'F-inf': 1 },
+            destinations: { 'F-inf': 83 },
+            kept: {}
+        })
+        const occupation = recorded.act(ActionType.Occupy, Side.Allied, {
+            orders: [{ ...rider, road: [73] }]
+        })
+        const [arrow] = moveReplayScene(recorded.replay(occupation), NORTH).arrows
+        expect(arrow.shaft).toContainEqual(LOCALE_GEOMETRY[73].anchor)
+    })
+
+    it('is reinforcement cavalry taking a locale by road, with its arrow from the edge of the field', () => {
+        const { entry, taken, corps } = RIDDEN_IN
+        const recorded = deployed()
+        recorded.act(ActionType.EndTurn, Side.Allied)
+        arrangeBattlefield(recorded.game, [
+            { id: 'A-screen', side: Side.Allied, face: cavalry(1), locale: taken }
+        ])
+        waitOffMap(recorded.game, corps.commanderId, [{ id: 'F-off', face: cavalry(2) }])
+        recorded.actions.length = 0
+        const { map } = recorded.game.hydrated
+        const mainRoad = map
+            .entries(Side.French)
+            .find((candidate) => candidate.locale === entry && candidate.main)
+        assertExists(mainRoad, 'Expected a main road onto the field')
+        recorded.act(ActionType.ThreatenAttack, Side.French, {
+            approach: map.approachBetween(entry, taken).id
+        })
+        recorded.act(ActionType.Retreat, Side.Allied, {
+            losses: {},
+            destinations: { 'A-screen': 39 },
+            kept: {}
+        })
+        const occupation = recorded.act(ActionType.Occupy, Side.French, {
+            orders: [{ ...corps, entryId: mainRoad.id, road: [entry] }]
+        })
+        const scene = moveReplayScene(recorded.replay(occupation), NORTH)
+        expect(scene.left).toEqual([])
+        expect(scene.arrows).toHaveLength(1)
+        expect(scene.arrows[0].shaft).toContainEqual(LOCALE_GEOMETRY[entry].anchor)
+    })
+
+    /** Bernadotte's cavalry has come on by road and taken RIDDEN_IN.taken, its ride not yet over. */
+    function riddenIn(riders: readonly { id: string; face: Face }[]): Recorded {
+        const { entry, taken, corps } = RIDDEN_IN
+        const recorded = deployed()
+        recorded.act(ActionType.EndTurn, Side.Allied)
+        arrangeBattlefield(recorded.game, [
+            { id: 'A-screen', side: Side.Allied, face: cavalry(1), locale: taken }
+        ])
+        waitOffMap(recorded.game, corps.commanderId, riders)
+        recorded.actions.length = 0
+        const { map } = recorded.game.hydrated
+        const mainRoad = map
+            .entries(Side.French)
+            .find((candidate) => candidate.locale === entry && candidate.main)
+        assertExists(mainRoad, 'Expected a main road onto the field')
+        recorded.act(ActionType.ThreatenAttack, Side.French, {
+            approach: map.approachBetween(entry, taken).id
+        })
+        recorded.act(ActionType.Retreat, Side.Allied, {
+            losses: {},
+            destinations: { 'A-screen': 39 },
+            kept: {}
+        })
+        recorded.act(ActionType.Occupy, Side.French, {
+            orders: [
+                {
+                    ...corps,
+                    unitIds: riders.map((rider) => rider.id),
+                    entryId: mainRoad.id,
+                    road: [entry]
+                }
+            ]
+        })
+        return recorded
+    }
+
+    const RIDERS = [
+        { id: 'F-off', face: cavalry(2) },
+        { id: 'F-off-2', face: cavalry(3) }
+    ]
+
+    function shownIn(standing: Standing): Record<string, Face | undefined> {
+        return Object.fromEntries(
+            standing.units
+                .filter((unit) => RIDERS.some((rider) => rider.id === unit.id))
+                .map((unit) => [unit.id, unit.shown])
+        )
+    }
+
+    it('is cavalry staying in the reserve at the end of its ride, shown face-up where it stopped', () => {
+        const { held, corps } = RIDDEN_IN
+        const recorded = riddenIn(RIDERS)
+        recorded.act(ActionType.Move, Side.French, {
+            order: { ...corps, unitIds: ['F-off', 'F-off-2'], road: [held], continues: true },
+            to: { locale: held }
+        })
+        const stay = recorded.act(ActionType.StayInReserve, Side.French)
+        recorded.act(ActionType.EndTurn, Side.French)
+
+        // Seen by the Allies after the end-of-turn shuffle has hidden the riders again.
+        expect(shownIn(standingOf(recorded.game.seenBy(Side.Allied)))).toEqual({
+            'F-off': undefined,
+            'F-off-2': undefined
+        })
+        const replay = recorded.replay(stay, Side.Allied)
+        expect(shownIn(replay.before)).toEqual({ 'F-off': undefined, 'F-off-2': undefined })
+        expect(shownIn(replay.after)).toEqual({ 'F-off': cavalry(2), 'F-off-2': cavalry(3) })
+        const scene = moveReplayScene(replay, NORTH)
+        expect(scene.arrows).toEqual([])
+        expect(scene.bystanderIds).toEqual([])
+        expect(spriteUnitIds(scene)).toEqual(expect.arrayContaining(['F-off', 'F-off-2']))
+        expectFramed(scene.focus, LOCALE_GEOMETRY[held].anchor)
+    })
+
+    it('is the enemy cavalry seen still riding when the last turn ended, shown face-up where it stands', () => {
+        const { taken } = RIDDEN_IN
+        const recorded = riddenIn(RIDERS)
+        recorded.act(ActionType.EndTurn, Side.French)
+        const seen = recorded.act(ActionType.AcknowledgeReveal, Side.Allied)
+
+        const replay = recorded.replay(seen, Side.Allied)
+        expect(shownIn(replay.before)).toEqual({ 'F-off': cavalry(2), 'F-off-2': cavalry(3) })
+        const scene = moveReplayScene(replay, NORTH)
+        expect(scene.arrows).toEqual([])
+        expect(spriteUnitIds(scene)).toEqual(expect.arrayContaining(['F-off', 'F-off-2']))
+        expectFramed(scene.focus, LOCALE_GEOMETRY[taken].anchor)
     })
 
     function standsAgainstAThreat(defenders: string[]) {
@@ -415,11 +610,7 @@ describe('the scene of a move taken from the history', () => {
                 ...arrows.map((arrow) => arrow.tip)
             ]
             for (const point of shown) {
-                const onScreen = toView(point, rotation)
-                expect(onScreen.x).toBeGreaterThan(focus.x)
-                expect(onScreen.x).toBeLessThan(focus.x + focus.width)
-                expect(onScreen.y).toBeGreaterThan(focus.y)
-                expect(onScreen.y).toBeLessThan(focus.y + focus.height)
+                expectFramed(focus, point, rotation)
             }
         }
     })

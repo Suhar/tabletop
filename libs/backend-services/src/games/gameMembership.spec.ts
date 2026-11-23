@@ -94,6 +94,7 @@ function fixture({ isPublic = true, lastSlot = false, ownerId = 'a' } = {}) {
     vi.spyOn(notifications, 'sendNotification').mockResolvedValue()
     const tasks: LocalTaskService = Object.create(LocalTaskService.prototype)
     vi.spyOn(tasks, 'createPushTask').mockResolvedValue()
+    vi.spyOn(UserService.prototype, 'getUser').mockResolvedValue(undefined)
     const service = new GameService(
         store,
         UserService.prototype,
@@ -216,19 +217,15 @@ describe('game auto-start', () => {
         })
     })
 
-    it('schedules a start for an invite-only game whose owner holds no seat', async () => {
-        const { read, tasks } = await fillLobby({ isPublic: false, ownerId: 'developer' })
+    it.each([
+        ['the owner plays in', 'a'],
+        ['whose owner holds no seat', 'developer']
+    ])('schedules a start for an invite-only game %s', async (_case, ownerId) => {
+        const { read, tasks } = await fillLobby({ isPublic: false, ownerId })
         expect(read().autoStartAt).toEqual(new Date(autoStartAt))
         expect(tasks.createPushTask).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ payload: { gameId: 'lobby', autoStartAt } })
         )
-    })
-
-    it('does not schedule a start for an invite-only game the owner plays in', async () => {
-        const { read, tasks } = await fillLobby({ isPublic: false })
-        expect(read().status).toBe(GameStatus.WaitingToStart)
-        expect(read().autoStartAt).toBeUndefined()
-        expect(tasks.createPushTask).not.toHaveBeenCalled()
     })
 
     it('cancels the countdown when a player leaves and restarts it when the game refills', async () => {
@@ -244,12 +241,6 @@ describe('game auto-start', () => {
                 payload: { gameId: 'lobby', autoStartAt: autoStartAt + 5_000 }
             })
         )
-    })
-
-    it('cancels the countdown when the owner makes the game invite-only', async () => {
-        const { service, read } = await fillLobby()
-        await service.updateGame({ gameId: 'lobby', user: users[0], fields: { isPublic: false } })
-        expect(read().autoStartAt).toBeUndefined()
     })
 
     it('reports a scheduling failure and reschedules when the join is retried', async () => {
@@ -273,6 +264,68 @@ describe('game auto-start', () => {
         await service.autoStartGame({ gameId: 'lobby', autoStartAt })
         expect(read().status).toBe(GameStatus.Started)
         expect(read().autoStartAt).toBeUndefined()
+    })
+
+    describe('game started email', () => {
+        const emailed = (tasks: LocalTaskService) =>
+            vi
+                .mocked(tasks.createPushTask)
+                .mock.calls.map(([task]) => task)
+                .filter((task) => task.path === '/email/sendGameStartedEmail')
+
+        function withEmails() {
+            vi.mocked(UserService.prototype.getUser).mockImplementation(async (id) => {
+                const user = users.find((candidate) => candidate.id === id)
+                return (
+                    user && {
+                        ...user,
+                        email: `${id}@example.test`,
+                        ...(id === 'b' ? { preferences: optedOut } : {})
+                    }
+                )
+            })
+        }
+        const optedOut = {
+            preventWebNotificationPrompt: false,
+            preferredColorsEnabled: false,
+            preferredColors: [],
+            gameAndCompetitionEmails: false
+        }
+
+        const startByOwner = (service: GameService) =>
+            service.startGame({ definition: SyntheticDefinition, gameId: 'lobby', user: users[0] })
+
+        it.each([
+            [
+                'its countdown ends',
+                false,
+                (service: GameService) => service.autoStartGame({ gameId: 'lobby', autoStartAt })
+            ],
+            ['the owner starts it', false, startByOwner],
+            ['the owner starts a fork', true, startByOwner]
+        ])('emails each player who takes game emails when %s', async (_case, fork, start) => {
+            const { service, tasks, read } = await fillLobby()
+            if (fork) read().parentId = 'source'
+            withEmails()
+            await start(service)
+            expect(read().status).toBe(GameStatus.Started)
+            expect(emailed(tasks)).toEqual(
+                ['a', 'c'].map((id) => ({
+                    queue: 'game-end-email',
+                    path: '/email/sendGameStartedEmail',
+                    payload: { userId: id, gameId: 'lobby', toEmail: `${id}@example.test` }
+                }))
+            )
+        })
+
+        it('sends no email when a hotseat game starts', async () => {
+            const { service, tasks, read } = await fillLobby()
+            read().hotseat = true
+            withEmails()
+            await service.autoStartGame({ gameId: 'lobby', autoStartAt })
+            expect(read().status).toBe(GameStatus.Started)
+            expect(emailed(tasks)).toEqual([])
+        })
     })
 
     it('retries rather than start from a game read before the owner changed it', async () => {

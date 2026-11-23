@@ -1,5 +1,7 @@
+import { withTileGroups } from './tileGroups.js'
 import type { MapSession } from '../session/mapModule.svelte.js'
 import {
+    RailwayMapState,
     isChooseHomeStation,
     isLayTile,
     isPlacePrivateMarker,
@@ -10,9 +12,20 @@ import {
     type EighteenXXState
 } from '@tabletop/18xx'
 import { assertExists, RecordedHistory, type GameAction, type GameState } from '@tabletop/common'
-import { routeColor } from '../routes/routePresentation.js'
-import { createMapDrawing, routeLocationIds, type MapRoute } from './mapDrawing.js'
-import { stationMapTokens, type MapViewDefinition } from './stationPresentation.js'
+import { recordedRunRoutes, trainRouteOverlays } from '../routes/routePresentation.js'
+import {
+    createMapDrawing,
+    overfullCityKeys,
+    routeLocationIds,
+    type MapRoute
+} from './mapDrawing.js'
+import {
+    stationMapTokens,
+    withPlayedMarkerArt,
+    withStateMarkers,
+    type LocationMarkerArt,
+    type MapViewDefinition
+} from './stationPresentation.js'
 import type { TitlePresentation } from '../session/titlePresentation.js'
 
 /** Where an action changed the map, for the map preview its history row opens. */
@@ -61,7 +74,10 @@ export class HistoricalMaps<State extends GameState = EighteenXXState> {
     private actions?: readonly GameAction[]
     private view?: MapViewDefinition
     private readonly cache = new Map<string, HistoricalMap>()
-    /** ``currentView`` is read per preview so presentation changes (token artwork) invalidate the cache. */
+    /**
+     * ``currentView`` is read per preview so presentation changes (token artwork) invalidate the
+     * cache; each snapshot lays its own ``playedMarkerArt`` over it.
+     */
     constructor(
         private readonly currentView: () => MapViewDefinition,
         private readonly companyName: (companyId: string) => string,
@@ -70,7 +86,11 @@ export class HistoricalMaps<State extends GameState = EighteenXXState> {
         private readonly openReservations: (
             state: HistoricalMapState
         ) => HistoricalMapState['stationReservations'] = (state) => state.stationReservations,
-        private readonly titlePlacement: TitlePresentation['historyMapPlacement'] = undefined
+        private readonly titlePlacement: TitlePresentation['historyMapPlacement'] = undefined,
+        private readonly liftedPrivateBlocks: (
+            state: HistoricalMapState
+        ) => readonly string[] = () => [],
+        private readonly playedMarkerArt: (state: State) => LocationMarkerArt = () => ({})
     ) {}
 
     previews(action: GameAction): boolean {
@@ -99,17 +119,18 @@ export class HistoricalMaps<State extends GameState = EighteenXXState> {
         }
         const subject = this.subject(action)
         assertExists(subject, 'Historical map requires a map action')
-        const snapshot = this.read(new RecordedHistory(state, actions).after(action.id))
+        const snapshotState = new RecordedHistory(state, actions).after(action.id)
+        const snapshot = this.read(snapshotState)
         const company = snapshot.companies.find((company) => company.id === subject.companyId)
         assertExists(company, 'Historical map requires its operating company')
         const set = snapshot.operatingSet
         const run = isRunTrains(action) ? action : undefined
-        const routes =
-            run?.routes.map((route, index) => ({
-                id: route.trainId,
-                color: routeColor(index),
-                segments: route.paths
-            })) ?? []
+        const routes = trainRouteOverlays(run ? recordedRunRoutes(run) : [])
+        // A lay outlines every hex its tile covers.
+        const pieceIds =
+            subject.kind === 'track lay'
+                ? withTileGroups(view, subject.locationIds)
+                : subject.locationIds
         const preview: HistoricalMap = {
             actionId: action.id,
             label: `${this.companyName(company.id)}${set ? ` · OR ${set.number}.${set.roundNumber}` : ''}`,
@@ -120,16 +141,25 @@ export class HistoricalMaps<State extends GameState = EighteenXXState> {
                 {
                     tileSet: view.tileSet,
                     inventory: snapshot.tileInventory,
-                    markers: snapshot.locationMarkers
+                    markers:
+                        withStateMarkers(
+                            snapshot.locationMarkers,
+                            view.stateMarkers?.(snapshot) ?? []
+                        ) ?? [],
+                    liftedPrivateBlocks: this.liftedPrivateBlocks(snapshot),
+                    overfullCities: overfullCityKeys(
+                        snapshot.stations,
+                        new RailwayMapState(view.map, view.tileSet, snapshot.tileInventory)
+                    )
                 },
-                view
+                withPlayedMarkerArt(view, this.playedMarkerArt(snapshotState))
             ),
-            tokens: stationMapTokens(snapshot, view.stations),
+            tokens: stationMapTokens(snapshot, view),
             reservations: this.openReservations(snapshot),
             stationAppearances: view.stations,
             routes,
-            outlinedLocationIds: subject.locationIds,
-            locations: run ? routeLocationIds(routes, view) : [...subject.locationIds]
+            outlinedLocationIds: pieceIds,
+            locations: run ? routeLocationIds(routes, view) : [...pieceIds]
         }
         this.cache.set(action.id, preview)
         if (this.cache.size > 3) this.cache.delete(this.cache.keys().next().value!)

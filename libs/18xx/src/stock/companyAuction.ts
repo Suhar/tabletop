@@ -7,7 +7,13 @@ import {
     isValidBidStep
 } from '@tabletop/common'
 import { getCompany, presidentCertificate, type Company } from '../finance/finance.js'
-import { StationPosition, homeStationId } from '../map/station.js'
+import {
+    CompanyStationsOnly,
+    StationPosition,
+    homeStationId,
+    stationReservation,
+    type StationReservation
+} from '../map/station.js'
 import type { MapStateData } from '../map/mapState.js'
 import type { HomePosition } from '../stations/stationPlacement.js'
 import { applyStationPlacement } from '../stations/stationPlacement.js'
@@ -43,6 +49,7 @@ export type PendingCompanyFormation = {
     home: StationPosition
 }
 export type CompanyFormation = CompanyFormationChoice & PendingCompanyFormation
+export type CompanyFormationPayment = { privatesValue: number; cash: number }
 
 /**
  * Starting a company by auction during a stock turn: the opener names the company, its home and
@@ -53,6 +60,11 @@ export interface CompanyAuctionRules {
     increment: number
     /** The most a player can bid; a player who cannot reach the minimum leaves the auction. */
     maximumBid(state: CompanyAuctionState, playerId: string): number
+    /**
+     * What a player can put toward a bid before the title's limits on it, where more than cash
+     * counts, as 1817's privates do.
+     */
+    biddingPower?(state: CompanyAuctionState, playerId: string): number
     /** Whether the player could pay this exact amount and form a company with it now. */
     formable(state: CompanyAuctionState, playerId: string, amount: number): boolean
     homes(state: CompanyAuctionState, companyId: string): StationPosition[]
@@ -61,13 +73,26 @@ export interface CompanyAuctionRules {
     shareCounts(state: CompanyAuctionState): readonly number[]
     /** The privates a winner may contribute toward a winning bid of this price. */
     contributions(state: CompanyAuctionState, playerId: string, price: number): readonly string[]
+    contributionValue(privateIds: readonly string[]): number
     formationReason(state: CompanyAuctionState, formation: CompanyFormation): string | undefined
     /** Settles the bid and the title's formation terms once the company has its president. */
     form(state: CompanyAuctionState, formation: CompanyFormation): void
+    /**
+     * The turn records the winner, for the title's next turn to follow them rather than the
+     * player who opened the auction (1861 §9.2).
+     */
+    nextTurnFollowsWinner?(state: CompanyAuctionState): boolean
 }
 
 export function canBeAuctioned(company: Company): boolean {
     return company.kind !== 'private' && !company.started && !company.closed
+}
+
+export function companyAuctionHomeReservation(
+    state: Pick<CompanyAuctionState, 'companyAuction'>
+): StationReservation | undefined {
+    const auction = state.companyAuction
+    return auction ? stationReservation(auction.companyId, auction.home) : undefined
 }
 
 export class CompanyAuctionModel {
@@ -163,6 +188,13 @@ export class CompanyAuctionModel {
         return pending ? this.terms.contributions(this.state, pending.playerId, pending.price) : []
     }
 
+    formationPayment(privateIds: readonly string[]): CompanyFormationPayment {
+        const pending = this.pendingFormation()
+        assertExists(pending, 'A formation follows a won auction')
+        const privatesValue = this.terms.contributionValue(privateIds)
+        return { privatesValue, cash: Math.max(0, pending.price - privatesValue) }
+    }
+
     /** The winner's only formation, applied without a decision: one size and nothing to contribute. */
     automaticFormation(): CompanyFormationChoice | undefined {
         if (!this.pendingFormation()) return undefined
@@ -240,18 +272,24 @@ export class CompanyAuctionModel {
         }
         const president = { kind: 'player' as const, playerId }
         const marketSpaceId = this.terms.startSpace(this.state, formation.price)
-        startCompanyAtPar(this.state, this.rules.market, companyId, marketSpaceId, president)
+        startCompanyAtPar(this.state, this.rules.market, companyId, marketSpaceId)
         const certificate = presidentCertificate(this.state, companyId)
         assertExists(certificate, 'A company auction awards the president’s certificate')
         certificate.owner = president
         delete certificate.poolId
-        applyStationPlacement(this.state, {
-            companyId,
-            stationId: homeStationId(companyId),
-            position: formation.home,
-            cost: 0
-        })
+        applyStationPlacement(
+            this.state,
+            {
+                companyId,
+                stationId: homeStationId(companyId),
+                position: formation.home,
+                cost: 0
+            },
+            CompanyStationsOnly
+        )
         this.terms.form(this.state, formation)
+        if (this.terms.nextTurnFollowsWinner?.(this.state))
+            this.state.stockRound.turn.auctionWinnerId = playerId
         delete this.state.companyAuction
         this.state.activePlayerIds = [auction.openerId]
         const parPrice = getCompany(this.state, companyId).parPrice

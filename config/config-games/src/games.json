@@ -64,6 +64,10 @@
         "packageId": "napoleons-triumph"
     },
     {
+        "gameId": "south-african-railroads",
+        "packageId": "south-african-railroads"
+    },
+    {
         "gameId": "reef-encounter",
         "packageId": "reef-encounter"
     },
@@ -86,6 +90,138 @@
     {
         "gameId": "1832",
         "packageId": "1832"
+    },
+    {
+        "gameId": "1817",
+        "packageId": "1817"
+    },
+    {
+        "gameId": "1833ne",
+        "packageId": "1833ne"
+    },
+    {
+        "gameId": "1850",
+        "packageId": "1850"
+    },
+    {
+        "gameId": "1870",
+        "packageId": "1870"
+    },
+    {
+        "gameId": "1894",
+        "packageId": "1894"
+    },
+    {
+        "gameId": "1862",
+        "packageId": "1862"
+    },
+    {
+        "gameId": "1822",
+        "packageId": "1822"
+    },
+    {
+        "gameId": "1849",
+        "packageId": "1849"
+    },
+    {
+        "gameId": "1861",
+        "packageId": "1861"
+    },
+    {
+        "gameId": "1867",
+        "packageId": "1867"
+    },
+    {
+        "gameId": "1880",
+        "packageId": "1880"
+    },
+    {
+        "gameId": "1856",
+        "packageId": "1856"
+    },
+    {
+        "gameId": "1882",
+        "packageId": "1882"
+    },
+    {
+        "gameId": "18chesapeake",
+        "packageId": "18chesapeake"
+    },
+    {
+        "gameId": "1828",
+        "packageId": "1828"
+    },
+    {
+        "gameId": "dicke-kartoffeln",
+        "packageId": "dicke-kartoffeln"
+    },
+    {
+        "gameId": "medina",
+        "packageId": "medina"
+    },
+    {
+        "gameId": "preussische-ostbahn",
+        "packageId": "preussische-ostbahn"
+    },
+    {
+        "gameId": "koenigrufen",
+        "packageId": "koenigrufen"
+    },
+    {
+        "gameId": "gipf",
+        "packageId": "gipf"
+    },
+    {
+        "gameId": "zertz",
+        "packageId": "zertz"
+    },
+    {
+        "gameId": "matrx",
+        "packageId": "matrx"
+    },
+    {
+        "gameId": "gipf-potentials",
+        "packageId": "gipf-potentials"
+    },
+    {
+        "gameId": "ride-the-rails",
+        "packageId": "ride-the-rails"
+    },
+    {
+        "gameId": "yinsh",
+        "packageId": "yinsh"
+    },
+    {
+        "gameId": "dvonn",
+        "packageId": "dvonn"
+    },
+    {
+        "gameId": "lyngk",
+        "packageId": "lyngk"
+    },
+    {
+        "gameId": "tzaar",
+        "packageId": "tzaar"
+    },
+    {
+        "gameId": "punct",
+        "packageId": "punct"
+    },
+    {
+        "gameId": "18royalgorge",
+        "packageId": "18royalgorge"
+    },
+    {
+        "gameId": "hex",
+        "packageId": "hex"
+    },
+    {
+        "gameId": "18mex",
+        "packageId": "18mex"
+    },
+    {
+        "gameId": "1860",
+        "packageId": "1860"
     },
     {
         "gameId": "earendel",

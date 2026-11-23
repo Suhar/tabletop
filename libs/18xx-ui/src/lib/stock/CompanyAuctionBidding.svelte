@@ -4,6 +4,7 @@
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import AuctionBidControl from '../auctions/AuctionBidControl.svelte'
     import CompanyToken from '../tokens/CompanyToken.svelte'
+    import PlaceLink from '../places/PlaceLink.svelte'
 
     let { session }: { session: EighteenXXSessionView } = $props()
     const money = $derived(session.presentation.money)
@@ -21,9 +22,6 @@
         return model.bidding
     })
     const company = $derived(getCompany(session.gameState, auction.companyId))
-    const homeName = $derived(
-        session.mapView.map.location(auction.home.locationId).name ?? auction.home.locationId
-    )
     const startPrice = $derived(
         session.stockMarketChart.space(model.terms.startSpace(session.gameState, bidding.highBid))
             .price
@@ -36,8 +34,8 @@
         <div class="company">
             <CompanyToken appearance={session.mapView.stations[company.id]} size={48} />
             <div>
-                <strong>{session.companyName(company.id)}</strong>
-                <span>Home {homeName}</span>
+                <strong>{session.actionCompanyName(company.id)}</strong>
+                <span>Home <PlaceLink locationId={auction.home.locationId} /></span>
             </div>
         </div>
         <div class="turn">

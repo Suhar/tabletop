@@ -39,7 +39,7 @@ export class TestGame {
         playerCount = 2,
         seed = 1,
         config: EarendelGameConfig = { turnStyle: TurnStyle.SinglePiece },
-        start: GameStartOptions = {}
+        start: GameStartOptions<EarendelGameState> = {}
     ) {
         // The rule tests begin at the first draw; a test of the opening asks for it.
         config = { openingStations: false, ...config }

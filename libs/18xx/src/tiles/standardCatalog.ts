@@ -342,12 +342,14 @@ export const StandardTileCatalog = new TileCatalog([
     standardTile('82', junctionFace('green', [0, 1, 3])),
     standardTile('83', junctionFace('green', [0, 5, 3])),
     standardTile('141', townFace('green', [[0, 1, 3]], 10)),
+    standardTile('115', cityFace('yellow', [0], 20, 1)),
     standardTile('142', townFace('green', [[0, 3, 5]], 10)),
     standardTile('143', townFace('green', [[0, 1, 2]], 10)),
     standardTile('144', townFace('green', [[0, 2, 4]], 10)),
     standardTile('145', townFace('brown', [[0, 1, 3, 4]], 20)),
     standardTile('146', townFace('brown', [[0, 1, 2, 3]], 20)),
     standardTile('147', townFace('brown', [[0, 2, 3, 4]], 20)),
+    standardTile('170', cityFace('brown', [0, 1, 2, 3, 4], 50, 2, ['P'])),
     standardTile('205', cityFace('green', [0, 1, 3], 30, 1)),
     standardTile('206', cityFace('green', [0, 5, 3], 30, 1)),
     standardTile('437', { ...townFace('yellow', [[0, 2]], 30), symbols: ['port'] }),
@@ -366,6 +368,11 @@ export const StandardTileCatalog = new TileCatalog([
     standardTile('51', cityFace('gray', [0, 1, 2, 3, 4], 50, 2)),
     standardTile('597', cityFace('gray', [0, 1, 2, 3, 4], 80, 3, ['B'])),
     standardTile('611', cityFace('brown', [0, 1, 2, 3, 4], 40, 2)),
+    standardTile('455', cityFace('gray', [0, 1, 2, 3, 4, 5], 50, 3)),
+    standardTile('887', townFace('green', [[0, 1, 2, 3]], 20)),
+    standardTile('888', townFace('green', [[0, 1, 3, 4]], 20)),
+    standardTile('895', cityFace('gray', [0, 1, 2, 3, 4, 5], 50, 2)),
+    standardTile('915', cityFace('gray', [0, 1, 2, 3, 4], 50, 3)),
     standardTile('619', cityFace('green', [0, 2, 3, 4], 30, 2)),
     standardTile(
         '624',
@@ -460,7 +467,12 @@ export const StandardTileCatalog = new TileCatalog([
         )
     ),
     standardTile('767', townFace('brown', [[2, 3, 4, 5]], 10)),
-    standardTile('769', townFace('brown', [[0, 2, 3, 4]], 10))
+    standardTile('769', townFace('brown', [[0, 2, 3, 4]], 10)),
+    standardTile('87', townFace('green', [[0, 1, 2, 3]], 10)),
+    standardTile('88', townFace('green', [[0, 1, 3, 4]], 10)),
+    standardTile('204', townFace('green', [[0, 2, 3, 4]], 10)),
+    standardTile('911', townFace('brown', [[0, 1, 2, 3, 4]], 10)),
+    standardTile('171', cityFace('gray', [0, 1, 2, 3, 4, 5], 60, 3))
 ])
 
 function standardTile(printedNumber: string, face: TileFace): TileDefinition {

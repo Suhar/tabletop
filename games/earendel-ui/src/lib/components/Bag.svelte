@@ -42,14 +42,14 @@
                     stroke-width="2.4"
                     stroke-linejoin="round"
                     stroke-linecap="round"
-                />
+                ></path>
             {:else}
-                <path d="M-2,8 L0,20 L2,8 Z" fill="currentColor" fill-opacity="0.45" />
-                <path d="M-1,8 L0,14 L1,8 Z" fill="#fff3cc" fill-opacity="0.8" />
+                <path d="M-2,8 L0,20 L2,8 Z" fill="currentColor" fill-opacity="0.45"></path>
+                <path d="M-1,8 L0,14 L1,8 Z" fill="#fff3cc" fill-opacity="0.8"></path>
             {/if}
-            <path d={silhouette.body} fill="currentColor" />
+            <path d={silhouette.body} fill="currentColor"></path>
             {#each silhouette.windows ?? [] as window, pane (pane)}
-                <path d={window} fill="#fff3cc" fill-opacity="0.85" />
+                <path d={window} fill="#fff3cc" fill-opacity="0.85"></path>
             {/each}
         </svg>
         <span

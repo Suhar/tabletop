@@ -1,8 +1,8 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     assertExists,
@@ -34,6 +34,11 @@ export function privateStationPositions(
     pending: Omit<PrivateStation, 'playerId' | 'privateCompanyId'>
 ): StationPosition[] {
     if (!nextStationId(state, pending.companyId)) return []
+    const placed =
+        state.stationStep?.companyId === pending.companyId
+            ? state.stationStep.placedStationIds.length
+            : 0
+    if (placed > 0 && placed >= rules.placementLimit(state, pending.companyId)) return []
     const placement = new StationPlacement(state, rules)
     return placement.mapState.tile(pending.locationId).face.nodes.flatMap((node) => {
         const slot = placement.openSlots(pending.companyId, pending.locationId, node.id)[0]
@@ -64,7 +69,7 @@ function pendingFor(
 
 export const PlacePrivateStation = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('PlacePrivateStation'),
         privateCompanyId: Type.String(),
         position: StationPosition,
@@ -114,7 +119,7 @@ export class HydratedPlacePrivateStation
         const stationId = nextStationId(state, companyId)
         assertExists(stationId, 'The company has a station to place')
         const details = { companyId, stationId, position: { ...this.position }, cost: 0 }
-        applyStationPlacement(state, details)
+        applyStationPlacement(state, details, this.#rules.map)
         useTurnStationPlacement(state, companyId, stationId)
         delete state.privateStation
         this.metadata = details
@@ -123,7 +128,7 @@ export class HydratedPlacePrivateStation
 
 export const DeclinePrivateStation = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('DeclinePrivateStation'),
         privateCompanyId: Type.String()
     },

@@ -2,7 +2,11 @@ import path from 'node:path'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { access, readFile, stat } from 'node:fs/promises'
 import { GameDefinition } from '@tabletop/common'
-import type { SiteManifest, SiteManifestGame } from '@tabletop/games-config'
+import {
+    gamePublicationSignature,
+    type SiteManifest,
+    type SiteManifestGame
+} from '@tabletop/games-config'
 import { RedisCacheService } from '../cache/cacheService.js'
 import { EnvService } from '../env/envService.js'
 import { STATIC_ROOT } from '../env/staticRoot.js'
@@ -51,6 +55,7 @@ export type WhileLoadingTitle = <T>(load: () => Promise<T>) => Promise<T>
 
 export type LibraryServiceOptions = {
     manifestPath?: string
+    readManifest?: () => Promise<SiteManifest>
     cacheKey?: string
     useCache?: boolean
     fallbackManifest?: () => Promise<SiteManifest>
@@ -58,17 +63,21 @@ export type LibraryServiceOptions = {
     // Runs for every generation before it is installed; a failure keeps the previous titles.
     prepare?: (generation: TitleGeneration) => Promise<void>
     whileLoadingTitle?: WhileLoadingTitle
+    // Runs once an activation that loaded any title has installed its generations.
+    afterTitleLoads?: () => void | Promise<void>
 }
 
 export class LibraryService {
     private readonly cacheService: RedisCacheService
     private readonly manifestPath: string
+    private readonly readManifest?: () => Promise<SiteManifest>
     private readonly manifestCacheKey: string
     private readonly useCache: boolean
     private readonly fallbackManifest?: () => Promise<SiteManifest>
     private readonly logicRoot: string
     private readonly prepare?: (generation: TitleGeneration) => Promise<void>
     private readonly whileLoadingTitle: WhileLoadingTitle
+    private readonly afterTitleLoads?: () => void | Promise<void>
     private manifestSnapshot?: SiteManifest
     private manifestRefreshQueue: Promise<void> = Promise.resolve()
     private activationQueue: Promise<void> = Promise.resolve()
@@ -81,12 +90,14 @@ export class LibraryService {
     constructor(cacheService: RedisCacheService, options: LibraryServiceOptions = {}) {
         this.cacheService = cacheService
         this.manifestPath = options.manifestPath ?? MANIFEST_PATH
+        this.readManifest = options.readManifest
         this.manifestCacheKey = options.cacheKey ?? DEFAULT_CACHE_KEY
         this.useCache = options.useCache ?? true
         this.fallbackManifest = options.fallbackManifest
         this.logicRoot = options.logicRoot ?? GAMES_ROOT
         this.prepare = options.prepare
         this.whileLoadingTitle = options.whileLoadingTitle ?? ((load) => load())
+        this.afterTitleLoads = options.afterTitleLoads
     }
 
     async invalidateManifestCache(): Promise<void> {
@@ -151,7 +162,7 @@ export class LibraryService {
         const manifest = this.manifestSnapshot
         if (!manifest) return
         if (this.loadedManifest && this.publicationsMatch(this.loadedManifest, manifest)) return
-        const signature = this.publicationSignature(manifest)
+        const signature = gamePublicationSignature(manifest.games)
         const failure = this.activationFailure
         if (
             failure &&
@@ -177,13 +188,12 @@ export class LibraryService {
         return this.refreshManifest()
     }
 
-    // The manifest whose titles this instance runs; it trails the bucket manifest only while an
-    // activation is in progress.
+    // Only the games wait for an activation: a frontend-only release starts none.
     async getServedManifest(): Promise<SiteManifest> {
-        if (!this.loadedManifest) {
+        if (!this.loadedManifest || !this.manifestSnapshot) {
             throw new Error('Game titles have not been loaded; there is no served manifest')
         }
-        return this.loadedManifest
+        return { ...this.manifestSnapshot, games: this.loadedManifest.games }
     }
 
     createScope(): TitleScope {
@@ -249,6 +259,7 @@ export class LibraryService {
     // take the new publication record. Nothing is installed until every changed title loaded.
     private async activateManifest(manifest: SiteManifest): Promise<void> {
         const next = new Map<string, TitleGeneration>()
+        let loaded = false
         for (const entry of manifest.games) {
             if (next.has(entry.gameId)) throw new Error(`Duplicate title: ${entry.gameId}`)
             const current = this.generations.get(entry.gameId)
@@ -263,9 +274,11 @@ export class LibraryService {
             const generation = await this.whileLoadingTitle(() => this.loadGeneration(entry))
             await this.prepare?.(generation)
             next.set(entry.gameId, generation)
+            loaded = true
         }
         this.generations = next
         this.loadedManifest = manifest
+        if (loaded) await this.afterTitleLoads?.()
     }
 
     private async loadGeneration(entry: SiteManifestGame): Promise<TitleGeneration> {
@@ -418,9 +431,9 @@ export class LibraryService {
             const manifest = this.useCache
                 ? await this.cacheService.cachingGet<SiteManifest>(
                       this.manifestCacheKey,
-                      readManifest
+                      this.readManifest ?? readManifest
                   )
-                : await readManifest()
+                : await (this.readManifest ?? readManifest)()
             if (manifest) return manifest
         } catch (error) {
             if (error !== unavailable) throw error
@@ -436,19 +449,6 @@ export class LibraryService {
     }
 
     private publicationsMatch(loaded: SiteManifest, manifest: SiteManifest): boolean {
-        return this.publicationSignature(loaded) === this.publicationSignature(manifest)
-    }
-
-    private publicationSignature(manifest: SiteManifest): string {
-        return JSON.stringify(
-            (manifest.games ?? [])
-                .map((entry) => [
-                    entry.gameId,
-                    entry.packageId,
-                    entry.logicVersion,
-                    entry.uiVersion
-                ])
-                .sort(([left], [right]) => left.localeCompare(right))
-        )
+        return gamePublicationSignature(loaded.games) === gamePublicationSignature(manifest.games)
     }
 }

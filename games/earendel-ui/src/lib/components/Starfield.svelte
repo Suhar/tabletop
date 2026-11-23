@@ -20,7 +20,15 @@
     const BAND_TILT = -27
     const BAND_Y = H * 0.52
 
-    type Star = { x: number; y: number; r: number; o: number; twinkle: boolean; delay: number; duration: number }
+    type Star = {
+        x: number
+        y: number
+        r: number
+        o: number
+        twinkle: boolean
+        delay: number
+        duration: number
+    }
 
     const sky = $derived.by(() => {
         const random = makeRandom(seed)
@@ -82,21 +90,21 @@
 >
     <defs>
         <radialGradient id="sky-band-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="#cdd9ff" stop-opacity="0.15" />
-            <stop offset="55%" stop-color="#8ea4d8" stop-opacity="0.06" />
-            <stop offset="100%" stop-color="#8ea4d8" stop-opacity="0" />
+            <stop offset="0%" stop-color="#cdd9ff" stop-opacity="0.15"></stop>
+            <stop offset="55%" stop-color="#8ea4d8" stop-opacity="0.06"></stop>
+            <stop offset="100%" stop-color="#8ea4d8" stop-opacity="0"></stop>
         </radialGradient>
         <radialGradient id="sky-cloud" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="currentColor" stop-opacity="1" />
-            <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+            <stop offset="0%" stop-color="currentColor" stop-opacity="1"></stop>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
         </radialGradient>
         <radialGradient id="sky-lane" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="#050912" stop-opacity="1" />
-            <stop offset="100%" stop-color="#050912" stop-opacity="0" />
+            <stop offset="0%" stop-color="#050912" stop-opacity="1"></stop>
+            <stop offset="100%" stop-color="#050912" stop-opacity="0"></stop>
         </radialGradient>
     </defs>
 
-    <rect x="0" y="0" width={W} height={H} fill="#070b16" />
+    <rect x="0" y="0" width={W} height={H} fill="#070b16"></rect>
 
     {#each sky.clouds as cloud, i (i)}
         <ellipse
@@ -107,12 +115,14 @@
             fill="url(#sky-cloud)"
             color={cloud.hue}
             opacity={cloud.o}
-        />
+        ></ellipse>
     {/each}
 
     <g transform="rotate({BAND_TILT} {W / 2} {H / 2})">
-        <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.62} ry={H * 0.17} fill="url(#sky-band-glow)" />
-        <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.45} ry={H * 0.09} fill="url(#sky-band-glow)" />
+        <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.62} ry={H * 0.17} fill="url(#sky-band-glow)"
+        ></ellipse>
+        <ellipse cx={W / 2} cy={BAND_Y} rx={W * 0.45} ry={H * 0.09} fill="url(#sky-band-glow)"
+        ></ellipse>
 
         {#each sky.stars as star, i (i)}
             <circle
@@ -125,7 +135,7 @@
                 style={star.twinkle
                     ? `animation-delay: ${star.delay}s; animation-duration: ${star.duration}s;`
                     : ''}
-            />
+            ></circle>
         {/each}
 
         {#each sky.lanes as lane, i (i)}
@@ -136,7 +146,7 @@
                 ry={lane.ry}
                 fill="url(#sky-lane)"
                 opacity={lane.o}
-            />
+            ></ellipse>
         {/each}
     </g>
 </svg>

@@ -6,8 +6,15 @@ export interface StockRoundRules {
     nextPlayerOrder(state: StockState): string[]
     soldOut(state: StockState, companyId: string): boolean
     squeezed?(state: StockState, companyId: string): boolean
+    /**
+     * How many spaces a sold-out company rises at the end of the round, judged before any
+     * marker moves; one, or two when ``squeezed``, unless given.
+     */
+    soldOutRises?(state: StockState, companyId: string): number
     /** Down moves at the end of the round for a company's shares in the market pool. */
     poolDrop?(state: StockState, companyId: string): number
+    /** What else happens as the round ends, such as 1880's interest on players' debts (§X). */
+    afterRound?(state: StockState): void
 }
 
 export function playerOrderAfterLastTurn(state: StockState): string[] {

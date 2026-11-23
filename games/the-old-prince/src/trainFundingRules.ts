@@ -4,19 +4,18 @@ import { TheOldPrinceOperatingRules } from './roundRules.js'
 import {
     marketSaleTerms,
     reorderPendingOperatingCompanies,
-    getCompany,
+    presidentOf,
     privateOwner,
     type TrainFundingRules
 } from '@tabletop/18xx'
 import { TheOldPrinceStockRules } from './stockRules.js'
 export const TheOldPrinceTrainFundingRules: TrainFundingRules = {
-    sellInBlocks: true,
     afterShareSale(state) {
         reorderPendingOperatingCompanies(state, TheOldPrinceOperatingRules.companyOrder(state))
     },
     includeMarketTrains: false,
     contributors(state, companyId) {
-        const president = getCompany(state, companyId).president
+        const president = presidentOf(state, companyId)
         assertExists(president, 'A railway requires its president')
         if (president.kind === 'player') return [president]
         const owner = privateOwner(state, president.companyId)

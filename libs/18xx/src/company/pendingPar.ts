@@ -1,8 +1,9 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import * as Type from 'typebox'
+import { StartChoices, startChoicesReason } from './startChoices.js'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     type GameAction,
@@ -57,6 +58,15 @@ export function validatePendingPar(state: AwardedParState): void {
     )
 }
 
+/** The par spaces open to the player owed a par for the company. */
+export function awardParSpaces(
+    state: FormationState,
+    rules: CompanyRules,
+    companyId: string
+): string[] {
+    return rules.awardParSpaces?.(state, companyId) ?? rules.startMarketSpaces(state, companyId)
+}
+
 export function parReason(
     state: ParState,
     rules: CompanyRules,
@@ -65,17 +75,19 @@ export function parReason(
     const pending = state.pendingPar
     if (pending?.playerId !== request.playerId || pending.companyId !== request.companyId)
         return 'This player has no par to set for this company.'
-    if (!rules.startMarketSpaces(state, request.companyId).includes(request.marketSpaceId))
+    if (!awardParSpaces(state, rules, request.companyId).includes(request.marketSpaceId))
         return 'Choose an available starting price.'
     return undefined
 }
 
 export const ParCompany = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('ParCompany'),
         companyId: Type.String(),
-        marketSpaceId: Type.String()
+        marketSpaceId: Type.String(),
+        /** The title's start choices, such as the BCR's 1880 par slot and permits, by choice id. */
+        choices: Type.Optional(StartChoices)
     },
     { additionalProperties: false }
 )
@@ -92,6 +104,7 @@ export class HydratedParCompany extends HydratableAction<typeof ParCompany> impl
     declare playerId: string
     declare companyId: string
     declare marketSpaceId: string
+    declare choices?: StartChoices
     readonly #rules: CompanyRules
     readonly #market: StockMarketChart
     constructor(data: ParCompany, rules: CompanyRules, market: StockMarketChart) {
@@ -101,16 +114,16 @@ export class HydratedParCompany extends HydratableAction<typeof ParCompany> impl
     }
     isValid(state: ParState): boolean {
         return (
-            this.source === ActionSource.User && parReason(state, this.#rules, this) === undefined
+            this.source === ActionSource.User &&
+            parReason(state, this.#rules, this) === undefined &&
+            startChoicesReason(state, this.#rules, this.companyId, this) === undefined
         )
     }
     apply(state: HydratedGameState & ParState): void {
         assert(this.isValid(state), 'Invalid par')
-        startCompanyAtPar(state, this.#market, this.companyId, this.marketSpaceId, {
-            kind: 'player',
-            playerId: this.playerId
-        })
+        startCompanyAtPar(state, this.#market, this.companyId, this.marketSpaceId)
         delete state.pendingPar
+        if (this.choices) this.#rules.applyStartChoices?.(state, this.companyId, this.choices)
     }
 }
 

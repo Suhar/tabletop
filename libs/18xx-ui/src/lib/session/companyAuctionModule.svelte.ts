@@ -6,10 +6,12 @@ import {
     FormCompany,
     canBeAuctioned,
     PassCompanyAuction,
+    stationReservation,
     type CompanyAuctionState,
     type CompanyFormationChoice,
     type EighteenXXTitleRules,
-    type HomePosition
+    type HomePosition,
+    type StationReservation
 } from '@tabletop/18xx'
 import type { ModuleSession } from './moduleSession.js'
 import { StagedSelection, singleChoice } from './stagedSelection.svelte.js'
@@ -51,14 +53,26 @@ export class CompanyAuctionModule {
     canForm = $derived.by(
         () => this.session.interactive && this.session.validActionTypes.includes('FormCompany')
     )
-    companies = $derived.by(() =>
-        this.canOpen ? this.session.state.companies.filter(canBeAuctioned) : []
-    )
+    // Only the companies the title offers a home now, as 1861 offers only its minors (§9.2).
+    companies = $derived.by(() => {
+        const model = this.model
+        if (!this.canOpen || !model) return []
+        return this.session.state.companies.filter(
+            (company) =>
+                canBeAuctioned(company) &&
+                model.terms.homes(this.session.state, company.id).length > 0
+        )
+    })
     selectedCompanyId = $derived.by(() =>
         this.session.selectionsVisible ? this.opening.value('companyId') : undefined
     )
     selectedHome = $derived.by(() =>
         this.session.selectionsVisible ? this.opening.value('home') : undefined
+    )
+    chosenHome = $derived.by((): StationReservation | undefined =>
+        this.selectedCompanyId && this.selectedHome
+            ? stationReservation(this.selectedCompanyId, this.selectedHome)
+            : undefined
     )
     openingAmount = $derived.by(() => {
         const model = this.model
@@ -90,11 +104,21 @@ export class CompanyAuctionModule {
     contributedPrivateIds = $derived.by(
         () => (this.session.selectionsVisible ? this.contribution.value('choice') : undefined) ?? []
     )
+    formationPayment = $derived.by(() =>
+        this.canForm && this.contributions.length
+            ? this.model?.formationPayment(this.contributedPrivateIds)
+            : undefined
+    )
     formationChoice = $derived.by((): CompanyFormationChoice | undefined =>
         this.shareCount === undefined
             ? undefined
             : { shareCount: this.shareCount, privateIds: this.contributedPrivateIds }
     )
+
+    /** What the player can put toward a bid for a company, before the title's limits on it. */
+    biddingPower(playerId: string): number | undefined {
+        return this.model?.terms.biddingPower?.(this.session.state, playerId)
+    }
 
     openingReason(amount: number): string | undefined {
         const model = this.model
@@ -121,16 +145,29 @@ export class CompanyAuctionModule {
         const playerId = this.playerId
         return this.canRespond && !!playerId && !!this.model?.canBid(playerId, amount)
     }
-    formationReason(choice: CompanyFormationChoice): string | undefined {
+    // Every offered size pays alike, so a payment problem shows before a size is chosen.
+    formationProblem = $derived.by(() => {
         const model = this.model
         const pending = this.pending
         if (!model || !pending) return 'No company is being formed.'
-        return model.formationReason(pending.playerId, pending.companyId, choice)
-    }
+        const problem = model.formationReason(pending.playerId, pending.companyId, {
+            shareCount: this.shareCount ?? this.shareCounts[0],
+            privateIds: this.contributedPrivateIds
+        })
+        return problem ?? (this.shareCount === undefined ? 'Choose a size.' : undefined)
+    })
 
     selectCompany(companyId: string) {
         assert(this.canOpen, 'Company auctions are unavailable')
         this.opening.choose('companyId', companyId)
+        // A company with one possible home, as 1861's minors, takes it without a choice.
+        const homes = this.model?.terms.homes(this.session.state, companyId) ?? []
+        if (homes.length === 1)
+            this.opening.choose(
+                'home',
+                { locationId: homes[0].locationId, nodeId: homes[0].nodeId },
+                'auto'
+            )
     }
     toggleCompany(companyId: string) {
         if (this.selectedCompanyId === companyId) this.clearOpening()

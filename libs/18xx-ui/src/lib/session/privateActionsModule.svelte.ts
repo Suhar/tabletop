@@ -1,7 +1,8 @@
-import { assert } from '@tabletop/common'
-import type { EighteenXXState, TrackConstruction, TrackLayDetails } from '@tabletop/18xx'
+import { assert, assertExists } from '@tabletop/common'
+import type { EighteenXXState, TrackLayDetails } from '@tabletop/18xx'
+import type { TitleTrackConstruction } from './trackModule.svelte.js'
 import type { CompanyDecisionsModule } from './companyDecisionsModule.svelte.js'
-import type { LocalSelection } from './localSelections.js'
+import type { LocalSelection } from '@tabletop/frontend-components'
 import type { PrivatesModule } from './privatesModule.svelte.js'
 import type { ModuleSession } from './moduleSession.js'
 import { StagedSelection } from './stagedSelection.svelte.js'
@@ -15,10 +16,7 @@ export type PrivateTrackPower = { privateCompanyId: string; playerId: string }
 export type TitlePrivatePower = PrivateTrackPower & { label: string; prompt: string } & (
         | {
               kind: 'track'
-              construction: Pick<
-                  TrackConstruction,
-                  'choices' | 'canReach' | 'evaluate' | 'inventoryAfter' | 'stationsAfter'
-              >
+              construction: TitleTrackConstruction
               commit(details: TrackLayDetails): Promise<void>
               /** Ends a power that allows several lays with the lays staged so far. */
               finish?: { label: string; run(): Promise<void> }
@@ -42,8 +40,11 @@ export type TitlePrivatePower = PrivateTrackPower & { label: string; prompt: str
           }
         | { kind: 'immediate'; run(): Promise<void> }
     )
+export type PrivateListedPower = PrivateTrackPower & { kind: 'listed' }
+export type PrivatePower = PrivateTrackPower | TitlePrivatePower | PrivateListedPower
 export type PrivateActionSource = 'mine' | 'other' | 'powers'
-type PrivateActionStages = { source: PrivateActionSource; power: PrivateTrackPower }
+type ChosenPower = PrivateTrackPower & { label?: string }
+type PrivateActionStages = { source: PrivateActionSource; power: ChosenPower }
 const PrivateActionStageOrder = ['source', 'power'] as const
 
 export type PrivateActionsSession = ModuleSession<
@@ -52,13 +53,26 @@ export type PrivateActionsSession = ModuleSession<
 >
 type Decisions = Pick<
     CompanyDecisionsModule,
-    'choice' | 'privateTileOptions' | 'privateTrainOptions' | 'privateMarkerOptions'
+    | 'choice'
+    | 'privateTileOptions'
+    | 'privateTrainOptions'
+    | 'privateMarkerOptions'
+    | 'privateTokenOptions'
 >
 type TrackSelection = Pick<LocalSelection, 'undo' | 'clear'>
 type Exchanges = Pick<PrivatesModule, 'exchangeOptions'>
 
 function samePower(left: PrivateTrackPower, right: PrivateTrackPower) {
     return left.privateCompanyId === right.privateCompanyId && left.playerId === right.playerId
+}
+
+function distinctPowers(options: readonly PrivateTrackPower[]): PrivateTrackPower[] {
+    const powers: PrivateTrackPower[] = []
+    for (const { privateCompanyId, playerId } of options) {
+        const power = { privateCompanyId, playerId }
+        if (!powers.some((listed) => samePower(listed, power))) powers.push(power)
+    }
+    return powers
 }
 
 export class PrivateActionsModule implements LocalSelection {
@@ -92,12 +106,13 @@ export class PrivateActionsModule implements LocalSelection {
             : undefined
     )
     purchaseSource = $derived.by(() => (this.selection === 'powers' ? undefined : this.selection))
+    private get powersWithOwnButtons() {
+        return this.listedPowers.length > 0 || this.exchanges.exchangeOptions.length > 0
+    }
     get powersAvailable() {
         return (
             this.decisions.privateTileOptions.length > 0 ||
-            this.decisions.privateTrainOptions.length > 0 ||
-            this.decisions.privateMarkerOptions.length > 0 ||
-            this.exchanges.exchangeOptions.length > 0 ||
+            this.powersWithOwnButtons ||
             this.titlePowers.length > 0
         )
     }
@@ -105,14 +120,18 @@ export class PrivateActionsModule implements LocalSelection {
         return this.titlePowerOptions()
     }
     /** Private tile powers under the shared rules. */
-    sharedTrackPowers = $derived.by(() => {
-        const powers: PrivateTrackPower[] = []
-        for (const { privateCompanyId, playerId } of this.decisions.privateTileOptions) {
-            const power = { privateCompanyId, playerId }
-            if (!powers.some((listed) => samePower(listed, power))) powers.push(power)
-        }
-        return powers
-    })
+    sharedTrackPowers = $derived.by(() => distinctPowers(this.decisions.privateTileOptions))
+    private listedPowers = $derived.by((): PrivateListedPower[] =>
+        distinctPowers([
+            ...this.decisions.privateMarkerOptions,
+            ...this.decisions.privateTokenOptions,
+            ...this.decisions.privateTrainOptions.map((option) => {
+                const { playerId } = this.session
+                assertExists(playerId, 'Only a player is offered a private train')
+                return { privateCompanyId: option.privateCompanyId, playerId }
+            })
+        ]).map((power) => ({ ...power, kind: 'listed' }))
+    )
     trackPowers = $derived.by(() => [
         ...this.sharedTrackPowers,
         ...this.titlePowers
@@ -138,9 +157,12 @@ export class PrivateActionsModule implements LocalSelection {
         )
             return selected
         if (this.offeredPower) return { value: this.offeredPower, source: 'auto' as const }
-        // A lone power needs no choice; an immediate one still waits to be pressed.
+        // A lone power needs no choice; an immediate one still waits to be pressed, and a power
+        // with its own button, such as a free station, leaves the player a choice to make.
         const powers = [...this.trackPowers, ...this.choosableTitlePowers]
-        return powers.length === 1 && this.titlePowers.every((power) => power.kind !== 'immediate')
+        return powers.length === 1 &&
+            !this.powersWithOwnButtons &&
+            this.titlePowers.every((power) => power.kind !== 'immediate')
             ? {
                   value: {
                       privateCompanyId: powers[0].privateCompanyId,
@@ -158,8 +180,14 @@ export class PrivateActionsModule implements LocalSelection {
     })
     /** The chosen power when the title applies its rules. */
     titlePower = $derived.by(() => {
-        const selected = this.powerSelection?.value
-        return selected ? this.titlePowers.find((power) => samePower(power, selected)) : undefined
+        const selected: ChosenPower | undefined = this.powerSelection?.value
+        return selected
+            ? this.titlePowers.find(
+                  (power) =>
+                      samePower(power, selected) &&
+                      (selected.label === undefined || selected.label === power.label)
+              )
+            : undefined
     })
 
     choosePowers() {
@@ -191,13 +219,35 @@ export class PrivateActionsModule implements LocalSelection {
         this.chooseTitlePower(power)
     }
     /** Every power the private offers now, under the shared rules or the title's own. */
-    powersFor(privateCompanyId: string): (PrivateTrackPower | TitlePrivatePower)[] {
-        return [
-            ...this.sharedTrackPowers.filter(
-                (power) => power.privateCompanyId === privateCompanyId
-            ),
-            ...this.titlePowers.filter((power) => power.privateCompanyId === privateCompanyId)
+    powersFor(privateCompanyId: string): PrivatePower[] {
+        const ofPrivate = (power: PrivateTrackPower) => power.privateCompanyId === privateCompanyId
+        const powers: PrivatePower[] = [
+            ...this.sharedTrackPowers.filter(ofPrivate),
+            ...this.titlePowers.filter(ofPrivate)
         ]
+        return powers.length ? powers : this.listedPowers.filter(ofPrivate)
+    }
+    startPower(power: PrivatePower) {
+        if (!('kind' in power)) this.startTrackPower(power)
+        else if (power.kind === 'listed') this.startListedPower(power)
+        else this.startTitlePower(power)
+    }
+    isChosen(power: PrivatePower): boolean {
+        if ('kind' in power && power.kind === 'listed')
+            return this.selection === 'powers' && !this.powerSelection
+        const chosen = this.titlePower ?? this.trackPowerSelection?.value
+        return (
+            chosen !== undefined &&
+            samePower(chosen, power) &&
+            (!('label' in chosen) || !('label' in power) || chosen.label === power.label)
+        )
+    }
+    private startListedPower(power: PrivateListedPower) {
+        assert(
+            this.listedPowers.some((option) => samePower(option, power)),
+            'Choose an available private power'
+        )
+        if (this.selection !== 'powers') this.choosePowers()
     }
     chooseTitlePower(power: TitlePrivatePower) {
         if (power.kind === 'immediate') {
@@ -207,7 +257,8 @@ export class PrivateActionsModule implements LocalSelection {
         this.track.clear()
         this.stages.choose('power', {
             privateCompanyId: power.privateCompanyId,
-            playerId: power.playerId
+            playerId: power.playerId,
+            label: power.label
         })
     }
 

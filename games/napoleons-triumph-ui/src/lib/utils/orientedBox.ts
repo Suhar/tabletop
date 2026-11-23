@@ -47,3 +47,14 @@ export function boxSamples(box: OrientedBox): Point[] {
         stepsThrough(box.halfWidth).map((aside) => pointAt(box, ahead, aside))
     )
 }
+
+export function nearBox(box: OrientedBox, margin: number): (point: Point) => boolean {
+    return (point) => {
+        const x = point.x - box.centre.x
+        const y = point.y - box.centre.y
+        return (
+            Math.abs(x * box.along.x + y * box.along.y) <= box.halfLength + margin &&
+            Math.abs(y * box.along.x - x * box.along.y) <= box.halfWidth + margin
+        )
+    }
+}

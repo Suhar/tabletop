@@ -1,3 +1,4 @@
+import { stateWith } from '../game/stateWith.js'
 import { soldThisStockRound } from './stockRound.js'
 import { companyShareCount } from '../company/companyCharters.js'
 import * as Type from 'typebox'
@@ -9,6 +10,7 @@ import {
     copyFinances,
     cashOwnedBy,
     getCompany,
+    removeCertificates,
     sameOwner,
     sharesOwned,
     type Portfolio
@@ -25,6 +27,7 @@ import {
 import {
     certificateLimitAllows,
     stockCertificateCount,
+    presidencyExchangeTerms,
     purchaseOwnershipCeiling,
     type StockRules
 } from './stockRules.js'
@@ -39,26 +42,30 @@ export const SharePurchaseDetails = Type.Object(
         shares: Type.Integer({ minimum: 1 }),
         buyer: Owner,
         seller: Owner,
-        price: Type.Integer({ minimum: 1 }),
+        poolId: Type.Optional(Type.String()),
+        /** Nothing where a certificate is taken up in exchange, as 1822's LNWR concession. */
+        price: Type.Integer({ minimum: 0 }),
         payments: Type.Array(CashPayment),
         presidency: Type.Optional(PresidencyChange),
         presidencyClaim: Type.Optional(PresidencyClaim),
-        coveredShortId: Type.Optional(Type.String())
+        coveredShortId: Type.Optional(Type.String()),
+        /**
+         * Certificates taken out of play just before the purchase; the bought certificate among
+         * them leaves the buyer nothing (``StockRules.purchaseRemoval``).
+         */
+        removedCertificateIds: Type.Optional(Type.Array(Type.String()))
     },
     { additionalProperties: false }
 )
 export type SharePurchaseDetails = Type.Static<typeof SharePurchaseDetails>
 export type SharePurchaseResult =
     { details: SharePurchaseDetails; reason?: never } | { details?: never; reason: string }
-export type ShareBuyResult =
-    | { details: SharePurchaseDetails; poolId?: string; reason?: never }
-    | { details?: never; reason: string }
 export type SharePurchaseTerms = { price: number; recipient: Owner; payers: Owner[] }
 export function evaluateSharePurchase(
     state: StockState,
     request: PurchaseRequest,
     rules: StockRules
-): ShareBuyResult {
+): SharePurchaseResult {
     const certificate = state.certificates.find((item) => item.id === request.certificateId)
     if (!certificate || certificate.kind !== 'share')
         return { reason: 'This is not an available share certificate.' }
@@ -70,7 +77,18 @@ export function evaluateSharePurchase(
         rules,
         rules.purchaseTerms(state, certificate, request.buyer)
     )
-    return result.details && certificate.poolId ? { ...result, poolId: certificate.poolId } : result
+    const removedId = result.details && rules.purchaseRemoval?.(state, certificate, request.buyer)
+    if (!result.details || !removedId) return result
+    if (removedId !== certificate.id)
+        return { details: { ...result.details, removedCertificateIds: [removedId] } }
+    // The bought certificate leaves play first: the turn's purchase brings nothing.
+    const { presidency: _presidency, presidencyClaim: _claim, ...details } = result.details
+    return { details: { ...details, price: 0, payments: [], removedCertificateIds: [removedId] } }
+}
+
+/** Whether a purchase's certificate left play before the buyer could take it. */
+export function purchaseForfeited(details: SharePurchaseDetails): boolean {
+    return !!details.removedCertificateIds?.includes(details.certificateId)
 }
 
 export function evaluateShareAcquisition(
@@ -138,18 +156,20 @@ export function evaluateShareTransfer(
         remaining -= amount
     }
     if (remaining > 0) return { reason: 'The buyer cannot afford this purchase.' }
-    const projected = { ...state, ...copyFinances(state) }
+    const projected = stateWith(state, copyFinances(state))
     const purchased = projected.certificates.find((item) => item.id === certificateId)
     assert(purchased, 'Missing purchased certificate')
     purchased.owner = buyer
     delete purchased.poolId
-    const presidency = evaluatePresidency(
-        projected,
-        company.id,
-        rules.presidencyCandidates(state, company.id),
-        undefined,
-        rules.presidencyExchangeLargestFirst
-    )
+    const presidency = rules.presidentless?.(state, company.id)
+        ? {}
+        : evaluatePresidency(
+              projected,
+              company.id,
+              rules.presidencyCandidates(state, company.id),
+              undefined,
+              presidencyExchangeTerms(rules)
+          )
     if (presidency.reason) return { reason: presidency.reason }
     if (presidency.claim) applyPresidencyClaim(projected, presidency.claim)
     if (
@@ -169,6 +189,7 @@ export function evaluateShareTransfer(
             shares: certificate.shares,
             buyer,
             seller: certificate.owner,
+            ...(certificate.poolId ? { poolId: certificate.poolId } : {}),
             price: terms.price,
             payments,
             ...(presidency.change ? { presidency: presidency.change } : {}),
@@ -179,7 +200,9 @@ export function evaluateShareTransfer(
 }
 
 export function applySharePurchase(state: StockState, details: SharePurchaseDetails): void {
-    applyShareTransfer(state, details)
+    if (details.removedCertificateIds?.length)
+        removeCertificates(state, details.removedCertificateIds)
+    if (!purchaseForfeited(details)) applyShareTransfer(state, details)
     if (details.buyer.kind === 'company')
         state.stockRound.companyPurchases.push(details.buyer.companyId)
     markTurnPurchase(state)

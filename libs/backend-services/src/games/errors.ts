@@ -14,6 +14,7 @@ enum GameServiceError {
     PrivateGameNotFull = 'PrivateGameNotFullError',
     OwnerNotPlaying = 'OwnerNotPlayingError',
     UnlistedGameNotPublic = 'UnlistedGameNotPublicError',
+    GameNameNotAllowed = 'GameNameNotAllowedError',
     InvalidPlayerUser = 'InvalidPlayerUserError',
     InvalidPlayerId = 'InvalidPlayerIdError',
     UserIsNotAllowedPlayer = 'UserIsNotAllowedPlayerError',
@@ -24,7 +25,9 @@ enum GameServiceError {
     DisallowedUndo = 'DisallowedUndoError',
     DisallowedPlayerVote = 'DisallowedPlayerVoteError',
     DisallowedAction = 'DisallowedActionError',
-    RacedAction = 'RacedActionError'
+    RacedAction = 'RacedActionError',
+    HotseatSeatHandover = 'HotseatSeatHandoverError',
+    SeatHolderUnavailable = 'SeatHolderUnavailableError'
 }
 
 export class GamePlayerCountInvalidError extends BaseError {
@@ -167,6 +170,17 @@ export class UnlistedGameNotPublicError extends BaseError {
     }
 }
 
+export class GameNameNotAllowedError extends BaseError {
+    readonly statusCode = 400
+
+    constructor() {
+        super({
+            name: GameServiceError.GameNameNotAllowed,
+            message: 'That name is not allowed for a public game. Please choose a different one.'
+        })
+    }
+}
+
 export class InvalidPlayerUserError extends BaseError {
     constructor({ user }: { user: User }) {
         super({
@@ -297,6 +311,26 @@ export class RacedActionError extends BaseError {
             name: GameServiceError.RacedAction,
             message: `Action ${actionId} cannot be applied to game ${gameId} because it raced Actions it does not commute with: ${reason}`,
             metadata: { gameId, actionId, reason }
+        })
+    }
+}
+
+export class HotseatSeatHandoverError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.HotseatSeatHandover,
+            message: `The game with id ${id} is a hotseat game, whose seats cannot be handed over`,
+            metadata: { id }
+        })
+    }
+}
+
+export class SeatHolderUnavailableError extends BaseError {
+    constructor({ username }: { username: string }) {
+        super({
+            name: GameServiceError.SeatHolderUnavailable,
+            message: `${username} is not an active account`,
+            metadata: { username }
         })
     }
 }

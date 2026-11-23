@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import auth from '@fastify/auth'
 import sensible from '@fastify/sensible'
 import secureSession from '@fastify/secure-session'
 import { randomBytes } from 'node:crypto'
@@ -8,6 +9,7 @@ import { TournamentError } from '@tabletop/backend-services'
 import authorization from '../../../plugins/authorization.js'
 import tournaments from './index.js'
 import { authSession } from '../../../lib/session.js'
+import { memorySessions } from '../../../tests/sessionFixture.js'
 
 vi.hoisted(() => vi.stubEnv('GCLOUD_PROJECT', 'demo-tabletop'))
 afterAll(() => vi.unstubAllEnvs())
@@ -28,8 +30,11 @@ async function setup(roles: Role[]) {
         externalIds: []
     }
     await server.register(sensible)
+    await server.register(auth)
     await server.register(secureSession, { key: randomBytes(32), cookie: { path: '/' } })
-    Reflect.set(server, 'userService', { getUser: async () => user })
+    const { sessionService } = memorySessions()
+    server.decorate('sessionService', sessionService)
+    server.decorate('userService', { getUser: async () => user })
     const change = vi.fn(async () => ({ id: 'event' }))
     Reflect.set(server, 'tournamentService', {
         list: change,
@@ -39,17 +44,22 @@ async function setup(roles: Role[]) {
         cancel: change,
         control: change,
         lock: change,
+        start: change,
         previewSchedule: change,
         correctResult: change,
         rebuildStandings: change,
         commitSchedule: change,
-        tournamentTitleIds: () => ['sol']
+        tournamentTitles: () => ({ titleIds: ['sol'], placementTitleIds: ['sol'] })
     })
     await server.register(authorization)
     await server.register(tournaments, { prefix: '/tournaments' })
     server.get('/session', async (request) => {
-        authSession({ session: request.session, userId: user.id })
-        request.session.set('authTimestamp', '2000-01-01T00:00:00.000Z')
+        await authSession({
+            session: request.session,
+            user,
+            proof: 'authentication-method',
+            sessions: sessionService
+        })
         return {}
     })
     const response = await server.inject('/session')
@@ -101,7 +111,11 @@ describe('tournament administrator authorization', () => {
         const { server, cookies } = await setup(admin ? [Role.User, Role.Admin] : [Role.User])
         const response = await server.inject({ url: '/tournaments/titles', cookies })
         expect(response.statusCode).toBe(admin ? 200 : 403)
-        if (admin) expect(response.json()).toEqual({ status: 'ok', payload: { titleIds: ['sol'] } })
+        if (admin)
+            expect(response.json()).toEqual({
+                status: 'ok',
+                payload: { titleIds: ['sol'], placementTitleIds: ['sol'] }
+            })
     })
 
     it('accepts the completed tournament filter', async () => {
@@ -148,11 +162,13 @@ describe('tournament administrator authorization', () => {
                     url: '/tournaments/event/standings/rebuild',
                     payload: { revision: 1 }
                 },
-                ...['publish', 'cancel', 'lock', 'pause', 'resume', 'retry'].map((operation) => ({
-                    method: 'POST',
-                    url: `/tournaments/event/${operation}`,
-                    payload: {}
-                }))
+                ...['publish', 'cancel', 'lock', 'start', 'pause', 'resume', 'retry'].map(
+                    (operation) => ({
+                        method: 'POST',
+                        url: `/tournaments/event/${operation}`,
+                        payload: {}
+                    })
+                )
             ]
             for (const request of requests) {
                 const response = await server.inject({
@@ -192,6 +208,18 @@ describe('tournament administrator authorization', () => {
         expect(response.statusCode).toBe(403)
         expect(change).not.toHaveBeenCalled()
     })
+})
+
+describe('tournament session requirement', () => {
+    it.each(['/tournaments/', '/tournaments/event'])(
+        'answers a visitor without a session as unauthorized: %s',
+        async (url) => {
+            const { server, change } = await setup([Role.User])
+            const response = await server.inject(url)
+            expect(response.statusCode).toBe(401)
+            expect(change).not.toHaveBeenCalled()
+        }
+    )
 })
 
 describe('tournament errors', () => {

@@ -1,4 +1,4 @@
-import { assert } from '@tabletop/common'
+import { ActionSource, assert } from '@tabletop/common'
 import type { DistributionState, EarningsChoice } from '../earnings/earningsDistribution.js'
 import type { MapStateData } from '../map/mapState.js'
 import type { PresidencyClaim } from '../stock/presidency.js'
@@ -31,14 +31,23 @@ export interface ReceivershipRules {
     ): PresidencyClaimTerms | undefined
 }
 
-/** A started, open share company with no president, whose president certificate lies in a pool. */
+/**
+ * The kind of a company with neither shares nor president, run by its title's receivers, as
+ * 1861's Russian State Railway is run by the Banker (§7.4).
+ */
+export const NationalCompanyKind = 'national'
+
+/**
+ * A started, open company with no president: a share company whose president certificate lies in
+ * a pool, or a national company.
+ */
 export function inReceivership(state: FinancialState, companyId: string): boolean {
     const company = getCompany(state, companyId)
+    if (company.kind === NationalCompanyKind) return !!company.started && !company.closed
     return (
         company.kind !== 'private' &&
         !!company.started &&
         !company.closed &&
-        !company.president &&
         state.certificates.some(
             (certificate) =>
                 certificate.kind === 'share' &&
@@ -53,9 +62,31 @@ export function inReceivership(state: FinancialState, companyId: string): boolea
  * Whether the player may act for the company: its controlling owner, or anyone while it is in
  * receivership, where the step's active players say which receivers act.
  */
-export function actsFor(state: FinancialState, playerId: string, companyId: string): boolean {
+export function actsFor(
+    state: FinancialState,
+    playerId: string | undefined,
+    companyId: string
+): boolean {
     const owner = controllingOwner(state, companyId)
     return owner ? owner.playerId === playerId : inReceivership(state, companyId)
+}
+
+export function actionMayOperate(
+    state: FinancialState & { activePlayerIds: readonly string[] },
+    action: { source: ActionSource; playerId?: string },
+    companyId: string
+): boolean {
+    return action.playerId === undefined
+        ? action.source === ActionSource.System && inReceivership(state, companyId)
+        : state.activePlayerIds.includes(action.playerId) &&
+              actsFor(state, action.playerId, companyId)
+}
+
+export function automaticStepCredit(
+    state: FinancialState & { activePlayerIds: readonly string[] },
+    companyId: string
+): { playerId?: string } {
+    return inReceivership(state, companyId) ? {} : { playerId: state.activePlayerIds[0] }
 }
 
 /** The players who operate the company: its controlling owner, or its receivers. */

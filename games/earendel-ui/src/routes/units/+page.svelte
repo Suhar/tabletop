@@ -40,9 +40,20 @@
                 { name: 'Fighter', note: 'level 1 (damaged)', kind: 'fighter', level: 1 },
                 { name: 'Fighter', note: 'level 2', kind: 'fighter', level: 2 },
                 { name: 'Fighter', note: 'level 3', kind: 'fighter', level: 3 },
-                { name: 'Gamma Torpedo', note: 'a fighter, armed', kind: 'fighter', level: 3, torpedo: true },
+                {
+                    name: 'Gamma Torpedo',
+                    note: 'a fighter, armed',
+                    kind: 'fighter',
+                    level: 3,
+                    torpedo: true
+                },
                 { name: 'Station', note: '', kind: 'station' },
-                { name: 'Opening station', note: 'the free first one', kind: 'station', founding: true },
+                {
+                    name: 'Opening station',
+                    note: 'the free first one',
+                    kind: 'station',
+                    founding: true
+                },
                 { name: 'Scrap', note: 'card only', kind: 'glyph', type: PieceType.Scrap }
             ]
         },
@@ -50,18 +61,73 @@
             title: 'Special units',
             units: [
                 { name: 'Station Hub', note: 'teal (Expansion)', kind: 'station', hub: true },
-                { name: 'Terraformer', note: 'teal (Expansion)', kind: 'glyph', type: PieceType.Terraformer },
-                { name: 'Artificial Planet', note: 'teal (Expansion)', kind: 'glyph', type: PieceType.ArtificialPlanet },
-                { name: 'Nebula Seeder', note: 'teal (Expansion)', kind: 'glyph', type: PieceType.NebulaSeeder },
-                { name: 'Interdictor', note: 'violet (Belligerence)', kind: 'glyph', type: PieceType.Interdictor },
-                { name: 'Bastion', note: 'violet (Belligerence)', kind: 'glyph', type: PieceType.Bastion },
+                {
+                    name: 'Terraformer',
+                    note: 'teal (Expansion)',
+                    kind: 'glyph',
+                    type: PieceType.Terraformer
+                },
+                {
+                    name: 'Artificial Planet',
+                    note: 'teal (Expansion)',
+                    kind: 'glyph',
+                    type: PieceType.ArtificialPlanet
+                },
+                {
+                    name: 'Nebula Seeder',
+                    note: 'teal (Expansion)',
+                    kind: 'glyph',
+                    type: PieceType.NebulaSeeder
+                },
+                {
+                    name: 'Interdictor',
+                    note: 'violet (Belligerence)',
+                    kind: 'glyph',
+                    type: PieceType.Interdictor
+                },
+                {
+                    name: 'Bastion',
+                    note: 'violet (Belligerence)',
+                    kind: 'glyph',
+                    type: PieceType.Bastion
+                },
                 { name: 'Gate', note: 'aqua (Mobility)', kind: 'glyph', type: PieceType.Gate },
-                { name: 'Carrier', note: 'mint (Acquisitions)', kind: 'glyph', type: PieceType.Carrier },
-                { name: 'Deep Scanner', note: 'mint (Acquisitions)', kind: 'glyph', type: PieceType.DeepScanner },
-                { name: 'Salvage Drone', note: 'mint (Acquisitions)', kind: 'glyph', type: PieceType.SalvageDrone },
-                { name: 'Relay', note: 'periwinkle (Espionage)', kind: 'glyph', type: PieceType.Relay },
-                { name: 'Quarantine Beacon', note: 'periwinkle (Espionage)', kind: 'glyph', type: PieceType.QuarantineBeacon },
-                { name: 'Jammer', note: 'periwinkle (Espionage)', kind: 'glyph', type: PieceType.Jammer }
+                {
+                    name: 'Carrier',
+                    note: 'mint (Acquisitions)',
+                    kind: 'glyph',
+                    type: PieceType.Carrier
+                },
+                {
+                    name: 'Deep Scanner',
+                    note: 'mint (Acquisitions)',
+                    kind: 'glyph',
+                    type: PieceType.DeepScanner
+                },
+                {
+                    name: 'Salvage Drone',
+                    note: 'mint (Acquisitions)',
+                    kind: 'glyph',
+                    type: PieceType.SalvageDrone
+                },
+                {
+                    name: 'Relay',
+                    note: 'periwinkle (Espionage)',
+                    kind: 'glyph',
+                    type: PieceType.Relay
+                },
+                {
+                    name: 'Quarantine Beacon',
+                    note: 'periwinkle (Espionage)',
+                    kind: 'glyph',
+                    type: PieceType.QuarantineBeacon
+                },
+                {
+                    name: 'Jammer',
+                    note: 'periwinkle (Espionage)',
+                    kind: 'glyph',
+                    type: PieceType.Jammer
+                }
             ]
         }
     ]
@@ -80,11 +146,11 @@
     ]
 
     const JAMMERS = [
-        { kind: 'jammer-static', name: '1. Static', note: 'today\'s dish, waves flickering' },
+        { kind: 'jammer-static', name: '1. Static', note: "today's dish, waves flickering" },
         { kind: 'jammer-rings', name: '2. Scrambler', note: 'broken rings, counter-turning' },
         { kind: 'jammer-bolts', name: '3. Mast', note: 'jagged bolts flickering' },
         { kind: 'jammer-burst', name: '4. Noise burst', note: 'a jagged burst, throbbing' },
-        { kind: 'jammer-cut', name: '5. Cut signal', note: 'a relay\'s arcs, struck through' }
+        { kind: 'jammer-cut', name: '5. Cut signal', note: "a relay's arcs, struck through" }
     ]
 
     // Candidate Nebula Seeders, each reaching as far as a Station Hub's ring (about 31).
@@ -126,14 +192,14 @@
 <div class="min-h-screen bg-[#0b1222] px-6 py-8 text-white">
     <h1 class="text-2xl font-bold">Earendel units</h1>
     <p class="mt-1 text-sm text-white/60">
-        Every unit as the board draws it, in each player color. Each fighter row shows that
-        color's own ship.
+        Every unit as the board draws it, in each player color. Each fighter row shows that color's
+        own ship.
     </p>
 
     {#snippet seeder(key: (typeof SEEDER_IDEAS)[number]['key'], color: string)}
         {#if key === 'sprinkler'}
-            <circle r="12" fill="none" stroke={color} stroke-width="2.5" />
-            <circle r="5" fill={color} />
+            <circle r="12" fill="none" stroke={color} stroke-width="2.5"></circle>
+            <circle r="5" fill={color}></circle>
             {#each NOZZLES as angle (angle)}
                 {@const from = polar(12, angle)}
                 {@const to = polar(17, angle)}
@@ -145,7 +211,7 @@
                     stroke={color}
                     stroke-width="3"
                     stroke-linecap="round"
-                />
+                ></line>
             {/each}
             <g class="turning">
                 {#each NOZZLES as angle (angle)}
@@ -157,19 +223,19 @@
                             r={puff.size}
                             fill={color}
                             fill-opacity={puff.opacity}
-                        />
+                        ></circle>
                     {/each}
                 {/each}
             </g>
         {:else if key === 'duster'}
-            <path d="M0,-30 L6,-15 L4,-9 L-4,-9 L-6,-15 Z" fill={color} />
+            <path d="M0,-30 L6,-15 L4,-9 L-4,-9 L-6,-15 Z" fill={color}></path>
             <path
                 d="M-20,-9 L20,-9"
                 stroke={color}
                 stroke-width="3"
                 stroke-linecap="round"
                 fill="none"
-            />
+            ></path>
             {#each BOOM as x (x)}
                 <path
                     class="spray"
@@ -179,7 +245,7 @@
                     stroke-linecap="round"
                     stroke-dasharray="1.5 4"
                     fill="none"
-                />
+                ></path>
                 <ellipse
                     cx={x * 1.4}
                     cy={22 + Math.abs(x) * 0.12}
@@ -187,11 +253,11 @@
                     ry="5"
                     fill={color}
                     fill-opacity="0.3"
-                />
+                ></ellipse>
             {/each}
         {:else if key === 'comet'}
-            <circle cy="-20" r="7" fill={color} />
-            <circle cy="-20" r="10.5" fill="none" stroke={color} stroke-width="1.5" />
+            <circle cy="-20" r="7" fill={color}></circle>
+            <circle cy="-20" r="10.5" fill="none" stroke={color} stroke-width="1.5"></circle>
             {#each [-22, -8, 8, 22] as x, index (x)}
                 <path
                     class="spray"
@@ -201,18 +267,18 @@
                     stroke-linecap="round"
                     stroke-dasharray="2 4"
                     fill="none"
-                />
+                ></path>
                 <circle
                     cx={x}
                     cy={24 - Math.abs(index - 1.5) * 2}
                     r={index === 1 || index === 2 ? 6.5 : 5}
                     fill={color}
                     fill-opacity="0.32"
-                />
+                ></circle>
             {/each}
         {:else}
-            <circle r="5.5" fill={color} />
-            <circle r="8.5" fill="none" stroke={color} stroke-width="1.5" />
+            <circle r="5.5" fill={color}></circle>
+            <circle r="8.5" fill="none" stroke={color} stroke-width="1.5"></circle>
             <g class="turning">
                 {#each ARMS as puff, index (index)}
                     <circle
@@ -221,7 +287,7 @@
                         r={puff.size}
                         fill={color}
                         fill-opacity={puff.opacity}
-                    />
+                    ></circle>
                 {/each}
             </g>
         {/if}
@@ -259,7 +325,12 @@
                     <tr>
                         <td class="pr-3 text-xs text-white/60">{player.name}</td>
                         <td class="rounded-md bg-white/[0.04] p-1 text-center">
-                            <svg viewBox="-34 -34 68 68" width="88" height="88" class="inline-block">
+                            <svg
+                                viewBox="-34 -34 68 68"
+                                width="88"
+                                height="88"
+                                class="inline-block"
+                            >
                                 <UnitGlyph
                                     type={PieceType.NebulaSeeder}
                                     color={player.fill}
@@ -281,7 +352,12 @@
                             </td>
                         {/each}
                         <td class="rounded-md bg-white/[0.04] p-1 text-center">
-                            <svg viewBox="-34 -34 68 68" width="88" height="88" class="inline-block">
+                            <svg
+                                viewBox="-34 -34 68 68"
+                                width="88"
+                                height="88"
+                                class="inline-block"
+                            >
                                 <StationShape {center} color={player.fill} hub />
                             </svg>
                         </td>

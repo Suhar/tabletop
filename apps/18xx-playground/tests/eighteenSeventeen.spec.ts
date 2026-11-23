@@ -36,6 +36,50 @@ test('1817 opens with a selection auction and starts companies by auction', asyn
     )
 })
 
+test('1817 auction bids can be typed', async ({ page }) => {
+    await page.goto('/table')
+    await page.getByLabel('Game', { exact: true }).selectOption('1817')
+    await page.getByLabel('Position', { exact: true }).selectOption('opening')
+    const lots = page.getByRole('region', { name: 'Private auction' })
+    await lots.getByRole('button', { name: 'Auction Minor Coal Mine' }).click()
+    await lots.getByRole('spinbutton', { name: 'Bid amount' }).fill('100')
+    await lots.getByRole('button', { name: 'Bid', exact: true }).click()
+    const bidding = page.getByRole('article', { name: 'Current auction' })
+    await expect(bidding).toContainText('High bid $100')
+    const raise = bidding.getByRole('spinbutton', { name: 'Bid amount' })
+    await raise.fill('103')
+    await expect(bidding.getByRole('button', { name: 'Bid', exact: true })).toBeDisabled()
+    await raise.fill('125')
+    await expect(bidding.getByRole('button', { name: 'Bid', exact: true })).toBeEnabled()
+    // A cleared field must not bid the amount it last held.
+    await raise.fill('')
+    await expect(bidding.getByRole('button', { name: 'Bid', exact: true })).toBeDisabled()
+    await raise.fill('125')
+    await raise.press('Enter')
+    await expect(bidding).toContainText('High bid $125')
+    for (let pass = 0; pass < 2; pass++)
+        await bidding.getByRole('button', { name: 'Pass', exact: true }).click()
+    for (let pass = 0; pass < 3; pass++)
+        await lots.getByRole('button', { name: 'Pass', exact: true }).click()
+
+    await page.getByRole('button', { name: 'Auction', exact: true }).click()
+    await page.getByRole('button', { name: 'Auction Alton & Southern' }).click()
+    await page.locator('[data-map-location="B5"]').filter({ visible: true }).first().click()
+    const opening = page.getByLabel('Auction a company')
+    await opening.getByRole('spinbutton', { name: 'Bid amount' }).fill('250')
+    await opening.getByRole('button', { name: 'Bid', exact: true }).click()
+    const auction = page.getByRole('article', { name: 'Company auction' })
+    await expect(auction).toContainText('High bid $250')
+    const companyRaise = auction.getByRole('spinbutton', { name: 'Bid amount' })
+    // Below the minimum the auction keeps its minimum as the bid, so the field must not bid.
+    await companyRaise.fill('10')
+    await expect(companyRaise).toHaveValue('10')
+    await expect(auction.getByRole('button', { name: 'Bid', exact: true })).toBeDisabled()
+    await companyRaise.fill('300')
+    await auction.getByRole('button', { name: 'Bid', exact: true }).click()
+    await expect(auction).toContainText('High bid $300')
+})
+
 test('1817 Volatility auctions its privates from the bottom tier of a pyramid', async ({
     page
 }) => {
@@ -43,21 +87,43 @@ test('1817 Volatility auctions its privates from the bottom tier of a pyramid', 
     await page.getByLabel('Game', { exact: true }).selectOption('1817')
     await page.getByLabel('Position', { exact: true }).selectOption('optional-opening')
     const lots = page.getByRole('region', { name: 'Private auction' })
-    const tier = (label: string) => lots.getByRole('group', { name: label, exact: true })
-    await expect(tier('Tier 1').getByRole('button', { name: /^Auction / })).toBeDisabled()
+    const row = (number: number) =>
+        lots.getByRole('group', { name: `Row ${number}`, exact: true }).getByRole('button')
+    await expect(row(6)).toHaveCount(6)
     await expect(lots.getByRole('button', { name: 'Pass', exact: true })).toHaveCount(0)
-    const bottom = tier('Tier 6').getByRole('button', { name: /^Auction / })
-    await expect(bottom).toHaveCount(6)
-    // Each slot shows its private's power after its name and value.
-    await expect(bottom.first()).toHaveText(/\$\d+\s*\S.{10,}/)
+    // Any lot can be read; one above the open row cannot be auctioned.
+    await row(1).first().click()
+    await expect(lots).toContainText('Row 1 · not open yet')
+    await expect(lots.getByRole('button', { name: 'Bid', exact: true })).toHaveCount(0)
     // Selling the second lot leaves the first without a neighbour, so it is removed.
-    await bottom.nth(1).click()
+    await row(6).nth(1).click()
+    await expect(lots).toContainText(/If sold, .+ leaves the game\./)
     await lots.getByRole('button', { name: 'Bid', exact: true }).click()
     const bidding = page.getByRole('article', { name: 'Current auction' })
-    for (let pass = 0; pass < 2; pass++)
-        await bidding.getByRole('button', { name: 'Pass', exact: true }).click()
+    await expect(bidding).toContainText('Row 6 · being auctioned')
+    // The pyramid opens over the bidding card.
+    await bidding.getByRole('button', { name: 'Pyramid', exact: true }).click()
+    const pyramid = page.getByRole('dialog', { name: 'Lot pyramid' })
+    const pyramidRow6 = pyramid
+        .getByRole('group', { name: 'Row 6', exact: true })
+        .getByRole('button')
+    await expect(pyramidRow6).toHaveCount(6)
+    // Another open lot cannot be sold while this one is bid on, so it shows no sale.
+    await pyramidRow6.nth(4).click()
+    await expect(pyramid).toContainText('Row 6 · open')
+    await expect(pyramid).not.toContainText('If sold')
+    await pyramid.getByRole('button', { name: 'Close pyramid' }).click()
+    await expect(pyramid).toHaveCount(0)
+    await expect(bidding).toContainText(/High bid \$\d+/)
+    await expect(bidding).not.toContainText('Passed')
+    await bidding.getByRole('button', { name: 'Pass', exact: true }).click()
+    await expect(bidding).toContainText('Passed')
+    await bidding.getByRole('button', { name: 'Pass', exact: true }).click()
     await expect(page.getByRole('article', { name: 'Current auction' })).toHaveCount(0)
-    await expect(bottom).toHaveCount(4)
+    // Sold and removed lots keep their slots.
+    await expect(row(6)).toHaveCount(6)
+    await expect(lots.getByRole('button', { name: /, Removed from the game$/ })).toHaveCount(1)
+    await expect(lots.getByRole('button', { name: /, Sold to / })).toHaveCount(1)
     await page.getByRole('tab', { name: 'History', exact: true }).click()
     await expect(page.getByRole('list', { name: 'Action history' })).toContainText('removed')
 })
@@ -244,7 +310,7 @@ test('1817 companies use their private powers in their operating turn', async ({
     )
     await page.getByRole('tab', { name: 'History', exact: true }).click()
     await expect(page.getByRole('list', { name: 'Action history' })).toContainText(
-        'marked G6 with Union Bridge'
+        'marked Cincinnati with Union Bridge'
     )
 })
 

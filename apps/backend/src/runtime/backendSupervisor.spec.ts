@@ -140,6 +140,11 @@ describe('supervised backend worker', () => {
         log.mockRestore()
     })
 
+    it('starts the worker with garbage collection exposed, for the compaction after title loads', async () => {
+        await start()
+        expect(await get('/garbage-collection')).toEqual({ exposed: true })
+    })
+
     it('stays ready while the worker is blocked by a title load it announced', async () => {
         await start()
         const load = fetch(origin + '/load-title?ms=1500')
@@ -355,7 +360,7 @@ describe('supervised backend worker', () => {
             expect(result.body).toBe('{"value":1}')
             expect(result.url).toBe('/echo?x=1')
             expect(result.headers.authorization).toBe('Bearer test')
-            expect(result.headers['x-forwarded-for']).toBe('127.0.0.1')
+            expect(result.headers['x-forwarded-for']).toBe('forged, 127.0.0.1')
             expect(responseHeaders['set-cookie']).toEqual(['one=1', 'two=2'])
             const oldPort = supervisor.port
             const crash = client.request({ ':path': '/crash' })

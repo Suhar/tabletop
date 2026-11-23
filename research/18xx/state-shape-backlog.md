@@ -270,7 +270,8 @@ fields back before hashing, are unchanged.
   upgrade a hex the company laid this turn. The cost is in the Action's metadata.
 - **Inventories keep no constant ids.** The tile inventory no longer records its set; the
   train inventory records `depotId` only for a supply variant chosen at setup (1846's
-  two-player depot).
+  two-player depot), and the tile inventory `variantId` likewise (1822's scenarios), from which
+  the variant's board tiles and the pieces it plays without follow (`TileSetVariant`).
 - **Sale records hold the least fact.** A stock round records each (owner, company) sale
   once; train funding records sales only for titles that sell in blocks, without the
   share count. `stockRound.companyPurchases` stays: TOP's Union Bank rule reads it.
@@ -333,21 +334,120 @@ change freely.
   zone's limit and what they hold, so a protected or merged excess is kept until they sell
   but cannot grow; 1832 no longer composes `ownershipLimitExemptions`.
 
-Still open, for the owner: **`companies[].president`** repeats the president certificate's
-owner. Receivership deletes it while the certificate is in the market, and presidency
-changes write both. Deriving it from the certificate touches every reader across the family
-and changes stored TOP, 1889 and 1830 States; keeping it needs a recorded reason here.
+## Family readiness findings (2026-11-20)
 
-## Not a change
+Readiness reviews reported four family fields as definition data or repeated facts. Each is
+fixed in `libs/18xx` and every title that wrote or read it.
 
-`turnManager.series` stays. It is the index of the game's turns. Round and phase managers
-recording their own starts and ends are wanted later for the same reason, and 18xx's
-`operatingSet` and `phaseEvents` are candidates to be written through them.
+- **SHAPE-001 `bank.breaksOnShortfall`.** 1856's bank-breaking rule is a title rule now:
+  `defineEighteenXXState(schema, validations, { bank: { breaksOnShortfall: true } })` gives
+  the hydrated state a `bankRules` getter, which `settleCashPayments` reads. It is not a
+  member of the stored State, so it never dehydrates. Settlement is called from about 130 places
+  across the family and titles, and none of them holds title rules. The state definition is
+  the one title-owned object that reaches all of them. A plain copy of the State settles with
+  the default rule, where reaching nothing breaks the bank.
+- **SHAPE-002 `neutralStations[]`.** 1882's neutral stations are a title definition,
+  `NeutralStations1882`, which its `RailwayMap` carries (`new RailwayMap(definition,
+{ neutralStations })`). Station placement, routes, construction and the UI already hold the
+  map, so `neutralStation`, `stationPlacer`, `placeableStations`, `cityHasNeutralStation`,
+  `cityBlockedForCompanies`, `cityIsBlocked` and `validateStations` take the map's list.
+  `applyStationPlacement` takes it only where a neutral station may be placed.
+- **SHAPE-003 `trackStops[].revenue`.** A track stop records only its two edges. Its worth
+  comes from the tile set (`new TileSet(manifest, catalogs, variants, { trackStopRevenue })`,
+  1862's £20 small station), and a stop carried onto an upgrade is worth the same.
+- **SHAPE-004 `companies[].president`.** `presidentOf(state, companyId)` reads the holder of
+  the company's president's certificate. There is none while that certificate is with the bank
+  or in any pool, including a company's own treasury pool. `presides(state, companyId, owner)`
+  is the boolean form. Presidency changes, claims, lapses, acquisitions, forced sales and
+  company starts no longer write the field. `startCompanyAtPar` no longer takes a president.
+    - **Not derivable from a president's certificate: TOP's PEIR and 1828's C&P railway
+      (`CPRY`).** Neither has one. PEIR's president comes from TOP's `peirPresident`, a rule over
+      its numbered shares. CPRY's is the player holding the C&P private. Both keep writing the
+      field, and `presidentOf` falls back to it for a company without a president's certificate.
+      **Decided (2026-11-21): the record stays for these two.** Deriving them needs a title hook
+      every reader of `presidentOf` reaches. The only title-owned channel the hydrated State
+      offers, the state definition's options (how 1856's `bankRules` arrives), is lost on a plain
+      copy of the State, and the family and these titles build such copies in several places
+      (station placement previews, route views), some of which read presidents; there PEIR's and
+      the C&P's presidents would silently vanish. 1856's rule tolerates that miss (it differs only
+      when the bank lands exactly on zero); a president does not. Revisit if the family gains a
+      title channel that survives copying. The field's doc says to read it only through
+      `presidentOf`, and finance validation checks it only where no president's certificate
+      exists.
+    - **Two behaviour changes.** A president's certificate awarded in an opening auction before
+      par (1830's B&O, 1849, 1870, 1880's BCR, 1882's CPR, 1894, 18Chesapeake, 18MEX's NdM,
+      1832, 1828) makes its holder president at once, where the record waited for par. Stale
+      records left on closed companies (1880's merged investors, 1846's closed independents) and
+      1862's director during a share merge are no longer read.
+    - TOP's deployed-game replay asserts that the recorded president equals `presidentOf` in
+      every recorded State.
 
-Reviewed again on 2026-10-10 and left alone by the owner's decision. It is the largest
-single field left: 8–23 KB, 28–40% of a finished game's State. For reference, the same
-turns as compact tuples would be 1.6–5.2 KB, and pruned to the current round about
-0.2–0.3 KB.
+**Stored games.** `bank.breaksOnShortfall`, `neutralStations` and `trackStops[].revenue` stay
+in the schema as optional `never`, keeping their old value schema, so stored States and undo
+patches still load. `companies[].president` stays an optional `President`, because PEIR and
+CPRY write it. For any other company it is never read.
+
+**Logic majors.** States written by this logic lack fields that older logic reads or requires:
+the president of every certificate company, 1856's bank rule, 1882's neutral stations and
+1862's stop revenue. Every released 18xx title therefore takes it as a Logic major, with its
+UI: 1817, 1822, 1828, 1830, 1832, 1833ne, 1846, 1849, 1850, 1856, 1861, 1862, 1867, 1870,
+1880, 1882, 1894, 18Chesapeake, 18MEX, 18RoyalGorge, Shikoku 1889 and The Old Prince. 1860
+is unreleased.
+
+## Turn series
+
+`turnManager.series` was left alone at first, as the index of the game's turns. Round and
+phase managers recording their own starts and ends are wanted later for the same reason, and
+18xx's `operatingSet` and `phaseEvents` are candidates to be written through them. It was
+reviewed again on 2026-10-10 and left alone by the owner's decision, as the largest single
+field left: 8–23 KB, 28–40% of a finished game's State. For reference, the same turns as
+compact tuples would be 1.6–5.2 KB, and pruned to the current round about 0.2–0.3 KB.
+
+On 2026-11-13 the owner asked for it to be trimmed. A new 18xx game starts its turn manager
+with `seriesKeeps: 'latest'`, set in `EighteenXXInitializer`: the series then forgets every
+finished turn but each Player's latest. The turn manager answers the current turn, the last
+player and when a Player last had a turn as before.
+
+The family and its twelve titles read only the open turn from the series and, through
+`startNextTurn`, the last player. What a rule looks back for, such as priority, who has
+passed, or what a Player sold this round, is its own State fact in every title, as
+`docs/DESIGN.md` asks ("the least past fact a rule still consults"). The researched titles not
+yet implemented were not surveyed for this change. The limit is intended: a title whose rule
+needs an older turn records that fact itself.
+
+- **Given up.** A new game's State is no longer the index of its turns. A history panel
+  grouping by turn would take turn boundaries from the Actions.
+- **New games only.** History Navigation replays recorded Actions with the current logic, and
+  their undo patches address the series by position, so the setting cannot change during a
+  game. Games recorded before it keep every turn.
+- **Undo patches.** A forgotten turn moves into the undo patch of the Action that forgot it:
+  one operation when the turns beside it are unchanged, the rewritten turns when one Player
+  takes turns in a row. That holds since `createPatch` pairs the elements two lists share; the
+  diff before it paired them by position and rewrote the whole series whenever its head left,
+  which grew the action records by 11% on 1830's recorded game. The host builds the stored
+  patches, so the backend takes the new diff before a title takes the setting. No UI Artifact
+  has to be republished for it: an artifact's own `createPatch` builds only its local
+  previews, and either diff's patches apply everywhere.
+- **Release.** Each title takes it with a Logic major: older Logic drops the field it does not
+  know and keeps every turn, and the undo patches recorded since would miss.
+
+Each title's recorded finished game, replayed from its recorded opening with every turn kept
+and with the latest only, compact JSON in KB. The State is written with every Action, so its
+mean over the game is what a write carries.
+
+| Replayed                    | TOP  | 1889 | 1830 | 1846 | 1817 | 1850 | 1870 |
+| --------------------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| Final State, every turn     | 53.7 | 31.6 | 36.6 | 26.8 | 61.4 | 44.3 | 53.7 |
+| Final State, latest only    | 37.9 | 21.9 | 23.6 | 18.7 | 39.0 | 28.4 | 35.4 |
+| Mean State, every turn      | 39.8 | 21.6 | 25.1 | 19.9 | 40.1 | 30.2 | 35.1 |
+| Mean State, latest only     | 31.0 | 16.4 | 18.0 | 15.8 | 28.2 | 21.4 | 24.8 |
+| Action records, every turn  | 1195 | 720  | 1159 | 699  | 2251 | 1409 | 1743 |
+| Action records, latest only | 1225 | 739  | 1184 | 715  | 2295 | 1440 | 1778 |
+
+With the diff that paired by position, the same records with every turn kept were 1272, 769,
+1223, 735, 2452, 1526 and 1878 KB.
+
+1832's recorded game stops replaying at its 198th action on main and is left out.
 
 ## Verification
 

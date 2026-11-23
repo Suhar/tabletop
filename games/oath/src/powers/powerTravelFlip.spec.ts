@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { Color, type Visibility } from '@tabletop/common'
+import { Color, getPrng, type GameAction, type Visibility } from '@tabletop/common'
 import { campaignRecords, openTurn, testPlayer, testState } from '../testing/fixture.js'
+import { createOathVault } from '../model/vault.js'
 import { actionPowerUse, player, site, siteTarget } from '../testing/choices.js'
 import { answerQuestion } from '../testing/steps.js'
 import { buildAction } from '../testing/actions.js'
@@ -23,6 +24,7 @@ import {
     HydratedCampaignResolveVictory
 } from '../actions/campaignResolveVictory.js'
 import { PowerTiming, powerIndexOf } from '../data/cardPowers.js'
+import { hiddenRequestFor } from '../util/powerDoorway.js'
 import '../powers/index.js'
 
 const WHISTLE = 'relic.whistle'
@@ -483,6 +485,294 @@ describe('R-11.13-H1 — Palanquin to The Hidden Place: the carried player is as
     })
 })
 
+describe('R-5.6.2, R-11.13-H1 — Palanquin reveals a facedown site only when a pawn arrives there', () => {
+    const MINE = 'site.mine'
+    const perspectives: Visibility.Perspective[] = [
+        { kind: 'spectator' },
+        ...['dana', 'rhys', 'ann', 'bea'].map((playerId): Visibility.Perspective => ({
+            kind: 'player',
+            playerId
+        }))
+    ]
+
+    /**
+     * Dana, with Palanquin, stands with Rhys at the Buried Giant (c1); the Narrow Pass is p1, and
+     * p2 is facedown, the Mine in the vault (a relic and favor on its reveal). `here` and `pass`
+     * replace the Giant and the Pass, and `facedown` the Mine.
+     */
+    interface Scene {
+        oathRevision?: number
+        here?: string
+        pass?: string
+        facedown?: string
+        rulers?: Record<string, Record<string, number>>
+        atC2?: string[]
+        rhysRelics?: string[]
+    }
+    function giant({
+        oathRevision = OathRevision.EngineFixes26,
+        here = BURIED_GIANT,
+        pass = 'site.narrow-pass',
+        facedown = MINE,
+        rulers = {},
+        atC2 = [],
+        rhysRelics = []
+    }: Scene = {}) {
+        const s = table(
+            {
+                dana: {
+                    siteId: 'c1',
+                    relicIds: [],
+                    advisers: [{ cardId: PALANQUIN, faceUp: true }]
+                },
+                rhys: { siteId: 'c1', relicIds: rhysRelics }
+            },
+            {
+                denizensBySite: { c1: [], c2: atC2, p1: [], p2: [], h1: [] },
+                warbandsBySite: { h1: { [IMPERIAL_WARBANDS]: 2 }, ...rulers },
+                siteCards: {
+                    c1: here,
+                    c2: 'site.plains',
+                    p1: pass,
+                    h1: 'site.river'
+                }
+            },
+            oathRevision
+        )
+        s.vault = createOathVault(
+            { siteFacedown: { p2: facedown }, relicDeck: [HORSE, WHISTLE] },
+            getPrng(1)
+        )
+        return s
+    }
+    const carry = (s: HydratedOathGameState) => {
+        const used = actionPowerUse('dana', PALANQUIN, [player('rhys'), site('p2')])
+        used.apply(s)
+        return used
+    }
+    /** What p2 holds: its card, its relic slots, the Mine's favor, and the relic deck. */
+    const p2 = (s: HydratedOathGameState) => ({
+        faceup: s.isSiteFaceup('p2'),
+        siteCard: s.siteCardAt('p2'),
+        relicSlots: s.relicSlotsAt('p2').length,
+        mineFavor: s.tokensOn(MINE).favor,
+        relicDeck: s.requireVault().relicDeck.length
+    })
+    const unrevealed = {
+        faceup: false,
+        siteCard: undefined,
+        relicSlots: 0,
+        mineFavor: 0,
+        relicDeck: 2
+    }
+    const revealed = { faceup: true, siteCard: MINE, relicSlots: 1, mineFavor: 3, relicDeck: 1 }
+
+    /** The Mine's identity is out of every seat's and a spectator's served state and actions. */
+    function concealed(
+        s: HydratedOathGameState,
+        actions: readonly { type: string; dehydrate(): GameAction }[]
+    ) {
+        for (const perspective of perspectives) {
+            const who = JSON.stringify(perspective)
+            expect(JSON.stringify(served(s, perspective)), `served to ${who}`).not.toContain(MINE)
+            for (const action of actions) {
+                expect(
+                    JSON.stringify(OathVisibility.actions.project(action.dehydrate(), perspective)),
+                    `${action.type} served to ${who}`
+                ).not.toContain(MINE)
+            }
+        }
+    }
+
+    it("asked of Rhys, the use reveals nothing, and p2 stays out of every player's view", () => {
+        const s = giant()
+        const used = carry(s)
+        expect(asked(s)).toMatchObject({
+            kind: PowerQuestionKind.FlipToTravel,
+            askedPlayerId: 'rhys',
+            move: PowerMoveKind.Palanquin,
+            siteId: 'p2'
+        })
+        expect(used.metadata?.reveal).toBeUndefined()
+        expect(used.revealsInfo).toBe(false)
+        expect(p2(s)).toEqual(unrevealed)
+        concealed(s, [used])
+    })
+
+    it('no: neither moves, and p2 stays facedown with its relic and favor unplaced', () => {
+        const s = giant()
+        const used = carry(s)
+        const refused = flip(s, false)
+        expect(s.getPlayerState('dana').siteId).toBe('c1')
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'c1', secrets: 2, secretsFacedown: 0 })
+        expect(p2(s)).toEqual(unrevealed)
+        expect(s.requireVault().siteFacedown['p2']).toBe(MINE)
+        expect(refused.revealsInfo).toBe(false)
+        concealed(s, [used, refused])
+    })
+
+    it('yes: both go, and p2 is revealed once, on arrival', () => {
+        const s = giant()
+        const used = carry(s)
+        const went = flip(s, true)
+        expect(s.getPlayerState('dana').siteId).toBe('p2')
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'p2', secrets: 1, secretsFacedown: 1 })
+        expect(p2(s)).toEqual(revealed)
+        expect(s.requireVault().siteFacedown['p2']).toBeUndefined()
+        expect(used.metadata?.reveal).toBeUndefined()
+        // R-X.3 — the reveal is on the answer, which cannot be undone.
+        expect(went.revealsInfo).toBe(true)
+    })
+
+    it('with nothing asked, the use reveals p2, as before', () => {
+        const s = giant({ here: 'site.plains', pass: 'site.marshes' })
+        const used = carry(s)
+        expect(asked(s)).toBeUndefined()
+        expect(used.metadata?.reveal).toEqual({ kind: 'site', siteCardId: MINE })
+        expect(used.revealsInfo).toBe(true)
+        expect(s.getPlayerState('dana').siteId).toBe('p2')
+        expect(s.getPlayerState('rhys').siteId).toBe('p2')
+        expect(p2(s)).toEqual(revealed)
+    })
+
+    it("out of an enemy's Shrouded Wood, Dana is put on p2 and the use reveals it, as before", () => {
+        const s = giant({
+            here: 'site.shrouded-wood',
+            pass: 'site.marshes',
+            rulers: { c1: { ann: 2 } }
+        })
+        const used = carry(s)
+        expect(asked(s)).toMatchObject({
+            kind: PowerQuestionKind.ShroudedWoodDestination,
+            askedPlayerId: 'ann',
+            travelerPlayerId: 'rhys'
+        })
+        expect(used.metadata?.reveal).toEqual({ kind: 'site', siteCardId: MINE })
+        expect(s.getPlayerState('dana').siteId).toBe('p2')
+        expect(p2(s)).toEqual(revealed)
+    })
+
+    it('Toll Roads asks nothing for a facedown site, which no one rules: the use reveals p2', () => {
+        const tolled = () =>
+            giant({
+                here: 'site.plains',
+                pass: 'site.marshes',
+                atC2: [TOLL_ROADS],
+                rulers: { c2: { ann: 2 } }
+            })
+        // Ann's toll is live: to c2, which Ann rules, Rhys is asked.
+        const toC2 = tolled()
+        actionPowerUse('dana', PALANQUIN, [player('rhys'), site('c2')]).apply(toC2)
+        expect(asked(toC2)).toMatchObject({
+            kind: PowerQuestionKind.PayTravelToll,
+            askedPlayerId: 'rhys'
+        })
+
+        const s = tolled()
+        const used = carry(s)
+        expect(asked(s)).toBeUndefined()
+        expect(used.metadata?.reveal).toEqual({ kind: 'site', siteCardId: MINE })
+        expect(s.getPlayerState('rhys').siteId).toBe('p2')
+        expect(s.getPlayerState('rhys').favor).toBe(3)
+    })
+
+    it('a facedown Hidden Place is judged as named, facedown: the use reveals it and both go, with no flip asked', () => {
+        const s = giant({ here: 'site.plains', pass: 'site.marshes', facedown: HIDDEN_PLACE })
+        const used = carry(s)
+        expect(used.metadata?.reveal).toEqual({ kind: 'site', siteCardId: HIDDEN_PLACE })
+        expect(asked(s)).toBeUndefined()
+        expect(s.getPlayerState('dana').siteId).toBe('p2')
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'p2', secrets: 2, secretsFacedown: 0 })
+
+        // Past the pass, the Buried Giant's one flip is asked, and the yes reveals it on arrival.
+        const past = giant({ facedown: HIDDEN_PLACE })
+        carry(past)
+        expect(asked(past)).toMatchObject({ kind: PowerQuestionKind.FlipToTravel })
+        expect(asked(past)).not.toHaveProperty('flips')
+        flip(past, true)
+        expect(past.siteCardAt('p2')).toBe(HIDDEN_PLACE)
+        expect(secretsOf(past, 'rhys')).toEqual({ siteId: 'p2', secrets: 1, secretsFacedown: 1 })
+    })
+
+    it('R-X.4 — before revision 31 a facedown Hidden Place revealed by the use asks its flip, as recorded', () => {
+        const s = giant({
+            oathRevision: OathRevision.Chronicle,
+            here: 'site.plains',
+            pass: 'site.marshes',
+            facedown: HIDDEN_PLACE
+        })
+        carry(s)
+        expect(s.siteCardAt('p2')).toBe(HIDDEN_PLACE)
+        expect(asked(s)).toMatchObject({ kind: PowerQuestionKind.FlipToTravel, siteId: 'p2' })
+        flip(s, false)
+        expect(s.getPlayerState('dana').siteId).toBe('c1')
+        expect(s.getPlayerState('rhys').siteId).toBe('c1')
+        expect(s.siteCardAt('p2')).toBe(HIDDEN_PLACE)
+    })
+
+    it("whether the use reveals is judged the same on Dana's own view, reading nothing hidden", () => {
+        const dana: Visibility.Perspective = { kind: 'player', playerId: 'dana' }
+        const request = (state: HydratedOathGameState) =>
+            hiddenRequestFor(
+                state,
+                'dana',
+                PALANQUIN,
+                powerIndexOf(PALANQUIN, PowerTiming.Action),
+                [player('rhys'), site('p2')]
+            )
+        const cases = [
+            { s: giant(), expected: undefined },
+            {
+                s: giant({ here: 'site.plains', pass: 'site.marshes' }),
+                expected: { kind: 'siteFlip', siteId: 'p2' }
+            }
+        ]
+        for (const { s, expected } of cases) {
+            // Rhys holds a facedown adviser, so Dana's view does not hold everything.
+            s.getPlayerState('rhys').advisers = [{ cardId: STORYTELLER, faceUp: false }]
+            const server = JSON.stringify(s.dehydrate())
+            const seen = JSON.stringify(served(s, dana))
+            const ownView = OathVisibility.state.guardForExecution(
+                new HydratedOathGameState(served(s, dana)),
+                dana
+            )
+            expect(request(s)).toEqual(expected)
+            expect(request(ownView)).toEqual(expected)
+            expect(JSON.stringify(s.dehydrate())).toBe(server)
+            expect(JSON.stringify(served(s, dana))).toBe(seen)
+        }
+    })
+
+    it('the Dragonskin Drum is asked of Rhys after the yes and the reveal, and not after the no', () => {
+        const s = giant({ rhysRelics: [DRUM] })
+        carry(s)
+        flip(s, true)
+        expect(p2(s)).toEqual(revealed)
+        expect(asked(s)).toMatchObject({
+            kind: PowerQuestionKind.DragonskinDrum,
+            askedPlayerId: 'rhys'
+        })
+
+        const stays = giant({ rhysRelics: [DRUM] })
+        carry(stays)
+        flip(stays, false)
+        expect(asked(stays)).toBeUndefined()
+        expect(p2(stays)).toEqual(unrevealed)
+    })
+
+    it('R-X.4 — before revision 31 the use reveals p2 though Rhys refuses, as recorded', () => {
+        const s = giant({ oathRevision: OathRevision.Chronicle })
+        const used = carry(s)
+        expect(used.metadata?.reveal).toEqual({ kind: 'site', siteCardId: MINE })
+        flip(s, false)
+        expect(s.getPlayerState('dana').siteId).toBe('c1')
+        expect(s.getPlayerState('rhys').siteId).toBe('c1')
+        expect(p2(s)).toEqual(revealed)
+        // The view check above has reach: once the Mine is public, it finds it.
+        expect(() => concealed(s, [used])).toThrow()
+    })
+})
+
 describe('R-11.13-H1 — a banish to The Hidden Place asks the defender to flip', () => {
     /** Dana won against Rhys at p1, taking Rhys's pawn and favor. */
     function won(
@@ -927,5 +1217,130 @@ describe('R-X.4 — the Whistle from The Hidden Place replays as it was recorded
                 ).updatedState
             expect(replayed).toEqual(recorded)
         }
+    })
+})
+
+describe('R-11.13-H2 — a power-made travel from the Buried Giant past the Narrow Pass into The Hidden Place takes two flips', () => {
+    const eachPower = OathRevision.EngineFixes16
+    /** Rhys stands at the Buried Giant (c1); the Narrow Pass is p1; Dana holds the Whistle at The Hidden Place (p2). */
+    function giant(over: Over = {}, oathRevision: number = eachPower) {
+        return table(
+            { dana: { siteId: 'p2', ...over['dana'] }, rhys: { siteId: 'c1', ...over['rhys'] } },
+            {
+                denizensBySite: { c1: [], c2: [], p1: [], p2: [], h1: [] },
+                warbandsBySite: { p2: { dana: 2 }, h1: { [IMPERIAL_WARBANDS]: 2 } },
+                siteCards: {
+                    c1: BURIED_GIANT,
+                    c2: 'site.plains',
+                    p1: 'site.narrow-pass',
+                    p2: HIDDEN_PLACE,
+                    h1: 'site.river'
+                }
+            },
+            oathRevision
+        )
+    }
+
+    it('the Whistle asks Rhys for two; yes flips both and brings Rhys', () => {
+        const s = giant()
+        whistle(s)
+        expect(asked(s)).toEqual({
+            kind: PowerQuestionKind.FlipToTravel,
+            cardId: WHISTLE,
+            askedPlayerId: 'rhys',
+            move: PowerMoveKind.Whistle,
+            powerCardId: WHISTLE,
+            moverPlayerId: 'dana',
+            fromSiteId: 'c1',
+            siteId: 'p2',
+            flips: 2
+        })
+        const answer = flip(s, true)
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'p2', secrets: 1, secretsFacedown: 2 })
+        expect(answer.metadata?.summary).toBe(
+            'flipped 2 secrets facedown and travelled to p2, taking 1 secret from the Whistle'
+        )
+    })
+
+    it('with one faceup secret Rhys is unable: nothing is asked and Rhys stays', () => {
+        const s = giant({ rhys: { secrets: 1 } })
+        expect(reasonCannotTravelByPower(s, 'rhys', 'p2')).toBe(
+            'The Hidden Place: you cannot travel here unless you flip a secret facedown'
+        )
+        whistle(s)
+        expect(s.pendingQuestions).toBeUndefined()
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'c1', secrets: 1, secretsFacedown: 0 })
+    })
+
+    it('within the region one flip, for The Hidden Place alone', () => {
+        const s = table(
+            { rhys: { siteId: 'c1' } },
+            {
+                siteCards: {
+                    c1: BURIED_GIANT,
+                    c2: HIDDEN_PLACE,
+                    p1: 'site.narrow-pass',
+                    h1: 'site.river'
+                }
+            },
+            eachPower
+        )
+        whistle(s)
+        expect(asked(s)).toMatchObject({ kind: PowerQuestionKind.FlipToTravel, siteId: 'c2' })
+        expect(asked(s)).not.toHaveProperty('flips')
+        flip(s, true)
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'c2', secrets: 2, secretsFacedown: 1 })
+    })
+
+    it("the Brass Horse's answer must flip two", () => {
+        const s = giant({
+            dana: { siteId: 'c1', relicIds: [HORSE], secrets: 3 },
+            rhys: { siteId: 'h1' }
+        })
+        s.denizensBySite['p2'] = [WOLVES]
+        s.requireVault().discardPiles[Region.Cradle] = [RANGERS]
+        s.discardPileCounts[Region.Cradle] = 1
+        actionPowerUse('dana', HORSE).apply(s)
+        expect(asked(s)).toMatchObject({ kind: PowerQuestionKind.TravelFreeTo, siteIds: ['p2'] })
+        const to = (flipSecret?: boolean | 2): QuestionAnswer => ({
+            kind: PowerQuestionKind.TravelFreeTo,
+            siteId: 'p2',
+            flipSecret
+        })
+        expect(HydratedAnswerQuestion.reasonCannotAnswer(s, 'dana', to(true))).toBe(
+            'travelling to p2 takes 2 faceup secrets flipped facedown'
+        )
+        expect(HydratedAnswerQuestion.reasonCannotAnswer(s, 'dana', to())).toBe(
+            'travelling to p2 takes 2 faceup secrets flipped facedown'
+        )
+        const answer = answerQuestion(s, 'dana', to(2))
+        expect(secretsOf(s, 'dana')).toEqual({ siteId: 'p2', secrets: 0, secretsFacedown: 2 })
+        expect(answer.metadata?.summary).toBe(
+            'flipped 2 secrets facedown and travelled to p2 for no Supply'
+        )
+    })
+
+    it("Rhys's answer is checked on Rhys's own view", () => {
+        const s = giant({ dana: { advisers: [{ cardId: STORYTELLER, faceUp: false }] } })
+        whistle(s)
+        const rhys: Visibility.Perspective = { kind: 'player', playerId: 'rhys' }
+        const own = OathVisibility.state.guardForExecution(
+            new HydratedOathGameState(served(s, rhys)),
+            rhys
+        )
+        const yes: QuestionAnswer = { kind: PowerQuestionKind.FlipToTravel, flip: true }
+        expect(HydratedAnswerQuestion.reasonCannotAnswer(own, 'rhys', yes)).toBeUndefined()
+        own.getPlayerState('rhys').secrets = 1
+        expect(HydratedAnswerQuestion.reasonCannotAnswer(own, 'rhys', yes)).toBe(
+            'flipping 2 secrets takes 2 faceup secrets: you have 1'
+        )
+    })
+
+    it('R-X.4 — before revision 20 one flip serves both, as recorded', () => {
+        const s = giant({}, OathRevision.EngineFixes15)
+        whistle(s)
+        expect(asked(s)).not.toHaveProperty('flips')
+        flip(s, true)
+        expect(secretsOf(s, 'rhys')).toEqual({ siteId: 'p2', secrets: 2, secretsFacedown: 1 })
     })
 })

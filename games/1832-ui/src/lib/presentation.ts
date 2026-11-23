@@ -1,12 +1,14 @@
 import {
-    CoalTokens,
+    CoalAccess,
     isCompleteMergerPhase,
     isStartMergerPhase,
+    EighteenThirtyTwoMap,
     EighteenThirtyTwoSoftLedge,
-    miamiFirstRun,
-    type EighteenThirtyTwoState
+    EighteenThirtyTwoSystems,
+    type EighteenThirtyTwoState,
+    EighteenThirtyTwoTitleRules
 } from '@tabletop/1832'
-import { moneyFormat, type TitlePresentation } from '@tabletop/18xx-ui'
+import { moneyFormat, printedHomeCompanies, type TitlePresentation } from '@tabletop/18xx-ui'
 import { EighteenThirtyTwoCompanyNames } from './companyPresentation.js'
 import { EighteenThirtyTwoPhaseChart, eighteenThirtyTwoPhaseChart } from './phaseChart.js'
 import { EighteenThirtyTwoTrainColors } from './trainPresentation.js'
@@ -17,7 +19,13 @@ import UnknownToken from './images/tokens/unknown.svg'
 
 // A System names its letter and the two companies it was formed from (§11.6).
 export const EighteenThirtyTwoPresentation: TitlePresentation<EighteenThirtyTwoState> = {
-    money: moneyFormat('$'),
+    // Systems form only by merging two companies (§11.6).
+    unstartedCompanies: {
+        ...printedHomeCompanies(EighteenThirtyTwoMap),
+        onOffer: (_state, companyId) =>
+            !EighteenThirtyTwoSystems.some((system) => system.id === companyId)
+    },
+    money: moneyFormat(EighteenThirtyTwoTitleRules.currencySymbol),
     phaseChart: EighteenThirtyTwoPhaseChart,
     phaseChartFor: eighteenThirtyTwoPhaseChart,
     trainColors: EighteenThirtyTwoTrainColors,
@@ -25,6 +33,8 @@ export const EighteenThirtyTwoPresentation: TitlePresentation<EighteenThirtyTwoS
     marketPoolId: 'open-market',
     ipoPoolId: 'initial-offering',
     companyNames: EighteenThirtyTwoCompanyNames,
+    // Redemption and reissue price from par after the initial offering sells out (§5.11).
+    companyPricePresentation: { showPar: true, parWithoutIpoShares: true, label: 'Value' },
     privatePurchaseHeading: 'Available privates',
     historyMapPlacement: eighteenThirtyTwoMapPlacement,
     privateTokens: {
@@ -33,10 +43,7 @@ export const EighteenThirtyTwoPresentation: TitlePresentation<EighteenThirtyTwoS
         P4: { imageUrl: UnknownToken },
         P7: { companyId: 'CG' }
     },
-    gameFacts: (state) => [
-        { label: 'Coal', value: String(CoalTokens - state.coalRights.length) },
-        ...(miamiFirstRun(state) ? [{ label: 'Miami', value: '$0' }] : [])
-    ],
+    gameFacts: (state) => [{ label: 'Coal', value: String(CoalAccess.remaining(state)) }],
     companyMarks: (state, companyId) =>
         state.coalRights.includes(companyId)
             ? [
@@ -66,18 +73,21 @@ export const EighteenThirtyTwoPresentation: TitlePresentation<EighteenThirtyTwoS
         {
             color: 'yellow',
             name: 'Yellow',
-            description: 'Shares do not count toward the certificate limit.'
+            description: 'Shares do not count toward the certificate limit.',
+            marksCompanyValue: true
         },
         {
             color: 'green',
             name: 'Green',
-            description: 'Shares do not count toward the limit and may exceed 60%.'
+            description: 'Shares do not count toward the limit and may exceed 60%.',
+            marksCompanyValue: true
         },
         {
             color: 'brown',
             name: 'Brown',
             description:
-                'As green, and a player may buy every open-market share of one company in a turn.'
+                'As green, and a player may buy every open-market share of one company in a turn.',
+            marksCompanyValue: true
         },
         { color: 'black', name: 'Closed', description: 'A company entering it closes.' }
     ],

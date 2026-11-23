@@ -3,14 +3,24 @@
     import { LatestRequest } from '$lib/utils/latestRequest'
     import { onMount } from 'svelte'
     import {
+        placementScoringDescription,
+        ranksByAveragePlace,
+        tournamentTiebreakDescription,
         Role,
         tournamentAccountIds,
         tournamentCapacity,
         tournamentEntrantAccount,
+        tournamentFillsATable,
         tournamentInPlay,
         type TournamentDetail,
-        type TournamentEntrant
+        type TournamentEntrant,
+        type TournamentSchedule
     } from '@tabletop/common'
+    import {
+        KNOCKOUT_ROUND_VIEW_ABOVE,
+        knockoutBracketOf,
+        knockoutPlayerStatus
+    } from '$lib/utils/knockoutView'
     import { getAppContext } from '$lib/stores/appContext.svelte'
     import {
         tournamentLeagueHref,
@@ -20,10 +30,14 @@
         tournamentRegistrationText,
         tournamentRegistrationOpen,
         tournamentStatusText,
-        tournamentStatusColor
+        tournamentStatusColor,
+        tournamentAveragePlaceText,
+        tournamentScoringText,
+        tournamentTiebreakTexts
     } from '$lib/utils/tournamentPresentation'
     import { accountName } from '$lib/utils/accountName'
     import TournamentScheduleView from './TournamentScheduleView.svelte'
+    import TournamentBracketView from './TournamentBracketView.svelte'
     import TournamentForm from './TournamentForm.svelte'
     import TournamentResultCorrection from './TournamentResultCorrection.svelte'
     import TournamentReplacePlayer from './TournamentReplacePlayer.svelte'
@@ -55,6 +69,48 @@
     let showTiebreak = $derived(
         detail?.standings?.some((row) => row.tiebreak !== undefined) ?? false
     )
+    let tiebreakDescription = $derived(tournamentTiebreakDescription(detail?.standings ?? []))
+    let tiebreakTexts = $derived(tournamentTiebreakTexts(detail?.standings ?? []))
+    let ranksByPlace = $derived(tournament ? ranksByAveragePlace(tournament.rules) : false)
+    let knockout = $derived(tournament?.format.kind === 'knockout')
+    // A Knockout's Schedule grows as Matches resolve, so it is read again on every change.
+    let knockoutSchedule = $state<TournamentSchedule>()
+    const scheduleRequests = new LatestRequest()
+    $effect(() => {
+        const current = tournament
+        if (current?.format.kind !== 'knockout' || !current.stages[0]?.scheduleId) return
+        void current.revision
+        const latest = scheduleRequests.begin()
+        api.getTournamentSchedule(current.id)
+            .then((value) => {
+                if (latest()) knockoutSchedule = value
+            })
+            .catch((failure) => {
+                if (latest())
+                    loadError =
+                        failure instanceof Error ? failure.message : 'Could not load the bracket'
+            })
+    })
+    let bracket = $derived(
+        detail && knockoutSchedule ? knockoutBracketOf(detail, knockoutSchedule) : undefined
+    )
+    let showKnockedOut = $state(false)
+    // A large field lists the players still in, and the top four once the final is played.
+    let foldsKnockedOut = $derived(
+        !!bracket && (tournament?.entrants.length ?? 0) > KNOCKOUT_ROUND_VIEW_ABOVE
+    )
+    let listedEntrants = $derived(
+        foldsKnockedOut && bracket && !showKnockedOut
+            ? entrants.filter((entrant) => {
+                  const standing = standingByUser.get(entrant.userId)
+                  return (
+                      standing &&
+                      !standing.withdrawn &&
+                      (!knockoutPlayerStatus(bracket, entrant.userId).out || standing.rank <= 4)
+                  )
+              })
+            : entrants
+    )
     let scheduleFirst = $derived(Boolean(tournament?.stages[0]?.scheduleId))
     let title = $derived(
         tournament ? libraryService.titlesById[tournament.rules.titleId] : undefined
@@ -71,6 +127,7 @@
                   (tournamentCapacity(tournament.rules.registration) ?? 256)
             : false
     )
+    let fillsATable = $derived(tournament ? tournamentFillsATable(tournament) : false)
     let correcting = $state(false)
     let replacing = $state(false)
     let editingDraft = $state(false)
@@ -101,7 +158,16 @@
         }
     }
     async function act(
-        operation: 'join' | 'leave' | 'publish' | 'cancel' | 'lock' | 'pause' | 'resume' | 'retry'
+        operation:
+            | 'join'
+            | 'leave'
+            | 'publish'
+            | 'cancel'
+            | 'lock'
+            | 'start'
+            | 'pause'
+            | 'resume'
+            | 'retry'
     ) {
         if (!tournament) return
         busy = true
@@ -115,6 +181,12 @@
             await refresh()
             busy = false
         }
+    }
+    function startNow() {
+        if (!tournament) return
+        const players = tournament.entrants.length
+        if (window.confirm(`Close registration and start with ${players} players?`))
+            void act('start')
     }
     async function rebuildStandings() {
         if (!tournament) return
@@ -249,6 +321,16 @@
                                     ? 'w-64'
                                     : 'w-40'} rounded-md border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
                             >
+                                {#if tournament.status === 'open'}
+                                    <button
+                                        class="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-700"
+                                        disabled={busy || !fillsATable}
+                                        title={fillsATable
+                                            ? undefined
+                                            : `Needs at least ${tournament.rules.tableSize} players`}
+                                        onclick={startNow}>Close &amp; start now</button
+                                    >
+                                {/if}
                                 {#if tournament.status === 'locked' || tournament.status === 'inProgress'}
                                     <button
                                         class="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -282,7 +364,7 @@
                                         >Replace a player</button
                                     >
                                 {/if}
-                                {#if showStandings}
+                                {#if showStandings && !knockout}
                                     <button
                                         class="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                                         disabled={busy}
@@ -351,7 +433,7 @@
                 }}
             />
         {/if}
-        {#if isAdmin && correcting && showStandings}
+        {#if isAdmin && correcting && showStandings && !knockout}
             <TournamentResultCorrection {detail} onchanged={() => void refresh()} />
         {/if}
         {#if isAdmin && tournament.status === 'draft' && editingDraft}
@@ -373,7 +455,15 @@
             </section>
         {/if}
         {#snippet scheduleSection(detail: TournamentDetail)}
-            {#if detail.tournament.stages[0] && (isAdmin || detail.tournament.stages[0].scheduleId)}
+            {#if knockout && detail.tournament.stages[0]}
+                <div
+                    class={scheduleFirst
+                        ? 'mt-5'
+                        : 'mt-6 border-t border-gray-200 pt-4 dark:border-gray-700/60'}
+                >
+                    <TournamentBracketView {detail} {bracket} />
+                </div>
+            {:else if detail.tournament.stages[0] && (isAdmin || detail.tournament.stages[0].scheduleId)}
                 <div
                     class={scheduleFirst
                         ? 'mt-5'
@@ -408,13 +498,22 @@
                         >
                             <tr>
                                 <th class="pb-2 font-normal">Name</th>
-                                {#if showStandings}
+                                {#if showStandings && knockout}
+                                    <th class="w-40 pb-2 text-right font-normal">Status</th>
+                                {:else if showStandings}
                                     <th class="w-16 pb-2 text-right font-normal">Wins</th>
-                                    <th class="w-20 pb-2 text-right font-normal">Score</th>
+                                    {#if ranksByPlace}
+                                        <th
+                                            class="w-20 pb-2 text-right font-normal"
+                                            title={placementScoringDescription}>Avg place</th
+                                        >
+                                    {:else}
+                                        <th class="w-20 pb-2 text-right font-normal">Score</th>
+                                    {/if}
                                     {#if showTiebreak}
                                         <th
                                             class="w-24 pb-2 text-right font-normal"
-                                            title="Sum of final scores from each game">Tiebreak</th
+                                            title={tiebreakDescription}>Tiebreak</th
                                         >
                                     {/if}
                                 {:else if joined && registrationOpen}
@@ -423,7 +522,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200/60 dark:divide-gray-700/40">
-                            {#each entrants as entrant (entrant.userId)}
+                            {#each listedEntrants as entrant (entrant.userId)}
                                 {@const standing = standingByUser.get(entrant.userId)}
                                 {@const account = playing(entrant)}
                                 <tr
@@ -466,29 +565,57 @@
                                         {#if standing && !standing.withdrawn}<p
                                                 class="mt-1 text-[11px] text-gray-500"
                                             >
-                                                {standing.completed} finished · {standing.active} active
-                                                · {standing.remaining - standing.active} waiting
+                                                {#if knockout}
+                                                    {standing.score.toLocaleString(undefined, {
+                                                        maximumFractionDigits: 1
+                                                    })} of {standing.completed} games won · {standing.active}
+                                                    active
+                                                {:else}
+                                                    {standing.completed} finished · {standing.active}
+                                                    active · {standing.remaining - standing.active} waiting
+                                                {/if}
                                             </p>{/if}
                                     </td>
-                                    {#if showStandings}
+                                    {#if showStandings && knockout}
+                                        {@const status =
+                                            bracket && !standing?.withdrawn
+                                                ? knockoutPlayerStatus(bracket, entrant.userId)
+                                                : undefined}
+                                        <td
+                                            class="py-2.5 text-right text-xs {status && !status.out
+                                                ? ''
+                                                : 'text-gray-400'}"
+                                            aria-label="Status">{status?.text ?? '—'}</td
+                                        >
+                                    {:else if showStandings}
                                         <td
                                             class="py-2.5 text-right tabular-nums text-gray-400"
                                             aria-label="Wins">{standing?.wins ?? '—'}</td
                                         >
-                                        <td
-                                            class="py-2.5 text-right tabular-nums text-gray-400"
-                                            aria-label="Score"
-                                            >{standing?.score.toLocaleString(undefined, {
-                                                maximumFractionDigits: 3
-                                            }) ?? '—'}</td
-                                        >
+                                        {#if ranksByPlace}
+                                            <td
+                                                class="py-2.5 text-right tabular-nums text-gray-400"
+                                                aria-label="Average place"
+                                                >{standing
+                                                    ? tournamentAveragePlaceText(standing)
+                                                    : '—'}</td
+                                            >
+                                        {:else}
+                                            <td
+                                                class="py-2.5 text-right tabular-nums text-gray-400"
+                                                aria-label="Score"
+                                                >{standing?.score.toLocaleString(undefined, {
+                                                    maximumFractionDigits: 3
+                                                }) ?? '—'}</td
+                                            >
+                                        {/if}
                                         {#if showTiebreak}
                                             <td
                                                 class="py-2.5 text-right tabular-nums text-gray-400"
                                                 aria-label="Tiebreak"
-                                                >{standing?.tiebreak?.toLocaleString(undefined, {
-                                                    maximumFractionDigits: 3
-                                                }) ?? '—'}</td
+                                                >{(standing &&
+                                                    tiebreakTexts.get(standing.userId)) ??
+                                                    '—'}</td
                                             >
                                         {/if}
                                     {:else if joined && registrationOpen}
@@ -506,6 +633,15 @@
                             {/each}
                         </tbody>
                     </table>
+                    {#if foldsKnockedOut && (showKnockedOut || listedEntrants.length < entrants.length)}
+                        <button
+                            class="mt-2 text-xs text-gray-500 hover:text-gray-300"
+                            onclick={() => (showKnockedOut = !showKnockedOut)}
+                            >{showKnockedOut
+                                ? 'Show only the players still in'
+                                : `Show the ${entrants.length - listedEntrants.length} players knocked out`}</button
+                        >
+                    {/if}
                 {:else}
                     <p
                         class="rounded-md bg-gray-50 px-3 py-5 text-xs text-gray-500 dark:bg-gray-800"
@@ -526,16 +662,29 @@
                             <dt class="text-gray-500 dark:text-gray-400">Players per game</dt>
                             <dd>{tournament.rules.tableSize}</dd>
                         </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500 dark:text-gray-400">Total games per player</dt>
-                            <dd>{tournament.format.stages[0].gamesPerEntrant}</dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500 dark:text-gray-400">
-                                Simultaneous games per player
-                            </dt>
-                            <dd>{tournament.rules.concurrency}</dd>
-                        </div>
+                        {#if knockout}
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-gray-500 dark:text-gray-400">Format</dt>
+                                <dd>Knockout</dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-gray-500 dark:text-gray-400">Games per match</dt>
+                                <dd>2, both at once; a decider if split</dd>
+                            </div>
+                        {:else}
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-gray-500 dark:text-gray-400">
+                                    Total games per player
+                                </dt>
+                                <dd>{tournament.format.stages[0].gamesPerEntrant}</dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-gray-500 dark:text-gray-400">
+                                    Simultaneous games per player
+                                </dt>
+                                <dd>{tournament.rules.concurrency}</dd>
+                            </div>
+                        {/if}
                         {#if tournament.format.kind === 'multiStage'}<div
                                 class="flex justify-between gap-3"
                             >
@@ -548,13 +697,21 @@
                     config={tournament.rules.gameConfig}
                     configurator={title?.info.configurator}
                 />
+                {#if tournament.format.kind === 'knockout'}
+                    <TournamentGameOptions
+                        heading="Decider options"
+                        seated={false}
+                        config={tournament.format.deciderGameConfig}
+                        configurator={title?.info.configurator}
+                    />
+                {/if}
                 <section
                     class="border-t border-gray-200 pt-3 dark:border-gray-700/60"
                     aria-labelledby="scoring-heading"
                 >
                     <h2 id="scoring-heading" class="mb-1 text-sm font-medium">Scoring</h2>
                     <p class="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                        A win earns 1 point; joint winners split it.
+                        {tournamentScoringText(tournament.rules, tournament.format)}
                     </p>
                 </section>
             </aside>

@@ -11,8 +11,10 @@ import {
     issueShareCertificates,
     marketSaleTerms,
     playersAfterPresident,
+    presidentOf,
     privateOwner,
     settleCashPayments,
+    sharesOwned,
     solventPlayerCount,
     stockCertificateCount,
     treasuryPoolId,
@@ -192,6 +194,13 @@ function form(state: CompanyAuctionState, formation: CompanyFormation): void {
     buyOwedStations(state, formation.companyId)
 }
 
+function biddingPower(state: CompanyAuctionState, playerId: string): number {
+    return (
+        finiteCashOwnedBy(state, { kind: 'player', playerId }) +
+        privateValue(playerPrivateIds(state, playerId))
+    )
+}
+
 export const EighteenSeventeenCompanyAuction: CompanyAuctionRules = {
     openingBid: 100,
     increment: 5,
@@ -202,12 +211,9 @@ export const EighteenSeventeenCompanyAuction: CompanyAuctionRules = {
             EighteenSeventeenStockRules.certificateLimit(state, player)
         )
             return 0
-        return Math.min(
-            MaximumCompanyBid,
-            finiteCashOwnedBy(state, { kind: 'player', playerId }) +
-                privateValue(playerPrivateIds(state, playerId))
-        )
+        return Math.min(MaximumCompanyBid, biddingPower(state, playerId))
     },
+    biddingPower,
     formable: (state, playerId, amount) =>
         someContributionFits(state, playerId, amount, playerPrivateIds(state, playerId), 0),
     homes(state, companyId) {
@@ -243,6 +249,7 @@ export const EighteenSeventeenCompanyAuction: CompanyAuctionRules = {
             )
         )
     },
+    contributionValue: privateValue,
     formationReason,
     form
 }
@@ -256,7 +263,7 @@ export function marketSale(
     const company = getCompany(state, companyId)
     if (
         !companyShareCount(state, EighteenSeventeenCharters, companyId) ||
-        !company.president ||
+        !presidentOf(state, companyId) ||
         company.closed
     )
         return 'This company has no saleable shares.'
@@ -274,6 +281,14 @@ export const EighteenSeventeenStockRules: StockRules = {
     market: EighteenSeventeenMarket,
     charters: EighteenSeventeenCharters,
     round: EighteenSeventeenStockRoundRules,
+    instructions: {
+        // A short issues an extra share, so a rival can pass a president holding half.
+        securePresidency(state, companyId, owner) {
+            const shareCount = companyShareCount(state, EighteenSeventeenCharters, companyId)
+            assertExists(shareCount, 'A company with a president has shares')
+            return sharesOwned(state, companyId, owner) * 2 > shareCount
+        }
+    },
     buyers: (_state, playerId) => [{ kind: 'player', playerId }],
     sellers: (_state, playerId) => [{ kind: 'player', playerId }],
     purchaseTerms(state, certificate, buyer) {

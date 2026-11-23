@@ -11,9 +11,9 @@ import { Banner, CardKind, PlayerStatus, Region } from '../model/oathEnums.js'
 import { reliquarySlotId } from '../util/setup.js'
 import { createOathVault, type OathVault } from '../model/vault.js'
 import { testPlayer, testState, openTurn } from '../testing/fixture.js'
-import { type PowerChoice } from '../util/powerChoice.js'
+import type { PowerChoice } from '../util/powerChoice.js'
 import { PowerTiming, powerIndexOf } from '../data/cardPowers.js'
-import { type ModifierUse } from '../util/modifiers.js'
+import type { ModifierUse } from '../util/modifiers.js'
 import '../powers/index.js'
 import { PowerQuestionKind } from '../model/question.js'
 import { answerQuestion } from '../testing/steps.js'
@@ -198,6 +198,8 @@ describe('relics', () => {
         // A held relic was public, so every player knows it lies at the bottom.
         expect(s.players.map((player) => player.knownRelicDeckBottom)).toEqual([[CUP], [CUP]])
         expect(kept.metadata?.summary).toContain(DRUM)
+        // R-X.3 — a relic goes into the vault, so the answer cannot be undone.
+        expect(kept.revealsInfo).toBe(true)
 
         const t = board({ c1: [FAE] }, {}, { ruler: { relicIds: [CUP] } })
         const v = vaultFor()
@@ -208,6 +210,7 @@ describe('relics', () => {
         expect(t.players.map((player) => player.knownRelicDeckBottom)).toEqual([[DRUM], []])
         // R-9.4 — a relic drawn and sent down unkept is named only in the Actor-protected fields.
         expect(unkept.metadata?.summary).not.toContain(DRUM)
+        expect(unkept.revealsInfo).toBe(true)
     })
 
     it('Relic Breaker — a facedown relic at your site goes under the deck for three warbands', () => {
@@ -479,7 +482,7 @@ describe('discard piles', () => {
                     SearchSource.Discard,
                     errand(Region.Hinterland)
                 )
-            ).toBe('the hinterland discard pile is empty')
+            ).toBe('the Hinterland discard pile is empty')
             expect(
                 HydratedSearch.drawCount(s, 'ruler', errand(Region.Provinces), SearchSource.Discard)
             ).toBe(0)
@@ -618,6 +621,21 @@ describe('discard piles', () => {
         expect(() =>
             serverUse(board({ c1: [CONVOYS] }), vaultFor(), CONVOYS, [region(Region.Cradle)])
         ).toThrow()
+    })
+
+    it('Tavern Songs, Scryer and Convoys name each region as the board prints it', () => {
+        const s = board({ c1: [SONGS, SCRYER] })
+        const vault = vaultFor()
+        expect(serverUse(s, vault, SONGS).metadata?.summary).toBe(
+            'Tavern Songs: peeked at the top 3 cards of the Cradle discard pile'
+        )
+        expect(serverUse(s, vault, SCRYER, [region(Region.Provinces)]).metadata?.summary).toBe(
+            'Scryer: peeked at the Provinces discard pile (2 cards)'
+        )
+        const t = board({ c1: [CONVOYS] })
+        expect(
+            serverUse(t, vaultFor(), CONVOYS, [region(Region.Hinterland)]).metadata?.summary
+        ).toBe('Convoys: moved the Hinterland discard pile (0 cards) onto the Cradle pile')
     })
 
     it('Oracle — the next Vision in the deck comes to hand, and the machine holds as for a Search', () => {

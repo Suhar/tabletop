@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { Color } from '@tabletop/common'
-import { ActionType, Banner, PlayerStatus, type HydratedOathGameState } from '@tabletop/oath'
-import { testBanners, testPlayer, testState } from '@tabletop/oath/testing'
 import {
+    ActionType,
+    Banner,
+    OathRevision,
+    PlayerStatus,
+    type HydratedOathGameState
+} from '@tabletop/oath'
+import { openTurn, testBanners, testPlayer, testState } from '@tabletop/oath/testing'
+import {
+    facedownTollLine,
     freeActionDueLine,
     gridRefusal,
     reasonActionUnavailable,
@@ -124,6 +131,14 @@ describe('R-10.2 — a granted free action comes next', () => {
         )
         expect(freeActionDueLine(due({ freeTravelAtAction: 1 }), CHANCELLOR)).toBeUndefined()
         expect(freeActionDueLine(board(), CHANCELLOR)).toBeUndefined()
+    })
+
+    it('the line does not name the granting card (the History row does)', () => {
+        const granted = due({ freeTravelAtAction: 0, freeCampaignAtAction: 0 })
+        const player = granted.getPlayerState(CHANCELLOR)
+        player.freeTravelGrantedBy = 'relic.brass-horse'
+        player.freeCampaignGrantedBy = 'denizen.order.knights-errant'
+        expect(freeActionDueLine(granted, CHANCELLOR)).toBe('Free Travel or Campaign next.')
     })
 
     it('a dimmed tile tapped says the free action comes first; the free action itself is not refused for it', () => {
@@ -302,5 +317,65 @@ describe('the line under a dimmed major, by cause', () => {
             reasonActionUnavailable(state, EXILE, ActionType.Search)
         )
         expect(line(state, EXILE, ActionType.Search)).toContain('discard pile is empty')
+    })
+
+    it('a Search refused on an empty pile names the region as the board prints it', () => {
+        const state = exileAt({ supply: 2 }, { visionsDrawn: 1 })
+        expect(line(state, EXILE, ActionType.Search)).toBe('the Cradle discard pile is empty')
+    })
+})
+
+describe('R-6.1, R-7.1.4 — the line where the Adviser chip would stand, when a toll alone hides it', () => {
+    const FORCED_LABOR = 'denizen.order.forced-labor'
+
+    /** The Exile on turn at c1, which the Chancellor rules with Forced Labor there. */
+    function tolled(exile: Record<string, unknown> = {}) {
+        const state = testState(
+            [
+                testPlayer({
+                    playerId: CHANCELLOR,
+                    color: Color.Purple,
+                    status: PlayerStatus.Chancellor,
+                    siteId: 'c1',
+                    favor: 2,
+                    warbandsInPersonalBank: { [IMPERIAL_WARBANDS]: 20 }
+                }),
+                testPlayer({
+                    playerId: EXILE,
+                    color: Color.Red,
+                    status: PlayerStatus.Exile,
+                    siteId: 'c1',
+                    favor: 0,
+                    secrets: 1,
+                    supply: 4,
+                    advisers: [{ cardId: 'vision.conquest', faceUp: false }],
+                    warbandsInPersonalBank: { [EXILE]: 14 },
+                    ...exile
+                })
+            ],
+            {
+                // R-7.1.4 — Forced Labor's toll on a facedown play is kept from this revision on.
+                oathRevision: OathRevision.PlanCostsAndSearchPlays,
+                chancellorPlayerId: CHANCELLOR,
+                denizensBySite: { c1: [FORCED_LABOR], c2: [], p1: [], h1: [] },
+                warbandsBySite: { c1: { [IMPERIAL_WARBANDS]: 2 } }
+            }
+        )
+        openTurn(state, EXILE)
+        return state
+    }
+
+    it('at 0 favor it names the toll and its card: one favor, for Forced Labor', () => {
+        expect(facedownTollLine(tolled(), EXILE)).toBe('Needs 1 favor for Forced Labor')
+    })
+
+    it('none once the favor is there, or with no facedown adviser, or away from the site', () => {
+        expect(facedownTollLine(tolled({ favor: 1 }), EXILE)).toBeUndefined()
+        expect(facedownTollLine(tolled({ advisers: [] }), EXILE)).toBeUndefined()
+        expect(facedownTollLine(tolled({ siteId: 'c2' }), EXILE)).toBeUndefined()
+    })
+
+    it('none while a free action is due: the line above the grid gives that cause', () => {
+        expect(facedownTollLine(tolled({ freeTravelAtAction: 0 }), EXILE)).toBeUndefined()
     })
 })

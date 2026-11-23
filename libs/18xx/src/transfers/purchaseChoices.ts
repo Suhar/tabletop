@@ -2,6 +2,7 @@ import {
     assetOwner,
     evaluatePurchaseOffer,
     type PurchaseAsset,
+    type PriceRange,
     type PurchaseOfferRequest,
     type TransferRules
 } from './purchaseOffer.js'
@@ -13,7 +14,7 @@ export function purchaseChoices(
     playerId: string,
     rules: TransferRules,
     trains: TrainRules
-): { request: PurchaseOfferRequest; minimum: number; maximum?: number }[] {
+): ({ request: PurchaseOfferRequest } & PriceRange)[] {
     const companyId = rules.operatingCompany(state)
     if (
         !companyId ||
@@ -30,7 +31,10 @@ export function purchaseChoices(
         ),
         ...state.companies
             .filter((company) => company.kind === 'private')
-            .map((company) => ({ kind: 'private', privateCompanyId: company.id }) as const)
+            .map((company) => ({ kind: 'private', privateCompanyId: company.id }) as const),
+        ...(rules.stationPurchases ? state.stations : [])
+            .filter((station) => station.status === 'placed' && station.companyId !== companyId)
+            .map((station) => ({ kind: 'station', stationId: station.id }) as const)
     ]
     return assets.flatMap((asset) => {
         const seller = assetOwner(state, rules.charters, asset)

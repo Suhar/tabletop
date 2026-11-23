@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
 import { assert, assertExists } from '@tabletop/common'
 import {
+    totalCertificateShares,
     Owner,
     cashOwnedBy,
     finiteCashOwnedBy,
@@ -8,7 +9,7 @@ import {
     privateOwner,
     sameOwner
 } from '../finance/finance.js'
-import { settleCashPayments, type CashPayment } from '../finance/cashPayments.js'
+import { CashPayment, settleCashPayments } from '../finance/cashPayments.js'
 import { trainCanBeTraded } from '../trains/train.js'
 import { trainsCountingForLimit, type TrainRules } from '../trains/trainPurchase.js'
 import { closePrivatesOnTrainPurchase } from '../trains/buyTrain.js'
@@ -23,7 +24,9 @@ export const OrdinaryPurchaseAsset = Type.Union([
     Type.Object(
         { kind: Type.Literal('private'), privateCompanyId: Id },
         { additionalProperties: false }
-    )
+    ),
+    /** Another company's placed station, its place taken by one of the buyer's (1849 §14.1). */
+    Type.Object({ kind: Type.Literal('station'), stationId: Id }, { additionalProperties: false })
 ])
 export const PurchaseAsset = Type.Union([
     ...OrdinaryPurchaseAsset.anyOf,
@@ -87,7 +90,9 @@ export type PendingPurchaseOffer = Type.Static<typeof PendingPurchaseOffer>
 export const PurchaseEffects = Type.Object(
     {
         assets: Type.Optional(AssetTransfer),
-        stations: Type.Optional(StationTransfer)
+        stations: Type.Optional(StationTransfer),
+        /** What the buyer paid beyond the price, such as a fee to the bank. */
+        charges: Type.Optional(Type.Array(CashPayment))
     },
     { additionalProperties: false }
 )
@@ -104,17 +109,26 @@ export function companyOfferRequest(offer: PurchaseOffer): PurchaseOfferRequest 
 export function isCompanyPurchaseOffer(offer: PendingPurchaseOffer): offer is PurchaseOffer {
     return offer.buyer.kind === 'company'
 }
+/**
+ * The prices an asset may change hands at: from the minimum, to the maximum where there is one,
+ * in multiples of ``multipleOf`` where given, as 1860's trains go for multiples of £10.
+ */
+export type PriceRange = { minimum: number; maximum?: number; multipleOf?: number }
+
 export interface TransferRules {
     charters: CompanyCharters
     /** Whether a company may be bought whole, as 1846's independents are. */
     companyAcquisitions?: boolean
+    /** Whether a company may buy another's station token, as 1849's variant allows (§14.1). */
+    stationPurchases?: true
     operatingCompany(state: CompanyDecisionState): string | undefined
     canPurchase(state: CompanyDecisionState, companyId: string, asset: PurchaseAsset): boolean
+    /** The prices the asset may change hands at. */
     priceRange(
         state: CompanyDecisionState,
         companyId: string,
         asset: PurchaseAsset
-    ): { minimum: number; maximum?: number } | undefined
+    ): PriceRange | undefined
     afterPurchase(state: CompanyDecisionState, offer: PurchaseOffer): PurchaseEffects | void
     /**
      * Who makes up a price the buyer's treasury cannot cover, in order, and the highest price
@@ -144,13 +158,15 @@ export function assetOwner(
         const owner = first.owner
         return shares.every(
             (certificate) => certificate.kind === 'share' && sameOwner(certificate.owner, owner)
-        ) &&
-            shares.reduce(
-                (sum, certificate) => sum + (certificate.kind === 'share' ? certificate.shares : 0),
-                0
-            ) === shareCount
+        ) && totalCertificateShares(shares) === shareCount
             ? owner
             : undefined
+    }
+    if (asset.kind === 'station') {
+        const station = state.stations.find((item) => item.id === asset.stationId)
+        if (station?.status !== 'placed') return undefined
+        const company = state.companies.find((item) => item.id === station.companyId)
+        return company && !company.closed ? { kind: 'company', companyId: company.id } : undefined
     }
     if (asset.kind === 'private') {
         const company = state.companies.find((item) => item.id === asset.privateCompanyId)
@@ -171,6 +187,8 @@ export function evaluatePurchaseOffer(
     | { reason: string; buyerPlayerId?: never; sellerPlayerId?: never } {
     if (rules.operatingCompany(state) !== request.companyId)
         return { reason: 'Only the operating company may make a purchase offer.' }
+    if (request.asset.kind === 'station' && !rules.stationPurchases)
+        return { reason: 'Station tokens are not bought in this game.' }
     if (!rules.canPurchase(state, request.companyId, request.asset))
         return { reason: 'This asset cannot be purchased at this point in the turn.' }
     const buyer = state.companies.find((item) => item.id === request.companyId)
@@ -196,7 +214,8 @@ export function evaluatePurchaseOffer(
         !range ||
         !Number.isInteger(request.price) ||
         request.price < range.minimum ||
-        (range.maximum !== undefined && request.price > range.maximum)
+        (range.maximum !== undefined && request.price > range.maximum) ||
+        (range.multipleOf !== undefined && request.price % range.multipleOf !== 0)
     )
         return { reason: 'This purchase or price is not permitted.' }
     if (!canFund(state, request, rules)) return { reason: 'The buyer cannot afford the offer.' }
@@ -210,6 +229,11 @@ export function evaluatePurchaseOffer(
             trains.trainLimit(state, request.companyId)
         )
             return { reason: 'The buyer is at its train limit.' }
+        const { trainId } = request.asset
+        const train = state.trainInventory.trains.find((train) => train.id === trainId)
+        const limitReason =
+            train && trains.limitReason?.(state, request.companyId, train.definitionId)
+        if (limitReason) return { reason: limitReason }
     }
     return { buyerPlayerId, sellerPlayerId }
 }
@@ -248,6 +272,27 @@ export function settlePurchaseOffer(
         )
         train.owner = owner
         closePrivatesOnTrainPurchase(state, trains, offer.buyer.companyId)
+    } else if (asset.kind === 'station') {
+        const sold = state.stations.find((item) => item.id === asset.stationId)
+        assert(sold?.status === 'placed', 'A bought station is still placed')
+        const buyerId = offer.buyer.companyId
+        const replacement = state.stations.find(
+            (item) => item.companyId === buyerId && item.status === 'available'
+        )
+        assertExists(replacement, 'The buyer has a station to put in its place')
+        // The seller's station goes back to its charter (1849 §14.1).
+        state.stations = state.stations.map((item) =>
+            item.id === sold.id
+                ? { id: sold.id, companyId: sold.companyId, status: 'available' }
+                : item.id === replacement.id
+                  ? {
+                        id: replacement.id,
+                        companyId: buyerId,
+                        status: 'placed',
+                        position: sold.position
+                    }
+                  : item
+        )
     } else if (asset.kind === 'private') {
         const certificate = state.certificates.find(
             (item) => item.kind === 'private' && item.companyId === asset.privateCompanyId
@@ -261,9 +306,6 @@ export function settlePurchaseOffer(
                 certificate.owner = owner
                 delete certificate.poolId
             }
-        const company = state.companies.find((company) => company.id === asset.companyId)
-        assertExists(company, 'An acquired company exists')
-        company.president = owner
     }
     const effects = rules.afterPurchase(state, offer)
     return { payments, ...(effects ? { effects } : {}) }

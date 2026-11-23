@@ -1,14 +1,24 @@
 import type {
+    GameStartedProps,
     LeagueSeasonResultsProps,
     LeagueSeasonStartProps,
     LeagueSignUpProps
 } from '@tabletop/email'
-import { Game, GameDefinition, TournamentDetail, User } from '@tabletop/common'
+import {
+    type AccountChangeType,
+    Game,
+    GameDefinition,
+    TournamentDetail,
+    User
+} from '@tabletop/common'
 
-export enum AccountChangeType {
-    Email = 'email',
-    Password = 'password',
-    PasswordReset = 'passwordReset'
+export { AccountChangeType } from '@tabletop/common'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
+
+export type GameStartedEmail = GameStartedProps & {
+    url: string
+    notificationsUrl: string
+    toEmail: string
 }
 
 export type LeagueSignUpEmail = LeagueSignUpProps & { url: string; toEmail: string }
@@ -23,7 +33,8 @@ export interface EmailService {
     sendAccountChangedNotificationEmail(
         changeType: AccountChangeType,
         timestamp: Date,
-        toEmail: string
+        toEmail: string,
+        username?: string
     ): Promise<void>
     sendGameInvitationEmail({
         owner,
@@ -38,6 +49,15 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    sendContentReportEmail(report: ContentReportEmail): Promise<void>
+    sendPlayerRemovedEmail(email: {
+        playerName: string
+        game: Game
+        definition: GameDefinition
+        url: string
+        toEmail: string
+        deletedAccount: boolean
+    }): Promise<void>
     sendGameEndEmail({
         winners,
         game,
@@ -51,6 +71,7 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    sendGameStartedEmail(email: GameStartedEmail): Promise<void>
     sendTournamentResultsEmail({
         detail,
         definition,

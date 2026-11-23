@@ -82,7 +82,10 @@ export class HydratedCompleteStockRound
         const marketMoves = market.order(state.stockMarket).flatMap((companyId) => {
             const from = market.companySpace(state.stockMarket, companyId)
             const soldOut = this.#rules.soldOut(state, companyId)
-            const raises = soldOut ? (this.#rules.squeezed?.(state, companyId) ? 2 : 1) : 0
+            const raises = soldOut
+                ? (this.#rules.soldOutRises?.(state, companyId) ??
+                  (this.#rules.squeezed?.(state, companyId) ? 2 : 1))
+                : 0
             const raised = market.move(from.id, 'up', raises)
             const drop = this.#rules.poolDrop?.(state, companyId) ?? 0
             const to = market.move(raised.id, 'down', drop)
@@ -93,6 +96,7 @@ export class HydratedCompleteStockRound
         for (const move of marketMoves)
             placeStockMarker(state.stockMarket, move.companyId, move.toMarketSpaceId)
         state.turnManager.turnOrder = [...nextPlayerOrder]
+        this.#rules.afterRound?.(state)
         state.stockRound.completed = true
         delete state.stockRound.instructions
         this.metadata = {

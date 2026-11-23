@@ -8,6 +8,7 @@ import {
     NotificationCategory,
     type UserNotification,
     UserNotificationAction,
+    PlayerVoteKind,
     type IsYourTurnNotification,
     isYourTurnNotification
 } from '@tabletop/common'
@@ -108,10 +109,24 @@ async function generateLocalNotification(
                 tag: notification.data.game.id
             }
         } else if (notification.action === UserNotificationAction.PlayerVoteRequested) {
-            title = `${notification.data.initiator.name} asks to go back`
+            title =
+                notification.data.kind === PlayerVoteKind.Call
+                    ? `${notification.data.initiator.name} asks to end the game`
+                    : `${notification.data.initiator.name} asks to go back`
             options = {
                 body: `Vote in game ${notification.data.game.name}`,
                 tag: notification.data.game.id
+            }
+        } else if (notification.action === UserNotificationAction.TookOverSeat) {
+            title = `You've joined a game in progress`
+            options = {
+                body: `You've taken over ${notification.data.formerHolder.name}'s seat in ${notification.data.game.name}`,
+                tag: notification.data.game.id
+            }
+        } else if (notification.action === UserNotificationAction.LostSeat) {
+            title = `Your seat was given to another player`
+            options = {
+                body: `${notification.data.newHolder.name} has taken over your seat in ${notification.data.game.name}`
             }
         }
     }

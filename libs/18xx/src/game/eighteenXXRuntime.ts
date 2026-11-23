@@ -3,11 +3,18 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { ActionRegistry } from '../actions/actionDefinition.js'
 import { auctionActions } from '../auctions/auctionActions.js'
+import { BidBoxStockRoundHandler, bidBoxActions } from '../auctions/bidBoxes.js'
 import { OfferAuctionHandler } from '../auctions/offerAuctionHandler.js'
 import { SelectionAuctionHandler } from '../auctions/selectionAuctionHandler.js'
 import { WaterfallAuctionHandler } from '../auctions/waterfallAuctionHandler.js'
 import { companyActions } from '../company/companyActions.js'
 import { PendingParHandler } from '../company/pendingPar.js'
+import {
+    ChoosePresidencyExchange,
+    HydratedChoosePresidencyExchange,
+    PresidencyExchangeHandler,
+    isChoosePresidencyExchange
+} from '../stock/presidencyExchangeChoice.js'
 import { AutomaticTrackCompletionHandler } from '../construction/automaticTrackCompletionHandler.js'
 import { LayingTrackHandler } from '../construction/layingTrackHandler.js'
 import { trackActions } from '../construction/trackActions.js'
@@ -16,13 +23,32 @@ import { earningsActions } from '../earnings/earningsActions.js'
 import { endingActions } from '../ending/endingActions.js'
 import { FinalWealthScoring } from '../ending/finalScores.js'
 import { GameEndingHandler } from '../ending/gameEndingHandler.js'
+import { eighteenXXProgress, ProgressStateValidator } from '../ending/gameProgress.js'
+import { moneyFormat } from '../finance/money.js'
 import { BankruptHandler } from '../funding/bankruptHandler.js'
 import { cashCrisisActions } from '../funding/cashCrisisActions.js'
 import { fundingActions } from '../funding/fundingActions.js'
 import { FundingTrainHandler } from '../funding/fundingTrainHandler.js'
 import { RaisingCashHandler } from '../funding/raisingCashHandler.js'
+import { holdSettledCrisis, resumeCashCrisis } from '../funding/cashCrisis.js'
 import { loanActions } from '../loans/loanActions.js'
 import { LoanTakingHandler } from '../loans/loanTakingHandler.js'
+import { PayInterest, interestDueBeforeEarnings } from '../loans/payInterest.js'
+import {
+    InterruptingOperatingTurnHandler,
+    InterruptingOperatingTurnState,
+    ResumesInterruptedTurnHandler,
+    ResumingOperatingTurnHandler,
+    ResumingOperatingTurnState,
+    StockRoundInterruptionHandler,
+    stockRoundInterruptionActions
+} from '../operating/stockRoundInterruption.js'
+import { nextOperatingCompany } from '../operating/operatingSet.js'
+import { SystemActionFirstHandler } from './systemActionFirstHandler.js'
+import { AccessRightsHandler } from '../rights/accessRightsHandler.js'
+import { accessRightActions } from '../rights/rightsActions.js'
+import { DisplacedStationsHandler } from '../stations/displacedStationsHandler.js'
+import { HydratedReturnStation, ReturnStation, isReturnStation } from '../stations/returnStation.js'
 import { RepayingLoansHandler } from '../loans/repayingLoansHandler.js'
 import { operatingActions } from '../operating/operatingActions.js'
 import {
@@ -42,12 +68,18 @@ import { PrivateExchangeHandler } from '../privates/privateExchangeHandler.js'
 import { PrivatePowerRequestHandler } from '../privates/privatePowerRequestHandler.js'
 import { routeActions } from '../routes/routeActions.js'
 import { RunningTrainsHandler } from '../routes/runningTrainsHandler.js'
+import { InstructedRunsHandler } from '../routes/instructedRunsHandler.js'
+import { runInstructionActions } from '../routes/runInstructionActions.js'
+import { RunInstructionHandler } from '../routes/runInstructionHandler.js'
+import type { RunInstructionStep } from '../routes/runInstructionEvaluation.js'
 import { HomeStationChoiceHandler } from '../stations/chooseHomeStation.js'
 import { PlacingStationHandler } from '../stations/placingStationHandler.js'
+import { StationsWithTrackHandler } from '../stations/stationsWithTrackHandler.js'
 import { stationActions } from '../stations/stationActions.js'
 import { AutomaticStockTurnHandler } from '../stock/automaticStockTurnHandler.js'
 import { stockActions } from '../stock/stockActions.js'
 import { StockInstructionHandler } from '../stock/stockInstructionHandler.js'
+import { recordsTurnPurchases } from '../stock/turnPurchases.js'
 import { StockRoundHandler } from '../stock/stockRoundHandler.js'
 import {
     HydratedClaimPresidency,
@@ -57,6 +89,19 @@ import {
 } from '../stock/claimPresidency.js'
 import { ReceivershipHandler } from '../operating/receivershipHandler.js'
 import { defineAction } from '../actions/actionDefinition.js'
+import {
+    CorporateFinanceHandler,
+    corporateFinanceActions,
+    type CorporateFinanceTiming
+} from '../finance/corporateFinance.js'
+import { HydratedStartOperatingTurn } from '../operating/startOperatingTurn.js'
+import {
+    ClosingOperatingCorporationHandler,
+    ClosingOperatingCorporationState,
+    ZeroPriceClosureHandler,
+    corporationAwaitingClosure,
+    zeroPriceClosureActions
+} from '../company/zeroPriceClosure.js'
 import { AutomaticTrainCompletionHandler } from '../trains/automaticTrainCompletionHandler.js'
 import { BuyingTrainsHandler, OrdinaryBuyingTrainsHandler } from '../trains/buyingTrainsHandler.js'
 import { DiscardingTrainsHandler } from '../trains/discardTrain.js'
@@ -80,12 +125,18 @@ function validateStateComposition(
         | 'offerAuctionRules'
         | 'auctionRules'
         | 'selectionAuctionRules'
+        | 'bidBoxRules'
         | 'loanRules'
         | 'cashCrisisRules'
         | 'companyRules'
         | 'stockRules'
         | 'privatePowerRules'
         | 'trainFundingRules'
+        | 'accessRightRules'
+        | 'corporateFinanceRules'
+        | 'runInstructions'
+        | 'trackRules'
+        | 'stockRoundInterruptions'
     >,
     handlers: Readonly<Record<string, unknown>>
 ): void {
@@ -95,16 +146,22 @@ function validateStateComposition(
         ['offerAuction', !!options.offerAuctionRules],
         ['openingAuction', !!options.auctionRules],
         ['selectionAuction', !!options.selectionAuctionRules],
+        ['bidBoxes', !!options.bidBoxRules],
         ['pendingPar', !!options.companyRules.parAfterAward],
+        ['presidencyExchanges', !!options.stockRules.presidencyExchange?.choice],
         ['companyAuction', !!options.stockRules.companyAuction],
-        ['stockTurnPurchases', !!options.stockRules.multipleBuys],
+        ['stockTurnPurchases', recordsTurnPurchases(options.stockRules)],
         ['loanStep', !!options.loanRules],
         ['interestRate', !!options.loanRules],
         ['cashCrisis', !!options.cashCrisisRules],
         ['privatePowerWindow', !!options.privatePowerRules.betweenTurnsPrivateIds?.length],
         ['privatePowerRequests', !!options.privatePowerRules.betweenTurnsPrivateIds?.length],
         ['privateStation', !!options.privatePowerRules.stationPrivateIds?.length],
-        ['locationMarkers', !!options.privatePowerRules.markerTerms]
+        ['locationMarkers', !!options.privatePowerRules.markerTerms],
+        ['accessRights', !!options.accessRightRules],
+        ['trackConsent', !!options.trackRules.consentPlayerId],
+        ['financeStep', !!options.corporateFinanceRules],
+        ['stockRoundInterruption', !!options.stockRoundInterruptions]
     ]
     for (const [field, supported] of features)
         assert(
@@ -114,6 +171,10 @@ function validateStateComposition(
     assert(
         !options.cashCrisisRules || 'bankruptPlayerIds' in schema.properties,
         'Cash crises record the bankrupt players'
+    )
+    assert(
+        !options.runInstructions || 'runInstructions' in schema.properties,
+        'Run instructions need their state field'
     )
     const machine = schema.properties.machineState
     const states = 'anyOf' in machine && Array.isArray(machine.anyOf) ? machine.anyOf : [machine]
@@ -135,6 +196,7 @@ export function createEighteenXXRuntime<
 >(options: EighteenXXTitleRules<Schema, State>): GameRuntime<Type.Static<Schema>, State> {
     const { stockRules: rules, companyRules, operatingRules } = options
     const components = titleComponents(options)
+    const money = moneyFormat(options.currencySymbol)
     type Handler = EighteenXXStateHandler<State>
     const stateDefinition = options.state
     const decides = (machineState: EighteenXXMachineState, family: Handler): Handler =>
@@ -147,7 +209,8 @@ export function createEighteenXXRuntime<
             options.privateRules,
             rules,
             companyRules,
-            options.outOfTurnPrivatePowers === true
+            options.outOfTurnPrivatePowers === true,
+            options.privateExchangeActions
         )
     const allowsCompanyDecisions = (handler: Handler): Handler =>
         new CompanyDecisionsHandler<State>(
@@ -167,9 +230,59 @@ export function createEighteenXXRuntime<
         options.stationRules.homeChoice
             ? new HomeStationChoiceHandler(handler, options.stationRules)
             : handler
+    const hostsBidBoxes = (handler: Handler): Handler =>
+        options.bidBoxRules ? new BidBoxStockRoundHandler(handler, options.bidBoxRules) : handler
     const awaitsPar = (handler: Handler): Handler =>
         companyRules.parAfterAward ? new PendingParHandler(handler) : handler
-    const { loanRules, trainFundingRules, receivershipRules } = options
+    const { loanRules, trainFundingRules, receivershipRules, corporateFinanceRules } = options
+    const { zeroPriceClosure } = options
+    const closesAtZero = (handler: Handler, resume: (state: State, next?: string) => string) =>
+        zeroPriceClosure ? new ZeroPriceClosureHandler(handler, zeroPriceClosure, resume) : handler
+    const closesOwnTurnAtZero = (handler: Handler): Handler =>
+        zeroPriceClosure
+            ? {
+                  enter: (context) => handler.enter(context),
+                  validActionsForPlayer: (id, context) =>
+                      handler.validActionsForPlayer(id, context),
+                  isValidAction: (action, context) => handler.isValidAction(action, context),
+                  onAction(action, context) {
+                      const next = handler.onAction(action, context)
+                      return corporationAwaitingClosure(context.gameState, zeroPriceClosure.market)
+                          ? ClosingOperatingCorporationState
+                          : next
+                  }
+              }
+            : handler
+    const financeTiming = corporateFinanceRules?.timing ?? 'before-running'
+    const allowsCorporateFinance = (
+        handler: Handler,
+        timing: CorporateFinanceTiming = 'before-running'
+    ): Handler =>
+        corporateFinanceRules && financeTiming === timing
+            ? new CorporateFinanceHandler(handler, corporateFinanceRules)
+            : handler
+    // Issuing after buying trains can take the operating company's price to zero.
+    const closesOwnTurnAtZeroAfterFinance = (handler: Handler): Handler =>
+        financeTiming === 'after-trains' ? closesOwnTurnAtZero(handler) : handler
+    const endsFinanceStep = (handler: Handler): Handler =>
+        corporateFinanceRules
+            ? {
+                  enter: (context) => handler.enter(context),
+                  validActionsForPlayer: (id, context) =>
+                      handler.validActionsForPlayer(id, context),
+                  isValidAction: (action, context) => handler.isValidAction(action, context),
+                  onAction(action, context) {
+                      if (action instanceof HydratedStartOperatingTurn)
+                          delete context.gameState.financeStep
+                      return handler.onAction(action, context)
+                  }
+              }
+            : handler
+    const constructionActions = [
+        ...(options.additionalConstructionActions ?? []),
+        ...(options.stationsWithTrack ? ['PlaceStation'] : []),
+        ...(corporateFinanceRules && financeTiming === 'before-running' ? ['CorporateFinance'] : [])
+    ]
     const operatesReceivership = (step: OperatingStepState, handler: Handler): Handler =>
         receivershipRules
             ? new ReceivershipHandler(step, handler, {
@@ -182,14 +295,55 @@ export function createEighteenXXRuntime<
             ? new PresidencyClaimsHandler(handler, { stockRules: rules, receivershipRules })
             : handler
     const familySteps = options.operatingSteps ?? OperatingStepStates
-    const operatingSteps = loanRules ? [...familySteps, 'RepayingLoans'] : familySteps
+    const loanStep = !!loanRules && !loanRules.automatic
+    const operatingSteps = loanStep ? [...familySteps, 'RepayingLoans'] : familySteps
     const after = (step: string) => stateAfterOperatingStep(step, operatingSteps)
+    assert(
+        !options.stationsWithTrack || !familySteps.includes('PlacingStation'),
+        'Stations placed with track have no step of their own'
+    )
+    const placesStationsWithTrack = (handler: Handler): Handler =>
+        options.stationsWithTrack
+            ? new StationsWithTrackHandler(handler, options.stationRules, after('LayingTrack'))
+            : handler
     const allowsLoans = (handler: Handler): Handler =>
-        loanRules ? new LoanTakingHandler(handler, loanRules) : handler
+        loanRules && loanStep && !loanRules.borrowsInLoanStepOnly
+            ? new LoanTakingHandler(handler, loanRules)
+            : handler
+    // Where interest falls due after the run, it is paid before anything else on earnings.
+    const paysInterestFirst = (handler: Handler): Handler =>
+        loanRules?.interestBeforeEarnings
+            ? new SystemActionFirstHandler(handler, PayInterest, (state) => {
+                  const companyId = nextOperatingCompany(state)
+                  return interestDueBeforeEarnings(state, loanRules, companyId)
+                      ? { companyId }
+                      : undefined
+              })
+            : handler
+    const { accessRightRules } = options
+    const allowsRights = (handler: Handler): Handler =>
+        accessRightRules ? new AccessRightsHandler(handler, accessRightRules) : handler
+    const returnsStations = (handler: Handler): Handler =>
+        options.trackRules.reconfigures ? new DisplacedStationsHandler(handler) : handler
     const operatingStep = (handler: Handler): Handler =>
         endsGame(
-            allowsPrivatePowerRequests(allowsCompanyDecisions(allowsExchange(allowsLoans(handler))))
+            returnsStations(
+                allowsPrivatePowerRequests(
+                    allowsCompanyDecisions(allowsExchange(allowsRights(allowsLoans(handler))))
+                )
+            )
         )
+    const runInstructionRules = {
+        routeRules: options.routeRules,
+        trainRules: options.trainRules,
+        earningsRules: options.earningsRules,
+        ...(receivershipRules ? { receivershipRules } : {}),
+        ...(options.runInstructionsHeld ? { instructionsHeld: options.runInstructionsHeld } : {})
+    }
+    const followsRunInstructions = (step: RunInstructionStep, handler: Handler): Handler =>
+        options.runInstructions
+            ? new RunInstructionHandler(step, handler, runInstructionRules)
+            : handler
     const familyStateHandlers: Record<string, Handler> = {
         ...(options.offerAuctionRules
             ? {
@@ -224,9 +378,11 @@ export function createEighteenXXRuntime<
         ...(options.selectionAuctionRules
             ? {
                   SelectionAuction: endsGame(
-                      decides(
-                          'SelectionAuction',
-                          new SelectionAuctionHandler(options.selectionAuctionRules)
+                      awaitsPar(
+                          decides(
+                              'SelectionAuction',
+                              new SelectionAuctionHandler(options.selectionAuctionRules)
+                          )
                       )
                   )
               }
@@ -237,12 +393,16 @@ export function createEighteenXXRuntime<
                       allowsExchange(
                           decides(
                               'FundingTrain',
-                              new FundingTrainHandler(
-                                  trainFundingRules,
-                                  rules,
-                                  options.trainRules,
-                                  options.privateRules,
-                                  options.outOfTurnPrivatePowers === true
+                              closesAtZero(
+                                  new FundingTrainHandler(
+                                      trainFundingRules,
+                                      rules,
+                                      options.trainRules,
+                                      options.privateRules,
+                                      options.outOfTurnPrivatePowers === true
+                                  ),
+                                  (state, next) =>
+                                      next ?? (state.trainFunding ? 'FundingTrain' : 'OperatingSet')
                               )
                           )
                       )
@@ -250,6 +410,13 @@ export function createEighteenXXRuntime<
                   ...(trainFundingRules.elimination
                       ? {}
                       : { Bankrupt: endsGame(decides('Bankrupt', new BankruptHandler())) })
+              }
+            : {}),
+        ...(zeroPriceClosure
+            ? {
+                  [ClosingOperatingCorporationState]: endsGame(
+                      new ClosingOperatingCorporationHandler(zeroPriceClosure)
+                  )
               }
             : {}),
         GameOver: new TerminalStateHandler(),
@@ -272,10 +439,20 @@ export function createEighteenXXRuntime<
                                 allowsPresidencyClaims(
                                     decides(
                                         'StockRound',
-                                        new StockRoundHandler(
-                                            rules,
-                                            'StartingOperatingSet',
-                                            companyRules
+                                        hostsBidBoxes(
+                                            closesAtZero(
+                                                new StockRoundHandler(
+                                                    rules,
+                                                    'StartingOperatingSet',
+                                                    companyRules
+                                                ),
+                                                (state) => {
+                                                    if (!state.stockRound.completed)
+                                                        return 'StockRound'
+                                                    state.activePlayerIds = []
+                                                    return 'StartingOperatingSet'
+                                                }
+                                            )
                                         )
                                     )
                                 )
@@ -290,102 +467,144 @@ export function createEighteenXXRuntime<
             decides('StartingOperatingSet', new StartOperatingSetHandler(BetweenCompaniesState))
         ),
         OperatingSet: endsGame(
-            allowsPrivatePowerRequests(
-                new BetweenCompaniesHandler(
-                    decides(
-                        'OperatingSet',
-                        choosesHome(
-                            new StartOperatingTurnHandler(
-                                options.stationRules,
-                                operatingRules,
-                                familySteps[0]
+            returnsStations(
+                allowsPrivatePowerRequests(
+                    new BetweenCompaniesHandler(
+                        decides(
+                            'OperatingSet',
+                            endsFinanceStep(
+                                choosesHome(
+                                    new StartOperatingTurnHandler(
+                                        options.stationRules,
+                                        operatingRules,
+                                        familySteps[0]
+                                    )
+                                )
                             )
-                        )
-                    ),
-                    options.privatePowerRules,
-                    options.trackRules,
-                    options.stationRules
+                        ),
+                        options.privatePowerRules,
+                        options.trackRules,
+                        options.stationRules
+                    )
                 )
             )
         ),
-        LayingTrack: new AutomaticTrackCompletionHandler(
-            options.trackRules,
-            operatingStep(
-                operatesReceivership(
-                    'LayingTrack',
-                    decides(
+        LayingTrack: followsRunInstructions(
+            'LayingTrack',
+            new AutomaticTrackCompletionHandler(
+                options.trackRules,
+                operatingStep(
+                    operatesReceivership(
                         'LayingTrack',
-                        new LayingTrackHandler(options.trackRules, after('LayingTrack'))
+                        decides(
+                            'LayingTrack',
+                            allowsCorporateFinance(
+                                placesStationsWithTrack(
+                                    new LayingTrackHandler(options.trackRules, after('LayingTrack'))
+                                )
+                            )
+                        )
                     )
-                )
-            ),
-            options.additionalConstructionActions
+                ),
+                constructionActions
+            )
         ),
         ...(familySteps.includes('PlacingStation')
             ? {
-                  PlacingStation: operatingStep(
-                      operatesReceivership(
-                          'PlacingStation',
-                          decides(
+                  PlacingStation: followsRunInstructions(
+                      'PlacingStation',
+                      operatingStep(
+                          operatesReceivership(
                               'PlacingStation',
-                              new PlacingStationHandler(
-                                  options.stationRules,
-                                  after('PlacingStation')
+                              decides(
+                                  'PlacingStation',
+                                  allowsCorporateFinance(
+                                      new PlacingStationHandler(
+                                          options.stationRules,
+                                          after('PlacingStation')
+                                      )
+                                  )
                               )
                           )
                       )
                   )
               }
             : {}),
-        RunningTrains: operatingStep(
-            operatesReceivership(
-                'RunningTrains',
-                decides(
-                    'RunningTrains',
-                    new RunningTrainsHandler(options.routeRules, after('RunningTrains'))
-                )
-            )
-        ),
-        DistributingEarnings: operatingStep(
-            operatesReceivership(
-                'DistributingEarnings',
-                decides(
-                    'DistributingEarnings',
-                    new DistributingEarningsHandler(
-                        options.earningsRules,
-                        after('DistributingEarnings'),
-                        receivershipRules
-                    )
-                )
-            )
-        ),
-        BuyingTrains: new AutomaticTrainCompletionHandler(
+        RunningTrains: followsRunInstructions(
+            'RunningTrains',
             operatingStep(
                 operatesReceivership(
-                    'BuyingTrains',
+                    'RunningTrains',
                     decides(
-                        'BuyingTrains',
-                        trainFundingRules
-                            ? new BuyingTrainsHandler(
-                                  options.trainRules,
-                                  trainFundingRules,
-                                  rules,
-                                  after('BuyingTrains')
-                              )
-                            : new OrdinaryBuyingTrainsHandler(
-                                  options.trainRules,
-                                  after('BuyingTrains')
-                              )
+                        'RunningTrains',
+                        allowsCorporateFinance(
+                            new RunningTrainsHandler(options.routeRules, after('RunningTrains'))
+                        )
                     )
                 )
             )
         ),
-        ...(loanRules
+        DistributingEarnings: followsRunInstructions(
+            'DistributingEarnings',
+            operatingStep(
+                operatesReceivership(
+                    'DistributingEarnings',
+                    decides(
+                        'DistributingEarnings',
+                        paysInterestFirst(
+                            closesOwnTurnAtZero(
+                                new DistributingEarningsHandler(
+                                    options.earningsRules,
+                                    after('DistributingEarnings'),
+                                    receivershipRules
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        BuyingTrains: followsRunInstructions(
+            'BuyingTrains',
+            new AutomaticTrainCompletionHandler(
+                operatingStep(
+                    operatesReceivership(
+                        'BuyingTrains',
+                        decides(
+                            'BuyingTrains',
+                            closesOwnTurnAtZeroAfterFinance(
+                                allowsCorporateFinance(
+                                    trainFundingRules
+                                        ? new BuyingTrainsHandler(
+                                              options.trainRules,
+                                              trainFundingRules,
+                                              rules,
+                                              after('BuyingTrains')
+                                          )
+                                        : new OrdinaryBuyingTrainsHandler(
+                                              options.trainRules,
+                                              after('BuyingTrains')
+                                          ),
+                                    'after-trains'
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        ...(loanRules && loanStep
             ? {
-                  RepayingLoans: endsGame(
-                      decides(
-                          'RepayingLoans',
-                          new RepayingLoansHandler(loanRules, options.trainRules)
+                  // A loan's move left can take the company's price to zero; it closes then.
+                  RepayingLoans: followsRunInstructions(
+                      'RepayingLoans',
+                      endsGame(
+                          closesOwnTurnAtZero(
+                              decides(
+                                  'RepayingLoans',
+                                  new RepayingLoansHandler(loanRules, options.trainRules)
+                              )
+                          )
                       )
                   )
               }
@@ -393,7 +612,18 @@ export function createEighteenXXRuntime<
         ...(options.cashCrisisRules
             ? {
                   RaisingCash: endsGame(
-                      decides('RaisingCash', new RaisingCashHandler(options.cashCrisisRules))
+                      decides(
+                          'RaisingCash',
+                          zeroPriceClosure
+                              ? // A sale that closes a company closes it before play goes on.
+                                new ZeroPriceClosureHandler(
+                                    new RaisingCashHandler(options.cashCrisisRules),
+                                    zeroPriceClosure,
+                                    (state, next) => next ?? resumeCashCrisis(state),
+                                    holdSettledCrisis
+                                )
+                              : new RaisingCashHandler(options.cashCrisisRules)
+                      )
                   )
               }
             : {})
@@ -403,17 +633,82 @@ export function createEighteenXXRuntime<
             !(machineState in familyStateHandlers),
             `${machineState} already has a family handler; wrap its decisions instead`
         )
-    const stateHandlers: Record<string, Handler> = {
-        ...familyStateHandlers,
-        ...options.titleStateHandlers
+    const instructedRunRules = options.runInstructions
+        ? { routeRules: options.routeRules, operatingRules }
+        : undefined
+    // An outgoing president's choice of certificates holds whatever state the change came in.
+    const awaitsExchange = (handler: Handler): Handler =>
+        rules.presidencyExchange?.choice ? new PresidencyExchangeHandler(handler) : handler
+    const interruptionHandlers: Record<string, Handler> = options.stockRoundInterruptions
+        ? {
+              [InterruptingOperatingTurnState]: new InterruptingOperatingTurnHandler(),
+              // The homes of companies the stock round floated go down, a choice of home held
+              // before play resumes.
+              [ResumingOperatingTurnState]: options.stationRules.homeChoice
+                  ? new HomeStationChoiceHandler(
+                        new ResumingOperatingTurnHandler(options.stationRules),
+                        options.stationRules,
+                        ResumingOperatingTurnState
+                    )
+                  : new ResumingOperatingTurnHandler(options.stationRules)
+          }
+        : {}
+    // A stock round due in an operating turn interrupts it as play returns to the turn.
+    const interrupts = (machineState: string, handler: Handler): Handler =>
+        !options.stockRoundInterruptions
+            ? handler
+            : machineState === 'StockRound'
+              ? new ResumesInterruptedTurnHandler(handler)
+              : new StockRoundInterruptionHandler(handler)
+    const observesActions = (machineState: string, handler: Handler): Handler => {
+        const observer = Object.entries(options.actionObservers ?? {}).find(
+            ([observed]) => observed === machineState
+        )?.[1]
+        if (!observer) return handler
+        return {
+            isValidAction: (action, context) => handler.isValidAction(action, context),
+            validActionsForPlayer: (playerId, context) =>
+                handler.validActionsForPlayer(playerId, context),
+            enter: (context) => handler.enter(context),
+            onAction(action, context) {
+                observer(context.gameState, action)
+                return handler.onAction(action, context)
+            }
+        }
     }
+    const stateHandlers: Record<string, Handler> = Object.fromEntries(
+        Object.entries({
+            ...familyStateHandlers,
+            ...interruptionHandlers,
+            ...options.titleStateHandlers
+        }).map(([machineState, handler]) => [
+            machineState,
+            observesActions(
+                machineState,
+                interrupts(
+                    machineState,
+                    awaitsExchange(new InstructedRunsHandler(handler, instructedRunRules))
+                )
+            )
+        ])
+    )
     const actions = new ActionRegistry([
         ...endingActions(options.endingRules),
+        ...(rules.presidencyExchange?.choice
+            ? [
+                  defineAction(
+                      ChoosePresidencyExchange,
+                      isChoosePresidencyExchange,
+                      (action) => new HydratedChoosePresidencyExchange(action)
+                  )
+              ]
+            : []),
         ...auctionActions(
             options.offerAuctionRules,
             options.auctionRules,
             options.selectionAuctionRules,
-            options.endingRules
+            options.endingRules,
+            options.trainRules
         ),
         ...(trainFundingRules
             ? fundingActions(
@@ -454,11 +749,24 @@ export function createEighteenXXRuntime<
             receivershipRules
         ),
         ...loanActions(loanRules, rules),
+        ...accessRightActions(accessRightRules),
         ...cashCrisisActions(options.cashCrisisRules, options.endingRules),
         ...stockActions(rules, options.endingRules),
         ...companyActions(companyRules, rules),
         ...stationActions(options.stationRules),
+        ...(options.trackRules.reconfigures
+            ? [
+                  defineAction(
+                      ReturnStation,
+                      isReturnStation,
+                      (action) => new HydratedReturnStation(action, options.stationRules)
+                  )
+              ]
+            : []),
         ...routeActions(options.routeRules),
+        ...(instructedRunRules ? runInstructionActions(instructedRunRules) : []),
+        ...(corporateFinanceRules ? corporateFinanceActions(corporateFinanceRules) : []),
+        ...(zeroPriceClosure ? zeroPriceClosureActions(zeroPriceClosure, options.endingRules) : []),
         ...earningsActions(
             options.earningsRules,
             options.privateRules,
@@ -466,7 +774,11 @@ export function createEighteenXXRuntime<
             after('DistributingEarnings'),
             receivershipRules
         ),
-        ...trainActions(options.trainRules, options.phaseRules, !loanRules),
+        ...trainActions(options.trainRules, options.phaseRules, !loanStep),
+        ...(options.stockRoundInterruptions
+            ? stockRoundInterruptionActions(operatingRules, receivershipRules)
+            : []),
+        ...bidBoxActions(options.bidBoxRules),
         ...(options.titleActions ?? [])
     ])
     validateStateComposition(stateDefinition.schema, options, stateHandlers)
@@ -499,12 +811,20 @@ export function createEighteenXXRuntime<
         playerColors: EighteenXXInitializer.playerColors,
         randomnessVersion: 1,
         scoring: {
+            tiebreakRule: FinalWealthScoring.tiebreakRule,
             finalScores: (state) =>
                 FinalWealthScoring.finalScores(stateDefinition.hydrate(state, components))
         },
+        progression: {
+            progress: (state) => {
+                assert(ProgressStateValidator.Check(state), 'Progress requires a railway state')
+                return eighteenXXProgress(state, options.phases, money)
+            }
+        },
         apiActions: actions.schemas,
-        exploration: new EighteenXXGameExploration<Type.Static<Schema>>((state) =>
-            stateDefinition.hydrate(state, components)
+        exploration: new EighteenXXGameExploration<Type.Static<Schema>>(
+            (state) => stateDefinition.hydrate(state, components),
+            options.canonicalState?.populate
         ),
         stateHandlers
     }

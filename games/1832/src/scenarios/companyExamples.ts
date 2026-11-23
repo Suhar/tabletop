@@ -121,7 +121,6 @@ export function createEighteenThirtyTwoCompanyExample(
         const company = getCompany(state, 'SAL')
         company.started = true
         company.parPrice = 68
-        company.president = { kind: 'player', playerId: players[0].playerId }
         for (const [id, index] of [
             ['SAL:president', 0],
             ['SAL:share:1', 1],
@@ -190,4 +189,21 @@ export function createEighteenThirtyTwoCompanyExample(
                 }
     }
     return state
+}
+
+/**
+ * Adds, unstarted, the railroads a prepared position leaves out, so all ten count toward the
+ * certificate limit (Table 2).
+ */
+export function addUnstartedRailroads(state: CompanyState): void {
+    for (const id of Object.keys(EighteenThirtyTwoMajors))
+        if (!state.companies.some((company) => company.id === id))
+            state.companies.push({
+                id,
+                kind: 'major',
+                started: false,
+                funded: false,
+                floated: false,
+                operated: false
+            })
 }

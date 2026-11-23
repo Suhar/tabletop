@@ -282,7 +282,7 @@
             stroke-linecap="round"
             stroke-dasharray="7 6"
             class="claim-link"
-        />
+        ></line>
         <circle
             cx={target.center.x}
             cy={target.center.y}
@@ -290,7 +290,7 @@
             fill="none"
             stroke={ACCENT}
             stroke-width="1.5"
-        />
+        ></circle>
     </svg>
 {/if}
 

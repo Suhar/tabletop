@@ -1,8 +1,8 @@
-import {
-    type HydratedAction,
-    type HydratedGameState,
-    type MachineContext,
-    type MachineStateHandler
+import type {
+    HydratedAction,
+    HydratedGameState,
+    MachineContext,
+    MachineStateHandler
 } from '@tabletop/common'
 import {
     ReserveBidAuction,
@@ -39,12 +39,13 @@ export class WaterfallAuctionHandler<
             model.resolution()
         )
             return []
+        const buyOnly = model.buyOnlyLotIds()
         const ids = model.auction.bidding
             ? [model.auction.bidding.lotId]
-            : model.auction.remainingLotIds.slice(1)
+            : model.auction.remainingLotIds.filter((lotId) => !buyOnly.includes(lotId))
         return [
             'PassAuction',
-            ...(model.canPurchase(playerId, model.auction.remainingLotIds[0])
+            ...(buyOnly.some((lotId) => model.canPurchase(playerId, lotId))
                 ? ['BuyAuctionLot']
                 : []),
             ...(ids.some((id) => model.canBid(playerId, id, model.minimumBid(id)))
@@ -66,6 +67,9 @@ export class WaterfallAuctionHandler<
         }
     }
     onAction(_action: HydratedAction, context: MachineContext<State>): string {
+        // An export after an all-pass income round may start a phase, which resumes the auction.
+        const state: object = context.gameState
+        if ('phaseChange' in state && state.phaseChange) return 'AdvancingPhase'
         return context.gameState.openingAuction?.completed
             ? 'StockRound'
             : context.gameState.openingAuction?.bidding

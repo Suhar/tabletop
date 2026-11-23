@@ -1,8 +1,8 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     type GameAction,
@@ -12,7 +12,7 @@ import {
     type MachineStateHandler
 } from '@tabletop/common'
 import { releaseTrains } from './train.js'
-import { trainsCountingForLimit, type TrainRules } from './trainPurchase.js'
+import { trainsOverLimit, type TrainRules } from './trainPurchase.js'
 import {
     continuePhaseChange,
     phaseDecisionPlayers,
@@ -27,17 +27,15 @@ import {
 export function discardableTrains(
     state: PhaseChangeState,
     companyId: string,
-    rules: Pick<TrainRules, 'trainLimit' | 'countsForLimit'>
+    rules: Pick<TrainRules, 'trainLimit' | 'countsForLimit' | 'trainGroups'>
 ) {
-    const trains = trainsCountingForLimit(state, rules, companyId)
-    return state.phaseChange?.discardCompanyIds[0] === companyId &&
-        trains.length > rules.trainLimit(state, companyId)
-        ? trains
+    return state.phaseChange?.discardCompanyIds[0] === companyId
+        ? trainsOverLimit(state, rules, companyId)
         : []
 }
 export const DiscardTrain = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('DiscardTrain'),
         companyId: Type.String(),
         trainId: Type.String(),
@@ -98,10 +96,7 @@ export class HydratedDiscardTrain
             }
         ])
         releaseTrains(state.trainInventory, [train.id], this.#phases.discardDestination)
-        if (
-            trainsCountingForLimit(state, this.#rules, this.companyId).length <=
-            this.#rules.trainLimit(state, this.companyId)
-        )
+        if (!trainsOverLimit(state, this.#rules, this.companyId).length)
             state.phaseChange!.discardCompanyIds.shift()
         this.metadata = {
             destination: this.#phases.discardDestination,

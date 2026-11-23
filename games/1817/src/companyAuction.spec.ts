@@ -2,11 +2,13 @@ import { EighteenSeventeenMarket } from './stockMarket.js'
 import { describe, expect, it } from 'vitest'
 import {
     cashOwnedBy,
+    CompanyAuctionModel,
     evaluateSharePurchase,
     evaluateShareSale,
     getCompany,
     privateOwner,
-    type EighteenXXState
+    type EighteenXXState,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample } from '@tabletop/18xx/scenarios'
 import {
@@ -55,7 +57,7 @@ describe('company auctions', () => {
         play.act('FormCompany', { companyId: 'AS', shareCount: 2, privateIds: [] })
         const company = getCompany(play.state, 'AS')
         expect(company).toMatchObject({ started: true, floated: true, shareCount: 2, parPrice: 50 })
-        expect(company.president).toEqual({ kind: 'player', playerId: 'alex' })
+        expect(presidentOf(play.state, 'AS')).toEqual({ kind: 'player', playerId: 'alex' })
         expect(EighteenSeventeenMarket.companySpace(play.state.stockMarket, 'AS').price).toBe(50)
         expect(play.treasury('AS')).toBe(100)
         expect(play.cash('alex')).toBe(200)
@@ -75,7 +77,7 @@ describe('company auctions', () => {
         play.act('PassCompanyAuction', { companyId: 'AS' })
         expect(play.state.activePlayerIds).toEqual(['alex'])
         play.act('PassCompanyAuction', { companyId: 'AS' })
-        expect(getCompany(play.state, 'AS').president).toEqual({
+        expect(presidentOf(play.state, 'AS')).toEqual({
             kind: 'player',
             playerId: 'blair'
         })
@@ -116,6 +118,9 @@ describe('company auctions', () => {
         // Blair's $250 and $30 private cannot reach $305, so only Casey is asked.
         expect(play.state.activePlayerIds).toEqual(['casey'])
         play.act('PassCompanyAuction', { companyId: 'AS' })
+        const auction = new CompanyAuctionModel(play.state, EighteenSeventeenStockRules)
+        expect(auction.formationPayment(['MAJC'])).toEqual({ privatesValue: 90, cash: 210 })
+        expect(auction.formationPayment(['MAJC', 'OBC'])).toEqual({ privatesValue: 130, cash: 170 })
         expect(() =>
             play.act('FormCompany', { companyId: 'AS', shareCount: 2, privateIds: ['MINC'] })
         ).toThrow()
@@ -124,6 +129,15 @@ describe('company auctions', () => {
         expect(privateOwner(play.state, 'OBC')).toEqual({ kind: 'company', companyId: 'AS' })
         expect(play.cash('alex')).toBe(30)
         expect(play.treasury('AS')).toBe(170)
+    })
+
+    it('counts cash and privates as bidding power past the most a bid may be', () => {
+        const play = trading((state) => {
+            giveCash(state, 'alex', 380)
+            givePrivate(state, 'OBC', 'alex')
+        })
+        expect(EighteenSeventeenCompanyAuction.biddingPower?.(play.state, 'alex')).toBe(450)
+        expect(EighteenSeventeenCompanyAuction.maximumBid(play.state, 'alex')).toBe(400)
     })
 
     it('accepts only bids its bidder can pay from cash and privates', () => {

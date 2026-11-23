@@ -1,12 +1,7 @@
 <script lang="ts">
     import type { MoneyFormat } from '../presentation/money.js'
     import { isTreasuryPayment, paymentsInDisplayOrder } from './earningsPayments.js'
-    import {
-        type EarningsChoice,
-        type EarningsDetails,
-        type Owner,
-        type StockMarketChart
-    } from '@tabletop/18xx'
+    import type { EarningsChoice, EarningsDetails, Owner, StockMarketChart } from '@tabletop/18xx'
     let {
         money,
         choice,
@@ -30,6 +25,8 @@
         onclick?: () => void
         disabled?: boolean
     } = $props()
+    // With part of the revenue decided apart, a card that withholds the rest may still pay.
+    const keepsAll = $derived(choice === 'withhold' && !details?.dividendPerShare)
 </script>
 
 {#snippet content()}
@@ -38,14 +35,10 @@
         {#if details}
             <span class="heading-amounts">
                 <span class="heading-amount">
-                    <b
-                        >{money(
-                            choice === 'withhold' ? details.retained : details.dividendPerShare
-                        )}</b
-                    >
-                    {#if choice !== 'withhold'}<small>/share</small>{/if}
+                    <b>{money(keepsAll ? details.retained : details.dividendPerShare)}</b>
+                    {#if !keepsAll}<small>/share</small>{/if}
                 </span>
-                {#if choice === 'half-pay'}
+                {#if choice === 'half-pay' || (details.separate && !keepsAll && details.retained)}
                     <span class="heading-amount"
                         ><b>{money(details.retained)}</b><small>&nbsp;retained</small></span
                     >
@@ -56,7 +49,7 @@
     {#if details}
         {#if details.bonusPerShare}<small>Includes {money(details.bonusPerShare)}/share bonus</small
             >{/if}
-        {#if choice !== 'withhold'}<span class="payments">
+        {#if !keepsAll}<span class="payments">
                 {#each paymentsInDisplayOrder(details.payments, companyId) as payment, i (i)}
                     <span
                         ><span

@@ -54,9 +54,7 @@
         animationContext: AnimationContext
     }) {
         if (!isStowShip(action) || action.choice === undefined) return
-        const picked = gameSession.stowableShips.findIndex(
-            (ship) => ship.choice === action.choice
-        )
+        const picked = gameSession.stowableShips.findIndex((ship) => ship.choice === action.choice)
         const card = cards[picked]
         if (!card) return
 
@@ -67,11 +65,7 @@
             { opacity: 0, duration: REJECT_FADE, ease: 'power1.in' },
             0
         )
-        timeline.to(
-            card,
-            { rotationY: 360, duration: TWIRL, ease: 'power2.inOut' },
-            REJECT_FADE
-        )
+        timeline.to(card, { rotationY: 360, duration: TWIRL, ease: 'power2.inOut' }, REJECT_FADE)
         timeline.to(
             card,
             {

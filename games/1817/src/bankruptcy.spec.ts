@@ -6,7 +6,8 @@ import {
     crisisSales,
     evaluateCrisisSale,
     getCompany,
-    type EighteenXXState
+    type EighteenXXState,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample, type ExamplePlay } from '@tabletop/18xx/scenarios'
 import {
@@ -106,7 +107,6 @@ describe('crisis sales', () => {
                     delete certificate.poolId
                 }
             }
-        getCompany(state, 'BA').president = alex
         expect(
             evaluateCrisisSale(state, EighteenSeventeenCashCrisisRules, 'alex', {
                 companyId: 'BA',
@@ -118,13 +118,20 @@ describe('crisis sales', () => {
 })
 
 describe('bankruptcy', () => {
+    it('records the company a bankrupt player presided over in its operation', () => {
+        const play = pleDefaults()
+        play.act('GoBankrupt')
+        expect(
+            play.processed.find((action) => action.type === 'GoBankrupt')?.metadata
+        ).toMatchObject({ presidedCompanyId: 'PLE' })
+    })
     it('takes the player’s shares and cash, liquidates their companies and removes them', () => {
         const play = pleDefaults()
         play.act('GoBankrupt')
         expect(play.state.bankruptPlayerIds).toEqual(['alex'])
         expect(play.state.turnManager.turnOrder).not.toContain('alex')
-        expect(getCompany(play.state, 'PLE').president).toBeUndefined()
-        expect(getCompany(play.state, 'BA').president).toEqual({
+        expect(presidentOf(play.state, 'PLE')).toBeUndefined()
+        expect(presidentOf(play.state, 'BA')).toEqual({
             kind: 'player',
             playerId: 'blair'
         })
@@ -167,7 +174,15 @@ describe('bankruptcy', () => {
 describe('a bankrupt president’s companies', () => {
     it('are liquidated in operating order, and later auctioned from the player after them', () => {
         const play = playExample(EighteenSeventeenScenarios, 'construction', 3, (state) => {
-            getCompany(state, 'PLE').president = { kind: 'player', playerId: 'blair' }
+            for (const certificate of state.certificates)
+                if (
+                    certificate.kind === 'share' &&
+                    certificate.companyId === 'PLE' &&
+                    certificate.president
+                ) {
+                    certificate.owner = { kind: 'player', playerId: 'blair' }
+                    delete certificate.poolId
+                }
         })
         const state = structuredClone(play.state)
         expect(EighteenSeventeenMarket.order(state.stockMarket).indexOf('BA')).toBeLessThan(
@@ -175,7 +190,7 @@ describe('a bankrupt president’s companies', () => {
         )
         const record = EighteenSeventeenCashCrisisRules.elimination.eliminate(state, 'blair')
         expect(record.liquidatedCompanyIds).toEqual(['BA', 'PLE'])
-        expect(getCompany(state, 'BA').president).toBeUndefined()
+        expect(presidentOf(state, 'BA')).toBeUndefined()
         expect(state.turnManager.turnOrder).toEqual(['alex', 'blair', 'casey'])
         expect(biddingOrder(state, 'BA')).toEqual(['casey', 'alex', 'blair'])
     })

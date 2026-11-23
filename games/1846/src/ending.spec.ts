@@ -8,10 +8,12 @@ import {
     isEndGame,
     nextOperatingCompany,
     placeStockMarker,
-    trainsOwnedBy
+    trainsOwnedBy,
+    presidentOf
 } from '@tabletop/18xx'
 import { buyTrain, constructionGame, emergencyBuyingGame, stockGame } from '../test/testSupport.js'
-import { corporateFinanceChoices } from './corporateFinance.js'
+import { corporateFinanceChoices } from '@tabletop/18xx'
+import { CorporateFinanceRules1846 } from './corporateFinance.js'
 import { EndingRules1846 } from './ending.js'
 import { Names1846 } from './names.js'
 import { Runtime } from './definition/gameDefinition.js'
@@ -147,11 +149,11 @@ describe('1846 game endings', () => {
             playUntil(
                 table,
                 () =>
-                    corporateFinanceChoices(table.hydrated).some(
+                    corporateFinanceChoices(table.hydrated, CorporateFinanceRules1846).some(
                         (choice) => choice.operation === 'issue'
                     ) && table.state.operatingSet?.roundNumber === 2
             )
-            const choice = corporateFinanceChoices(table.hydrated).find(
+            const choice = corporateFinanceChoices(table.hydrated, CorporateFinanceRules1846).find(
                 (choice) => choice.operation === 'issue'
             )
             assertExists(choice)
@@ -240,7 +242,7 @@ describe('1846 game endings', () => {
 
     it('values stock at the final price without adding corporate cash or assets', () => {
         const table = buyingGame()
-        const president = getCompany(table.state, 'IC').president
+        const president = presidentOf(table.state, 'IC')
         assert(president?.kind === 'player')
         const certificate = certificatesOwnedBy(table.state, president).find(
             (certificate) => certificate.companyId === 'IC'

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type Player } from '@tabletop/common'
+    import type { Player } from '@tabletop/common'
     import {
         EarendelPlayerState,
         controllerOf,
@@ -199,7 +199,7 @@
                         viewBox="0 0 24 24"
                         fill="currentColor"
                     >
-                        <path d="M4 4l16 8-16 8 4-8-4-8z" />
+                        <path d="M4 4l16 8-16 8 4-8-4-8z"></path>
                     </svg>
                 {/if}
                 <h1 class="text-[15px] leading-tight {isTurn ? 'font-bold' : 'font-semibold'}">

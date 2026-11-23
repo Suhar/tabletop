@@ -278,7 +278,7 @@ describe('Hospitality on a Travel: the gain shows on each destination it fits (R
 })
 
 /**
- * Dana keeps her favor in the nomad bank (Vow of Kinship): none on her board, `nomad` in the bank.
+ * Dana keeps their favor in the nomad bank (Vow of Kinship): none on their board, `nomad` in the bank.
  * Toll Roads at the Cradle site Rhys rules takes a favor to travel there.
  */
 function kinship(nomad: number, denizens: Record<string, string[]> = {}) {
@@ -404,7 +404,7 @@ const useOf = (cardId: string) => ({
 })
 
 /**
- * Dana keeps her favor in the nomad bank (Vow of Kinship), none on her board, and holds `card`, a
+ * Dana keeps their favor in the nomad bank (Vow of Kinship), none on their board, and holds `card`, a
  * Travel card whose cost places a favor (A Fast Steed, Tents). The Cradle site c2 holds Oracle, the
  * one nomad card Hospitality matches there.
  */
@@ -550,7 +550,7 @@ describe('Hospitality’s bank as the way’s card costs leave it (R-7.1.2, R-7.
     })
 })
 
-/** Dana keeps her favor in the nomad bank, one there; Toll Roads stands at c2, which no one rules, so its toll goes to the bandits. */
+/** Dana keeps their favor in the nomad bank, one there; Toll Roads stands at c2, which no one rules, so its toll goes to the bandits. */
 function banditToll(dana: Partial<Seat> = {}) {
     const state = kinship(1, { c2: [ORACLE, TOLL_ROADS] })
     state.warbandsBySite = {}
@@ -605,9 +605,15 @@ describe('Hospitality only on the player’s own Travel', () => {
     })
 })
 
-describe('Hospitality and the powers list (R-7.4)', () => {
-    it('lists no Use a power entry for Hospitality: its gain comes after the action', () => {
-        expect(actionCards(scene(), 'dana').map((card) => card.cardId)).not.toContain(HOSPITALITY)
+describe('Hospitality and its "Use" (R-7.4)', () => {
+    it('changes the Travel: its gain comes after the action, on a row sent with it', () => {
+        expect(actionCards(scene(), 'dana')).toContainEqual(
+            expect.objectContaining({
+                cardId: HOSPITALITY,
+                action: ActionType.Travel,
+                kind: 'changes'
+            })
+        )
     })
 
     it('a destination offers the same Travel with Hospitality’s bank as without it', () => {
@@ -668,17 +674,17 @@ describe('Hospitality’s gain in words', () => {
 
     it('the map chip reads the gold cost, then the gain with each bank’s suit', () => {
         expect(travelChip([way(Suit.Beast)])).toEqual({
-            ways: [{ cost: 2, favor: 0, secret: false }],
+            ways: [{ cost: 2, favor: 0, secrets: 0 }],
             banks: [Suit.Beast]
         })
         expect(travelChip([way(Suit.Beast), way(Suit.Nomad)])).toEqual({
-            ways: [{ cost: 2, favor: 0, secret: false }],
+            ways: [{ cost: 2, favor: 0, secrets: 0 }],
             banks: [Suit.Beast, Suit.Nomad]
         })
         expect(travelChip([way()])).toEqual({ words: '2 Supply' })
         expect(
             chipWords({
-                ways: [{ cost: 2, favor: 0, secret: false }],
+                ways: [{ cost: 2, favor: 0, secrets: 0 }],
                 banks: [Suit.Beast, Suit.Nomad]
             })
         ).toBe('2 Supply, gain 1 favor from the Beast or Nomad bank')

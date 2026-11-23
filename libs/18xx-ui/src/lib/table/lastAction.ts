@@ -6,6 +6,8 @@ import {
     isCompanyPurchaseOffer,
     isDistributeEarnings,
     isFinishOperatingTurn,
+    isFinishStockTurn,
+    isFloatCompany,
     isIssueTreasuryShares,
     isLayTile,
     isOfferPurchase,
@@ -17,7 +19,9 @@ import {
     isRunTrains,
     isSellFundingShares,
     isStartOperatingTurn,
+    isStartStockRound,
     type DistributeEarnings,
+    type FloatCompany,
     type Owner
 } from '@tabletop/18xx'
 import type { MoneyFormat } from '../presentation/money.js'
@@ -48,6 +52,53 @@ export function lastNotableStep(
             (action.source === ActionSource.User || isAutomaticStockDecision(action))
     )
     return actions.slice(Math.max(0, start), last + 1).filter(notable)
+}
+
+export type TurnRecapLine =
+    | { kind: 'passes'; id: string; playerIds: string[] }
+    | { kind: 'decision'; action: GameAction & { playerId: string } }
+    | { kind: 'float'; action: FloatCompany }
+
+function isStockPass(action: GameAction): boolean {
+    return isFinishStockTurn(action) && action.metadata?.passed === true
+}
+
+function isPlayerDecision(action: GameAction): action is GameAction & { playerId: string } {
+    return (
+        action.playerId !== undefined &&
+        (action.source === ActionSource.User || isAutomaticStockDecision(action)) &&
+        !isHistoryBookkeeping(action)
+    )
+}
+
+export function turnRecap(
+    actions: readonly GameAction[],
+    playerId: string,
+    routine: (action: GameAction) => boolean
+): TurnRecapLine[] {
+    const roundStart = actions.findLastIndex(isStartStockRound)
+    const previousTurnEnd = actions.findLastIndex(
+        (action) => isFinishStockTurn(action) && action.playerId === playerId
+    )
+    if (previousTurnEnd < 0 || previousTurnEnd < roundStart) return []
+    const turnStart = actions.findLastIndex(isFinishStockTurn)
+    const actedThisTurn = actions
+        .slice(turnStart + 1)
+        .some((action) => action.playerId === playerId && isPlayerDecision(action))
+    if (actedThisTurn) return []
+    const lines: TurnRecapLine[] = []
+    for (const action of actions.slice(previousTurnEnd + 1)) {
+        if (isFloatCompany(action)) {
+            lines.push({ kind: 'float', action })
+            continue
+        }
+        if (!isPlayerDecision(action) || action.playerId === playerId || routine(action)) continue
+        const previous = lines.at(-1)
+        if (!isStockPass(action)) lines.push({ kind: 'decision', action })
+        else if (previous?.kind === 'passes') previous.playerIds.push(action.playerId)
+        else lines.push({ kind: 'passes', id: action.id, playerIds: [action.playerId] })
+    }
+    return lines
 }
 
 export function operatingTurnCompany(

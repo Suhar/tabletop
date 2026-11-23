@@ -7,7 +7,7 @@
     let paths = $derived(trussPaths(start, end))
 </script>
 
-<path d={paths.rails} fill="none" stroke={color} stroke-width="2.5" pointer-events="none" />
+<path d={paths.rails} fill="none" stroke={color} stroke-width="2.5" pointer-events="none"></path>
 <path
     d={paths.lacing}
     fill="none"
@@ -16,4 +16,4 @@
     stroke-opacity="0.8"
     stroke-linejoin="round"
     pointer-events="none"
-/>
+></path>

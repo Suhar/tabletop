@@ -32,10 +32,11 @@ Historical schema incompatibilities are reported as failures of these particular
 
 ## Hosted rehearsal
 
-Start the existing hosted runner with local realtime transport enabled:
+Start the existing hosted runner with the backend's own SSE realtime transport enabled:
 
 ```sh
-ABLY_API_KEY='' PUBLIC_ENABLE_ABLY_REALTIME='' PUBLIC_SSE_HOST='http://localhost:3000' \
+ABLY_API_KEY='' ENABLE_SSE_REALTIME=true PUBLIC_ENABLE_ABLY_REALTIME='' \
+  PUBLIC_SSE_HOST='http://localhost:3000' \
   node tools/scripts/local-hosted-game.mjs fresh-fish
 ```
 
@@ -73,7 +74,7 @@ Keep each fixture under `games/<package>/rehearsals/<case>/`:
 - `actions.json`: complete canonical Actions, including undo patches. Either chronological ordering is accepted; the loader sorts by index and validates continuity.
 - `fixture.mjs`: metadata and any explicit comparison or setup adaptations.
 
-These are repository-only fixtures. Game TypeScript builds include `src`, and Logic/UI Rollup builds follow their `src` entry points. Deployment uploads only `games/<package>/bundle` and `games/<package>-ui/bundle`; it does not upload the package directory. Keep rehearsal imports out of production entry points. Logic packages are private workspace packages, not npm publications.
+These are repository-only fixtures. Game TypeScript builds include `src`, and Logic/UI Rolldown builds follow their `src` entry points. Deployment uploads only `games/<package>/bundle` and `games/<package>-ui/bundle`; it does not upload the package directory. Keep rehearsal imports out of production entry points. Logic packages are private workspace packages, not npm publications.
 
 Use the Fresh Fish `legacy-2025` fixture as an example. A basic fixture requires no adaptation:
 

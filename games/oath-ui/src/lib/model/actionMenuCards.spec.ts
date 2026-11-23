@@ -7,6 +7,7 @@ import {
     Suit,
     TradeOption,
     cardDefinitions,
+    hasEffect,
     isFreeGain,
     isMandatoryModifier,
     isMuster,
@@ -18,7 +19,7 @@ import {
 import { openTurn, testPlayer, testState } from '@tabletop/oath/testing'
 import { disposeSessions, openSessionOn, tableOf } from '$lib/testing/sessionHarness.js'
 import { shroudedWoodState } from '$lib/testing/shroudedWoodTable.js'
-import { ACTION_CARD_LINES, actionCardKey } from './actionCards.js'
+import { ACTION_CARD_LINES } from './actionCards.js'
 import type { OathGameSession } from './session.svelte.js'
 
 afterEach(() => {
@@ -50,7 +51,7 @@ const use = (cardId: string) => ({ cardId, powerIndex: powerIndexOf(cardId, Powe
 
 type Seat = Parameters<typeof testPlayer>[0]
 
-/** Dana at c1 with plenty to spend, her cards and the cards at her site as the case needs. */
+/** Dana at c1 with plenty to spend, their cards and the cards at their site as the case needs. */
 function table(
     me: Partial<Seat>,
     here: string[] = [],
@@ -312,7 +313,6 @@ describe('R-7.4 — an action only two cards together make possible is one entry
                 with: use(PRESSGANGS)
             }
         ])
-        expect(actionCardKey(session.actionCards[0])).toContain('+')
     })
 
     it('opens the Muster with both in use; neither can be put down; the Muster is sent with both', async () => {
@@ -333,11 +333,11 @@ describe('R-7.4 — an action only two cards together make possible is one entry
         expect(action.modifiers).toEqual([use(PLAYMATES), use(PRESSGANGS)])
     })
 
-    it('Undo from a pair returns to the powers', async () => {
+    it('Undo from a pair returns to the grid', async () => {
         const { session } = await sessionAt(m1())
         session.openActionWithCard(session.actionCards[0])
         await session.undo()
-        expect(session.selection.action).toBe(ActionType.UseActionPower)
+        expect(session.selection.action).toBeUndefined()
     })
 
     it('Birdsong + Small Friends make a Trade at 0 Supply with a beast card at another site', async () => {
@@ -380,8 +380,11 @@ describe('R-7.4 — an action only two cards together make possible is one entry
     })
 })
 
+/** The built ones: a printed modifier with no effect yet is never offered (R-7.4). */
 function allModifiers() {
-    return cardDefinitions().flatMap((card) => powersWithTiming(card.id, PowerTiming.Modifier))
+    return cardDefinitions()
+        .flatMap((card) => powersWithTiming(card.id, PowerTiming.Modifier))
+        .filter(hasEffect)
 }
 
 describe('R-7.4 — one line per card, read by the menu rows and Use a power alike', () => {

@@ -3,11 +3,16 @@
     import { fade } from 'svelte/transition'
     import { prefersReducedMotion } from 'svelte/motion'
     import { placedTileLayout } from '../tiles/standardTileLayouts.js'
-    import type { Point } from '@tabletop/common'
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import Tile from '../tiles/Tile.svelte'
     import type { TileAppearance } from '../tiles/tileAppearance.js'
     import { tileChoiceArc } from './tileChoiceArc.js'
+    import { HexPickerFrame } from './hexPickerFrame.svelte.js'
+    import HexPickerControls from './HexPickerControls.svelte'
+    import TilePiece from './TilePiece.svelte'
+    import { TileBox, pieceLayout, type PieceHex } from './tilePiece.js'
+    import { tileGroupOf } from './tileGroups.js'
+    import { assertExists, type Point } from '@tabletop/common'
 
     let {
         session,
@@ -16,72 +21,96 @@
     }: { session: EighteenXXSessionView; viewport: HTMLDivElement; appearance?: TileAppearance } =
         $props()
     const money = $derived(session.presentation.money)
-    let center: Point = $state({ x: 0, y: 0 })
-    let width = $state(0)
-    let height = $state(0)
-    let tileSize = $state(80)
-    let hexHeight = $state(100)
+    const frame = new HexPickerFrame()
     const locationId = $derived(session.track.selection.locationId?.value)
+    const mapScale = $derived(frame.tileSize / TileBox)
+    function sceneHex(id: string) {
+        const entry = session.map.scene.locations.find((candidate) => candidate.location.id === id)
+        assertExists(entry, `The map draws ${id}`)
+        return entry
+    }
+    /** Where a point of the map, in map units, stands on screen, from the followed hex. */
+    function onScreen(point: Point): Point {
+        assertExists(locationId, 'The picker follows a chosen hex')
+        const anchor = sceneHex(locationId).center
+        return {
+            x: frame.center.x + (point.x - anchor.x) * mapScale,
+            y: frame.center.y + (point.y - anchor.y) * mapScale
+        }
+    }
+    const group = $derived(locationId ? tileGroupOf(session.mapView, locationId) : undefined)
+    const groupLayout = $derived(
+        group ? pieceLayout(group.map((id) => sceneHex(id).center)) : undefined
+    )
+    const center = $derived(groupLayout ? onScreen(groupLayout.middle) : frame.center)
+    /** Half the height the hex, or the piece, takes on screen. */
+    const halfHeight = $derived(
+        frame.hexHeight / 2 + (groupLayout ? ((groupLayout.height - TileBox) * mapScale) / 2 : 0)
+    )
+    const controls = $derived(frame.controlsAbove(center, halfHeight))
+    /** The tiles each choice lays as one piece, by tile, where it lays more than one. */
+    const pieces = $derived.by(() => {
+        const preview = session.track.preview
+        return new Map(
+            session.track.tiles.flatMap((tile) => {
+                const details =
+                    preview?.definitionId === tile.id
+                        ? preview
+                        : session.track.choices.find((choice) => choice.definitionId === tile.id)
+                const tiles = details ? session.track.pieceOf(details) : []
+                if (tiles.length < 2) return []
+                const layout = pieceLayout(tiles.map((entry) => sceneHex(entry.locationId).center))
+                const hexes = tiles.map((entry, index): PieceHex => {
+                    const definition = session.mapView.tileSet.definitions.find(
+                        (candidate) => candidate.id === entry.definitionId
+                    )
+                    assertExists(definition, `Tile ${entry.definitionId} is in the set`)
+                    const { outline, joints } = sceneHex(entry.locationId)
+                    return {
+                        face: definition.face,
+                        printedNumber: definition.printedNumber,
+                        rotation: entry.rotation,
+                        layout: placedTileLayout(session.mapView.layouts, entry.definitionId),
+                        offset: layout.offsets[index],
+                        outline,
+                        joints
+                    }
+                })
+                return [[tile.id, { hexes, layout }] as const]
+            })
+        )
+    })
+    const width = $derived(frame.width)
+    const height = $derived(frame.height)
+    const tileSize = $derived(frame.tileSize)
+    const hexHeight = $derived(frame.hexHeight)
     let collapsing = $derived.by(() => {
         session.track.selection
         return false
     })
     const selectedId = $derived(session.track.preview?.definitionId)
-    const layout = $derived(
-        tileChoiceArc(center, width, height, session.track.tiles.length, tileSize, 1.4)
+    /** How many hexes across a piece laid over the group is, so its hexes keep a tile's size. */
+    const pieceExtent = $derived(
+        groupLayout ? Math.max(groupLayout.width, groupLayout.height) / TileBox : 1
     )
-    const buttonSize = $derived(tileSize * 0.42)
-    const controls = $derived({
-        x: Math.max(buttonSize * 1.2, Math.min(width - buttonSize * 1.2, center.x)),
-        y: Math.max(buttonSize * 0.6, center.y - hexHeight / 2 - buttonSize * 0.65) + 1
+    /**
+     * The choices' arc, and the size a choice's whole piece takes there: each hex at a tile's
+     * size where the pieces fit around the group, otherwise a piece within one tile's size.
+     */
+    const layout = $derived.by(() => {
+        const count = session.track.tiles.length
+        const whole = groupLayout
+            ? tileChoiceArc(center, width, height, count, tileSize * pieceExtent, 1.4)
+            : undefined
+        if (whole) return { ...whole, size: whole.size / pieceExtent, pieceSize: whole.size }
+        const arc = tileChoiceArc(center, width, height, count, tileSize, 1.4 * pieceExtent)
+        return arc ? { ...arc, pieceSize: arc.size } : undefined
     })
 
-    function followHex(_anchor: HTMLElement, initialLocationId: string | undefined) {
-        let followedId = initialLocationId
-        let frame: number | undefined
-        function measure() {
-            frame = undefined
-            const hex = [...viewport.querySelectorAll('[data-map-location]')].find(
-                (element) => element.getAttribute('data-map-location') === followedId
-            )
-            if (!hex) return
-            const bounds = viewport.getBoundingClientRect()
-            const rect = hex.getBoundingClientRect()
-            const next = {
-                x: rect.x + rect.width / 2 - bounds.x,
-                y: rect.y + rect.height / 2 - bounds.y
-            }
-            if (center.x !== next.x || center.y !== next.y) center = next
-            width = bounds.width
-            height = bounds.height
-            hexHeight = rect.height
-            const svg = viewport.querySelector('svg.map-scene')
-            if (svg instanceof SVGSVGElement) {
-                // WebKit's getScreenCTM omits the CSS scale on the map wrapper.
-                tileSize = (106 * svg.getBoundingClientRect().width) / svg.viewBox.baseVal.width
-            }
-        }
-        function scheduleMeasure() {
-            if (frame === undefined) frame = requestAnimationFrame(measure)
-            releaseStuckEntrances()
-        }
-        const resized = new ResizeObserver(scheduleMeasure)
-        resized.observe(viewport)
-        const viewMoved = new MutationObserver(scheduleMeasure)
-        viewMoved.observe(viewport, { subtree: true, attributes: true, attributeFilter: ['style'] })
-        measure()
-        return {
-            update(locationId: string | undefined) {
-                followedId = locationId
-                measure()
-            },
-            destroy() {
-                resized.disconnect()
-                viewMoved.disconnect()
-                if (frame !== undefined) cancelAnimationFrame(frame)
-            }
-        }
-    }
+    const trackHex = frame.follow(
+        () => viewport,
+        () => releaseStuckEntrances()
+    )
     const elements = new Map<string, HTMLButtonElement>()
     const animations = new Set<Animation>()
     let motionVersion = 0
@@ -220,18 +249,17 @@
     function dismissChoices(event: PointerEvent) {
         if (session.track.preview || !(event.target instanceof Element)) return
         if (event.target.closest('[data-map-tile-choice]')) return
-        if (
-            event.target.closest('[data-map-location]')?.getAttribute('data-map-location') ===
-            locationId
-        )
-            return
+        const clicked = event.target
+            .closest('[data-map-location]')
+            ?.getAttribute('data-map-location')
+        if (clicked && (clicked === locationId || group?.includes(clicked))) return
         void cancel()
     }
 </script>
 
 <svelte:window onpointerdown={dismissChoices} />
 
-<span class="hex-anchor" hidden use:followHex={locationId}></span>
+<span class="hex-anchor" hidden use:trackHex={locationId}></span>
 {#if locationId && width && session.track.canBuild}
     <div
         class="picker"
@@ -242,8 +270,18 @@
             {#key locationId}
                 {#each session.track.tiles as tile, index (tile.id)}
                     {@const chosen = tile.id === selectedId}
-                    {@const point = chosen ? center : layout.points[index]}
                     {@const size = chosen ? tileSize : layout.size}
+                    {@const piece = pieces.get(tile.id)}
+                    {@const pieceScale = piece
+                        ? chosen
+                            ? mapScale
+                            : layout.pieceSize / Math.max(piece.layout.width, piece.layout.height)
+                        : 1}
+                    {@const point = chosen
+                        ? piece
+                            ? onScreen(piece.layout.middle)
+                            : center
+                        : layout.points[index]}
                     <button
                         use:register={tile.id}
                         out:fade|global={{
@@ -257,23 +295,34 @@
                         tabindex={chosen ? -1 : 0}
                         aria-label={`Build tile ${tile.printedNumber}`}
                         style:translate={`${point.x}px ${point.y}px`}
-                        style:width={`${size}px`}
-                        style:height={`${size}px`}
+                        style:width={`${piece ? piece.layout.width * pieceScale : size}px`}
+                        style:height={`${piece ? piece.layout.height * pieceScale : size}px`}
                         onclick={() => moveTile(tile.id)}
                     >
-                        <Tile
-                            face={tile.face}
-                            printedNumber={tile.printedNumber}
-                            {appearance}
-                            {size}
-                            layout={placedTileLayout(session.mapView.layouts, tile.id)}
-                            orientation={session.mapView.map.definition.orientation}
-                            rotation={chosen
-                                ? session.track.preview?.rotation
-                                : session.track.choices.find(
-                                      (choice) => choice.definitionId === tile.id
-                                  )?.rotation}
-                        />
+                        {#if piece}<TilePiece
+                                hexes={piece.hexes}
+                                viewWidth={piece.layout.width}
+                                viewHeight={piece.layout.height}
+                                width={piece.layout.width * pieceScale}
+                                height={piece.layout.height * pieceScale}
+                                orientation={session.mapView.map.definition.orientation}
+                                {appearance}
+                                label={`Tile ${tile.printedNumber} across ${piece.hexes.length} hexes`}
+                                shadow
+                            />{:else}<Tile
+                                face={tile.face}
+                                printedNumber={tile.printedNumber}
+                                {appearance}
+                                {size}
+                                shadow
+                                layout={placedTileLayout(session.mapView.layouts, tile.id)}
+                                orientation={session.mapView.map.definition.orientation}
+                                rotation={chosen
+                                    ? session.track.preview?.rotation
+                                    : session.track.choices.find(
+                                          (choice) => choice.definitionId === tile.id
+                                      )?.rotation}
+                            />{/if}
                     </button>
                 {/each}
             {/key}
@@ -284,40 +333,22 @@
                     class="placement-cost"
                     transition:fade|global={{ duration: prefersReducedMotion.current ? 0 : 120 }}
                     style:left={`${center.x}px`}
-                    style:top={`${Math.min(height - tileSize * 0.3, center.y + hexHeight / 2 + tileSize * 0.06)}px`}
+                    style:top={`${Math.min(height - tileSize * 0.3, center.y + halfHeight + tileSize * 0.06)}px`}
                     style:font-size={`${tileSize * 0.15}px`}
                 >
                     {money(session.track.preview.cost)}
                 </div>
             {/if}
-            <div
-                class="controls"
-                transition:fade|global={{ duration: prefersReducedMotion.current ? 0 : 120 }}
-                style:left={`${controls.x}px`}
-                style:top={`${controls.y}px`}
-                style:font-size={`${buttonSize}px`}
-            >
-                <button
-                    class="cancel"
-                    aria-label="Cancel track lay"
-                    title="Cancel track lay"
-                    onclick={cancel}
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true"
-                        ><path d="m7 7 10 10M17 7 7 17"></path></svg
-                    >
-                </button>
-                <button
-                    class="accept"
-                    aria-label="Accept track lay"
-                    title={`Accept track lay · ${money(session.track.preview.cost)}`}
-                    onclick={accept}
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true"
-                        ><path d="m5 13 4 4L19 7"></path></svg
-                    >
-                </button>
-            </div>
+            <HexPickerControls
+                at={controls}
+                size={frame.buttonSize}
+                cancel={{ label: 'Cancel track lay', onclick: cancel }}
+                accept={{
+                    label: 'Accept track lay',
+                    title: `Accept track lay · ${money(session.track.preview.cost)}`,
+                    onclick: accept
+                }}
+            />
         {/if}
     </div>
 {/if}
@@ -345,7 +376,6 @@
         padding: 0;
         border: 0;
         background: transparent;
-        filter: drop-shadow(0 2px 4px #0009);
     }
     .picker[data-track-motion='true'] .tile-choice {
         transition: none;
@@ -384,41 +414,5 @@
         white-space: nowrap;
         box-shadow: 0 2px 5px #0004;
         font-variant-numeric: tabular-nums;
-    }
-    .controls {
-        position: absolute;
-        display: flex;
-        gap: 0.18em;
-        transform: translate(-50%, -50%);
-    }
-    .controls button {
-        display: grid;
-        place-items: center;
-        width: 1em;
-        height: 1em;
-        padding: 0;
-        font: inherit;
-        border-radius: 50%;
-        border: 1px solid #fff9;
-        box-shadow: 0 2px 5px #0005;
-        color: white;
-    }
-    .cancel {
-        background: #b34242;
-    }
-    .accept {
-        background: #347752;
-    }
-    .controls button:hover {
-        filter: brightness(1.15);
-    }
-    svg {
-        width: 0.69em;
-        height: 0.69em;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 2.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
     }
 </style>

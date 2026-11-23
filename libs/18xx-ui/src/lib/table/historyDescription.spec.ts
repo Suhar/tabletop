@@ -1,10 +1,14 @@
 import { expect, it } from 'vitest'
-import { ActionSource } from '@tabletop/common'
+import { ActionSource, GameCallKind, type CallGameAction } from '@tabletop/common'
 import type {
     AuctionAwardDetails,
     BuyAuctionLot,
+    BuyShares,
+    CorporateFinance,
+    DeclareBankruptcy,
     DiscardTrain,
     FundTrain,
+    LayTile,
     PresidencyChange,
     ResolveAuction,
     RouteBonus,
@@ -14,7 +18,8 @@ import type {
 } from '@tabletop/18xx'
 import { afterPlayerName, historyDescription } from './historyDescription.js'
 import { historyStateFixture } from './history.fixture.js'
-import { TestMarket } from '@tabletop/18xx/testing'
+import { TestCharters, TestCompanyId, TestMarket } from '@tabletop/18xx/testing'
+import { placeReference } from '@tabletop/18xx'
 
 it('describes purchased and auctioned bonus shares without current certificates or reversal data', () => {
     const state = historyStateFixture()
@@ -107,6 +112,39 @@ it('lists a run’s bonuses beneath it, totalled by what earned them', () => {
     ).toBe('East–West +$80 · Steamboat +$40 · +$20 at G9')
 })
 
+it('names where track and stations went with the place formatter it is given', () => {
+    const state = historyStateFixture()
+    const lay: LayTile = {
+        id: 'lay',
+        gameId: 'history',
+        type: 'LayTile',
+        source: ActionSource.User,
+        playerId: 'alex',
+        companyId: 'R',
+        locationId: 'H12',
+        definitionId: 'tile',
+        rotation: 0,
+        nodeMapping: {},
+        expectedCost: 0
+    }
+    const place = (locationId: string) => (locationId === 'H12' ? 'Altoona' : locationId)
+    const describe = (formatter?: (locationId: string) => string) =>
+        historyDescription(
+            lay,
+            state,
+            TestMarket,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            formatter
+        ).text
+    expect(describe(place)).toBe('Laid track at Altoona')
+    expect(describe(placeReference)).toBe(`Laid track at ${placeReference('H12')}`)
+})
+
 it('says whether a funded train was compulsory or the president’s choice', () => {
     const state = historyStateFixture()
     const fund: FundTrain = {
@@ -152,18 +190,18 @@ function startCompany(presidency?: PresidencyChange): StartCompany {
     }
 }
 
-it('names a started company’s par, with the shares and price beneath', () => {
+it('names a started company’s starting price, not a par some titles lack, with the shares and price beneath', () => {
     expect(historyDescription(startCompany(), historyStateFixture(), TestMarket)).toMatchObject({
-        text: 'Started R at $110 par',
+        text: 'Started R at $110',
         detail: '2 shares · $220'
     })
 })
 
-it('reads a started company’s par from its market space without recorded details', () => {
+it('reads a started company’s starting price from its market space without recorded details', () => {
     const start = startCompany()
     delete start.metadata
     expect(historyDescription(start, historyStateFixture(), TestMarket)).toMatchObject({
-        text: 'Started R at $110 par',
+        text: 'Started R at $110',
         detail: '$220'
     })
 })
@@ -179,6 +217,46 @@ it('adds a presidency change after a started company’s price', () => {
     expect(historyDescription(start, historyStateFixture(), TestMarket).detail).toBe(
         '2 shares · $220 · President: blair → alex'
     )
+})
+
+it('names the pool a share was bought from', () => {
+    const buy = (poolId?: string): BuyShares => ({
+        id: 'buy',
+        gameId: 'history',
+        source: ActionSource.User,
+        playerId: 'alex',
+        type: 'BuyShares',
+        buyer: { kind: 'player', playerId: 'alex' },
+        certificateId: 'R:share:3',
+        expectedPrice: 67,
+        metadata: {
+            certificateId: 'R:share:3',
+            companyId: 'R',
+            shares: 1,
+            buyer: { kind: 'player', playerId: 'alex' },
+            seller: { kind: 'bank' },
+            ...(poolId ? { poolId } : {}),
+            price: 67,
+            payments: []
+        }
+    })
+    const describe = (action: BuyShares) =>
+        historyDescription(
+            action,
+            historyStateFixture(),
+            TestMarket,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            (poolId) => (poolId === 'open-market' ? 'Market' : 'IPO')
+        ).text
+    expect(describe(buy('open-market'))).toBe('Bought 1 R from Market for $67')
+    expect(describe(buy('initial-offering'))).toBe('Bought 1 R from IPO for $67')
+    expect(describe(buy())).toBe('Bought 1 R for $67')
 })
 
 it('keeps a leading company name as written after the player name', () => {
@@ -207,6 +285,45 @@ it('treats the stock round opening after an operating set as routine', () => {
     })
 })
 
+it('names who went bankrupt, and for which company’s train', () => {
+    const bankruptcy: DeclareBankruptcy = {
+        id: 'bankrupt',
+        gameId: 'history',
+        source: ActionSource.System,
+        type: 'DeclareBankruptcy',
+        metadata: { companyId: 'R', playerId: 'alex', shortfall: 139 }
+    }
+    expect(
+        historyDescription(bankruptcy, historyStateFixture(), TestMarket, undefined, (id) =>
+            id.toUpperCase()
+        )
+    ).toEqual({ text: 'ALEX went bankrupt', detail: '$139 short of R’s train', important: true })
+})
+
+it('says how much of a bankrupt player’s stock reached the company’s treasury', () => {
+    const bankruptcy: DeclareBankruptcy = {
+        id: 'bankrupt',
+        gameId: 'history',
+        source: ActionSource.System,
+        type: 'DeclareBankruptcy',
+        metadata: {
+            companyId: 'R',
+            playerId: 'alex',
+            shortfall: 287,
+            surrendered: {
+                from: { kind: 'player', playerId: 'alex' },
+                to: { kind: 'company', companyId: 'R' },
+                amount: 270
+            }
+        }
+    }
+    expect(
+        historyDescription(bankruptcy, historyStateFixture(), TestMarket, undefined, (id) =>
+            id.toUpperCase()
+        ).detail
+    ).toBe('$287 short of R’s train · $270 from their remaining shares to its treasury')
+})
+
 it('names the company that discarded a train and where the train went', () => {
     const discard: DiscardTrain = {
         id: 'discard',
@@ -222,4 +339,93 @@ it('names the company that discarded a train and where the train went', () => {
         text: 'R discarded a train',
         detail: 'To the open market'
     })
+})
+
+it('describes issuing and redeeming treasury shares by what changed hands', () => {
+    const finance = (
+        operation: CorporateFinance['operation'],
+        shares: number
+    ): CorporateFinance => ({
+        id: operation,
+        gameId: 'history',
+        source: ActionSource.User,
+        playerId: 'alex',
+        type: 'CorporateFinance',
+        companyId: 'R',
+        operation,
+        shares,
+        amount: shares * 50
+    })
+    expect(historyDescription(finance('issue', 2), historyStateFixture(), TestMarket)).toEqual({
+        text: 'Issued 2 shares',
+        value: '$100'
+    })
+    expect(historyDescription(finance('redeem', 1), historyStateFixture(), TestMarket)).toEqual({
+        text: 'Redeemed 1 share',
+        value: '$50'
+    })
+})
+
+it('describes a called game by its call, not by an actor', () => {
+    const call: CallGameAction = {
+        id: 'call',
+        gameId: 'history',
+        source: ActionSource.System,
+        type: 'callGame',
+        call: {
+            kind: GameCallKind.Conceded,
+            initiatorPlayerId: 'alex',
+            declaredWinnerId: 'blake',
+            approvingPlayerIds: ['alex'],
+            decliningPlayerIds: []
+        }
+    }
+    expect(
+        historyDescription(call, historyStateFixture(), TestMarket, undefined, (id) =>
+            id.toUpperCase()
+        )
+    ).toEqual({ text: 'ALEX conceded; BLAKE wins', important: true })
+})
+
+it('names what an outgoing president took for the president’s certificate (1849 §9.5)', () => {
+    const state = historyStateFixture()
+    const owner = { kind: 'player' as const, playerId: 'alex' }
+    const share = (id: string, shares: number) => ({
+        id,
+        companyId: TestCompanyId,
+        kind: 'share' as const,
+        shares,
+        owner
+    })
+    state.certificates = [share('last', 2), share('one', 1), share('two', 1)]
+    const choice = (certificateIds: string[]) => ({
+        id: 'choice',
+        gameId: 'history',
+        source: ActionSource.User,
+        type: 'ChoosePresidencyExchange',
+        playerId: 'alex',
+        companyId: TestCompanyId,
+        certificateIds
+    })
+    const describe = (certificateIds: string[]) =>
+        historyDescription(
+            choice(certificateIds),
+            state,
+            TestMarket,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            { charters: TestCharters, multiShare: { name: 'Last certificate' } }
+        ).text
+    expect(describe(['last'])).toBe(
+        'Took the last certificate (20%) for R’s president’s certificate'
+    )
+    expect(describe(['one', 'two'])).toBe(
+        'Took two 10% certificates for R’s president’s certificate'
+    )
 })

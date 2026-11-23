@@ -145,6 +145,51 @@ describe('the History words: each row as the record says it, older records too',
                 'traveled to Great Slum, spending 2 Supply; flipped 1 secret; revealed Mine and 1 facedown relic'
             )
         })
+
+        it('Tyrant’s kill names whose warband it was, so only its piece takes that owner’s colour', () => {
+            const killed = (warbandOwner: string, viewerId?: string) => {
+                const travel = action({
+                    type: ActionType.Travel,
+                    playerId: 'p1',
+                    siteId: 'slot.cradle.0',
+                    metadata: {
+                        supplySpent: 2,
+                        supplyRemaining: 3,
+                        modifiers: [DRUM, 'denizen.order.tyrant (must)'],
+                        modifierNotes: [
+                            'Dragonskin Drum: gained 1 warband',
+                            'Tyrant killed a warband at slot.cradle.0'
+                        ],
+                        warbandOwner
+                    }
+                })
+                const text = describeAction(travel, names, viewerId)
+                const reader = { names, viewerId }
+                const owners = tokenParts(text, { warbands: true }).flatMap((part) =>
+                    part.kind === 'warband'
+                        ? [phraseWarbandOwner(part.whose, travel, reader, (id) => id)]
+                        : []
+                )
+                return { text, owners }
+            }
+
+            // R-10.13 — the Drum's gain stays the traveller's; the kill is the owner's.
+            expect(killed('p2')).toEqual({
+                text: "traveled to Great Slum, spending 2 Supply; gained 1 warband (Dragonskin Drum); killed 1 of Rhys's warbands at Great Slum (Tyrant)",
+                owners: ['p1', 'p2']
+            })
+            expect(killed('p2', 'p2')).toEqual({
+                text: 'traveled to Great Slum, spending 2 Supply; gained 1 warband (Dragonskin Drum); killed 1 of your warbands at Great Slum (Tyrant)',
+                owners: ['p1', 'p2']
+            })
+            expect(killed('imperial').text).toContain('killed 1 Imperial warband at Great Slum')
+            expect(killed('imperial').owners).toEqual(['p1', 'imperial'])
+            // The traveller's own: no owner words, the row's colour.
+            expect(killed('p1')).toEqual({
+                text: 'traveled to Great Slum, spending 2 Supply; gained 1 warband (Dragonskin Drum); killed 1 warband at Great Slum (Tyrant)',
+                owners: ['p1', 'p1']
+            })
+        })
     })
 
     describe('383 the Shrouded Wood', () => {
@@ -336,13 +381,34 @@ describe('the History words: each row as the record says it, older records too',
                     { play: SearchPlay.Site },
                     { playedCardId: 'denizen.beast.wolves', favorGained: 2 }
                 )
-            ).toBe('kept Wolves and played it to their site, gaining 2 favor')
+            ).toBe('kept Wolves and played it to their own site, gaining 2 favor')
             expect(
                 kept(
                     { play: SearchPlay.Site },
                     { playedCardId: 'denizen.beast.wolves', secretsGained: 1 }
                 )
-            ).toBe('kept Wolves and played it to their site, gaining 1 secret')
+            ).toBe('kept Wolves and played it to their own site, gaining 1 secret')
+        })
+
+        it('the cards its site play discarded first, one or one per power, as the facedown play names them', () => {
+            const played = { playedCardId: 'denizen.arcane.alchemist', favorGained: 1 }
+            const site = (fields: Record<string, unknown>) =>
+                kept(
+                    { play: SearchPlay.Site, keptCardId: 'denizen.arcane.alchemist', ...fields },
+                    played
+                )
+            expect(
+                site({
+                    discardFirstCardIds: ['denizen.nomad.tents', 'denizen.hearth.rowdy-pub']
+                })
+            ).toBe(
+                'kept Alchemist and played it to their own site, discarding Tents and Rowdy Pub first, gaining 1 favor'
+            )
+            // A game recorded with one card names it the same way.
+            expect(site({ discardFirstCardId: 'denizen.nomad.tents' })).toBe(
+                'kept Alchemist and played it to their own site, discarding Tents first, gaining 1 favor'
+            )
+            expect(site({})).toBe('kept Alchemist and played it to their own site, gaining 1 favor')
         })
     })
 
@@ -513,7 +579,7 @@ describe('the History words: each row as the record says it, older records too',
                 sacrificeKills,
                 metadata: { attack: 6, defense: 5, sacrificed: 3, attackerVictorious: true }
             })
-        // Each counted phrase's owner, as the History colours its pieces: Dana's own are hers.
+        // Each counted phrase's owner, as the History colours its pieces: Dana's own are theirs.
         const pieces = (sacrifice: GameAction) =>
             tokenParts(describeAction(sacrifice, names), { warbands: true }).flatMap((part) =>
                 part.kind === 'warband'
@@ -684,6 +750,17 @@ describe('the History words: each row as the record says it, older records too',
         ).toBe(
             'played Wolves to their site, discarding Wayside Inn first (Crop Rotation), gaining 1 favor'
         )
+        // From revision 32, one per power that gives one.
+        expect(
+            toSite(
+                {
+                    discardFirstCardIds: ['denizen.hearth.wayside-inn', 'denizen.hearth.rowdy-pub']
+                },
+                ['denizen.hearth.crop-rotation']
+            )
+        ).toBe(
+            'played Wolves to their site, discarding Wayside Inn and Rowdy Pub first (Crop Rotation), gaining 1 favor'
+        )
         expect(
             toSite(
                 { toSiteId: 'slot.provinces.0', discardFirstCardId: 'denizen.hearth.wayside-inn' },
@@ -742,6 +819,39 @@ describe('the History words: each row as the record says it, older records too',
         )
         expect(prophet(SearchPlay.Discard, 'discarded vision.faith')).toBe(
             'False Prophet: 1 warband on Vision of Faith died; discarded it'
+        )
+    })
+
+    it('Fae Merchant sends the Obsidian Cage down: each board its warbands went back to (R-10.13-H1)', () => {
+        const fae = (summary: string, viewerId?: string) =>
+            row(
+                {
+                    type: ActionType.AnswerQuestion,
+                    answer: {
+                        kind: PowerQuestionKind.BottomRelic,
+                        heldRelicCardId: 'relic.obsidian-cage',
+                        cagePlacement: [
+                            { playerId: 'p3', count: 1 },
+                            { playerId: 'p2', count: 1 }
+                        ]
+                    },
+                    metadata: {
+                        cardId: 'denizen.beast.fae-merchant',
+                        kind: PowerQuestionKind.BottomRelic,
+                        summary,
+                        resumeMachineState: MachineState.ActPhase,
+                        last: true
+                    }
+                },
+                viewerId
+            )
+        const summary =
+            "took relic.cup-of-plenty and put relic.obsidian-cage on the bottom of the relic deck; its warbands went back: 1 to p3's board, 1 to p2's board"
+        expect(fae(summary)).toBe(
+            "Fae Merchant: took Cup of Plenty and put Obsidian Cage on the bottom of the relic deck; its warbands went back: 1 to Ann's board, 1 to Rhys's board"
+        )
+        expect(fae(summary, 'p2')).toBe(
+            "Fae Merchant: took Cup of Plenty and put Obsidian Cage on the bottom of the relic deck; its warbands went back: 1 to Ann's board, 1 to your board"
         )
     })
 
@@ -949,9 +1059,9 @@ describe('the History words: each row as the record says it, older records too',
             expect(
                 power(
                     'denizen.hearth.tavern-songs',
-                    'Tavern Songs: peeked at the top 1 cards of the cradle discard pile'
+                    'Tavern Songs: peeked at the top 1 cards of the Cradle discard pile'
                 )
-            ).toBe('used Tavern Songs: peeked at the top 1 card of the cradle discard pile')
+            ).toBe('used Tavern Songs: peeked at the top 1 card of the Cradle discard pile')
             expect(
                 power('relic.whistle', 'Whistle: p2 travelled to slot.cradle.0, gaining 1 secrets')
             ).toBe(
@@ -1117,5 +1227,71 @@ describe('R-7.4 — what each card in use did, after the gain it changed', () =>
                 }
             })
         ).toBe('traveled to Great Slum, spending 2 Supply; gained 1 warband (Dragonskin Drum)')
+    })
+})
+
+describe('a region in an engine summary reads as the board prints it, in games recorded before it did', () => {
+    const used = (cardId: string, summary: string, viewerId?: string) =>
+        row(
+            { type: ActionType.UseActionPower, cardId, powerIndex: 0, metadata: { summary } },
+            viewerId
+        )
+    const stacked = (summary: string) =>
+        row({
+            type: ActionType.AnswerQuestion,
+            answer: { kind: PowerQuestionKind.OrderDrawnCards, order: [1, 0] },
+            metadata: {
+                cardId: 'denizen.nomad.pilgrimage',
+                kind: PowerQuestionKind.OrderDrawnCards,
+                summary,
+                resumeMachineState: MachineState.ActPhase,
+                last: true
+            }
+        })
+
+    it('"the <region> discard pile": Tavern Songs and Scryer, for every seat', () => {
+        for (const viewerId of [undefined, 'p1', 'p2']) {
+            expect(
+                used(
+                    TAVERN_SONGS,
+                    'Tavern Songs: peeked at the top 3 cards of the cradle discard pile',
+                    viewerId
+                )
+            ).toBe('used Tavern Songs: peeked at the top 3 cards of the Cradle discard pile')
+        }
+        expect(
+            used(
+                'denizen.discord.scryer',
+                'Scryer: peeked at the hinterland discard pile (2 cards)'
+            )
+        ).toBe(
+            'used Scryer, placing a secret on it: peeked at the Hinterland discard pile (2 cards)'
+        )
+    })
+
+    it('"on the <region> discard pile": the cards Pilgrimage stacked', () => {
+        expect(stacked('stacked 2 cards on the provinces discard pile')).toBe(
+            'Pilgrimage: stacked 2 cards on the Provinces discard pile'
+        )
+    })
+
+    it('Convoys names both regions: the pile it took and the pile it went onto', () => {
+        expect(
+            used(
+                'denizen.nomad.convoys',
+                'Convoys: moved the hinterland discard pile (3 cards) onto the cradle pile'
+            )
+        ).toBe(
+            'used Convoys, placing a favor on it: moved the Hinterland discard pile (3 cards) onto the Cradle pile'
+        )
+    })
+
+    it('a summary that already names the region, and other prose, stay as they are', () => {
+        expect(
+            used(TAVERN_SONGS, 'Tavern Songs: peeked at the top 3 cards of the Cradle discard pile')
+        ).toBe('used Tavern Songs: peeked at the top 3 cards of the Cradle discard pile')
+        expect(stacked('stacked 2 cards on the cradled discard pile beside the cradle')).toBe(
+            'Pilgrimage: stacked 2 cards on the cradled discard pile beside the cradle'
+        )
     })
 })

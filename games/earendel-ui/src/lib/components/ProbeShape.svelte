@@ -21,7 +21,7 @@
                 y2="0"
                 stroke={color}
                 stroke-width="2"
-            />
+            ></line>
             <rect
                 x={PANEL_FROM}
                 y={-PANEL_WIDTH / 2}
@@ -32,7 +32,7 @@
                 fill-opacity="0.32"
                 stroke={color}
                 stroke-width="1.4"
-            />
+            ></rect>
             <line
                 x1={PANEL_FROM + PANEL_LENGTH / 2}
                 y1={-PANEL_WIDTH / 2}
@@ -40,9 +40,9 @@
                 y2={PANEL_WIDTH / 2}
                 stroke={color}
                 stroke-width="0.9"
-            />
+            ></line>
         </g>
     {/each}
-    <circle r="8.5" fill={color} />
-    <circle r="3" fill="#0b1222" fill-opacity="0.55" />
+    <circle r="8.5" fill={color}></circle>
+    <circle r="3" fill="#0b1222" fill-opacity="0.55"></circle>
 </g>

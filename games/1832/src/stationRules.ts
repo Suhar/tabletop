@@ -1,9 +1,11 @@
 import { assertExists } from '@tabletop/common'
 import {
+    charterScheduleCost,
     charterStationCounts,
     getCompany,
     homeStationId,
     nextOperatingCompany,
+    type StationPlacementContext,
     type StationRules,
     type StationState
 } from '@tabletop/18xx'
@@ -11,7 +13,7 @@ import { EighteenThirtyTwoMap } from './map.js'
 import { EighteenThirtyTwoTileSet } from './tiles.js'
 import { keyWestPlacedThisTurn, revenueTokenChoices } from './revenueTokens.js'
 import { requireEighteenThirtyTwoState } from './state.js'
-import { coalFieldsOpen } from './coalAccess.js'
+import { CoalAccess } from './coalAccess.js'
 import { isSystem } from './systems.js'
 
 // Token costs from each charter, the free home token first (§7.4, §16.3).
@@ -36,7 +38,11 @@ const MergedStationCost = 100
  * charter by a merger, and any returned to the charter from a shared city cost $100 (§7.3.3,
  * §11.6.6, §11.7.1).
  */
-function mergedStationCost(state: StationState, stationId: string): number {
+function mergedStationCost(
+    state: StationState,
+    stationId: string,
+    context?: StationPlacementContext
+): number {
     const station = state.stations.find((entry) => entry.id === stationId)
     assertExists(station, 'A station placement requires a known station')
     const title = requireEighteenThirtyTwoState(state)
@@ -51,16 +57,19 @@ function mergedStationCost(state: StationState, stationId: string): number {
         !charter.some((entry) => entry.id === stationId)
     )
         return MergedStationCost
-    const cost = schedule[charter.filter((entry) => entry.status !== 'available').length]
-    assertExists(cost, 'The charter prices each of its stations')
-    return cost
+    return charterScheduleCost(
+        charter.filter((entry) => !title.returnedStationIds?.includes(entry.id)),
+        stationId,
+        schedule,
+        context
+    )
 }
 
 export const EighteenThirtyTwoStationRules: StationRules = {
     map: EighteenThirtyTwoMap,
     tileSet: EighteenThirtyTwoTileSet,
     placementCost: mergedStationCost,
-    stopAllowed: coalFieldsOpen,
+    stopAllowed: CoalAccess.open,
     placementLimit: (state, companyId) => (keyWestPlacedThisTurn(state, companyId) ? 0 : 1),
     holdsStationStep: (state, companyId) => {
         const title = requireEighteenThirtyTwoState(state)

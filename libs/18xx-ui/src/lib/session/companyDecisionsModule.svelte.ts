@@ -8,6 +8,9 @@ import {
     LayPrivateTileOutOfTurn,
     OfferPurchase,
     PlacePrivateMarker,
+    PlacePrivateToken,
+    sameStationPosition,
+    type StationPosition,
     RespondToPurchaseOffer,
     RespondToTrackConsent,
     cashOwnedBy,
@@ -25,6 +28,7 @@ import {
 } from '@tabletop/18xx'
 import type { ModuleSession } from './moduleSession.js'
 import { singleChoice } from './stagedSelection.svelte.js'
+import { isCompanyAsset } from '../finance/purchaseAssets.js'
 
 export type PrivateTileOption = {
     privateCompanyId: string
@@ -32,11 +36,21 @@ export type PrivateTileOption = {
     details: TrackLayDetails
 }
 export type PrivateTrainOption = { privateCompanyId: string; details: TrainPurchaseDetails }
+export type PrivateTokenOption = {
+    privateCompanyId: string
+    playerId: string
+    companyId: string
+    position: StationPosition
+}
 export type PrivateMarkerOption = {
     privateCompanyId: string
     playerId: string
     kind: string
     locationId: string
+    /** The revenue center it goes on, where the terms name centers. */
+    nodeId?: string
+    /** Which of the location's offered centers it is, where there are several: 2 of 2. */
+    stopOrdinal?: { index: number; count: number }
 }
 export type CompanyDecision =
     | { kind: 'purchase'; request: PurchaseOfferRequest }
@@ -94,16 +108,21 @@ export class CompanyDecisionsModule {
             : []
     )
     purchaseOptions = $derived.by(() => (this.canResolve ? this.availablePurchaseOptions : []))
+    /** Privates and whole companies the operating company may buy. */
     companyPurchases = $derived.by(() =>
-        this.purchaseOptions.filter((option) => option.request.asset.kind !== 'train')
+        this.purchaseOptions.filter((option) => isCompanyAsset(option.request.asset))
     )
     companyPurchasesAvailable = $derived.by(() =>
-        this.availablePurchaseOptions.some((option) => option.request.asset.kind !== 'train')
+        this.availablePurchaseOptions.some((option) => isCompanyAsset(option.request.asset))
+    )
+    /** Other companies' stations the operating company may buy (1849 §14.1). */
+    stationPurchases = $derived.by(() =>
+        this.purchaseOptions.filter((option) => option.request.asset.kind === 'station')
     )
     ownCompanyPurchasesAvailable = $derived.by(() =>
         this.availablePurchaseOptions.some(
             ({ request }) =>
-                request.asset.kind !== 'train' &&
+                isCompanyAsset(request.asset) &&
                 request.seller.kind === 'player' &&
                 request.seller.playerId === this.session.playerId
         )
@@ -158,11 +177,49 @@ export class CompanyDecisionsModule {
                 .flatMap((company) => {
                     const terms = rules.privatePowerRules.markerTerms?.(state, company.id, playerId)
                     if (!terms) return []
-                    return terms.locationIds.map((locationId) => ({
+                    const { stops } = terms
+                    if (!stops)
+                        return terms.locationIds.map((locationId) => ({
+                            privateCompanyId: company.id,
+                            playerId,
+                            kind: terms.kind,
+                            locationId
+                        }))
+                    return stops.map((stop) => {
+                        const here = stops.filter((other) => other.locationId === stop.locationId)
+                        return {
+                            privateCompanyId: company.id,
+                            playerId,
+                            kind: terms.kind,
+                            locationId: stop.locationId,
+                            nodeId: stop.nodeId,
+                            ...(here.length > 1
+                                ? {
+                                      stopOrdinal: {
+                                          index: here.indexOf(stop) + 1,
+                                          count: here.length
+                                      }
+                                  }
+                                : {})
+                        }
+                    })
+                })
+        )
+    })
+    privateTokenOptions = $derived.by((): PrivateTokenOption[] => {
+        const { state, rules } = this.session
+        if (pendingCompanyDecision(state)) return []
+        return this.players.flatMap((playerId) =>
+            state.companies
+                .filter((company) => company.kind === 'private' && !company.closed)
+                .flatMap((company) => {
+                    const terms = rules.privatePowerRules.tokenTerms?.(state, company.id, playerId)
+                    if (!terms) return []
+                    return terms.positions.map((position) => ({
                         privateCompanyId: company.id,
                         playerId,
-                        kind: terms.kind,
-                        locationId
+                        companyId: terms.companyId,
+                        position
                     }))
                 })
         )
@@ -188,6 +245,16 @@ export class CompanyDecisionsModule {
                 : []
         })
     })
+    /** The prices the chosen purchase may be offered at. */
+    purchasePriceRange = $derived.by(() =>
+        this.selection?.kind === 'purchase'
+            ? this.session.rules.transferRules.priceRange(
+                  this.session.state,
+                  this.selection.request.companyId,
+                  this.selection.request.asset
+              )
+            : undefined
+    )
     purchaseOfferEvaluation = $derived.by(() =>
         this.selection?.kind === 'purchase'
             ? evaluatePurchaseOffer(
@@ -211,7 +278,7 @@ export class CompanyDecisionsModule {
             'Purchasing is unavailable'
         )
         let price = request.price
-        if (request.asset.kind !== 'train') {
+        if (isCompanyAsset(request.asset)) {
             const range = this.session.rules.transferRules.priceRange(
                 this.session.state,
                 request.companyId,
@@ -359,13 +426,31 @@ export class CompanyDecisionsModule {
             this.privateMarkerOptions.some(
                 (listed) =>
                     listed.privateCompanyId === option.privateCompanyId &&
-                    listed.locationId === option.locationId
+                    listed.locationId === option.locationId &&
+                    listed.nodeId === option.nodeId
             ),
             'This private cannot mark that location now'
         )
         const action = this.session.createPlayerAction(PlacePrivateMarker, {
             privateCompanyId: option.privateCompanyId,
-            locationId: option.locationId
+            locationId: option.locationId,
+            ...(option.nodeId ? { nodeId: option.nodeId } : {})
+        })
+        action.playerId = option.playerId
+        await this.session.applyAction(action)
+    }
+    async placePrivateToken(option: PrivateTokenOption) {
+        assert(
+            this.privateTokenOptions.some(
+                (listed) =>
+                    listed.privateCompanyId === option.privateCompanyId &&
+                    sameStationPosition(listed.position, option.position)
+            ),
+            'This private cannot place a station there now'
+        )
+        const action = this.session.createPlayerAction(PlacePrivateToken, {
+            privateCompanyId: option.privateCompanyId,
+            position: option.position
         })
         action.playerId = option.playerId
         await this.session.applyAction(action)

@@ -32,14 +32,22 @@ they are not measurements of a complete production instance.
 
 ## Validator source retention
 
-The pinned patch in `patches/typebox@1.0.79.patch` changes only how TypeBox joins
-generated validator source. Its template literal retained a tree of concatenated
-strings through `Validator.code`. Joining the same pieces into one flat string
-lets V8 collect those construction trees. It does not disable validation, defer
-validation, change schemas, or change generated JavaScript.
+The pinned patch in `patches/typebox@1.0.79.patch` makes two changes to generated
+validator source, neither of which disables validation, defers it, changes schemas,
+or changes the generated JavaScript.
 
-The Old Prince's 63 eagerly compiled validators have identical source lengths
-and SHA-256 hashes before and after this change. Its actual logic bundle's steady
+The first, from September 2026, changes how TypeBox joins that source. Its template
+literal retained a tree of concatenated strings through `Validator.code`. Joining
+the same pieces into one flat string lets V8 collect those construction trees.
+
+The second, from November 2026, stops a compiled `Validator` keeping the source at
+all: `Validator.Code()` returns an empty string. Nothing in this repository reads
+it, and V8 keeps its own copy for the function it compiled. Across the 55 titles
+served on 2026-11-20 the retained copies came to about 47 MiB. The measurements
+below predate it.
+
+Under the first change, The Old Prince's 63 eagerly compiled validators have identical
+source lengths and SHA-256 hashes before and after. Its actual logic bundle's steady
 retained heap per additional artifact URL fell from **8.65 to 5.91 MiB (32%)** on
 Node 22.23.3 and from **6.62 to 3.86 MiB (42%)** on Node 24.21.0, production's Node
 major version. The patch is independent of title rules and applies to every title
@@ -72,7 +80,8 @@ Fastify application runs in `worker.ts`, a child process listening on an ephemer
 loopback port. Production backend ingress remains HTTP/2; tasks and local ingress
 remain HTTP/1. Both stream requests to the child over HTTP/1, preserving request
 bodies, authorization, cookies, status codes and streaming responses. The parent
-sets the forwarded client address; the child trusts only its loopback proxy.
+appends its peer to the forwarded address chain; the child trusts only its loopback proxy and,
+on Cloud Run, the ingress behind it ([client address](./client-address.md)).
 
 Firebase Hosting serves the site files, so a frontend publication needs no
 replacement: only a logic change in the manifest triggers one. `X-Tabletop-Version`
@@ -84,9 +93,12 @@ work, and a frontend rollback goes through `rollback --frontend`. The deploy too
 `X-Tabletop-Version` as the served frontend version.
 
 Game versions follow the same rule through the served manifest, which since ADR 0011 is the
-manifest whose titles the worker has activated: it trails the bucket manifest only while an
-activation is in progress, and a UI-only release reaches clients as soon as the worker has
-taken the new publication record.
+latest manifest with the titles the worker has activated: its games trail the bucket manifest
+only while an activation is in progress, and a UI-only release reaches clients as soon as the
+worker has taken the new publication record. The rest of it, the frontend version included,
+follows the bucket manifest without waiting for an activation, since a frontend-only release
+starts none; before that, a running worker kept the frontend version it started with, and pages
+on the new build took the older header for a rollback and reloaded in a loop.
 `/api/v1/manifest`, `/api/v1/catalog`, `X-TABLETOP-GAME-UI-VERSION`,
 `X-Tabletop-Version` and the game names and thumbnails in Discord notifications
 all come from the served manifest, so clients never load a UI whose logic the backend

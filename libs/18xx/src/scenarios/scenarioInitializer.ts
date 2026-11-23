@@ -10,6 +10,7 @@ import {
 import { Compile } from 'typebox/compile'
 import { settleCashPayments } from '../finance/cashPayments.js'
 import { controllingOwner } from '../finance/finance.js'
+import { loanRate } from '../loans/loans.js'
 import { EighteenXXInitializer } from '../game/eighteenXXInitializer.js'
 import type {
     EighteenXXRuntimeSchema,
@@ -19,6 +20,7 @@ import type {
 import type { EighteenXXTitleRules } from '../game/eighteenXXTitleRules.js'
 import type { InitialPosition, Opening } from '../game/opening.js'
 import { privateIncomePayments } from '../operating/startOperatingRound.js'
+import { roundCountFields } from '../operating/operatingSet.js'
 import { StationPlacement, applyStationPlacement } from '../stations/stationPlacement.js'
 import type { StockMarket } from '../stock/stockMarket.js'
 import { ScenarioPosition } from './scenarioPosition.js'
@@ -127,17 +129,18 @@ export class ScenarioInitializer<
         state.operatingSet = {
             number: 1,
             roundNumber: 1,
-            roundCount: operatingRules.roundCount(state),
+            ...roundCountFields(operatingRules.roundCount(state)),
             companyOrder,
             completedCompanyIds: [],
             privateIncomePaid: true,
             completed: false
         }
-        if (this.titleRules.loanRules) state.interestRate = this.titleRules.loanRules.rate(state)
+        if (this.titleRules.loanRules)
+            state.interestRate = loanRate(state, this.titleRules.loanRules)
         state.trackStep = { companyId, lays: [], completed: false }
         state.machineState = 'LayingTrack'
         for (const home of new StationPlacement(state, stationRules).homePlacements())
-            applyStationPlacement(state, home)
+            applyStationPlacement(state, home, stationRules.map)
         if (position === 'stations') {
             state.trackStep.completed = true
             state.stationStep = { companyId, placedStationIds: [], completed: false }

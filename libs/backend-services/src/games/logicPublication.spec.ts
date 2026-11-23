@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { copyFile, mkdir, readFile, utimes } from 'node:fs/promises'
 import path from 'node:path'
+import { setImmediate } from 'node:timers/promises'
 import { LibraryService } from './libraryService.js'
 import { RedisCacheService } from '../cache/cacheService.js'
 import { logicPublicationFixture } from './tests/logicPublicationFixture.js'
@@ -23,6 +24,19 @@ async function fixture() {
         useCache: false
     }
     return { ...fixture, options }
+}
+
+// A library whose activation of logic 1.1.0 waits until the gate opens.
+async function gatedLibrary(f: Awaited<ReturnType<typeof fixture>>) {
+    const gate = Promise.withResolvers<void>()
+    const library = new LibraryService(RedisCacheService.prototype, {
+        ...f.options,
+        prepare: async (generation) => {
+            if (generation.publication.logicVersion === '1.1.0') await gate.promise
+        }
+    })
+    await library.getTitlesMap()
+    return { library, gate }
 }
 
 const titleLoads = (log: MockInstance<typeof console.log>) =>
@@ -56,14 +70,7 @@ describe('Collectible title generations', () => {
 
     it('keeps serving the loaded titles until a queued activation completes', async () => {
         const f = await fixture()
-        const gate = Promise.withResolvers<void>()
-        const library = new LibraryService(RedisCacheService.prototype, {
-            ...f.options,
-            prepare: async (generation) => {
-                if (generation.publication.logicVersion === '1.1.0') await gate.promise
-            }
-        })
-        await library.getTitlesMap()
+        const { library, gate } = await gatedLibrary(f)
         await f.publish(f.manifest('1.1.0'))
         const manifest = await library.refreshManifest()
         expect(manifest.games[0].logicVersion).toBe('1.1.0')
@@ -74,6 +81,26 @@ describe('Collectible title generations', () => {
         gate.resolve()
         await library.activation()
         expect(version(library, f.titleId)).toBe('1.1.0')
+        expect((await library.getServedManifest()).games[0].logicVersion).toBe('1.1.0')
+    })
+
+    it('serves a new frontend version at once, while the titles trail an activation', async () => {
+        const f = await fixture()
+        const { library, gate } = await gatedLibrary(f)
+        const frontendOnly = f.manifest('1.0.0')
+        frontendOnly.frontend.version = '2.0.0'
+        await f.publish(frontendOnly)
+        await library.refreshManifest()
+        expect((await library.getServedManifest()).frontend.version).toBe('2.0.0')
+        const both = f.manifest('1.1.0')
+        both.frontend.version = '3.0.0'
+        await f.publish(both)
+        await library.refreshManifest()
+        const served = await library.getServedManifest()
+        expect(served.frontend.version).toBe('3.0.0')
+        expect(served.games[0].logicVersion).toBe('1.0.0')
+        gate.resolve()
+        await library.activation()
         expect((await library.getServedManifest()).games[0].logicVersion).toBe('1.1.0')
     })
 
@@ -193,6 +220,35 @@ describe('Collectible title generations', () => {
             locateMs: expect.any(Number),
             importMs: expect.any(Number)
         })
+    })
+
+    it('finishes the after-load hook, with the titles installed, before an activation that loaded one completes', async () => {
+        const f = await fixture()
+        const events: string[] = []
+        const library = new LibraryService(RedisCacheService.prototype, {
+            ...f.options,
+            afterTitleLoads: async () => {
+                await setImmediate()
+                events.push(`hook ran serving ${version(library, f.titleId)}`)
+            }
+        })
+        await library.getTitlesMap()
+        events.push('started')
+        await f.publish(f.manifest('1.1.0'))
+        await library.refreshAndActivate()
+        events.push('activated logic')
+        const uiOnly = f.manifest('1.1.0')
+        uiOnly.games[0].uiVersion = '1.2.0'
+        await f.publish(uiOnly)
+        await library.refreshAndActivate()
+        events.push('activated UI only')
+        expect(events).toEqual([
+            'hook ran serving 1.0.0',
+            'started',
+            'hook ran serving 1.1.0',
+            'activated logic',
+            'activated UI only'
+        ])
     })
 
     it('does not reconstruct unchanged title code for UI-only publications', async () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { isAggregatedMove, type AggregatedMove } from '$lib/aggregates/aggregatedMove.js'
-    import { type GameAction } from '@tabletop/common'
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { isCallGameAction, type GameAction } from '@tabletop/common'
+    import { CalledGameDescription, PlayerName } from '@tabletop/frontend-components'
     import {
         Activate,
         ActivateBonus,
@@ -230,8 +230,12 @@
 {:else if isChooseActivate(action)}
     chose to activate
 {:else if isDeconstruct(action)}
-    deconstructed {StationNameArticles[action.metadata!.removedStation.type]}
-    {StationNames[action.metadata!.removedStation.type]}
+    {#if action.metadata?.removedStation}
+        deconstructed {StationNameArticles[action.metadata.removedStation.type]}
+        {StationNames[action.metadata.removedStation.type]}
+    {:else if action.metadata?.removedGate}
+        deconstructed a solar gate
+    {/if}
     {#if action.metadata?.oldMovement !== action.metadata?.newMovement}
         <br />
         Movement decreased to {action.metadata?.newMovement}
@@ -344,6 +348,8 @@
     {/each}
 {:else if isFuel(action)}
     used fuel to gain 3 movement points
+{:else if isCallGameAction(action)}
+    <CalledGameDescription {action} />
 {:else}
     {action.type}
 {/if}

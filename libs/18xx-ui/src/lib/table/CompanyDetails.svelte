@@ -1,39 +1,55 @@
 <script lang="ts">
-    import { privatePowerUsed, isObsoleteTrain } from '@tabletop/18xx'
+    import { chainSidewaysScroll } from '@tabletop/frontend-components'
+    import { NationalCompanyKind, privatePowerUsed, isObsoleteTrain } from '@tabletop/18xx'
     import type { Snippet } from 'svelte'
     import {
-        companySharePrice,
+        companyMarketSpace,
         DefaultCompanyPricePresentation,
+        shownParPrice,
         type CompanyPricePresentation
     } from './companyPresentation.js'
-    import { assertExists, type GameAction } from '@tabletop/common'
+    import { assertExists, type BoundingBox, type GameAction } from '@tabletop/common'
     import {
         cashOwnedBy,
         certificatesOwnedBy,
         controllingOwner,
         getCompany,
+        presides,
         privateOwner,
         sameOwner,
         trainsOwnedBy,
         sharesOwned,
         type Company,
-        type Owner,
-        type CertificatePool
+        type Owner
     } from '@tabletop/18xx'
     import type {
         CompanyShareStatus,
         EighteenXXSessionView
     } from '../session/eighteenXXSession.svelte.js'
-    import { type CompanyOwnership, companyOwnership } from '../finance/companyOwnership.js'
+    import {
+        type CompanyOwnership,
+        companyOwnership,
+        holdsReceiverPresidentCertificate
+    } from '../finance/companyOwnership.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import PrivateDescription from '../privates/PrivateDescription.svelte'
-    import PrivateTrackPowerButton from '../privates/PrivateTrackPowerButton.svelte'
+    import PrivatePowerButton from '../privates/PrivatePowerButton.svelte'
     import { companyLastRun } from './companyLastRun.js'
+    import type { CompanyMark, PlaceConnection } from '../session/titlePresentation.js'
     import PresidentName from '../finance/PresidentName.svelte'
+    import CertificateBadge from '../finance/CertificateBadge.svelte'
+    import { multiShareMark } from '../finance/multiShareCertificates.js'
+    import CompanyTradePopover from '../stock/CompanyTradePopover.svelte'
+    import RemainingStationTokens from './RemainingStationTokens.svelte'
+    import { sessionStationTokens } from './stationTokens.js'
+    import { shareSourceName } from '../stock/purchaseSources.js'
+    import { marketValueMark } from '../stock/marketColors.js'
+    import '../stock/marketZoneTint.css'
     let {
         session,
         onPreviewMap,
+        onFocusConnection,
         company,
         pricePresentation = DefaultCompanyPricePresentation,
         layout = 'wide',
@@ -41,8 +57,9 @@
         purchaseSources,
         canPurchase,
         trainColors,
-        poolName = (pool) => session.poolName(pool.id)
+        offersTrades = true
     }: {
+        offersTrades?: boolean
         pricePresentation?: CompanyPricePresentation
         unavailable?: boolean
         /** `wide-fill` is the wide card stretched to its container's width. */
@@ -50,10 +67,10 @@
         canPurchase?: (entry: CompanyOwnership) => boolean
         purchaseSources?: Snippet<[CompanyOwnership]>
         onPreviewMap?: (action: GameAction) => void
+        onFocusConnection?: (connection: PlaceConnection) => void
         session: EighteenXXSessionView
         trainColors: Readonly<Record<string, string>>
         company: Company
-        poolName?: (pool: CertificatePool) => string
     } = $props()
     const vertical = $derived(layout === 'vertical')
     const shareStatusLabels: Record<CompanyShareStatus, string> = {
@@ -92,25 +109,29 @@
         ownership.findIndex((entry) => entry.owner.kind === 'bank' || sameOwner(entry.owner, owner))
     )
     const numberedShares = $derived(ownership.some((row) => row.certificateNumbers.length))
-    const marketPrice = $derived(
-        companySharePrice(session.stockMarketChart, gameState.stockMarket, company.id)
+    const marketSpace = $derived(
+        companyMarketSpace(session.stockMarketChart, gameState.stockMarket, company.id)
     )
+    const parPrice = $derived(shownParPrice(pricePresentation, gameState, company))
+    const marketPrice = $derived(marketSpace?.price)
+    const valueMark = $derived(marketValueMark(marketSpace, session.presentation.marketZones))
     const shareStatus = $derived(session.companyShareStatus(company.id))
     const trains = $derived(trainsOwnedBy(gameState, owner))
     const marks = $derived(session.presentation.companyMarks?.(gameState, company.id) ?? [])
-    const origin = $derived(session.presentation.companyOrigin?.(gameState, company.id))
-    const stations = $derived(
-        gameState.stations.filter((station) => station.companyId === company.id)
+    const tokenBadges = $derived(
+        session.presentation.companyTokenBadges?.(gameState, company.id) ?? []
     )
-    const remainingStations = $derived(stations.filter((station) => station.status === 'available'))
-    const tokenGroups = $derived.by(() => {
-        const counts = new Map<number, number>()
-        for (const station of remainingStations) {
-            const cost = session.stations.placementCost(station.id)
-            counts.set(cost, (counts.get(cost) ?? 0) + 1)
-        }
-        return [...counts].sort(([a], [b]) => a - b).map(([cost, count]) => ({ cost, count }))
-    })
+    const compactMarks = $derived(marks.filter((mark) => mark.compact))
+    const rosterMarks = $derived(marks.filter((mark) => !mark.compact))
+    const stationCosts = $derived(!session.presentation.hideStationCosts)
+    // Three priced token groups leave a narrow card's name too little room beside them.
+    const tokensBelowName = $derived(
+        vertical && stationCosts && sessionStationTokens(session, company.id).groups.length > 2
+    )
+    const titleFacts = $derived(
+        session.presentation.companyFacts?.(session.gameState, company.id) ?? []
+    )
+    const origin = $derived(session.presentation.companyOrigin?.(gameState, company.id))
     const investments = $derived(
         certificatesOwnedBy(gameState, owner).filter(
             (certificate) => certificate.kind === 'share' && certificate.companyId !== company.id
@@ -119,12 +140,17 @@
     const investmentCompanies = $derived([
         ...new Set(investments.map((certificate) => certificate.companyId))
     ])
-    const privates = $derived(
-        session.privates.companies.filter((item) => {
+    const companyPowers = $derived(session.presentation.companyPowers)
+    const privates = $derived.by(() => {
+        if (companyPowers) {
+            const ids = companyPowers.privateIds(gameState, company.id)
+            return session.privates.companies.filter((item) => ids.includes(item.id))
+        }
+        return session.privates.companies.filter((item) => {
             const privateCompanyOwner = privateOwner(gameState, item.id)
             return privateCompanyOwner && sameOwner(privateCompanyOwner, owner)
         })
-    )
+    })
     const personalPrivates = $derived(
         session.privates.companies.flatMap((item) => {
             const privateCompanyOwner = privateOwner(gameState, item.id)
@@ -138,34 +164,93 @@
                 : []
         })
     )
-    function poolLabel(poolId: string): string {
-        const pool = gameState.certificatePools.find((entry) => entry.id === poolId)
-        assertExists(pool, 'Unknown certificate pool')
-        return poolName(pool)
+    const trades = $derived(offersTrades ? session.stock.companyTrades(company.id) : undefined)
+    const tradeLabel = $derived(
+        [trades?.offers.length ? 'Buy' : '', trades?.sales.length ? 'Sell' : '']
+            .filter(Boolean)
+            .join(' · ')
+    )
+    type TradeOpening = { number: number; anchor: BoundingBox; pointerY: number }
+    let openings = 0
+    let tradeOpening = $derived.by((): TradeOpening | undefined => {
+        session.updatingVisibleState
+        return undefined
+    })
+    const shownTradeOpening = $derived(tradeLabel ? tradeOpening : undefined)
+    let card = $state<HTMLElement>()
+    // The popover closes itself on the press, before the click, so the press records whether it
+    // was open for the click to close it rather than open it again.
+    let pressedWhileOpen = false
+    function notePress() {
+        pressedWhileOpen = !!shownTradeOpening
     }
-    function ownershipName(entry: (typeof ownership)[number]): string {
-        if (entry.poolId) return poolLabel(entry.poolId)
-        return sameOwner(entry.owner, owner) ? 'Treasury' : session.ownerName(entry.owner)
+    function toggleTrades(pointerY: number) {
+        const closing = pressedWhileOpen
+        pressedWhileOpen = false
+        if (closing) {
+            tradeOpening = undefined
+            return
+        }
+        assertExists(card, 'A company card opens its trades')
+        openings += 1
+        tradeOpening = { number: openings, anchor: card.getBoundingClientRect(), pointerY }
+    }
+    function toggleTradesFromCard(event: MouseEvent) {
+        if (
+            !tradeLabel ||
+            (event.target instanceof Element && event.target.closest('button, a, input, select'))
+        ) {
+            pressedWhileOpen = false
+            return
+        }
+        toggleTrades(event.clientY)
     }
 </script>
 
+{#snippet multiShareBadge(entry: CompanyOwnership)}
+    {@const mark = multiShareMark(
+        session.presentation,
+        gameState,
+        company.id,
+        entry.owner,
+        entry.poolId
+    )}
+    {#if mark}<CertificateBadge label={mark.label} title={mark.title} />{/if}
+{/snippet}
+
+<!-- The Buy · Sell button is the keyboard path; a click anywhere else on the card is a shortcut. -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <article
+    bind:this={card}
     class="company-detail"
     class:vertical
+    class:trains-under-stations={vertical && !stationCosts}
+    class:tokens-below-name={tokensBelowName}
     class:wide-fill={layout === 'wide-fill'}
     class:unavailable
+    class:tradable={!!tradeLabel}
+    class:trading={!!shownTradeOpening}
     aria-label={`${session.companyName(company.id)} details`}
+    onpointerdown={notePress}
+    onclick={toggleTradesFromCard}
 >
     <header>
         <div class="identity">
-            <CompanyToken
-                appearance={session.mapView.stations[company.id]}
-                size={vertical ? 32 : 36}
-            />
+            {#if vertical && compactMarks.length}
+                <span class="token-column"
+                    >{@render token()}<span class="compact-marks"
+                        >{@render markList(compactMarks)}</span
+                    ></span
+                >
+            {:else}{@render token()}{/if}
             <div>
-                <h2 title={session.companyFullName(company.id)}>
-                    {session.companyName(company.id)}
-                </h2>
+                {#if !vertical && compactMarks.length}
+                    <div class="name-line">
+                        {@render name()}<span class="compact-marks"
+                            >{@render markList(compactMarks)}</span
+                        >
+                    </div>
+                {:else}{@render name()}{/if}
                 <div class="train-roster" aria-label="Trains">
                     {#each trains as train (train.id)}
                         {@const definition = session.trainDepot.trainDefinition(train.definitionId)}
@@ -173,6 +258,7 @@
                             name={definition.name}
                             color={trainColors[train.definitionId]}
                             obsolete={isObsoleteTrain(train)}
+                            tokens={session.presentation.trainTokens?.(gameState, train)}
                             title={definition.distance.maximum === 'unlimited'
                                 ? 'Unlimited'
                                 : `${definition.distance.maximum} ${definition.distance.measure === 'hex-edges' ? 'hex edges' : definition.distance.measure === 'cities-and-offboards' ? 'cities / offboards + towns' : 'revenue centers'}`}
@@ -184,85 +270,83 @@
                                 ? 'Must buy a train when operating'
                                 : undefined}>No trains</span
                         >{/each}
-                    {#each marks as mark (mark.label)}<span
-                            class="company-mark"
-                            title={mark.description}
-                            aria-label={mark.description}>{mark.label}</span
-                        >{/each}
+                    {@render markList(rosterMarks)}
                 </div>
                 {#if company.closed}<p class="subtitle">Closed</p>{/if}
             </div>
         </div>
         <div class="header-summary">
-            <div class="remaining-tokens" role="group" aria-label="Remaining station tokens">
-                {#if !vertical}
-                    {#each remainingStations as station (station.id)}
-                        {@const cost = session.stations.placementCost(station.id)}
-                        <div class="token-cost" aria-label={`Station token, ${money(cost)}`}>
-                            <CompanyToken
-                                appearance={session.mapView.stations[company.id]}
-                                size={20}
-                            />
-                            <span>{cost}</span>
-                        </div>
-                    {/each}
-                {:else}
-                    {#each tokenGroups as group (group.cost)}
-                        <div
-                            class="token-cost"
-                            aria-label={`${group.count} station tokens, ${money(group.cost)} each`}
-                        >
-                            <div class="token-count">
-                                <span>{group.count}</span><CompanyToken
-                                    appearance={session.mapView.stations[company.id]}
-                                    size={20}
-                                />
-                            </div>
-                            <span class="token-price">{group.cost}</span>
-                        </div>
-                    {:else}
-                        <div class="token-count exhausted" aria-label="0 station tokens remaining">
-                            <span>0</span><CompanyToken
-                                appearance={session.mapView.stations[company.id]}
-                                size={20}
-                            />
-                        </div>
-                    {/each}
-                {/if}
-            </div>
+            <RemainingStationTokens {session} companyId={company.id} {vertical} />
         </div>
     </header>
-    {#if origin}
+    {#if origin && 'connection' in origin && onFocusConnection}
+        {@const connection = origin.connection}
+        <button
+            type="button"
+            class="origin connection"
+            title={`Show ${session.placeName(connection.from)} and ${session.placeName(connection.to)} on the map`}
+            onclick={() => onFocusConnection(connection)}><span>{origin.text}</span></button
+        >
+    {:else if origin}
         <p class="origin">
             {origin.text}
-            {#each origin.companyIds as id, index (id)}{#if index}<span>&amp;</span>{/if}<span
-                    class="origin-company"
-                    ><CompanyToken appearance={session.mapView.stations[id]} size={15} /><strong
-                        >{session.companyInitials(id)}</strong
-                    ></span
-                >{/each}
+            {#if 'companyIds' in origin}
+                {#each origin.companyIds as id, index (id)}{#if index}<span>&amp;</span>{/if}<span
+                        class="origin-company"
+                        ><CompanyToken appearance={session.mapView.stations[id]} size={15} /><strong
+                            >{session.companyInitials(id)}</strong
+                        ></span
+                    >{/each}
+            {/if}
         </p>
     {/if}
-    <div class="financial-summary">{@render prices()}</div>
-    <div class="detail-columns">
+    <div class="financial-summary">
+        {@render prices()}
+        {#if titleFacts.some((fact) => fact.below)}<p class="fact-notes">
+                {#each titleFacts.filter((fact) => fact.below) as fact (fact.label)}<span
+                        >{fact.label} <strong>{fact.value}</strong></span
+                    >{/each}
+            </p>{/if}
+    </div>
+    <div class="detail-columns" {@attach chainSidewaysScroll}>
         <section aria-label="Company ownership">
             <div class="ownership-heading">
                 <h3>Owners</h3>
-                {#if shareStatus}<span
-                        class="share-status"
-                        class:unfloated={shareStatus === 'unfloated'}
-                        >{shareStatusLabels[shareStatus]}</span
-                    >{/if}
+                <span class="heading-end">
+                    {#if shareStatus}<span
+                            class="share-status"
+                            class:unfloated={shareStatus === 'unfloated'}
+                            >{shareStatusLabels[shareStatus]}</span
+                        >{/if}
+                    {#if tradeLabel}<button
+                            type="button"
+                            class="trade-opener"
+                            aria-label={`Trade ${session.companyName(company.id)} shares`}
+                            onclick={(event) => {
+                                const bounds = event.currentTarget.getBoundingClientRect()
+                                toggleTrades(bounds.y + bounds.height / 2)
+                            }}>{tradeLabel}</button
+                        >{/if}
+                </span>
             </div>
             {#if ownership.length}
                 <table aria-label={`${session.companyName(company.id)} share ownership`}>
                     <tbody>
                         {#each ownership as entry, index (index)}
-                            {@const president =
-                                !!company.president && sameOwner(entry.owner, company.president)}
+                            {@const presidency =
+                                entry.poolId &&
+                                holdsReceiverPresidentCertificate(
+                                    gameState,
+                                    company.id,
+                                    entry.poolId
+                                )
+                                    ? `Holds the ${session.terms.presidentWord}’s certificate`
+                                    : presides(gameState, company.id, entry.owner)
+                                      ? session.terms.president
+                                      : undefined}
                             <tr
                                 class:pool-divider={index > 0 && index === sharePoolsStart}
-                                class:president
+                                class:president={!!presidency}
                                 class:sold={sellers.some((seller) =>
                                     sameOwner(seller, entry.owner)
                                 )}
@@ -277,14 +361,23 @@
                                         >{@render purchaseSources(entry)}</td
                                     >
                                 {:else}
-                                    <th scope="row" title={president ? 'President' : undefined}
+                                    <th scope="row" title={presidency}
                                         ><PresidentName
-                                            name={ownershipName(entry)}
-                                            {president}
-                                        /></th
+                                            name={shareSourceName(
+                                                { ...entry, companyId: company.id },
+                                                session
+                                            )}
+                                            president={!!presidency}
+                                            label={session.presidentMark(company.id)}
+                                            title={session.terms.president}
+                                        />{@render multiShareBadge(entry)}</th
                                     >
-                                    {#if numberedShares}<td title="Certificate numbers"
-                                            >{entry.certificateNumbers.join(', ') || '—'}</td
+                                    {#if numberedShares}<td
+                                            class="certificate-numbers"
+                                            title="Certificate numbers"
+                                            >{#if entry.certificateNumbers.length}#{entry.certificateNumbers.join(
+                                                    ', '
+                                                )}{/if}</td
                                         >{/if}
                                     <td title="Shares">{entry.shares || '—'}</td>
                                 {/if}
@@ -292,13 +385,17 @@
                         {/each}
                     </tbody>
                 </table>
-            {:else}<p class="empty">No issued shares.</p>{/if}
+            {:else}<p class="empty">
+                    {company.kind === NationalCompanyKind
+                        ? 'Owned by the state; no shares.'
+                        : 'No issued shares.'}
+                </p>{/if}
         </section>
         {#if !vertical || privates.length || personalPrivates.length || investmentCompanies.length}
             <section aria-label="Company assets">
                 <section aria-label="Private companies and powers">
                     {#if !vertical || privates.length}
-                        <h3>Privates & powers</h3>
+                        <h3>{companyPowers?.heading ?? 'Privates & powers'}</h3>
                         {#each privates as item (item.id)}
                             {@render privateCard(item)}
                         {:else}<p class="empty">None</p>{/each}
@@ -318,9 +415,12 @@
                 </section>
                 {#if investmentCompanies.length}
                     <h3 class="section-heading">Investments</h3>
-                    {#each investmentCompanies as id (id)}<p class="investment">
-                            {session.companyName(id)}<strong
-                                >{sharesOwned(gameState, id, owner)} shares</strong
+                    {#each investmentCompanies as id (id)}
+                        {@const shares = sharesOwned(gameState, id, owner)}
+                        <p class="investment" title={session.companyFullName(id)}>
+                            {session.companyInitials(id)}<strong
+                                >{shares}
+                                {shares === 1 ? 'share' : 'shares'}</strong
                             >
                         </p>{/each}
                 {/if}
@@ -328,21 +428,70 @@
         {/if}
     </div>
 </article>
+{#if trades && shownTradeOpening}
+    <!-- One popover per opening: one hidden by Escape stays hidden until its close is reported. -->
+    {#key shownTradeOpening.number}
+        <CompanyTradePopover
+            {session}
+            companyId={company.id}
+            {trades}
+            anchor={shownTradeOpening.anchor}
+            pointerY={shownTradeOpening.pointerY}
+            onclose={() => (tradeOpening = undefined)}
+        />
+    {/key}
+{/if}
+
+{#snippet token()}
+    {#if tokenBadges.length}<span class="badged-token"
+            ><CompanyToken
+                appearance={session.mapView.stations[company.id]}
+                size={vertical ? 32 : 36}
+            />{#each tokenBadges as badge, index (badge.description)}<img
+                    class="token-badge"
+                    style:right={`${index * 12 - 4}px`}
+                    src={badge.imageUrl}
+                    alt={badge.description}
+                    title={badge.description}
+                />{/each}</span
+        >{:else}<CompanyToken
+            appearance={session.mapView.stations[company.id]}
+            size={vertical ? 32 : 36}
+        />{/if}
+{/snippet}
+
+{#snippet name()}
+    <h2 title={session.companyFullName(company.id)}>
+        {session.companyName(company.id)}
+    </h2>
+{/snippet}
+
+{#snippet markList(list: readonly CompanyMark[])}
+    {#each list as mark (mark.label)}{#if mark.imageUrl}<img
+                class="company-mark-image"
+                src={mark.imageUrl}
+                alt={mark.description}
+                title={mark.description}
+            />{:else}<span
+                class="company-mark"
+                title={mark.description}
+                aria-label={mark.description}>{mark.label}</span
+            >{/if}{/each}
+{/snippet}
 
 {#snippet prices()}
     <div class="prices">
         {@render cashValue()}
-        {#if pricePresentation.showPar && company.parPrice !== undefined}<div>
-                <span>Par</span><strong>{company.parPrice}</strong>
+        {#if pricePresentation.showPar && parPrice !== undefined}<div>
+                <span>Par</span><strong>{parPrice}</strong>
             </div>{/if}
         {@render marketValue()}
         {#if session.loans.rules && company.kind !== 'private' && company.started}<div>
-                <span>Loans</span><strong
-                    >{session.loans.loans(company.id)}/{session.loans.capacity(company.id)}</strong
+                <span>{session.presentation.loanTerms?.name ?? 'Loans'}</span><strong
+                    >{session.loans.held(company.id)}</strong
                 >
             </div>{/if}
-        {#each session.presentation.companyFacts?.(session.gameState, company.id) ?? [] as fact (fact.label)}<div
-            >
+        {#each titleFacts.filter((fact) => !fact.below) as fact (fact.label)}<div>
                 <span>{fact.label}</span><strong>{fact.value}</strong>
             </div>{/each}
         {#if !vertical}
@@ -367,7 +516,12 @@
 {/snippet}
 
 {#snippet marketValue()}
-    {#if marketPrice !== undefined}<div class="market-value">
+    {#if marketPrice !== undefined}<div
+            class="market-value"
+            class:market-zone-tint={valueMark}
+            style={valueMark?.style}
+            title={valueMark?.title}
+        >
             <span>{pricePresentation.label}</span><strong>{marketPrice}</strong>
         </div>{/if}
 {/snippet}
@@ -394,11 +548,30 @@
                     fullName={session.companyFullName(item.id)}
                     description={item.description}
                     income={item.closed ? undefined : item.revenue}
-                />{#each session.privateActions.powersFor(item.id) as power (power.playerId)}<span
-                        class="private-power"><PrivateTrackPowerButton {session} {power} /></span
-                    >{/each}
+                />{#each session.privateActions.powersFor(item.id) as power, index (index)}<span
+                        class="private-power"
+                        ><PrivatePowerButton
+                            {session}
+                            {power}
+                            label={session.privateActions.powersFor(item.id).length > 1 &&
+                            'label' in power
+                                ? power.label
+                                : undefined}
+                        /></span
+                    >{/each}{#if !item.closed}{@const held = session.presentation.privateHoldings?.(
+                        gameState,
+                        item.id
+                    )}{#if held}<small class="private-holdings">{held}</small>{/if}{/if}
             </div>
-            <span>{purchasePrice ?? (item.closed ? 'Closed' : `${money(item.revenue)} / OR`)}</span>
+            <span
+                >{purchasePrice ??
+                    (item.closed
+                        ? 'Closed'
+                        : companyPowers
+                          ? ''
+                          : (session.presentation.privateStatus?.(gameState, item.id) ??
+                            `${money(item.revenue)} / OR`))}</span
+            >
         </div>
         {#if privatePowerUsed(gameState, item.id)}<span class="status">One-time power used</span
             >{/if}
@@ -409,6 +582,13 @@
     .private-power {
         margin-left: 6px;
         white-space: nowrap;
+    }
+    .private-holdings {
+        display: block;
+        color: var(--rail-muted, #817565);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 14px;
     }
     .company-detail.unavailable {
         background: var(--rail-surface, #f1f1ef);
@@ -439,8 +619,58 @@
         align-items: flex-start;
         gap: 7px;
     }
+    /*
+     * With no costs under them the station tokens are one line tall, so the header becomes a
+     * grid: the name beside the tokens, and the train list below both, across the card.
+     */
+    .trains-under-stations header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 0 7px;
+    }
+    .trains-under-stations .identity,
+    .trains-under-stations .identity > div {
+        display: contents;
+    }
+    .trains-under-stations .identity > :global(svg),
+    .trains-under-stations .identity > .badged-token,
+    .trains-under-stations .token-column {
+        grid-row: 1 / span 3;
+    }
+    .trains-under-stations h2 {
+        grid-column: 2;
+        min-height: 20px;
+    }
+    .trains-under-stations .header-summary {
+        grid-column: 3;
+        grid-row: 1;
+    }
+    .trains-under-stations .train-roster,
+    .trains-under-stations .subtitle {
+        grid-column: 2 / span 2;
+    }
+    .trains-under-stations.unavailable h2,
+    .trains-under-stations.unavailable .train-roster,
+    .trains-under-stations.unavailable .subtitle {
+        opacity: var(--rail-phase-opacity, 0.5);
+        filter: var(--rail-phase-filter, grayscale(1));
+    }
     .identity > :global(svg) {
         flex-shrink: 0;
+    }
+    .badged-token {
+        position: relative;
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+    .badged-token > :global(svg) {
+        display: block;
+    }
+    .token-badge {
+        position: absolute;
+        bottom: -4px;
+        width: 17px;
+        height: 17px;
     }
     .vertical h2 {
         white-space: normal;
@@ -448,6 +678,14 @@
     }
     .vertical .header-summary {
         padding-left: 0;
+    }
+    .tokens-below-name header {
+        flex-wrap: wrap;
+        row-gap: 4px;
+    }
+    .tokens-below-name .header-summary {
+        flex-basis: 100%;
+        padding-left: 39px;
     }
     .vertical .detail-columns {
         grid-template-columns: minmax(0, 1fr);
@@ -472,6 +710,23 @@
     .financial-summary .prices {
         gap: 0;
     }
+    .fact-notes {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 2px 14px;
+        margin: 0;
+        align-items: center;
+        padding: 4px 10px;
+        border-top: 1px solid #ffffff0a;
+        font-size: 11px;
+        line-height: 14px;
+        color: var(--rail-muted, #887664);
+    }
+    .fact-notes strong {
+        color: var(--rail-text, #514536);
+        font-weight: 600;
+    }
     .financial-summary .prices div {
         position: relative;
         flex: 1;
@@ -483,6 +738,14 @@
     }
     .financial-summary .prices .market-value {
         background: #1b3d4580;
+    }
+    .financial-summary .prices .market-value.market-zone-tint {
+        background: var(--market-tint);
+        color: var(--market-tint-ink);
+    }
+    .financial-summary .prices .market-value.market-zone-tint span {
+        color: inherit;
+        opacity: 0.75;
     }
     .financial-summary .prices .cash-value {
         background: var(--rail-surface-inset, #1b232d);
@@ -545,6 +808,50 @@
         line-height: 1.2;
         white-space: nowrap;
     }
+    .company-mark-image {
+        width: 24px;
+        height: 24px;
+        cursor: help;
+    }
+    /* The marks follow the name's last word, also when the name wraps. */
+    .name-line {
+        font-size: 15px;
+        line-height: 1.2;
+    }
+    .name-line h2 {
+        display: inline;
+    }
+    .name-line .compact-marks {
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+    .compact-marks {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 2px;
+    }
+    .compact-marks .company-mark-image {
+        width: 13px;
+        height: 13px;
+    }
+    /* On the narrow card the marks sit under the company's token, no wider than it. */
+    .token-column {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 4px;
+    }
+    .token-column .compact-marks {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 34px;
+    }
+    .token-column .company-mark-image {
+        width: 16px;
+        height: 16px;
+    }
     .company-mark {
         padding: 0 5px;
         border: 1px solid var(--rail-border, #c7b8a6);
@@ -570,6 +877,23 @@
         color: var(--rail-muted, #887664);
         font-size: 11px;
     }
+    .connection {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid var(--rail-border, #e3d9cd);
+        background: none;
+        font-family: inherit;
+        cursor: pointer;
+    }
+    .connection span {
+        text-decoration: underline dotted;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 2px;
+    }
+    .connection:hover span {
+        color: var(--rail-text, #514536);
+        text-decoration-style: solid;
+    }
     .origin-company {
         display: inline-flex;
         align-items: center;
@@ -592,36 +916,6 @@
         gap: 10px;
         margin-left: auto;
         padding-left: 6px;
-    }
-    .remaining-tokens {
-        display: flex;
-        gap: 6px;
-    }
-    .token-count {
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        font-size: 16px;
-        line-height: 20px;
-    }
-    .token-price {
-        align-self: flex-end;
-        width: 20px;
-        text-align: center;
-    }
-    .token-count.exhausted {
-        opacity: 0.45;
-        filter: grayscale(1);
-    }
-    .token-cost {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-        font-size: 11px;
-        line-height: 11px;
-        font-variant-numeric: tabular-nums;
-        color: var(--rail-text, #695540);
     }
     .prices {
         display: flex;
@@ -753,6 +1047,32 @@
     .share-status.unfloated {
         color: #e2a84f;
     }
+    .heading-end {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+    .company-detail.tradable {
+        cursor: pointer;
+    }
+    .company-detail.tradable:hover,
+    .company-detail.trading {
+        border-color: var(--rail-focus, #a87948);
+    }
+    .trade-opener {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: var(--rail-focus, #a87948);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .trade-opener:focus-visible {
+        outline: 2px solid var(--rail-focus, #a87948);
+        outline-offset: 2px;
+    }
     .ownership-heading h3 {
         margin-bottom: 0;
     }
@@ -805,6 +1125,10 @@
     td {
         padding-left: 12px;
     }
+    /* Dimmed from the row's own colour so sold and tinted rows keep their tone. */
+    td.certificate-numbers {
+        color: color-mix(in srgb, currentColor 65%, transparent);
+    }
     .empty {
         margin: 0;
         color: var(--rail-muted, #887664);
@@ -812,6 +1136,7 @@
     }
     .train-roster {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 3px;
         min-height: 16px;

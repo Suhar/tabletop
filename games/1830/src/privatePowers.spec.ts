@@ -8,7 +8,9 @@ import {
     privateTrackConstruction,
     settlePurchaseOffer,
     type EighteenXXState,
-    type Owner
+    type Owner,
+    presidentCertificate,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample, type ScenarioPosition } from '@tabletop/18xx/scenarios'
 import {
@@ -82,7 +84,9 @@ describe('auction awards', () => {
         })
         expect(game.valid(owner)).toEqual(['ParCompany'])
         for (const player of game.state.players.filter((player) => player.playerId !== owner))
-            expect(game.valid(player.playerId)).toEqual([])
+            expect(
+                game.valid(player.playerId).filter((type) => type !== 'SetRunInstruction')
+            ).toEqual([])
         expect(() => game.act('ParCompany', { companyId: 'BO', marketSpaceId: '0:0' })).toThrow()
 
         const before = cash(game.state, { kind: 'player', playerId: owner })
@@ -95,9 +99,9 @@ describe('auction awards', () => {
         expect(company).toMatchObject({
             started: true,
             floated: false,
-            parPrice: 100,
-            president: { kind: 'player', playerId: owner }
+            parPrice: 100
         })
+        expect(presidentOf(game.state, 'BO')).toEqual({ kind: 'player', playerId: owner })
         expect(
             game.state.stockMarket.stacks.find((stack) => stack.spaceId === space.id)?.companyIds
         ).toContain('BO')
@@ -124,7 +128,7 @@ describe('contested B&O', () => {
         expect(game.valid(rival)).toEqual(['ParCompany'])
         game.act('ParCompany', { companyId: 'BO', marketSpaceId: '0:6' })
         expect(game.state.machineState).toBe('StockRound')
-        expect(getCompany(game.state, 'BO').president).toEqual({ kind: 'player', playerId: rival })
+        expect(presidentOf(game.state, 'BO')).toEqual({ kind: 'player', playerId: rival })
     })
 })
 
@@ -158,7 +162,10 @@ describe('B&O private closure by an intercompany train purchase', () => {
         const seller = game.state.players.find((player) => player.playerId !== buyers.BOP)
         assert(seller, 'Another player presides PRR')
         const state = structuredClone(game.state)
-        getCompany(state, 'PRR').president = { kind: 'player', playerId: seller.playerId }
+        const director = presidentCertificate(state, 'PRR')
+        assert(director, 'PRR has a president’s certificate')
+        director.owner = { kind: 'player', playerId: seller.playerId }
+        delete director.poolId
         state.machineState = 'BuyingTrains'
         state.operatingSet = {
             number: 1,
@@ -275,7 +282,11 @@ describe('Delaware & Hudson', () => {
             playerId: president,
             locationId: 'F16'
         })
-        expect(game.valid(president)).toEqual(['PlacePrivateStation', 'DeclinePrivateStation'])
+        expect(game.valid(president)).toEqual([
+            'PlacePrivateStation',
+            'DeclinePrivateStation',
+            'SetRunInstruction'
+        ])
         game.act('PlacePrivateStation', {
             privateCompanyId: 'DH',
             position: { locationId: 'F16', nodeId: 'city', slot: 0 }

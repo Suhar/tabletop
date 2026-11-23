@@ -3,13 +3,14 @@
     import HistoryHeaderJump from './HistoryHeaderJump.svelte'
     import type { Snippet } from 'svelte'
     import { assertExists } from '@tabletop/common'
-    import { pinToNewest } from '@tabletop/frontend-components'
+    import { chainSidewaysScroll, pinToNewest } from '@tabletop/frontend-components'
     import type { HistoryRound } from './historyRounds.js'
     import type { HistoryOperatingOrder } from './historyOperatingOrder.js'
     let {
         rounds,
         children,
         phaseColors,
+        phaseLabel,
         newestFirst = false,
         historyComplete = true,
         onJump,
@@ -17,7 +18,8 @@
         currentHeaderId,
         jumpDisabled = false,
         onOrderChange,
-        orderContent
+        orderContent,
+        setup
     }: {
         onJump: (index: number) => void
         onReturn: () => void
@@ -26,10 +28,13 @@
         rounds: HistoryRound[]
         children: Snippet<[HistoryRound]>
         phaseColors: Readonly<Record<string, string>>
+        phaseLabel: (phaseIds: readonly string[]) => string
         newestFirst?: boolean
         historyComplete?: boolean
         onOrderChange: (newestFirst: boolean) => void
         orderContent?: Snippet<[HistoryOperatingOrder]>
+        /** The title's setup, the oldest entry, before the first round. */
+        setup?: Snippet
     } = $props()
     const indexId = $props.id()
     let indexPanel: HTMLDivElement | undefined = $state()
@@ -89,10 +94,14 @@
             const style = getComputedStyle(node)
             const available =
                 node.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+            // The phase's width on one line, though it wraps once the order moves down.
+            parts.phase.style.whiteSpace = 'nowrap'
+            const phaseWidth = parts.phase.offsetWidth
+            parts.phase.style.whiteSpace = ''
             const needed =
                 parts.title.offsetWidth +
                 parts.order.scrollWidth +
-                parts.phase.offsetWidth +
+                phaseWidth +
                 2 * parseFloat(style.columnGap)
             node.classList.toggle('order-on-second-line', needed > available)
         }
@@ -147,7 +156,7 @@
                     style:--phase-ink={contrastingTextColor(phaseColors[round.phases[0]])}
                     onclick={() => scrollToRound(round.id)}
                 >
-                    <strong>{round.label}</strong><span>Phase {round.phases.join(' → ')}</span>
+                    <strong>{round.label}</strong><span>{phaseLabel(round.phases)}</span>
                 </button>
             {:else}<div class="empty">No rounds yet.</div>{/each}
         </nav>
@@ -160,6 +169,10 @@
         aria-label="Scrollable history"
     >
         <ol class="history-content" class:newest-last={!newestFirst} aria-label="Action history">
+            {#snippet setupEntry()}{#if setup}<li class="history-setup">
+                        {@render setup()}
+                    </li>{/if}{/snippet}
+            {#if !newestFirst}{@render setupEntry()}{/if}
             {#each newestFirst ? rounds : rounds.toReversed() as round (round.id)}
                 <li class="round-section" data-round-id={round.id} aria-label={round.label}>
                     {#snippet divider()}
@@ -185,17 +198,19 @@
                             </span>
                             {#if round.operatingOrder && orderContent}<span
                                     class="round-order"
+                                    {@attach chainSidewaysScroll}
                                     aria-label="Operating order"
                                     >{@render orderContent(round.operatingOrder)}</span
                                 >{/if}
-                            <span class="round-phase">Phase {round.phases.join(' → ')}</span>
+                            <span class="round-phase">{phaseLabel(round.phases)}</span>
                         </h3>
                     {/snippet}
                     {#if !newestFirst}{@render divider()}{/if}
                     {@render children(round)}
                     {#if newestFirst}{@render divider()}{/if}
                 </li>
-            {:else}<li class="empty">No actions yet.</li>{/each}
+            {:else}{#if !setup}<li class="empty">No actions yet.</li>{/if}{/each}
+            {#if newestFirst}{@render setupEntry()}{/if}
         </ol>
     </div>
 </div>
@@ -226,9 +241,9 @@
         flex-direction: column;
         flex: 1;
         min-height: 0;
-        overflow-y: auto;
+        overflow: hidden auto;
         scrollbar-width: thin;
-        overscroll-behavior: contain;
+        overscroll-behavior-y: contain;
     }
     .history-toolbar {
         display: grid;
@@ -315,6 +330,15 @@
     .history-content.newest-last {
         margin-top: auto;
     }
+    .history-setup {
+        margin: var(--history-item-gap, 0.417em) 0;
+        padding: 0.25em 0.5em 0.417em;
+        border-bottom: 1px solid var(--rail-shadow, #b9ac994f);
+    }
+    .newest-first .history-setup {
+        border-top: 1px solid var(--rail-shadow, #b9ac994f);
+        border-bottom: 0;
+    }
     .round-section {
         display: flow-root;
         margin: 0;
@@ -366,8 +390,9 @@
     .round-order :global(.order) {
         flex-wrap: nowrap;
     }
+    /* A long phase name wraps beside the title rather than running under it. */
     .round-divider:global(.order-on-second-line) {
-        grid-template-columns: minmax(0, 1fr) max-content;
+        grid-template-columns: max-content minmax(0, 1fr);
         grid-template-areas: 'title phase' 'order order';
     }
     :global(.order-on-second-line) .round-order {
@@ -380,6 +405,9 @@
         font-weight: 600;
         text-align: right;
         white-space: nowrap;
+    }
+    :global(.order-on-second-line) .round-phase {
+        white-space: normal;
     }
     .empty {
         padding: 1.538em 0.615em;

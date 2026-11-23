@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Color } from '@tabletop/common'
 import {
     Banner,
+    CURRENT_OATH_REVISION,
     HydratedSearchResolve,
     IMPERIAL_WARBANDS,
     MachineState,
@@ -13,7 +14,13 @@ import {
     powerIndexOf,
     type LegalChoice
 } from '@tabletop/oath'
-import { FIXTURE_SITE_CAPACITY, openTurn, testPlayer, testState } from '@tabletop/oath/testing'
+import {
+    FIXTURE_SITE_CAPACITY,
+    openTurn,
+    testPlayer,
+    testState,
+    testVaultWithRelics
+} from '@tabletop/oath/testing'
 import {
     disposeSessions,
     openSessionOn,
@@ -121,7 +128,11 @@ describe('a Search play at the adviser limit (R-5.1.4.II)', () => {
         draft.keep(TENTS)
         const faceup = draft.placements.find((o) => o.play === SearchPlay.Adviser && o.faceUp)
         expect(faceup).toBeDefined()
-        expect(faceup?.room).toEqual({ needed: 1, discardable: HELD })
+        expect(faceup?.room).toEqual({
+            needed: 1,
+            discardable: HELD,
+            discards: HELD.map((id) => [id])
+        })
 
         await draft.choosePlacement({ play: SearchPlay.Adviser, faceUp: true })
         expect(draft.needsDisplaced).toBe(true)
@@ -407,7 +418,7 @@ describe('Land Warden — the second play is picked on the cards', () => {
         expect(draft.second).toBeUndefined()
     })
 
-    it('offers only the second plays the engine accepts: a Vision only as a facedown adviser, and none without the Warden', async () => {
+    it('offers only the second plays the engine accepts: in a game before revision 32 a Vision only as a facedown adviser, and none without the Warden', async () => {
         const { draft } = await searchingWith([TENTS, VISION], [], WARDEN_CARRIED)
         draft.keep(TENTS)
         expect(draft.secondPlays.map((option) => option.mode)).toEqual(['adviser, facedown'])
@@ -486,6 +497,31 @@ describe('Land Warden — the second play is picked on the cards', () => {
             )
             expect(engineRefusal(session, sent)).toBeUndefined()
         })
+
+        it("from revision 26 a kept Dazzle's discards break the tie, faceup or at the site, so those placements pair with Riots and facedown does not", async () => {
+            const DAZZLE = 'denizen.arcane.dazzle'
+            // Hearth 2 against Discord 2 with Riots; Dazzle discards the Wayside Inn in the Cradle when it is played faceup.
+            const { session, draft, sent } = await searchingWith([DAZZLE, RIOTS, HELD[0]], [], {
+                ...onTheMob({ c2: [HELD[1]], p1: [MERCENARIES], h1: [STORYTELLER] }),
+                oathRevision: OathRevision.EngineFixes22
+            })
+            draft.keep(DAZZLE)
+            draft.setSecondPlay(riotsSecond(draft)?.key)
+            expect(draft.second?.cardId).toBe(RIOTS)
+            expect(draft.placements.map(({ play, faceUp }) => ({ play, faceUp }))).toEqual([
+                { play: SearchPlay.Site, faceUp: undefined },
+                { play: SearchPlay.Adviser, faceUp: true }
+            ])
+            await draft.choosePlacement({ play: SearchPlay.Adviser, faceUp: true })
+            expect(sent).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    play: SearchPlay.Adviser,
+                    faceUp: true,
+                    secondPlay: { cardId: RIOTS, play: SearchPlay.Site }
+                })
+            )
+            expect(engineRefusal(session, sent)).toBeUndefined()
+        })
     })
 })
 
@@ -533,8 +569,10 @@ describe('R-5.1.4.I, R-11.10 — the site play is open when another site or a di
         })
         draft.keep(TENTS)
         expect(draft.otherSites).toEqual(['c2'])
-        expect(draft.placements.map((option) => option.play)).toContain(SearchPlay.Site)
+        // Its own full site waits for a card there to discard first; the open site picked offers the play.
+        expect(draft.placements.map((option) => option.play)).not.toContain(SearchPlay.Site)
         draft.setToSite('c2')
+        expect(draft.placements.map((option) => option.play)).toContain(SearchPlay.Site)
         await draft.choosePlacement({ play: SearchPlay.Site })
         expect(sent).toHaveBeenCalledWith(
             expect.objectContaining({ keptCardId: TENTS, play: SearchPlay.Site, toSiteId: 'c2' })
@@ -558,19 +596,20 @@ describe('R-5.1.4.I, R-11.10 — the site play is open when another site or a di
         expect(engineRefusal(session, sent)).toBeUndefined()
     })
 
-    it('the site play picked with nothing that opens it is judged at send: not sent, one reason, gone with the next pick', async () => {
+    it('the site play waits for a card there picked to discard first: not offered, not sent, no reason, offered with the pick', async () => {
         const { draft, sent } = await searchingWith([TENTS, TUTOR], [], {
             siteCards: SLUM_SITES,
             denizensBySite: { c1: FULL, c2: [], p1: [], h1: [] }
         })
         draft.keep(TENTS)
+        expect(draft.placements.map((option) => option.play)).not.toContain(SearchPlay.Site)
         await draft.choosePlacement({ play: SearchPlay.Site })
         expect(sent).not.toHaveBeenCalled()
         expect(draft.placement).toBeUndefined()
-        expect(draft.placementReason).toMatch(/capacity of 3/)
+        expect(draft.placementReason).toBeUndefined()
 
         draft.setDiscardFirst(FULL[0])
-        expect(draft.placementReason).toBeUndefined()
+        expect(draft.placements.map((option) => option.play)).toContain(SearchPlay.Site)
         await draft.choosePlacement({ play: SearchPlay.Site })
         expect(sent).toHaveBeenCalledWith(
             expect.objectContaining({ play: SearchPlay.Site, discardFirstCardId: FULL[0] })
@@ -622,14 +661,12 @@ describe('R-5.1.4.I, R-11.10, Crop Rotation, New Growth — the site play is jud
             banners: FAVOR_HELD
         })
         draft.keep(TENTS)
-        expect(draft.placements.map((option) => option.play)).toContain(SearchPlay.Site)
-        await draft.choosePlacement({ play: SearchPlay.Site })
-        expect(sent).not.toHaveBeenCalled()
-        expect(draft.placementReason).toMatch(/c1 is at its capacity of 3/)
+        expect(draft.placements.map((option) => option.play)).not.toContain(SearchPlay.Site)
 
         // A card discarded at another site frees no room here.
         expect(draft.discardFirstOptions).toEqual(FULL)
         draft.setDiscardFirst(FULL[1])
+        expect(draft.placements.map((option) => option.play)).toContain(SearchPlay.Site)
         expect(draft.placementReason).toBeUndefined()
         await draft.choosePlacement({ play: SearchPlay.Site })
         expect(sent).toHaveBeenCalledWith(
@@ -764,9 +801,12 @@ describe('R-5.1.4.I, R-11.10, Crop Rotation, New Growth — the site play is jud
         )
         expect(facedown).toBeDefined()
         draft.setSecondPlay(facedown?.key)
-        expect(draft.placements.map((option) => option.play)).toEqual([SearchPlay.Site])
+        // The pair is offered on the site play a pick opens; the play itself waits for the pick.
+        expect(draft.second?.key).toBe(facedown?.key)
+        expect(draft.placements).toEqual([])
 
         draft.setDiscardFirst(FULL[0])
+        expect(draft.placements.map((option) => option.play)).toEqual([SearchPlay.Site])
         await draft.choosePlacement({ play: SearchPlay.Site })
         expect(sent).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -776,6 +816,128 @@ describe('R-5.1.4.I, R-11.10, Crop Rotation, New Growth — the site play is jud
             })
         )
         expect(engineRefusal(session, sent)).toBeUndefined()
+    })
+})
+
+/**
+ * Hide choices that cannot be picked: at a full site, "To your site" waits for a card there picked to discard first.
+ * Dana is at the full Plains; the River, in the same region, holds two cards. Dana holds the People's Favor, searched
+ * with Crop Rotation, and kept Alchemist: from revision 32 each power discards one card first.
+ */
+describe('R-5.1.4.I, Crop Rotation — at a full site, "To your site" is offered once a card there is picked to discard first', () => {
+    const ALCHEMIST = 'denizen.arcane.alchemist'
+    const WOLVES = 'denizen.beast.wolves'
+    const TAVERN_SONGS = 'denizen.hearth.tavern-songs'
+    const ROWDY_PUB = 'denizen.hearth.rowdy-pub'
+    const GAMBLING_HALL = 'denizen.discord.gambling-hall'
+    const PLAINS_FULL = [WOLVES, TENTS, TAVERN_SONGS]
+    const SITES = { c1: 'site.plains', c2: 'site.river', p1: 'site.marshes', h1: 'site.mountain' }
+
+    async function atThePlains(plains: string[]) {
+        const searched = await searchingWith([ALCHEMIST, TUTOR], [], {
+            oathRevision: CURRENT_OATH_REVISION,
+            siteCards: SITES,
+            denizensBySite: { c1: plains, c2: [ROWDY_PUB, GAMBLING_HALL], p1: [], h1: [] },
+            banners: FAVOR_HELD,
+            ...carrying(CROP_ROTATION)
+        })
+        searched.draft.keep(ALCHEMIST)
+        return searched
+    }
+
+    const plays = (draft: Awaited<ReturnType<typeof searchingWith>>['draft']) =>
+        draft.placements.map((option) => option.play)
+
+    it('with no card picked to discard first, "To your site" is not offered', async () => {
+        const { draft } = await atThePlains(PLAINS_FULL)
+        expect(draft.toSite).toBeUndefined()
+        expect(draft.discardFirstOptions).toEqual([...PLAINS_FULL, ROWDY_PUB, GAMBLING_HALL])
+        expect(plays(draft)).toEqual([SearchPlay.Adviser, SearchPlay.Adviser, SearchPlay.Discard])
+        expect(draft.placementReason).toBeUndefined()
+    })
+
+    it('a River card picked frees no room at the Plains: still not offered', async () => {
+        const { draft } = await atThePlains(PLAINS_FULL)
+        draft.tapDiscardFirst(ROWDY_PUB)
+        expect(draft.discardFirsts).toEqual([ROWDY_PUB])
+        expect(plays(draft)).not.toContain(SearchPlay.Site)
+    })
+
+    it('Tents picked: "To your site" is offered, and the engine takes the play', async () => {
+        const { session, draft, sent } = await atThePlains(PLAINS_FULL)
+        draft.tapDiscardFirst(TENTS)
+        expect(plays(draft)).toEqual([
+            SearchPlay.Site,
+            SearchPlay.Adviser,
+            SearchPlay.Adviser,
+            SearchPlay.Discard
+        ])
+        expect(draft.siteGain).toBeDefined()
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                keptCardId: ALCHEMIST,
+                play: SearchPlay.Site,
+                discardFirstCardId: TENTS
+            })
+        )
+        expect(engineRefusal(session, sent)).toBeUndefined()
+    })
+
+    it('a River card and then Tents picked: offered', async () => {
+        const { draft } = await atThePlains(PLAINS_FULL)
+        draft.tapDiscardFirst(ROWDY_PUB)
+        draft.tapDiscardFirst(TENTS)
+        expect(draft.discardFirsts).toEqual([ROWDY_PUB, TENTS])
+        expect(plays(draft)).toContain(SearchPlay.Site)
+    })
+
+    it('Tents taken back: not offered again', async () => {
+        const { draft } = await atThePlains(PLAINS_FULL)
+        draft.tapDiscardFirst(TENTS)
+        expect(plays(draft)).toContain(SearchPlay.Site)
+        draft.tapDiscardFirst(TENTS)
+        expect(draft.discardFirsts).toEqual([])
+        expect(plays(draft)).not.toContain(SearchPlay.Site)
+    })
+
+    it('the Plains with room: "To your site" is offered at once, as before', async () => {
+        const { draft } = await atThePlains([WOLVES, TENTS])
+        expect(draft.discardFirsts).toEqual([])
+        expect(plays(draft)).toEqual([
+            SearchPlay.Site,
+            SearchPlay.Adviser,
+            SearchPlay.Adviser,
+            SearchPlay.Discard
+        ])
+    })
+
+    it('Salt the Earth ignores the capacity: "To your site" is offered at once, as before', async () => {
+        const SALT = 'denizen.discord.salt-the-earth'
+        const { session, draft, sent } = await searchingWith([SALT, TUTOR], [], {
+            oathRevision: CURRENT_OATH_REVISION,
+            siteCards: SITES,
+            denizensBySite: { c1: PLAINS_FULL, c2: [ROWDY_PUB, GAMBLING_HALL], p1: [], h1: [] },
+            banners: FAVOR_HELD,
+            ...carrying(CROP_ROTATION)
+        })
+        draft.keep(SALT)
+        expect(plays(draft)).toContain(SearchPlay.Site)
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).toHaveBeenCalledWith(
+            expect.objectContaining({ keptCardId: SALT, play: SearchPlay.Site })
+        )
+        expect(engineRefusal(session, sent)).toBeUndefined()
+    })
+
+    it('the River picked on the map keeps its site play, judged with the reason it is refused', async () => {
+        const { draft, sent } = await atThePlains(PLAINS_FULL)
+        expect(draft.otherSites).toEqual(['c2'])
+        draft.setToSite('c2')
+        expect(plays(draft)).toContain(SearchPlay.Site)
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).not.toHaveBeenCalled()
+        expect(draft.placementReason).toMatch(/c2 is at its capacity of 2/)
     })
 })
 
@@ -957,7 +1119,7 @@ describe("R-7.3.3 — Bewitch's yes is offered once the play's own secret counts
     })
 })
 
-describe('R-5.1.4.I — Salt the Earth\'s "Play to:" sites, as the engine judges a play to another site', () => {
+describe('R-5.1.4.I — Salt the Earth\'s "To which site" rows, as the engine judges a play to another site', () => {
     const SALT = 'denizen.discord.salt-the-earth'
     const FULL = ['denizen.beast.wolves', 'denizen.hearth.storyteller', 'denizen.beast.rangers']
     const LOCKED = 'denizen.beast.vow-of-union'
@@ -984,6 +1146,51 @@ describe('R-5.1.4.I — Salt the Earth\'s "Play to:" sites, as the engine judges
 
     it('before revision 16, the site with a locked card is offered', async () => {
         expect((await salting(OathRevision.EngineFixes11, [LOCKED])).otherSites).toEqual(['c2'])
+    })
+})
+
+describe("R-7.2.2 — Salt the Earth's site play at a site holding a relic Ancient Bloodline locks", () => {
+    const SALT = 'denizen.discord.salt-the-earth'
+    const BLOODLINE = 'denizen.nomad.ancient-bloodline'
+
+    /** Rhys rules the seat's site, c1, which holds one facedown relic; with `bloodline` Rhys holds Ancient Bloodline. */
+    async function salting(oathRevision: OathRevision, bloodline = true) {
+        const { draft } = await searchingWith([SALT, TUTOR], [], {
+            oathRevision,
+            players: [
+                testPlayer({
+                    playerId: ME,
+                    color: Color.Red,
+                    siteId: 'c1',
+                    favor: 2,
+                    handIds: [SALT, TUTOR]
+                }),
+                testPlayer({
+                    playerId: 'rhys',
+                    color: Color.Blue,
+                    siteId: 'c2',
+                    favor: 2,
+                    advisers: bloodline ? [{ cardId: BLOODLINE, faceUp: true }] : []
+                })
+            ],
+            denizensBySite: { c1: [], c2: [], p1: [], h1: [] },
+            warbandsBySite: { c1: { rhys: 2 } },
+            relicsBySite: { c1: [{ slotId: 'c1-r1' }] },
+            vault: testVaultWithRelics({ 'c1-r1': 'relic.brass-horse' })
+        })
+        draft.keep(SALT)
+        return draft.placements.map((option) => option.play)
+    }
+
+    it('from revision 31, the site play is not offered', async () => {
+        const plays = await salting(OathRevision.EngineFixes26)
+        expect(plays).toContain(SearchPlay.Adviser)
+        expect(plays).not.toContain(SearchPlay.Site)
+    })
+
+    it('at revision 30, and without Ancient Bloodline, it is offered', async () => {
+        expect(await salting(OathRevision.Chronicle)).toContain(SearchPlay.Site)
+        expect(await salting(OathRevision.EngineFixes26, false)).toContain(SearchPlay.Site)
     })
 })
 
@@ -1062,5 +1269,253 @@ describe("Land Warden's Q&A — the kept card sent to another site leaves the se
         expect(draft.second?.cardId).toBe(INN)
         draft.setToSite('c2')
         expect(sitePlacements(draft)).toEqual([])
+    })
+})
+
+describe('Land Warden — the second card to your site is judged on the site the kept card leaves', () => {
+    const SALT = 'denizen.discord.salt-the-earth'
+    const BOILING_LAKE = 'denizen.discord.boiling-lake'
+    const INN = 'denizen.hearth.wayside-inn'
+
+    /** The seat holds Land Warden at c1, which is empty, and has drawn `kept`, `second` and a card to discard. */
+    async function warden(oathRevision: OathRevision, kept: string, second: string) {
+        const { session, draft, sent } = await searchingWith([kept, second, TUTOR], [], {
+            oathRevision,
+            denizensBySite: { c1: [], c2: [], p1: [], h1: [] },
+            ...WARDEN_CARRIED
+        })
+        draft.keep(kept)
+        draft.setSecondPlay(
+            draft.secondPlays.find(
+                (option) => option.cardId === second && option.play === SearchPlay.Site
+            )?.key
+        )
+        expect(draft.second?.cardId).toBe(second)
+        return { session, draft, sent }
+    }
+    const placed = (draft: Awaited<ReturnType<typeof warden>>['draft']) =>
+        draft.placements.map(({ play, faceUp }) => ({ play, faceUp }))
+
+    const cases: [string, string, string][] = [
+        ['Salt the Earth kept to the site and a second card to it', SALT, INN],
+        ['a locked card kept to the site and Salt the Earth second to it', BOILING_LAKE, SALT]
+    ]
+    for (const [scene, kept, second] of cases) {
+        it(`from revision 29, ${scene}: the kept card's site play is not offered with it`, async () => {
+            const { session, draft, sent } = await warden(OathRevision.EngineFixes25, kept, second)
+            expect(placed(draft)).toEqual([
+                { play: SearchPlay.Adviser, faceUp: false },
+                { play: SearchPlay.Discard, faceUp: undefined }
+            ])
+            await draft.choosePlacement({ play: SearchPlay.Adviser, faceUp: false })
+            expect(sent).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    keptCardId: kept,
+                    play: SearchPlay.Adviser,
+                    faceUp: false,
+                    secondPlay: { cardId: second, play: SearchPlay.Site }
+                })
+            )
+            expect(engineRefusal(session, sent)).toBeUndefined()
+        })
+
+        it(`before revision 29, ${scene}: the kept card's site play is offered, as the engine then accepted`, async () => {
+            const { draft } = await warden(OathRevision.EngineFixes24, kept, second)
+            expect(placed(draft)).toContainEqual({ play: SearchPlay.Site, faceUp: undefined })
+        })
+    }
+})
+
+describe('Land Warden — Salt the Earth second to your site ignores its capacity', () => {
+    const SALT = 'denizen.discord.salt-the-earth'
+    const INN = 'denizen.hearth.wayside-inn'
+    const TWO_OF_THREE = ['denizen.beast.wolves', 'denizen.beast.rangers']
+
+    /** The seat holds Land Warden at c1, one space short of full, and has drawn the Inn, Salt the Earth and a card to discard. */
+    async function innThenSalt(oathRevision: OathRevision) {
+        const { session, draft, sent } = await searchingWith([INN, SALT, TUTOR], [], {
+            oathRevision,
+            denizensBySite: { c1: TWO_OF_THREE, c2: [], p1: [], h1: [] },
+            ...WARDEN_CARRIED
+        })
+        expect(TWO_OF_THREE).toHaveLength(FIXTURE_SITE_CAPACITY - 1)
+        draft.keep(INN)
+        draft.setSecondPlay(
+            draft.secondPlays.find(
+                (option) => option.cardId === SALT && option.play === SearchPlay.Site
+            )?.key
+        )
+        expect(draft.second).toMatchObject({ cardId: SALT, mode: 'to your site' })
+        return { session, draft, sent }
+    }
+    const sitePlay = { play: SearchPlay.Site, faceUp: undefined }
+    const placed = (draft: Awaited<ReturnType<typeof innThenSalt>>['draft']) =>
+        draft.placements.map(({ play, faceUp }) => ({ play, faceUp }))
+
+    it('from revision 31, the Inn kept to the last space: its site play is offered with Salt the Earth second, and the engine accepts it', async () => {
+        const { session, draft, sent } = await innThenSalt(OathRevision.EngineFixes26)
+        expect(placed(draft)).toContainEqual(sitePlay)
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                keptCardId: INN,
+                play: SearchPlay.Site,
+                secondPlay: { cardId: SALT, play: SearchPlay.Site }
+            })
+        )
+        expect(engineRefusal(session, sent)).toBeUndefined()
+    })
+
+    it.each([OathRevision.EngineFixes25, OathRevision.Chronicle])(
+        'at revision %i, the site play is not offered with Salt the Earth second, as the engine refuses it',
+        async (oathRevision) => {
+            const { draft } = await innThenSalt(oathRevision)
+            expect(placed(draft)).not.toContainEqual(sitePlay)
+            expect(placed(draft)).toContainEqual({ play: SearchPlay.Adviser, faceUp: false })
+        }
+    )
+})
+
+describe("Land Warden — the kept card's When Played discard at your site leaves its space to the second card", () => {
+    const DAZZLE = 'denizen.arcane.dazzle'
+    const RANGERS = 'denizen.beast.rangers'
+    const LONGBOWS_AND_WOLVES = ['denizen.order.longbows', 'denizen.beast.wolves']
+    const sitePlay = { play: SearchPlay.Site, faceUp: undefined }
+
+    /** The seat holds Land Warden at c1, one space short of full with Longbows there, and has drawn Dazzle, Rangers and a card to discard. */
+    async function dazzleThenRangers(oathRevision: OathRevision) {
+        const { session, draft, sent } = await searchingWith([DAZZLE, RANGERS, TUTOR], [], {
+            oathRevision,
+            denizensBySite: { c1: LONGBOWS_AND_WOLVES, c2: [], p1: [], h1: [] },
+            ...WARDEN_CARRIED
+        })
+        expect(LONGBOWS_AND_WOLVES).toHaveLength(FIXTURE_SITE_CAPACITY - 1)
+        draft.keep(DAZZLE)
+        draft.setSecondPlay(
+            draft.secondPlays.find(
+                (option) => option.cardId === RANGERS && option.play === SearchPlay.Site
+            )?.key
+        )
+        expect(draft.second).toMatchObject({ cardId: RANGERS, mode: 'to your site' })
+        return { session, draft, sent }
+    }
+    const placed = (draft: Awaited<ReturnType<typeof dazzleThenRangers>>['draft']) =>
+        draft.placements.map(({ play, faceUp }) => ({ play, faceUp }))
+
+    it('from revision 31, Dazzle kept to the last space discards Longbows: its site play is offered with Rangers second, and the engine accepts it', async () => {
+        const { session, draft, sent } = await dazzleThenRangers(OathRevision.EngineFixes26)
+        expect(placed(draft)).toContainEqual(sitePlay)
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                keptCardId: DAZZLE,
+                play: SearchPlay.Site,
+                secondPlay: { cardId: RANGERS, play: SearchPlay.Site }
+            })
+        )
+        expect(engineRefusal(session, sent)).toBeUndefined()
+    })
+
+    it('at revision 30, the site play is not offered with Rangers second, as the engine refuses it', async () => {
+        const { draft } = await dazzleThenRangers(OathRevision.Chronicle)
+        expect(placed(draft)).not.toContainEqual(sitePlay)
+        expect(placed(draft)).toContainEqual({ play: SearchPlay.Adviser, faceUp: false })
+    })
+})
+
+describe('Land Warden — a card the kept card discards first at your site leaves room for the second card', () => {
+    const INN = 'denizen.hearth.wayside-inn'
+    const LONGBOWS = 'denizen.order.longbows'
+    const WOLVES = 'denizen.beast.wolves'
+    const TWO_OF_THREE = [WOLVES, 'denizen.beast.rangers']
+    const FULL_SITE = [...TWO_OF_THREE, 'denizen.hearth.storyteller']
+    const sitePlay = { play: SearchPlay.Site, faceUp: undefined }
+
+    /**
+     * The seat holds Land Warden at c1 and has drawn the Inn, Longbows and a card to discard. The Inn is kept,
+     * sent to `toSiteId` when given, the Wolves at c1 are picked to discard first, then Longbows to your site.
+     */
+    async function innDiscardingWolves(
+        oathRevision: OathRevision,
+        c1: string[],
+        table: Record<string, unknown>,
+        toSiteId?: string
+    ) {
+        const { session, draft, sent } = await searchingWith([INN, LONGBOWS, TUTOR], [], {
+            oathRevision,
+            denizensBySite: { c1, c2: [], p1: [], h1: [] },
+            ...WARDEN_CARRIED,
+            ...table
+        })
+        draft.keep(INN)
+        if (toSiteId) draft.setToSite(toSiteId)
+        draft.setDiscardFirst(WOLVES)
+        expect(draft.discardFirst).toBe(WOLVES)
+        draft.setSecondPlay(
+            draft.secondPlays.find(
+                (option) => option.cardId === LONGBOWS && option.play === SearchPlay.Site
+            )?.key
+        )
+        expect(draft.second).toMatchObject({ cardId: LONGBOWS, mode: 'to your site' })
+        return { session, draft, sent }
+    }
+    const placed = (draft: Awaited<ReturnType<typeof innDiscardingWolves>>['draft']) =>
+        draft.placements.map(({ play, faceUp }) => ({ play, faceUp }))
+
+    const scenes: [string, Record<string, unknown>][] = [
+        ["the People's Favor at your site", { banners: FAVOR_HELD }],
+        ['the Great Slum', { siteCards: SLUM_SITES }]
+    ]
+    for (const [scene, table] of scenes) {
+        it(`from revision 31, ${scene}: the Inn's site play is offered with Longbows second, and the engine accepts it`, async () => {
+            const { session, draft, sent } = await innDiscardingWolves(
+                OathRevision.EngineFixes26,
+                TWO_OF_THREE,
+                table
+            )
+            expect(TWO_OF_THREE).toHaveLength(FIXTURE_SITE_CAPACITY - 1)
+            expect(placed(draft)).toContainEqual(sitePlay)
+            await draft.choosePlacement({ play: SearchPlay.Site })
+            expect(sent).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    keptCardId: INN,
+                    play: SearchPlay.Site,
+                    discardFirstCardId: WOLVES,
+                    secondPlay: { cardId: LONGBOWS, play: SearchPlay.Site }
+                })
+            )
+            expect(engineRefusal(session, sent)).toBeUndefined()
+        })
+
+        it.each([OathRevision.EngineFixes25, OathRevision.Chronicle])(
+            `at revision %i, ${scene}: the Inn's site play is not offered with Longbows second, as the engine refuses it`,
+            async (oathRevision) => {
+                const { draft } = await innDiscardingWolves(oathRevision, TWO_OF_THREE, table)
+                expect(placed(draft)).not.toContainEqual(sitePlay)
+                expect(placed(draft)).toContainEqual({ play: SearchPlay.Adviser, faceUp: false })
+            }
+        )
+    }
+
+    it("from revision 29, the People's Favor: the Inn discards the Wolves at your full site and goes to the River; Longbows second to your site is offered and accepted", async () => {
+        const { session, draft, sent } = await innDiscardingWolves(
+            OathRevision.EngineFixes25,
+            FULL_SITE,
+            { banners: FAVOR_HELD },
+            'c2'
+        )
+        expect(FULL_SITE).toHaveLength(FIXTURE_SITE_CAPACITY)
+        expect(placed(draft)).toContainEqual(sitePlay)
+        await draft.choosePlacement({ play: SearchPlay.Site })
+        expect(sent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                keptCardId: INN,
+                play: SearchPlay.Site,
+                toSiteId: 'c2',
+                discardFirstCardId: WOLVES,
+                secondPlay: { cardId: LONGBOWS, play: SearchPlay.Site }
+            })
+        )
+        expect(engineRefusal(session, sent)).toBeUndefined()
     })
 })

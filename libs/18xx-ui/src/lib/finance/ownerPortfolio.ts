@@ -4,7 +4,7 @@ import {
     certificatesOwnedBy,
     getCompany,
     portfolioWealth,
-    sameOwner,
+    presides,
     sharesOwned,
     type Owner,
     type StockState,
@@ -21,7 +21,10 @@ export function ownerPortfolio(
     rules: ValuationRules,
     charters: CompanyCharters,
     /** Lists minor companies among the owner's privates rather than their share holdings. */
-    minorsAsPrivates = false
+    minorsAsPrivates = false,
+    /** What a private pays a round, where the title's state decides it. */
+    income: (privateId: string) => number = (privateId) =>
+        currentPrivateRevenue(state, charters, privateId)
 ) {
     const cash = cashOwnedBy(state, owner)
     assert(typeof cash === 'number', 'Portfolio requires finite cash')
@@ -49,7 +52,7 @@ export function ownerPortfolio(
             return {
                 company,
                 percentage: (shares / total) * 100,
-                president: !!company.president && sameOwner(company.president, owner)
+                president: presides(state, company.id, owner)
             }
         })
     const privates = certificates
@@ -58,7 +61,7 @@ export function ownerPortfolio(
             const company = getCompany(state, item.companyId)
             return {
                 company,
-                income: currentPrivateRevenue(state, charters, company.id),
+                income: income(company.id),
                 value: certificateValue(state, item, rules)
             }
         })

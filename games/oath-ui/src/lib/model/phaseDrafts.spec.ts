@@ -21,7 +21,7 @@ import {
     type LegalPowerUse
 } from '@tabletop/oath'
 import { openTurn, required, testBanners, testPlayer, testState } from '@tabletop/oath/testing'
-import { emptyPicks, warbandGrids, withGridCount } from './powerChoices.js'
+import { NO_OPTION, emptyPicks, warbandGrids, withGridCount } from './powerChoices.js'
 import {
     bargainRows,
     shownBargainPicks,
@@ -50,6 +50,8 @@ const INN = 'denizen.hearth.wayside-inn'
 const OAK = 'denizen.beast.the-old-oak'
 const SNARE = 'denizen.arcane.spirit-snare'
 const WITCHS_BARGAIN = 'denizen.arcane.witchs-bargain'
+
+const RING_OF_DEVOTION = 'relic.ring-of-devotion'
 
 function table(
     machineState: MachineState,
@@ -571,6 +573,25 @@ describe('the Action powers draft (docs/user-interactions.md)', () => {
         expect((await using()).hasManualSelection()).toBe(false)
     })
 
+    it('a count, a list or an option taken back to nothing is no pick: Undo landing there leaves the picks at once', async () => {
+        const nothing = [
+            { ...emptyPicks(), count: { 0: 0 } },
+            { ...emptyPicks(), several: { 0: [] } },
+            { ...emptyPicks(), option: { 0: NO_OPTION } },
+            { ...emptyPicks(), bargain: { 0: [] } }
+        ]
+        for (const left of nothing) {
+            const draft = await using()
+            draft.setPicks(INN_USE, ticked)
+            draft.setPicks(INN_USE, left)
+            draft.setPicks(INN_USE, { ...emptyPicks(), count: { 0: 2 } })
+            // Back past the last pick: nothing stands picked, so the picks are left.
+            expect(draft.back()).toBe(true)
+            expect(draft.hasManualSelection()).toBe(false)
+            expect(draft.back()).toBe(false)
+        }
+    })
+
     it('a power not in reach is never given picks', async () => {
         const draft = await using()
         draft.setPicks({ cardId: OBEDIENCE, powerIndex: 0 }, ticked)
@@ -693,19 +714,19 @@ describe("Witch's Bargain's picks (revision 7)", () => {
             )
         ).toEqual(['rhys', 'ann'])
         expect(draft.picksComplete(power)).toBe(false)
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
         expect(draft.picksComplete(power)).toBe(false)
         // The 3rd secret is the cost's; the 5th favor makes no pair.
         expect(bargainRows(session.gameState, ME, picked(), 'rhys')).toEqual({
             secrets: { held: 3, addable: 2, picked: 0 },
             pairs: { held: 5, addable: 2, picked: 0 }
         })
-        // Ann's one favor buys none of your secrets; her last secret can be taken.
+        // Ann's one favor buys none of your secrets; their last secret can be taken.
         expect(bargainRows(session.gameState, ME, picked(), 'ann')).toEqual({
             secrets: { held: 3, addable: 0, picked: 0 },
             pairs: { held: 5, addable: 1, picked: 0 }
         })
-        pick(withBargainCount(legal, picked(), 'rhys', 'secretsGiven', 1))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'secretsGiven', 1))
         expect(draft.picksComplete(power)).toBe(true)
         expect(draft.choicesFor(power)).toEqual([
             { kind: PowerChoiceKind.Bargain, playerId: 'rhys', secretsGiven: 1, pairsGiven: 0 }
@@ -715,15 +736,15 @@ describe("Witch's Bargain's picks (revision 7)", () => {
 
     it('several players: each gets their own rows, held to what the others leave, and is sent in the order picked', async () => {
         const { session, draft, power, pick, picked, legal } = await bargaining()
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
-        pick(withBargainCount(legal, picked(), 'rhys', 'secretsGiven', 2))
-        pick(withBargainCount(legal, picked(), 'rhys', 'pairsGiven', 1))
-        pick(withBargainPlayer(legal, picked(), 'ann'))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'secretsGiven', 2))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'pairsGiven', 1))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'ann'))
         expect(bargainRows(session.gameState, ME, picked(), 'ann')).toEqual({
             secrets: { held: 3, addable: 0, picked: 0 },
             pairs: { held: 5, addable: 1, picked: 0 }
         })
-        pick(withBargainCount(legal, picked(), 'ann', 'pairsGiven', 1))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'ann', 'pairsGiven', 1))
         expect(draft.choicesFor(power)).toEqual([
             { kind: PowerChoiceKind.Bargain, playerId: 'rhys', secretsGiven: 2, pairsGiven: 1 },
             { kind: PowerChoiceKind.Bargain, playerId: 'ann', secretsGiven: 0, pairsGiven: 1 }
@@ -743,14 +764,14 @@ describe("Witch's Bargain's picks (revision 7)", () => {
     })
 
     it('a tap on the piece at the count sets none; a tap on a picked chip drops the player and their counts', async () => {
-        const { draft, power, pick, picked, legal } = await bargaining()
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
-        pick(withBargainCount(legal, picked(), 'rhys', 'secretsGiven', 2))
-        pick(withBargainCount(legal, picked(), 'rhys', 'secretsGiven', 2))
+        const { session, draft, power, pick, picked, legal } = await bargaining()
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'secretsGiven', 2))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'secretsGiven', 2))
         expect(picked()).toEqual([{ playerId: 'rhys', secretsGiven: 0, pairsGiven: 0 }])
         expect(draft.picksComplete(power)).toBe(false)
-        pick(withBargainCount(legal, picked(), 'rhys', 'pairsGiven', 1))
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'pairsGiven', 1))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
         expect(picked()).toEqual([])
         expect(draft.choicesFor(power)).toEqual([])
     })
@@ -762,35 +783,40 @@ describe("Witch's Bargain's picks (revision 7)", () => {
         ).toEqual(['rhys'])
         // Shown picked, never stored: nothing for Undo to take back.
         expect(picked()).toEqual([])
-        expect(shownBargainPicks(legal, picked())).toEqual([
+        expect(shownBargainPicks(session.gameState, ME, legal, picked())).toEqual([
             { playerId: 'rhys', secretsGiven: 0, pairsGiven: 0 }
         ])
         expect(
-            bargainRows(session.gameState, ME, shownBargainPicks(legal, picked()), 'rhys')
+            bargainRows(
+                session.gameState,
+                ME,
+                shownBargainPicks(session.gameState, ME, legal, picked()),
+                'rhys'
+            )
         ).toEqual({
             secrets: { held: 3, addable: 2, picked: 0 },
             pairs: { held: 5, addable: 2, picked: 0 }
         })
         expect(draft.picksComplete(power)).toBe(false)
         // The pick is required: a tap on the one chip changes nothing.
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
         expect(picked()).toEqual([])
-        expect(shownBargainPicks(legal, picked())).toEqual([
+        expect(shownBargainPicks(session.gameState, ME, legal, picked())).toEqual([
             { playerId: 'rhys', secretsGiven: 0, pairsGiven: 0 }
         ])
         expect(draft.picksComplete(power)).toBe(false)
-        pick(withBargainCount(legal, picked(), 'rhys', 'pairsGiven', 1))
+        pick(withBargainCount(session.gameState, ME, legal, picked(), 'rhys', 'pairsGiven', 1))
         expect(picked()).toEqual([{ playerId: 'rhys', secretsGiven: 0, pairsGiven: 1 }])
         expect(draft.picksComplete(power)).toBe(true)
         expect(draft.choicesFor(power)).toEqual([
             { kind: PowerChoiceKind.Bargain, playerId: 'rhys', secretsGiven: 0, pairsGiven: 1 }
         ])
-        pick(withBargainPlayer(legal, picked(), 'rhys'))
+        pick(withBargainPlayer(session.gameState, ME, legal, picked(), 'rhys'))
         expect(picked()).toEqual([{ playerId: 'rhys', secretsGiven: 0, pairsGiven: 1 }])
         // Undo takes back the pair; Rhys stays shown picked.
         expect(draft.back()).toBe(true)
         expect(picked()).toEqual([])
-        expect(shownBargainPicks(legal, picked())).toEqual([
+        expect(shownBargainPicks(session.gameState, ME, legal, picked())).toEqual([
             { playerId: 'rhys', secretsGiven: 0, pairsGiven: 0 }
         ])
         expect(draft.picksComplete(power)).toBe(false)
@@ -1352,7 +1378,7 @@ describe('the Citizenship offer draft (docs/user-interactions.md)', () => {
         expect(offer.reliquarySlotId).toBeUndefined()
     })
 
-    it('R-6.6.1 — an Exile offering himself gets no terms: the offer is the relic alone', async () => {
+    it('R-6.6.1 — an Exile offering themself gets no terms: the offer is the relic alone', async () => {
         const state = table(MachineState.ActPhase, { relicIds: ['relic.grand-scepter'] })
         state.reliquary = state.reliquary.map((slot, index) => ({
             ...slot,
@@ -1383,11 +1409,14 @@ describe('the Citizenship answer draft (docs/user-interactions.md)', () => {
     const BOARD = { kind: 'board', playerId: ME } as const
     const SITE = { kind: 'site', siteId: 'c1' } as const
 
-    const answering = async (imperial: number) => {
+    const answering = async (imperial: number, ring = false) => {
         const state = table(
             MachineState.ActPhase,
-            { warbandsOnBoard: { [ME]: 3 } },
-            { warbandsBySite: { c1: { [ME]: 2 } } }
+            { warbandsOnBoard: { [ME]: 3 }, ...(ring ? { relicIds: [RING_OF_DEVOTION] } : {}) },
+            {
+                warbandsBySite: { c1: { [ME]: 2 } },
+                ...(ring ? { oathRevision: OathRevision.EngineFixes27 } : {})
+            }
         )
         state.getPlayerState(CHANCELLOR).warbandsInPersonalBank = { [IMPERIAL_WARBANDS]: imperial }
         state.pendingConsent = {
@@ -1483,6 +1512,38 @@ describe('the Citizenship answer draft (docs/user-interactions.md)', () => {
         expect(pieceKeys(session).every((key) => consent.isImperial(key))).toBe(true)
         expect(consent.replacementChoice).toBeUndefined()
         expect(consent.blockedBecause).toBeUndefined()
+    })
+
+    describe("Ring of Devotion's holder (revision 32): the 2 at the site are removed, so only the board's 3 are listed", () => {
+        it('short: the board alone competes, and the picks the panel sends are the ones the engine accepts', async () => {
+            const session = await answering(2, true)
+            const { consent } = session
+            expect(consent.conversion).toEqual({
+                kind: 'short',
+                warbands: 3,
+                imperial: 2,
+                removed: 1
+            })
+            expect(consent.places.map((place) => [place.at, place.pieces.length])).toEqual([
+                [BOARD, 3]
+            ])
+            expect(consent.picksComplete).toBe(true)
+            expect(consent.blockedBecause).toBeUndefined()
+            expect(consent.replacementChoice).toEqual([{ at: BOARD, owner: ME, count: 2 }])
+        })
+
+        it('enough for the board: nothing to pick, though the site holds 2 more', async () => {
+            const { consent } = await answering(3, true)
+            expect(consent.conversion).toEqual({
+                kind: 'enough',
+                warbands: 3,
+                imperial: 3,
+                removed: 0
+            })
+            expect(consent.canPick).toBe(false)
+            expect(consent.replacementChoice).toBeUndefined()
+            expect(consent.blockedBecause).toBeUndefined()
+        })
     })
 
     it('Accept sends the picks as warband groups by place, as the engine reads them; Refuse sends none', async () => {
@@ -1665,5 +1726,69 @@ describe('the seat card’s let-peek picker draft (docs/user-interactions.md)', 
         expect(draft.open).toBe(true)
         expect(draft.back()).toBe(true)
         expect(draft.open).toBe(false)
+    })
+})
+
+/** Vow of Kinship's Q&A — its bank's favor may be placed at the Wake, never forced (R-10.10-H1). */
+describe('the Wake draft with the Vow of Kinship', () => {
+    const VOW = 'denizen.nomad.vow-of-kinship'
+    const kin = async (value: number, mobSide = false, revision = OathRevision.EngineFixes14) => {
+        const session = await opened(
+            table(
+                MachineState.WakePhase,
+                { favor: 0, advisers: [{ cardId: VOW, faceUp: true }] },
+                {
+                    oathRevision: revision,
+                    banners: {
+                        ...testBanners(),
+                        [Banner.PeoplesFavor]: { value, mobSide, holderPlayerId: ME }
+                    }
+                }
+            )
+        )
+        const sent = vi.spyOn(session, 'resolveWake').mockResolvedValue()
+        return { session, wake: session.wake, sent }
+    }
+
+    it('at 1 with an empty board, the step offers Place or none, and the Wake is not skipped', async () => {
+        const { session, wake, sent } = await kin(1)
+        expect(session.wakeNeedsDecision).toBe(true)
+        expect(wake.question).toEqual({ kind: 'favorStep', index: 0, options: ['place', 'none'] })
+        expect(wake.readyToEnd).toBe(false)
+        expect(sent).not.toHaveBeenCalled()
+    })
+
+    it('"Place none" sends a Wake with no step; Place sends the place', async () => {
+        const none = await kin(1)
+        await none.wake.chooseKind('none')
+        expect(none.sent).toHaveBeenCalledExactlyOnceWith([], undefined)
+        const place = await kin(1)
+        await place.wake.chooseKind('place')
+        expect(place.sent).toHaveBeenCalledExactlyOnceWith([{ kind: 'place' }], undefined)
+    })
+
+    it('at 2 the step is forced: Place or Return, no none', async () => {
+        const { wake } = await kin(2)
+        expect(wake.question).toEqual({ kind: 'favorStep', index: 0, options: ['place', 'return'] })
+    })
+
+    it('on the Mob side at 2, a Return leaves the second step optional: none sends the Return alone', async () => {
+        const { wake, sent } = await kin(2, true)
+        expect(wake.stepCount).toBe(2)
+        await wake.chooseKind('return')
+        await wake.chooseBank(Suit.Discord)
+        expect(wake.question).toEqual({ kind: 'favorStep', index: 1, options: ['place', 'none'] })
+        await wake.chooseKind('none')
+        expect(sent).toHaveBeenCalledExactlyOnceWith(
+            [{ kind: 'return', toSuit: Suit.Discord }],
+            undefined
+        )
+    })
+
+    it('before revision 18 the place is forced and taken with no tap, as recorded', async () => {
+        const { wake } = await kin(1, false, OathRevision.EngineFixes13)
+        expect(wake.question).toBeUndefined()
+        expect(wake.answeredLines).toEqual(['Placed 1 favor.'])
+        expect(wake.readyToEnd).toBe(true)
     })
 })

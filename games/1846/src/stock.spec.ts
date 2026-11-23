@@ -5,9 +5,10 @@ import {
     getCompany,
     placeStockMarker,
     sharesOwned,
-    treasuryPoolId
+    treasuryPoolId,
+    presidentOf
 } from '@tabletop/18xx'
-import { finishTurn, setInstruction } from '@tabletop/18xx/testing'
+import { finishTurn, ownViewActions, setInstruction } from '@tabletop/18xx/testing'
 import { stockGame } from '../test/testSupport.js'
 import { StockRules1846, Market1846 } from './stock.js'
 
@@ -128,6 +129,37 @@ describe('1846 first stock round', () => {
         table.buy('IC', 'bank')
         expect(finiteCashOwnedBy(table.state, { kind: 'company', companyId: 'IC' })).toBe(treasury)
     })
+    it('extends a president’s block with a later sale that turn, at its price, moving once', () => {
+        const table = stockGame()
+        const president = table.state.activePlayerIds[0]
+        table.launch()
+        table.finishTurn()
+        table.finishTurn()
+        table.buy('IC')
+        table.finishTurn()
+        table.finishTurn()
+        table.buy('IC')
+        table.finishTurn()
+        table.finishTurn()
+        const before = finiteCashOwnedBy(table.state, { kind: 'player', playerId: president })
+        const sellOne = () => {
+            const sale = table
+                .choices()
+                .sells.find(
+                    (choice) => choice.sales[0].companyId === 'IC' && choice.sales[0].shares === 1
+                )
+            assertExists(sale, 'President can sell one more share')
+            expect(sale.expectedProceeds).toBe(40)
+            table.act('SellShares', sale)
+        }
+        sellOne()
+        expect(Market1846.companySpace(table.state.stockMarket, 'IC').price).toBe(30)
+        sellOne()
+        expect(Market1846.companySpace(table.state.stockMarket, 'IC').price).toBe(30)
+        expect(finiteCashOwnedBy(table.state, { kind: 'player', playerId: president })).toBe(
+            before + 80
+        )
+    })
     it('completes on consecutive passes, preserves priority after no trades, and rejects further actions', () => {
         const table = stockGame()
         const priority = table.state.turnManager.turnOrder[0]
@@ -166,7 +198,7 @@ describe('1846 first stock round', () => {
         for (let i = 0; i < 3; i++) {
             table.buy('IC')
             if (i < 2) {
-                expect(getCompany(table.state, 'IC').president).toEqual({
+                expect(presidentOf(table.state, 'IC')).toEqual({
                     kind: 'player',
                     playerId: first
                 })
@@ -174,11 +206,29 @@ describe('1846 first stock round', () => {
                 table.finishTurn()
             }
         }
-        expect(getCompany(table.state, 'IC').president).toEqual({
+        expect(presidentOf(table.state, 'IC')).toEqual({
             kind: 'player',
             playerId: second
         })
         expect(sharesOwned(table.state, 'IC', { kind: 'player', playerId: first })).toBe(2)
+    })
+    it('offers the acting player the same stock actions in their own view as in the full game', () => {
+        const table = stockGame()
+        const expectSameActions = () => {
+            const { own, full } = ownViewActions(
+                table.engine,
+                table.game,
+                table.state,
+                table.state.activePlayerIds[0]
+            )
+            expect(full).toContain('FinishStockTurn')
+            expect(own).toEqual(full)
+        }
+        expectSameActions()
+        table.launch()
+        expectSameActions()
+        table.buy('IC')
+        expectSameActions()
     })
     it('replays and reverses the stock round including automatic flotation and completion', () => {
         const table = stockGame()
@@ -240,7 +290,7 @@ describe('1846 first stock round', () => {
         assertExists(sale)
         expect(sale.expectedProceeds).toBe(80)
         table.act('SellShares', sale)
-        expect(getCompany(table.state, 'IC').president).toEqual({
+        expect(presidentOf(table.state, 'IC')).toEqual({
             kind: 'player',
             playerId: successor
         })

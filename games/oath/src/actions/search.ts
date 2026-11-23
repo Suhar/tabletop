@@ -11,6 +11,7 @@ import {
 import { HydratedOathGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { Banner, CardKind, Region } from '../model/oathEnums.js'
+import { regionName } from '../data/mapSlots.js'
 import {
     DARKEST_SECRET_WORLD_DECK_SUPPLY_COST,
     DISCARD_SEARCH_SUPPLY_COST,
@@ -20,11 +21,14 @@ import {
 import { sitePowerCategory } from '../data/sites.js'
 import { kindOf } from '../data/cardRegistry.js'
 import { topBackType } from '../model/vault.js'
+import { topOf } from '../model/pileOrder.js'
 import { drawDiscardPile, drawWorldDeck } from '../util/knowledge.js'
 import { payTolls, reasonTollsUnpaid } from '../util/tolls.js'
 import { modifierPayment, reasonCannotPayInAll, tollPayment } from '../util/actionPayment.js'
 import { defaultTolls } from '../util/tollDefaults.js'
 import {
+    beginModifiersInUse,
+    carryToSearchPlay,
     firstForbid,
     foldDrawCount,
     foldSupplyCost,
@@ -168,23 +172,9 @@ export class HydratedSearch extends HydratableAction<typeof Search> implements S
         }
 
         // R-7.4, R-5.1.4 — carried to the play, which clears them.
-        state.pendingSearchModifiers = active
-            .filter(
-                (m) =>
-                    m.hooks.after !== undefined ||
-                    m.hooks.discardTo !== undefined ||
-                    m.hooks.discardFirstAtSitePlay === true ||
-                    m.hooks.sitePlayGainsSecret === true ||
-                    m.hooks.playAnywhere !== undefined ||
-                    m.hooks.secondPlay === true ||
-                    m.hooks.revealsDraw === true
-            )
-            .map((m) => ({
-                cardId: m.power.cardId,
-                powerIndex: m.power.powerIndex,
-                choices: m.choices.length > 0 ? [...m.choices] : undefined
-            }))
-        if (state.pendingSearchModifiers.length === 0) state.pendingSearchModifiers = undefined
+        carryToSearchPlay(state, active)
+        // R-7.4.3 — every modifier the Search uses, the draw's and cost's too, cannot be discarded until it ends.
+        beginModifiersInUse(state, active)
 
         this.metadata = {
             draw,
@@ -222,7 +212,7 @@ export class HydratedSearch extends HydratableAction<typeof Search> implements S
             HydratedSearch.drawsFromBottom(state, this.playerId, this.modifiers),
             this.playerId
         )
-        const newTop = vault.discardPiles[region][0]
+        const newTop = topOf(vault.discardPiles[region])
         return {
             drawnCardIds,
             stoppedOnVision: false,
@@ -277,6 +267,7 @@ export class HydratedSearch extends HydratableAction<typeof Search> implements S
         return !resolved.reason && resolved.active.some((m) => m.hooks.drawsFromBottom)
     }
 
+    /** Errand Boy, Observatory — the first with an answer, which from revision 31 is the only one (R-7.4-H2). */
     static drawRegionFor(
         state: HydratedOathGameState,
         playerId: string,
@@ -374,7 +365,7 @@ export class HydratedSearch extends HydratableAction<typeof Search> implements S
         } else {
             const pile = HydratedSearch.drawRegion(state, playerId, modifiers)
             if (state.discardPileCounts[pile] === 0) {
-                return { cost, active, reason: `the ${pile} discard pile is empty` }
+                return { cost, active, reason: `the ${regionName(pile)} discard pile is empty` }
             }
         }
         // R-11.11-H1 — Mushrooms alone at the Marshes draws no card, which leaves the Search

@@ -1,3 +1,4 @@
+import { stateWith } from '../game/stateWith.js'
 import { companyShareCount } from '../company/companyCharters.js'
 import { isOperatingStep } from '../operating/operatingSteps.js'
 import { allPlayersPassed } from '../stock/stockRoundRules.js'
@@ -6,6 +7,7 @@ import { assert, assertExists } from '@tabletop/common'
 import {
     copyFinances,
     getCompany,
+    presidentOf,
     privateOwner,
     sameOwner,
     sharesOwned
@@ -13,7 +15,7 @@ import {
 import { exchangeCertificate } from '../finance/certificateExchange.js'
 import { grantOwnershipLimitExemption } from '../company/companyState.js'
 import { PresidencyChange, evaluatePresidency, applyPresidencyChange } from '../stock/presidency.js'
-import type { StockRules } from '../stock/stockRules.js'
+import { presidencyExchangeTerms, type StockRules } from '../stock/stockRules.js'
 import type { StockState } from '../stock/stockState.js'
 import { closePrivate } from './privateCompany.js'
 import type { PrivateRules, PrivateState } from './privateRules.js'
@@ -30,7 +32,11 @@ export const PrivateExchangeDetails = Type.Object(
         companyId: Type.String(),
         shares: Type.Integer({ minimum: 1 }),
         exemptOwnershipLimit: Type.Boolean(),
-        stockAction: Type.Union([Type.Literal('additional'), Type.Literal('none')]),
+        stockAction: Type.Union([
+            Type.Literal('additional'),
+            Type.Literal('none'),
+            Type.Literal('purchase')
+        ]),
         presidency: Type.Optional(PresidencyChange)
     },
     { additionalProperties: false }
@@ -70,6 +76,12 @@ export function evaluatePrivateExchange(
         (state.machineState !== 'StockRound' || state.activePlayerIds[0] !== request.playerId)
     )
         return { reason: 'Exchange during your own stock turn.' }
+    if (
+        terms.stockAction === 'purchase' &&
+        state.machineState === 'StockRound' &&
+        state.stockRound.turn.bought
+    )
+        return { reason: 'The turn’s purchase has been made.' }
     const certificate = state.certificates.find((item) => item.id === request.certificateId)
     if (!certificate || certificate.kind !== 'share' || sameOwner(certificate.owner, owner))
         return { reason: 'This share is unavailable.' }
@@ -83,11 +95,10 @@ export function evaluatePrivateExchange(
             stockRules.ownershipLimit(state, target.id, owner) * shareCount
     )
         return { reason: 'The exchange exceeds the ownership limit.' }
-    const projected: StockState = {
-        ...state,
+    const projected: StockState = stateWith(state, {
         ...copyFinances(state),
         ownershipLimitExemptions: structuredClone(state.ownershipLimitExemptions)
-    }
+    })
     const presidency = applyPrivateShareExchange(
         projected,
         company.id,
@@ -159,13 +170,13 @@ export function applyPrivateShareExchange(
     closePrivate(state, privateCompanyId)
     if (exemptOwnershipLimit)
         grantOwnershipLimitExemption(state, rules.charters, received.companyId, owner)
-    if (!getCompany(state, received.companyId).president) return undefined
+    if (!presidentOf(state, received.companyId)) return undefined
     const presidency = evaluatePresidency(
         state,
         received.companyId,
         rules.presidencyCandidates(state, received.companyId),
         undefined,
-        rules.presidencyExchangeLargestFirst
+        presidencyExchangeTerms(rules)
     )
     assert(!presidency.reason, presidency.reason ?? 'Invalid exchange presidency')
     if (presidency.change) applyPresidencyChange(state, presidency.change)

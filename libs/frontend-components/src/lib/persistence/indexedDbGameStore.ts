@@ -1,5 +1,5 @@
 import type { Game, GameAction, GameState, User } from '@tabletop/common'
-import { type GameStore } from '$lib/persistence/gameStore.js'
+import type { GameStore } from '$lib/persistence/gameStore.js'
 import { openDB, type IDBPDatabase } from 'idb'
 
 type GameActions = {
@@ -100,6 +100,11 @@ export class IndexedDbGameStore implements GameStore {
         const tx = db.transaction(IndexedDbGameStore.GAME_STORE_NAME, 'readonly')
         const [game] = await Promise.all([tx.store.get(gameId), tx.done])
         return game
+    }
+
+    async loadGameState(gameId: string): Promise<GameState | undefined> {
+        const db = await this.getDatabase()
+        return db.get(IndexedDbGameStore.STATE_STORE_NAME, gameId)
     }
 
     async deleteGame(gameId: string): Promise<void> {

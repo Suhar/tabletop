@@ -1,6 +1,7 @@
 <script lang="ts">
+    import { purchaseAssetId } from './purchaseAssets.js'
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
-    import { getCompany, isCompanyPurchaseOffer } from '@tabletop/18xx'
+    import { getCompany, isCompanyPurchaseOffer, placeReference } from '@tabletop/18xx'
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import { privateMarkerLabel } from '../maps/mapDrawing.js'
     import CompanyBuying from './CompanyBuying.svelte'
@@ -9,6 +10,7 @@
     import { placedTileLayout } from '../tiles/standardTileLayouts.js'
     import PrivateTrainBuying from '../trains/PrivateTrainBuying.svelte'
     import PrivateExchangeButton from '../privates/PrivateExchangeButton.svelte'
+    import PlaceText from '../places/PlaceText.svelte'
     let {
         session,
         trainColors,
@@ -53,8 +55,12 @@
         onDecline={() => session.decisions.respondToTrackConsent(false)}
     >
         <CompanyToken appearance={session.mapView.stations[request.companyId]} size={24} />
-        <strong>{session.companyName(request.companyId)}</strong>
-        <span>requests permission to lay track at {request.locationId}</span>
+        <strong>{session.actionCompanyName(request.companyId)}</strong>
+        <span
+            ><PlaceText
+                text={`requests permission to lay track at ${placeReference(request.locationId)}`}
+            /></span
+        >
         {#if definition}
             <Tile
                 face={definition.face}
@@ -111,11 +117,7 @@
                         >
                             <option value="">Choose asset</option>
                             {#each purchaseOptions as option, index (index)}<option value={index}
-                                    >{option.request.asset.kind === 'train'
-                                        ? option.request.asset.trainId
-                                        : option.request.asset.kind === 'private'
-                                          ? option.request.asset.privateCompanyId
-                                          : option.request.asset.companyId} · {session.ownerName(
+                                    >{purchaseAssetId(option.request.asset)} · {session.ownerName(
                                         option.request.seller
                                     )} · minimum {option.minimum}{option.maximum
                                         ? `, maximum ${option.maximum}`
@@ -161,9 +163,9 @@
                             <header class="private-track-prompt">
                                 <span
                                     >{privateTilePrompts[power.privateCompanyId] ??
-                                        `Place a tile using ${session.companyName(power.privateCompanyId)}`}</span
+                                        `Place a tile using ${session.actionCompanyName(power.privateCompanyId)}`}</span
                                 >
-                                {#if gameState.privateTrackLay}
+                                {#if gameState.privateTrackLay && !gameState.privateTrackLay.required}
                                     <span>or</span>
                                     <button
                                         class="action-button inline-action"
@@ -180,10 +182,10 @@
                             {#each session.privateActions.sharedTrackPowers as power, index (index)}
                                 <button
                                     onclick={() => session.privateActions.chooseTrackPower(power)}
-                                    >{session.companyName(power.privateCompanyId)}</button
+                                    >{session.actionCompanyName(power.privateCompanyId)}</button
                                 >
                             {/each}
-                            {#each session.privateActions.titlePowers as power (`${power.playerId}:${power.privateCompanyId}`)}
+                            {#each session.privateActions.titlePowers as power (`${power.playerId}:${power.privateCompanyId}:${power.label}`)}
                                 <button
                                     disabled={!session.decisions.canResolve}
                                     onclick={() => session.privateActions.chooseTitlePower(power)}
@@ -195,7 +197,7 @@
                 {/if}
                 {#if session.privateActions.selection === 'powers' && session.decisions.privateMarkerOptions.length}
                     <div class="private-track" aria-label="Private markers">
-                        {#each session.decisions.privateMarkerOptions as option (`${option.privateCompanyId}:${option.locationId}`)}
+                        {#each session.decisions.privateMarkerOptions as option (`${option.privateCompanyId}:${option.locationId}:${option.nodeId ?? ''}`)}
                             <button
                                 disabled={!session.decisions.canResolve}
                                 onclick={() => session.decisions.placePrivateMarker(option)}
@@ -203,7 +205,23 @@
                                     session.mapView,
                                     option.kind,
                                     option.locationId
-                                )} ({session.companyName(option.privateCompanyId)})</button
+                                )}{option.stopOrdinal
+                                    ? `, stop ${option.stopOrdinal.index} of ${option.stopOrdinal.count}`
+                                    : ''} ({session.actionCompanyName(
+                                    option.privateCompanyId
+                                )})</button
+                            >
+                        {/each}
+                    </div>
+                {/if}
+                {#if session.privateActions.selection === 'powers' && session.decisions.privateTokenOptions.length}
+                    <div class="private-track" aria-label="Private stations">
+                        {#each session.decisions.privateTokenOptions as option (`${option.privateCompanyId}:${option.position.locationId}:${option.position.nodeId}`)}
+                            <button
+                                disabled={!session.decisions.canResolve}
+                                onclick={() => session.decisions.placePrivateToken(option)}
+                                >Place the {session.actionCompanyName(option.privateCompanyId)} station
+                                for free</button
                             >
                         {/each}
                     </div>
@@ -214,7 +232,7 @@
                 {#if session.privateActions.selection === 'powers' && session.privates.exchangeOptions.length}
                     <div class="private-track">
                         {#each session.privates.exchangeOptions as option (`${option.playerId}:${option.privateCompanyId}:${option.certificateId}`)}
-                            <span>{session.companyName(option.privateCompanyId)}</span>
+                            <span>{session.actionCompanyName(option.privateCompanyId)}</span>
                             <PrivateExchangeButton {session} {option} />
                         {/each}
                     </div>
@@ -228,8 +246,9 @@
                         >Offer price <input
                             aria-label="Offer price"
                             type="number"
-                            min="1"
-                            step="1"
+                            min={session.decisions.purchasePriceRange?.minimum ?? 1}
+                            max={session.decisions.purchasePriceRange?.maximum}
+                            step={session.decisions.purchasePriceRange?.multipleOf ?? 1}
                             value={selection.request.price}
                             oninput={(event) =>
                                 session.decisions.setPurchasePrice(

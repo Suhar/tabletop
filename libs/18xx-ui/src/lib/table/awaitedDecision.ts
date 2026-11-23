@@ -1,11 +1,14 @@
 import {
     isCompanyPurchaseOffer,
+    placeReference,
     type EighteenXXState,
     type Owner,
     type PendingPurchaseOffer,
     type PhaseChangeState,
     type TrainRules
 } from '@tabletop/18xx'
+import { purchaseAssetName } from '../finance/purchaseAssets.js'
+import { counted } from '../presentation/count.js'
 import type { MoneyFormat } from '../presentation/money.js'
 import { pendingDiscard } from '../session/discardModule.svelte.js'
 
@@ -15,10 +18,18 @@ export type AwaitedDecision = {
     text: string
 }
 
+/** The names a title's waiting message uses. */
+export type DecisionNames = {
+    playerName(playerId: string): string
+    companyName(companyId: string): string
+}
+
 export type AwaitedDecisionNames = {
     companyName(companyId: string): string
     ownerName(owner: Owner): string
     trainName(trainId: string): string
+    /** Where a placed station stands, as its city's name. */
+    stationPlace(stationId: string): string
     money: MoneyFormat
 }
 
@@ -26,7 +37,7 @@ export type AwaitedDecisionState = PhaseChangeState &
     Pick<EighteenXXState, 'machineState' | 'trackConsent' | 'purchaseOffer'>
 
 export function trainCount(count: number): string {
-    return count === 1 ? '1 train' : `${count} trains`
+    return counted(count, 'train')
 }
 
 export function awaitedDecision(
@@ -39,7 +50,7 @@ export function awaitedDecision(
         return {
             title: 'Track permission',
             companyId,
-            text: `${names.companyName(companyId)} asks to lay track at ${locationId}${cost ? ` for ${names.money(cost)}` : ''}`
+            text: `${names.companyName(companyId)} asks to lay track at ${placeReference(locationId)}${cost ? ` for ${names.money(cost)}` : ''}`
         }
     }
     const offer = state.purchaseOffer
@@ -67,11 +78,11 @@ export function purchaseOfferText(
     const buyer = isCompanyPurchaseOffer(offer)
         ? names.companyName(offer.buyer.companyId)
         : names.ownerName(offer.buyer)
-    const asset =
-        offer.asset.kind === 'private'
-            ? names.companyName(offer.asset.privateCompanyId)
-            : offer.asset.kind === 'company'
-              ? names.companyName(offer.asset.companyId)
-              : `${names.ownerName(offer.seller)}’s ${names.trainName(offer.asset.trainId)} train`
+    const seller = names.ownerName(offer.seller)
+    const asset = purchaseAssetName(offer.asset, {
+        company: names.companyName,
+        station: (stationId) => `${seller}’s station at ${names.stationPlace(stationId)}`,
+        train: (trainId) => `${seller}’s ${names.trainName(trainId)} train`
+    })
     return `${buyer} offers ${names.money(offer.price)} for ${asset}`
 }

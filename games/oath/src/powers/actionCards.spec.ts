@@ -390,13 +390,13 @@ describe('Discord', () => {
         expect(rerolled.favorBank[Suit.Beast]).toBe(10 - Number(m[1]))
     })
 
-    it('Assassin — discards a faceup adviser of a player at your site; the cross-check binds card to player', () => {
+    it("Assassin — discards a faceup adviser of a player at your site; the card is one of that player's", () => {
         const s = board(['denizen.discord.assassin'])
         s.getPlayerState('other').setAdvisers([
             { cardId: 'denizen.beast.rangers', faceUp: true },
             { cardId: 'denizen.hearth.ballot-box', faceUp: false }
         ])
-        // A third player's faceup adviser is in the domain, so only the cross-check can refuse it.
+        // A third player's faceup adviser at the site is not among the picked player's.
         s.getPlayerState('away').siteId = 'c1'
         s.getPlayerState('away').setAdvisers([{ cardId: 'denizen.order.wrestlers', faceUp: true }])
 
@@ -411,7 +411,7 @@ describe('Discord', () => {
                 player('other'),
                 card('denizen.order.wrestlers')
             ]).apply(s)
-        ).toThrow(/denizen.order.wrestlers is not a faceup adviser of other/)
+        ).toThrow(/denizen.order.wrestlers is not among the options/)
         expect(s.tokensOn('denizen.discord.assassin').favor).toBe(0)
 
         actionPowerUse('ruler', 'denizen.discord.assassin', [
@@ -585,9 +585,11 @@ describe('Order', () => {
 })
 
 describe('The doorway with the room furnished', () => {
-    it('a card outside the playtest deck still refuses, unimplemented, and pays nothing', () => {
+    it('a power with no effect still refuses, last, and pays nothing', () => {
         const s = board([UNBUILT])
-        expect(() => actionPowerUse('ruler', UNBUILT).apply(s)).toThrow(/not implemented yet/)
+        expect(() => actionPowerUse('ruler', UNBUILT).apply(s)).toThrow(
+            /power 0 cannot be used as an "Action:" power/
+        )
         expect(s.tokensOn(UNBUILT).favor).toBe(0)
         expect(s.getPlayerState('ruler')).toMatchObject({ favor: 3, secrets: 2 })
     })

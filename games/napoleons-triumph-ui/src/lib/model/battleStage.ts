@@ -15,6 +15,7 @@ import {
     currentAttack,
     isNamedDefender,
     mayDefendAgainst,
+    eligibleReserveCommanders,
     eligibleReserveDefenders,
     finalResultWith,
     forcedDefendingCommanders,
@@ -25,24 +26,22 @@ import {
     nextDecision,
     occupyAfterRetreat,
     resolveAttackOrders,
+    roadAttackOrders,
     samePosition,
     validateCounterAttackers,
     whyIllegal,
     type Attack,
     type CommandKind,
+    type DeclareDefense,
     type HydratedNapoleonsTriumphGameState,
     type EndedAttack,
     type MoveOrder,
     type ThreatOrder,
     type ProjectedUnit,
-    type ResultTerm
+    type ResultTerm,
+    type RoadHalt
 } from '@tabletop/napoleons-triumph'
-import {
-    attackCommand,
-    attackerGroups,
-    rideInOrders,
-    type AttackerGroup
-} from './attackCommands.js'
+import { attackCommand, attackerGroups, type AttackerGroup } from './attackCommands.js'
 import {
     AttackWidth,
     StageKind,
@@ -74,7 +73,8 @@ import { RideChoice } from './moveCommands.js'
 import { movableCommander, retreatPlan, strengthOf, type RetreatPlan } from './retreatPlan.js'
 import type { StagedSelection } from './stagedSelection.js'
 import { copyOf } from './stateCopy.js'
-import { oddStepTakers } from './battleWaiting.js'
+import type { Identified } from './gameOrder.js'
+import { oddStepTakers, onlyRetreatIsLeft } from './battleWaiting.js'
 
 export type VisibleAttack = Omit<Attack, 'defensePlan' | 'attackPlan'> & {
     attackPlan?: { order?: ThreatOrder }
@@ -104,7 +104,10 @@ export interface DefenceStage extends Picking {
     defenders: string[]
     commanders: DefendingCommander[]
     problem?: string
+    withAll?: DefenceDeclaration
 }
+
+export type DefenceDeclaration = Required<Pick<DeclareDefense, 'unitIds' | 'commanderIds'>>
 
 export enum CommanderStatus {
     NoUnitPicked = 'NoUnitPicked',
@@ -150,6 +153,7 @@ interface AttackerPicking extends Picking {
     commandOptions: CommandKind[]
     command?: CommandKind
     orders?: MoveOrder[]
+    roadHalt?: RoadHalt
 }
 
 export interface FeintStage extends AttackerPicking {
@@ -179,7 +183,10 @@ export interface OccupationStage extends AttackerPicking {
     kind: StageKind.Occupation
     mayMoveIn: boolean
     byRoad: boolean
+    /** Riding in under the command chosen. */
     roadOrders?: MoveOrder[]
+    /** The commands the units named could ride in by, whichever is chosen. */
+    roadCommands: CommandKind[]
     gunsMayStay: boolean
 }
 
@@ -238,8 +245,8 @@ export type BattleStage =
     | RegroupStage
     | AdvanceStage
 
-function idsOf(units: readonly ProjectedUnit[]): string[] {
-    return units.map((unit) => unit.id)
+function idsOf(pieces: readonly Identified[]): string[] {
+    return pieces.map((piece) => piece.id)
 }
 
 function rolesOf(
@@ -285,9 +292,31 @@ function defenceStage(
                 : whyIllegal(() =>
                       declareDefense(copyOf(state), defenders, namedCommanderIds({ commanders }))
                   ),
+        withAll: blockers ? undefined : defenceWithAll(state, candidates),
         pickableIds: blockers ? [] : candidateIds,
         roles: rolesOf(defenders, [], BattleRole.Defends)
     }
+}
+
+function defenceWithAll(
+    state: HydratedNapoleonsTriumphGameState,
+    candidates: readonly ProjectedUnit[]
+): DefenceDeclaration | undefined {
+    if (candidates.length < 2) {
+        return undefined
+    }
+    const eligibleCommanderIds = idsOf(eligibleReserveCommanders(state))
+    const declaration = {
+        unitIds: idsOf(candidates),
+        commanderIds: corpsCommanderIds(candidates).filter((commanderId) =>
+            eligibleCommanderIds.includes(commanderId)
+        )
+    }
+    return isLegal(() =>
+        declareDefense(copyOf(state), declaration.unitIds, declaration.commanderIds)
+    )
+        ? declaration
+        : undefined
 }
 
 function reserveCommanders(
@@ -435,6 +464,7 @@ function attackerPicking(
         commandOptions: command.options,
         command: command.chosen,
         orders: command.orders,
+        roadHalt: command.roadHalt,
         roles: rolesOf(attackers, leaders, BattleRole.Attacks)
     }
 }
@@ -549,16 +579,25 @@ function occupationStage(
     const legalWith = (candidate: MoveOrder[] | undefined, gunsStay: boolean) =>
         candidate !== undefined &&
         isLegal(() => occupyAfterRetreat(copyOf(state), candidate, gunsStay))
-    const roadOrders = byRoad
-        ? undefined
-        : rideInOrders(state, attack, picking.attackers, picking.command)
+    const rideable = byRoad
+        ? []
+        : roadAttackOrders(
+              state,
+              attack,
+              picking.attackers.map((id) => state.unit(id))
+          ).filter(
+              (order) => picking.commandOptions.includes(order.kind) && legalWith([order], false)
+          )
+    // Only the command on the switch rides in; a Detach Move cannot go by road, so it has no ride.
+    const roadOrder = rideable.find((order) => order.kind === picking.command)
     return {
         ...picking,
         kind: StageKind.Occupation,
         roles: rolesOf(picking.attackers, [], BattleRole.Attacks),
         mayMoveIn: legalWith(orders, false),
         byRoad,
-        roadOrders: legalWith(roadOrders, false) ? roadOrders : undefined,
+        roadOrders: roadOrder ? [roadOrder] : undefined,
+        roadCommands: rideable.map((order) => order.kind),
         gunsMayStay: legalWith(orders, true)
     }
 }
@@ -699,7 +738,8 @@ export function battleStageOf(
 ): BattleStage | undefined {
     switch (state.machineState) {
         case MachineState.DefenseResponse:
-            return defenceSelection.value(selections.defence, 'retreating')
+            return onlyRetreatIsLeft(state) ||
+                defenceSelection.value(selections.defence, 'retreating')
                 ? retreatStage(state, selections)
                 : defenceStage(state, selections)
         case MachineState.DefenseDeclaration:

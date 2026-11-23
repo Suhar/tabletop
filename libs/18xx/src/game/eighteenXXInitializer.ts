@@ -53,7 +53,8 @@ export class EighteenXXInitializer<
         Color.Yellow,
         Color.Purple,
         Color.Orange,
-        Color.Pink
+        Color.Pink,
+        Color.Brown
     ]
     readonly supportsStartingPositions = true
     constructor(protected readonly rules: EighteenXXInitializerRules<Schema, State>) {
@@ -126,6 +127,9 @@ export class EighteenXXInitializer<
                     ...('usedPrivatePowerIds' in this.rules.state.schema.properties
                         ? { usedPrivatePowerIds: [] }
                         : {}),
+                    ...('accessRights' in this.rules.state.schema.properties
+                        ? { accessRights: [] }
+                        : {}),
                     machineState: 'StockRound',
                     stockRound: createStockRound(parts.stockRoundNumber),
                     turnManager: new HydratedTurnManager({
@@ -133,7 +137,8 @@ export class EighteenXXInitializer<
                         turnOrder: seatOrder,
                         turnCounts: Object.fromEntries(
                             players.map((player) => [player.playerId, 0])
-                        )
+                        ),
+                        seriesKeeps: 'latest'
                     }),
                     ...parts.position,
                     ...parts.titleState

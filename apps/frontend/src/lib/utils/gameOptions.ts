@@ -6,14 +6,25 @@ import {
     type GameConfigurator
 } from '@tabletop/common'
 
+export type DisplayedGameOption = {
+    name: string
+    value: string
+    // A Yes/No option that is switched on, so its name alone describes it.
+    enabledFlag: boolean
+}
+
 export function configuredGameOptions(
     config: GameConfig,
-    definition: GameConfigOptions | GameConfigurator
-) {
+    definition: GameConfigOptions | GameConfigurator,
+    // Seats are assigned, so an option the seat decides shows that instead of its setting.
+    seated = false
+): DisplayedGameOption[] {
     const resolved = resolveConfiguration(config, definition)
     const definitions = resolved.definitions
     return Object.entries(resolved.config).map(([id, value]) => {
         const option = definitions.find((candidate) => candidate.id === id)
+        if (seated && option?.seatedValue)
+            return { name: option.name, value: option.seatedValue, enabledFlag: false }
         const selected =
             option?.type === ConfigOptionType.List
                 ? option.options.find((choice) => choice.value === value)?.name
@@ -28,7 +39,8 @@ export function configuredGameOptions(
                         : 'No'
                     : value === null
                       ? 'None'
-                      : String(value))
+                      : String(value)),
+            enabledFlag: value === true
         }
     })
 }
@@ -36,7 +48,7 @@ export function configuredGameOptions(
 export function gameCardOptions(
     config: GameConfig,
     definition: GameConfigOptions | GameConfigurator
-) {
+): DisplayedGameOption[] {
     const resolved = resolveConfiguration(config, definition)
     const definitions = resolved.definitions
     const visibleConfig = Object.fromEntries(

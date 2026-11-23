@@ -1,0 +1,42 @@
+import {
+    neutralStation,
+    placeableStations,
+    type NeutralStations,
+    type StationState
+} from '@tabletop/18xx'
+import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
+
+/**
+ * A company's station tokens not yet on the map, its own and the neutral ones it holds, and the
+ * same grouped by what placing each costs and whether it is neutral, as a narrow card shows them;
+ * a group's count matters only where some group has several.
+ */
+export function remainingStationTokens(
+    state: Pick<StationState, 'stations'>,
+    neutral: NeutralStations,
+    companyId: string,
+    placementCost: (stationId: string) => number
+) {
+    const remaining = placeableStations(state, neutral, companyId).map((station) => ({
+        ...station,
+        neutral: !!neutralStation(neutral, station.id)
+    }))
+    const groups: { cost: number; neutral: boolean; count: number }[] = []
+    for (const station of remaining) {
+        const cost = placementCost(station.id)
+        const group = groups.find(
+            (entry) => entry.cost === cost && entry.neutral === station.neutral
+        )
+        if (group) group.count++
+        else groups.push({ cost, neutral: station.neutral, count: 1 })
+    }
+    groups.sort((a, b) => Number(a.neutral) - Number(b.neutral) || a.cost - b.cost)
+    return { remaining, groups, counted: groups.some((group) => group.count > 1) }
+}
+
+/** A company's station tokens not yet on the map, priced as the session shows them. */
+export function sessionStationTokens(session: EighteenXXSessionView, companyId: string) {
+    return remainingStationTokens(session.gameState, session.mapView.map, companyId, (stationId) =>
+        session.stations.placementCost(stationId)
+    )
+}

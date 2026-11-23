@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type GameAction } from '@tabletop/common'
+    import type { GameAction } from '@tabletop/common'
     import { PlayerName } from '@tabletop/frontend-components'
     import { technologyAbility, technologyCard, technologyName } from '@tabletop/earendel'
     import { describeActionSegments } from '$lib/utils/describe.js'

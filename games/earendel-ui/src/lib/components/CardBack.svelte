@@ -10,7 +10,7 @@
 </script>
 
 <svg aria-hidden="true" class="block h-full w-full" viewBox="0 0 66 96">
-    <rect width="66" height="96" rx="8" style="fill: color-mix(in srgb, {tint} 55%, #000)" />
+    <rect width="66" height="96" rx="8" style="fill: color-mix(in srgb, {tint} 55%, #000)"></rect>
     <rect
         x="3"
         y="3"
@@ -21,7 +21,7 @@
         stroke={tint}
         stroke-opacity="0.35"
         stroke-width="0.75"
-    />
+    ></rect>
     <circle
         cx="33"
         cy="48"
@@ -31,7 +31,7 @@
         stroke-opacity="0.28"
         stroke-width="0.5"
         stroke-dasharray="1 2.5"
-    />
+    ></circle>
     {#each constellation.lines as [from, to], index (index)}
         <line
             x1={constellation.stars[from][0]}
@@ -41,15 +41,15 @@
             stroke="#fff"
             stroke-opacity="0.3"
             stroke-width="0.45"
-        />
+        ></line>
     {/each}
     {#each constellation.stars as [x, y, r], index (index)}
         {#if index !== constellation.lit}
-            <circle cx={x} cy={y} {r} fill="#fff" />
+            <circle cx={x} cy={y} {r} fill="#fff"></circle>
         {/if}
     {/each}
-    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 3} fill={tint} fill-opacity="0.22" />
-    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 1.4} fill={tint} fill-opacity="0.45" />
-    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 0.3} fill={tint} />
-    <circle cx={lit[0]} cy={lit[1]} r="0.5" fill="#fff" />
+    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 3} fill={tint} fill-opacity="0.22"></circle>
+    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 1.4} fill={tint} fill-opacity="0.45"></circle>
+    <circle cx={lit[0]} cy={lit[1]} r={lit[2] + 0.3} fill={tint}></circle>
+    <circle cx={lit[0]} cy={lit[1]} r="0.5" fill="#fff"></circle>
 </svg>

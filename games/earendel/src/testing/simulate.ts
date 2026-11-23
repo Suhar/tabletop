@@ -56,7 +56,7 @@ export type SetupOverrides = BoardSetupOptions & {
     turnStyle?: TurnStyle
     // The opening is off unless asked for, as in the rule tests.
     openingStations?: boolean
-    start?: GameStartOptions
+    start?: GameStartOptions<EarendelGameState>
 }
 
 export type GameSummary = {

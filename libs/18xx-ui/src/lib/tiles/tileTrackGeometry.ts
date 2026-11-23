@@ -1,4 +1,5 @@
 import type { Point } from '@tabletop/common'
+import type { TrackGauge } from '@tabletop/18xx'
 
 export type TileDrawnPath = {
     id: string
@@ -8,6 +9,11 @@ export type TileDrawnPath = {
     arc?: { center: Point; radius: number; sweep: number }
     d: string
     spike?: TrackSpike
+    /** A port connection: dashes from the edge toward an anchor at the tip. */
+    pier?: TrackSpike
+    /** Not drawn: the print shows the connection some other way. */
+    hidden?: true
+    gauge?: TrackGauge
 }
 export type TrackSpike = { base: Point; tip: Point }
 
@@ -112,7 +118,7 @@ const CrossingEndClearance = 4
 
 export function trackCrossings(paths: readonly TileDrawnPath[]): TrackCrossing[] {
     const tracks = paths
-        .filter((path) => !path.spike)
+        .filter((path) => !path.spike && !path.pier && !path.hidden)
         .map((path) => ({
             path,
             points: Array.from({ length: CrossingSamples + 1 }, (_, index) =>

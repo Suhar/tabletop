@@ -1,8 +1,8 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     type GameAction,
@@ -19,7 +19,7 @@ import {
 } from './stationPlacement.js'
 export const PlaceStation = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         ...StationRequest.properties,
         type: Type.Literal('PlaceStation'),
         expectedCost: Type.Integer({ minimum: 0 }),
@@ -70,7 +70,7 @@ export class HydratedPlaceStation
                     amount: result.details.cost
                 }
             ])
-        applyStationPlacement(state, result.details)
+        applyStationPlacement(state, result.details, this.#rules.map)
         state.stationStep!.placedStationIds.push(this.stationId)
         this.metadata = result.details
     }

@@ -9,8 +9,8 @@ import type * as Type from 'typebox'
 import { FinishTrack } from '../construction/finishTrack.js'
 import { FinishStations } from '../stations/finishStations.js'
 import { BuyTrain } from '../trains/buyTrain.js'
-import { TrainPurchase, type TrainRules } from '../trains/trainPurchase.js'
-import { trainsOwnedBy, type TrainPurchaseState } from '../trains/train.js'
+import { TrainPurchase, ownsRequiredTrain, type TrainRules } from '../trains/trainPurchase.js'
+import type { TrainPurchaseState } from '../trains/train.js'
 import type { MapStateData } from '../map/mapState.js'
 import {
     inReceivership,
@@ -44,8 +44,7 @@ export function cheapestAffordableTrain(
     companyId: string,
     rules: TrainRules
 ): ReceiverPurchase | undefined {
-    const owner = { kind: 'company' as const, companyId }
-    if (trainsOwnedBy(state, owner).length || !rules.requiresTrain(state, companyId))
+    if (ownsRequiredTrain(state, rules, companyId) || !rules.requiresTrain(state, companyId))
         return undefined
     const purchase = new TrainPurchase(state, rules)
     const offers = [
@@ -78,15 +77,14 @@ export class ReceivershipHandler<S extends State> implements MachineStateHandler
         return companyId && inReceivership(state, companyId) ? companyId : undefined
     }
     private automatic(state: S, companyId: string): Automatic | undefined {
-        const playerId = state.activePlayerIds[0]
         switch (this.step) {
             case 'LayingTrack':
                 return state.trackStep?.companyId === companyId && !state.trackStep.completed
-                    ? { schema: FinishTrack, fields: { companyId, playerId } }
+                    ? { schema: FinishTrack, fields: { companyId } }
                     : undefined
             case 'PlacingStation':
                 return state.stationStep?.companyId === companyId && !state.stationStep.completed
-                    ? { schema: FinishStations, fields: { companyId, playerId } }
+                    ? { schema: FinishStations, fields: { companyId } }
                     : undefined
             case 'RunningTrains':
                 return undefined
@@ -100,8 +98,8 @@ export class ReceivershipHandler<S extends State> implements MachineStateHandler
                     this.rules.trainRules
                 )
                 return purchase
-                    ? { schema: BuyTrain, fields: { ...purchase, playerId } }
-                    : { schema: FinishOperatingTurn, fields: { companyId, playerId } }
+                    ? { schema: BuyTrain, fields: purchase }
+                    : { schema: FinishOperatingTurn, fields: { companyId } }
             }
         }
     }
@@ -121,7 +119,11 @@ export class ReceivershipHandler<S extends State> implements MachineStateHandler
         this.handler.enter(context)
         const companyId = this.receiver(context.gameState)
         const automatic = companyId ? this.automatic(context.gameState, companyId) : undefined
-        if (automatic) context.addSystemAction(automatic.schema, automatic.fields)
+        // A step that finishes itself, as a station step with nothing to place does, needs no
+        // second finish from the receiver; a step whose own system action comes first, as an 1861
+        // company's loans are settled, is entered again once it has applied.
+        if (automatic && !context.getPendingActions().length)
+            context.addSystemAction(automatic.schema, automatic.fields)
     }
     onAction(action: HydratedAction, context: MachineContext<S>): string {
         return this.handler.onAction(action, context)

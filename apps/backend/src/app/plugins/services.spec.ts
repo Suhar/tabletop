@@ -12,32 +12,46 @@ vi.mock('@tabletop/backend-services', async () => {
         await import('../../../../../libs/backend-services/src/pubsub/redisPubSubService.js')
     const { RedisCacheService } =
         await import('../../../../../libs/backend-services/src/cache/cacheService.js')
+    const { RedisRateLimitCounter } =
+        await import('../../../../../libs/backend-services/src/cache/rateLimitCounter.js')
     class Empty {}
     return {
         ...Object.fromEntries(
             [
+                'AbandonedSignUps',
+                'AccountModeration',
+                'ContentReports',
                 'CatalogService',
+                'CharityTallyRefresher',
+                'CharityTallyService',
                 'ChatService',
                 'CloudTasksTaskService',
                 'DiscordService',
+                'DiscordOAuthClient',
+                'FirestoreCharityTallyStore',
                 'FirestoreChatStore',
                 'FirestoreGameStore',
                 'FirestoreLeagueStore',
                 'FirestoreNotificationStore',
                 'FirestorePreferenceStore',
+                'FirestoreSessionStore',
                 'FirestoreSiteStatsStore',
                 'FirestoreTokenStore',
                 'FirestoreTournamentStore',
                 'FirestoreUserStore',
                 'GameService',
+                'ActivityCache',
                 'TitleLibrary',
                 'LeagueService',
                 'NullPubSubService',
                 'PreferenceService',
                 'ProjectedHistoryCache',
                 'PubSubTransport',
+                'RealtimeTokenIssuer',
                 'RedisPublisher',
+                'SessionService',
                 'SiteStatsService',
+                'StalledGames',
                 'TokenService',
                 'TournamentService',
                 'TournamentStallAlerts',
@@ -51,6 +65,9 @@ vi.mock('@tabletop/backend-services', async () => {
         RedisService,
         RedisPubSubService,
         RedisCacheService,
+        RedisRateLimitCounter,
+        TitleActivityScope: {},
+        SeriesActivityScope: {},
         LOCAL_WORKSPACE_ROOT: process.cwd(),
         STATIC_ROOT: process.cwd(),
         createLocalManifest: vi.fn(),
@@ -74,13 +91,24 @@ vi.mock('@tabletop/backend-services', async () => {
         },
         WebPushTransport: { createWebPushTransport: async () => ({}) },
         AblyTransport: { createAblyTransport: async () => ({}) },
-        AblyService: { createAblyService: async () => ({}) }
+        AblyService: { createAblyService: async () => ({}) },
+        parseRealtimeSigningKey: () => ({})
     }
 })
 
-test.each([true, false])(
-    'restarts release Redis clients and pools with Ably=%s',
-    async (useAbly) => {
+test.each([
+    { transports: 'SSE', ably: '', relay: '', sse: 'true', subscribes: true },
+    { transports: 'no realtime', ably: '', relay: '', sse: '', subscribes: false },
+    {
+        transports: 'Ably and the relay',
+        ably: 'local-test',
+        relay: 'k1:key',
+        sse: '',
+        subscribes: false
+    }
+])(
+    'restarts release Redis clients and pools with $transports',
+    async ({ ably, relay, sse, subscribes }) => {
         vi.resetModules()
         const sockets = new Set<Socket>()
         const redis = createServer((socket) => {
@@ -98,7 +126,10 @@ test.each([true, false])(
         vi.stubEnv('REDIS_HOST', '127.0.0.1')
         vi.stubEnv('REDIS_PORT', String(address.port))
         vi.stubEnv('K_SERVICE', 'backend')
-        vi.stubEnv('ABLY_API_KEY', useAbly ? 'local-test' : '')
+        vi.stubEnv('SITE_MANIFEST_GCS_URI', 'gs://test-static/config/site-manifest.json')
+        vi.stubEnv('ABLY_API_KEY', ably)
+        vi.stubEnv('REALTIME_SIGNING_KEY', relay)
+        vi.stubEnv('ENABLE_SSE_REALTIME', sse)
         const { RedisService, RedisPubSubService } = await import('@tabletop/backend-services')
         const pools: ReturnType<RedisServiceType['client']['createPool']>[] = []
         const createRedisService = RedisService.createRedisService.bind(RedisService)
@@ -132,7 +163,8 @@ test.each([true, false])(
             Fastify
         )
         try {
-            const expectedConnections = useAbly ? 3 : 4
+            expect(subscriptions).toHaveBeenCalledTimes(subscribes ? 1 : 0)
+            const expectedConnections = subscribes ? 4 : 3
             await vi.waitFor(() => expect(sockets.size).toBe(expectedConnections))
             for (let i = 0; i < 3; i++) {
                 await app.restart()

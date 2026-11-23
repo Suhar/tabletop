@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { TrackConstruction, applyStationPlacement, cashOwnedBy } from '@tabletop/18xx'
+import {
+    CompanyStationsOnly,
+    TrackConstruction,
+    applyStationPlacement,
+    cashOwnedBy
+} from '@tabletop/18xx'
 import { playExample } from '@tabletop/18xx/scenarios'
 import { laidTiles } from '@tabletop/18xx/testing'
 import {
@@ -7,7 +12,7 @@ import {
     EighteenThirtyTwoTileSet,
     EighteenThirtyTwoTrackRules,
     EighteenThirtyTwoTransferRules,
-    canBuyCoalRights
+    CoalRights
 } from './index.js'
 import { EighteenThirtyTwoScenarios } from './scenarios/index.js'
 
@@ -20,12 +25,16 @@ const ToCoalFields = [
 function coalFieldsPlay(coalFieldsOwner: 'ACL' | 'player') {
     return playExample(EighteenThirtyTwoScenarios, 'construction', 3, (state) => {
         state.tileInventory = EighteenThirtyTwoTileSet.createInventory(ToCoalFields)
-        applyStationPlacement(state, {
-            companyId: 'CG',
-            stationId: 'CG:station:1',
-            position: { locationId: 'P23', nodeId: 'city', slot: 0 },
-            cost: 0
-        })
+        applyStationPlacement(
+            state,
+            {
+                companyId: 'CG',
+                stationId: 'CG:station:1',
+                position: { locationId: 'P23', nodeId: 'city', slot: 0 },
+                cost: 0
+            },
+            CompanyStationsOnly
+        )
         const coalFields = state.certificates.find((item) => item.id === 'P5:charter')
         if (coalFields)
             coalFields.owner =
@@ -38,7 +47,7 @@ function coalFieldsPlay(coalFieldsOwner: 'ACL' | 'player') {
 describe('West Virginia Coal Fields', () => {
     it('sells a connected company a token for $80, half to the private’s owning company', () => {
         const play = coalFieldsPlay('ACL')
-        expect(canBuyCoalRights(play.state, 'blair')).toBe(true)
+        expect(CoalRights.canBuy(play.state, 'blair')).toBe(true)
         const coast = cashOwnedBy(play.state, { kind: 'company', companyId: 'ACL' })
         const central = cashOwnedBy(play.state, { kind: 'company', companyId: 'CG' })
         play.act('BuyCoalRights', { companyId: 'CG' })
@@ -66,7 +75,7 @@ describe('West Virginia Coal Fields', () => {
     })
 
     it('stays closed to every company while a player owns the private', () => {
-        expect(canBuyCoalRights(coalFieldsPlay('player').state, 'blair')).toBe(false)
+        expect(CoalRights.canBuy(coalFieldsPlay('player').state, 'blair')).toBe(false)
     })
 
     it('lets only token holders run there', () => {
@@ -133,7 +142,7 @@ describe('WVCF tokens and construction', () => {
                 completed: false
             }
         }
-        expect(canBuyCoalRights(upgraded, 'blair')).toBe(false)
+        expect(CoalRights.canBuy(upgraded, 'blair')).toBe(false)
     })
 
     it('let only holders reach track beyond the coal fields', () => {

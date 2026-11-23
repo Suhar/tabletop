@@ -16,7 +16,7 @@
 >
     <!-- The star the game is named for, over the name. -->
     <svg class="star" viewBox="-20 -20 40 40" aria-hidden="true">
-        <path d="M0,-18 L2.2,-2.2 L18,0 L2.2,2.2 L0,18 L-2.2,2.2 L-18,0 L-2.2,-2.2 Z" />
+        <path d="M0,-18 L2.2,-2.2 L18,0 L2.2,2.2 L0,18 L-2.2,2.2 L-18,0 L-2.2,-2.2 Z"></path>
     </svg>
     <h1 class="name" aria-label="Earendel">
         {#each LETTERS as letter, index (index)}

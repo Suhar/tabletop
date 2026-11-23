@@ -15,7 +15,9 @@
         insetTop,
         boardWidth = 1000,
         boardHeight = 800,
-        focus
+        focus,
+        focusOptions,
+        reveal
     }: Pick<
         ComponentProps<typeof ScalingWrapper>,
         | 'maxScale'
@@ -33,6 +35,8 @@
         verticalBody?: boolean
         modal?: boolean
         focus?: Parameters<ScalingWrapper['focusRect']>[0]
+        focusOptions?: Parameters<ScalingWrapper['focusRect']>[1]
+        reveal?: Parameters<ScalingWrapper['revealRect']>[0]
     } = $props()
     let clicks = $state(0)
     let dialog: HTMLDialogElement
@@ -42,7 +46,7 @@
             dialog.showModal()
             wrapper?.focusRect({ x: 200, y: 200, width: 300, height: 200 })
         }
-        if (focus) wrapper?.focusRect(focus)
+        if (focus) wrapper?.focusRect(focus, focusOptions)
     })
 </script>
 
@@ -79,4 +83,7 @@
         </div>
     </div>
     <output>{clicks}</output><span data-testid="scale">{wrapper?.viewScale()}</span>
+    {#if reveal}<button data-testid="reveal" onclick={() => wrapper?.revealRect(reveal)}
+            >Reveal</button
+        >{/if}
 </dialog>

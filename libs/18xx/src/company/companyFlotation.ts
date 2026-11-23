@@ -1,3 +1,4 @@
+import { stateWith } from '../game/stateWith.js'
 import { companyShareCount, type CompanyCharters } from './companyCharters.js'
 import * as Type from 'typebox'
 import { assert, assertExists } from '@tabletop/common'
@@ -11,6 +12,7 @@ import {
     type OpenShare
 } from '../finance/finance.js'
 import { applyPresidencyChange } from '../stock/presidency.js'
+import { allPlayersPassed } from '../stock/stockRoundRules.js'
 import type { SharePurchaseDetails } from '../stock/sharePurchase.js'
 import type { FormationState } from './companyState.js'
 import type { CompanyRules } from './companyRules.js'
@@ -41,6 +43,8 @@ export function nextCompanyToFloat(
     state: FormationState,
     rules: CompanyRules
 ): CompanyFlotationDetails | undefined {
+    if (rules.floatsAtRoundEnd && (state.stockRound.completed || !allPlayersPassed(state)))
+        return undefined
     for (const company of state.companies) {
         const details = evaluateCompanyFlotation(state, company.id, rules)
         if (details) return details
@@ -52,7 +56,7 @@ export function flotationAfterPurchase(
     purchase: SharePurchaseDetails,
     rules: CompanyRules
 ): CompanyFlotationDetails | undefined {
-    const projected: FormationState = { ...state, ...copyFinances(state) }
+    const projected: FormationState = stateWith(state, copyFinances(state))
     const certificate = projected.certificates.find((item) => item.id === purchase.certificateId)
     assert(certificate, 'Missing purchased certificate')
     certificate.owner = purchase.buyer

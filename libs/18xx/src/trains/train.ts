@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
 import { Owner, type FinancialState, sameOwner } from '../finance/finance.js'
 import { assert } from '@tabletop/common'
+import type { StretchGauge } from '../tiles/trackGauge.js'
 const Id = Type.String({ minLength: 1 })
 export const TrainDistance = Type.Object(
     {
@@ -9,18 +10,59 @@ export const TrainDistance = Type.Object(
             Type.Literal('revenue-centers'),
             Type.Literal('cities-and-offboards')
         ]),
-        maximum: Type.Union([Type.Integer({ minimum: 1 }), Type.Literal('unlimited')])
+        maximum: Type.Union([Type.Integer({ minimum: 1 }), Type.Literal('unlimited')]),
+        /** Towns a revenue-centre train may visit beyond its maximum, such as a 5+1's one. */
+        extraTowns: Type.Optional(Type.Integer({ minimum: 1 })),
+        /**
+         * What a hex-edge train counts for each hex side it crosses on standard or narrow track,
+         * where the two differ; track that is dual from one stop to the next counts the lesser.
+         * Without them every hex side counts one.
+         */
+        gaugeWeights: Type.Optional(
+            Type.Object(
+                {
+                    standard: Type.Integer({ minimum: 1 }),
+                    narrow: Type.Integer({ minimum: 1 })
+                },
+                { additionalProperties: false }
+            )
+        ),
+        /** It never runs on narrow-gauge track, though on dual track, as 1849's E train (§14.3). */
+        standardGaugeOnly: Type.Optional(Type.Literal(true)),
+        /**
+         * It runs from a station of its company and may run there alone, on no track at all; no
+         * two such trains of a company run from the same station, as 1822's L trains (§5.5.3).
+         */
+        stationRun: Type.Optional(Type.Literal(true))
     },
     { additionalProperties: false }
 )
 export type TrainDistance = Type.Static<typeof TrainDistance>
+
+/**
+ * What each hex edge of a stretch of the gauge costs a hex train: its weight for that gauge, or
+ * for track dual from stop to stop the lesser, as the train may run it on either; one without
+ * weights.
+ */
+export function stretchWeight(distance: TrainDistance, gauge: StretchGauge): number {
+    const weights = distance.gaugeWeights
+    if (!weights) return 1
+    return gauge === 'either' ? Math.min(weights.standard, weights.narrow) : weights[gauge]
+}
 export const TrainDefinition = Type.Object(
     {
         id: Id,
         name: Id,
         price: Type.Integer({ minimum: 0 }),
         distance: TrainDistance,
-        rustsOn: Type.Optional(Id)
+        rustsOn: Type.Optional(Id),
+        /** Its route may use track that other trains' routes use, as 1822's E trains (§5.5.11). */
+        sharesTrack: Type.Optional(Type.Literal(true)),
+        /**
+         * Rolling stock that never runs by itself: a run attaches it to one of its company's
+         * trains, which then runs as the title says, as 1822's Pullman carriages (§5.5.6).
+         */
+        attachment: Type.Optional(Type.Literal(true))
     },
     { additionalProperties: false }
 )
@@ -51,7 +93,14 @@ export const TrainInventory = Type.Object(
 )
 export type TrainInventory = Type.Static<typeof TrainInventory>
 export const TrainPurchaseStep = Type.Object(
-    { companyId: Id, purchasedTrainIds: Type.Array(Id, { uniqueItems: true }) },
+    {
+        companyId: Id,
+        purchasedTrainIds: Type.Array(Id, { uniqueItems: true }),
+        /** Trains the company gave in exchange this turn, for titles that limit exchanges. */
+        exchangedTrainIds: Type.Optional(Type.Array(Id, { uniqueItems: true })),
+        /** The turn's purchase its president helped pay for, which titles may make its last. */
+        funded: Type.Optional(Type.Literal(true))
+    },
     { additionalProperties: false }
 )
 export type TrainPurchaseStep = Type.Static<typeof TrainPurchaseStep>
@@ -67,6 +116,15 @@ export function trainsOwnedBy(state: TrainState, owner: Owner): Train[] {
     )
 }
 
+/** Whether the company owns no train at all. */
+export function ownsNoTrain(state: TrainState, companyId: string): boolean {
+    return !trainsOwnedBy(state, { kind: 'company', companyId }).length
+}
+
+export function trainIdsOwnedBy(state: TrainState, owner: Owner): string[] {
+    return trainsOwnedBy(state, owner).map((train) => train.id)
+}
+
 export function isObsoleteTrain(train: Train): boolean {
     return train.status === 'owned' && train.rustsAfterOperation === true
 }
@@ -76,7 +134,8 @@ export function trainCanBeTraded(train: Train): boolean {
 }
 
 /** Where trains go when they leave a company: the bank's market, or out of play. */
-export type TrainDestination = 'market' | 'removed'
+export const TrainDestination = Type.Union([Type.Literal('market'), Type.Literal('removed')])
+export type TrainDestination = Type.Static<typeof TrainDestination>
 
 export function releaseTrains(
     inventory: TrainInventory,

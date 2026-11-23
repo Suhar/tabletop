@@ -11,11 +11,14 @@ import {
 } from '@tabletop/common'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
+import type { BidBoxes } from '../auctions/bidBoxes.js'
+import type { FinalPhaseAt, TrainlessMajors } from '../company/phaseNationalisation.js'
 import { OfferPileFields } from '../auctions/offerPileAuction.js'
 import { SelectionAuctionFields } from '../auctions/selectionAuction.js'
 import { AuctionFields } from '../auctions/waterfallAuction.js'
 import { CompanyFields, CompanyTranche, OwnershipLimitExemption } from '../company/companyState.js'
 import { PendingParFields } from '../company/pendingPar.js'
+import { PresidencyExchangeFields } from '../stock/presidency.js'
 import { TrackStep, validateTrackStep } from '../construction/trackConstruction.js'
 import { EarningsFields, validateEarningsDistribution } from '../earnings/earningsDistribution.js'
 import { EndingFields, validateFinalResults } from '../ending/finalWealth.js'
@@ -24,11 +27,15 @@ import {
     FinanceFields,
     OrdinaryCertificate,
     OrdinaryCompany,
-    validateFinances
+    validateFinances,
+    type BankRules
 } from '../finance/finance.js'
 import { CashCrisisFields } from '../funding/cashCrisis.js'
+import { CorporateFinanceFields } from '../finance/corporateFinance.js'
 import { FundingFields, validateTrainFunding } from '../funding/trainFunding.js'
 import { LoanFields } from '../loans/loans.js'
+import { AccessRightFields } from '../rights/accessRights.js'
+import type { TurnMarkFields } from '../operating/finishOperatingTurn.js'
 import { LocationMarkerFields } from '../map/locationMarkers.js'
 import { MapFields, RailwayMapState } from '../map/mapState.js'
 import { validateStations } from '../map/station.js'
@@ -42,10 +49,12 @@ import {
     validateCompanyDecisions
 } from '../privates/companyDecision.js'
 import { RouteFields, validateRouteStep } from '../routes/route.js'
+import { RunInstructionFields } from '../routes/instructedRuns.js'
 import { StationStep, validateStationStep } from '../stations/stationPlacement.js'
 import { CompanyAuctionFields } from '../stock/companyAuction.js'
 import { StockMarket } from '../stock/stockMarket.js'
 import { StockRound, validateStockRound } from '../stock/stockRound.js'
+import type { StockRoundInterruptionFields } from '../operating/stockRoundInterruption.js'
 import { StockTurnPurchaseFields } from '../stock/turnPurchases.js'
 import { TrainFields, validateTrainPurchaseStep } from '../trains/train.js'
 
@@ -96,7 +105,8 @@ export const RailwayFields = {
     ...PhaseFields,
     ...EarningsFields,
     ...PurchaseOfferFields,
-    ...RouteFields
+    ...RouteFields,
+    ...RunInstructionFields
 }
 type RuntimeFields = Omit<typeof RailwayFields, 'companies' | 'certificates' | 'purchaseOffer'> &
     typeof FinanceFields &
@@ -104,13 +114,21 @@ type RuntimeFields = Omit<typeof RailwayFields, 'companies' | 'certificates' | '
     typeof CompanyAcquisitionOfferFields &
     typeof StockTurnPurchaseFields &
     typeof PendingParFields &
+    typeof PresidencyExchangeFields &
     typeof AuctionFields &
     typeof SelectionAuctionFields &
     typeof OfferPileFields &
     typeof LocationMarkerFields &
     typeof CompanyAuctionFields &
     typeof LoanFields &
-    typeof CashCrisisFields & {
+    typeof AccessRightFields &
+    typeof CorporateFinanceFields &
+    typeof CashCrisisFields &
+    typeof TurnMarkFields &
+    typeof StockRoundInterruptionFields & {
+        bidBoxes: Type.TOptional<typeof BidBoxes>
+        trainlessMajors: Type.TOptional<typeof TrainlessMajors>
+        finalPhaseAt: Type.TOptional<typeof FinalPhaseAt>
         tranches: Type.TOptional<Type.TArray<typeof CompanyTranche>>
         ownershipLimitExemptions: Type.TOptional<Type.TArray<typeof OwnershipLimitExemption>>
     }
@@ -138,7 +156,11 @@ export type EighteenXXRuntimeSchema = Type.TObject<typeof GameState.properties &
 export type EighteenXXState<Schema extends TitleStateSchema = EighteenXXRuntimeSchema> =
     Type.Static<Schema>
 export type HydratedEighteenXXState<Schema extends TitleStateSchema = EighteenXXRuntimeSchema> =
-    HydratedGameState<Type.Static<Schema>> & Type.Static<Schema>
+    HydratedGameState<Type.Static<Schema>> &
+        Type.Static<Schema> & {
+            /** The title's bank rules, from its state definition rather than stored State. */
+            readonly bankRules?: BankRules
+        }
 
 export type ComposedStateSchema<
     Fields extends Type.TProperties,
@@ -170,7 +192,11 @@ export function composeEighteenXXState<
 class StateHydrator<Schema extends TitleStateSchema> extends HydratableGameState<
     Schema,
     PlayerState
-> {}
+> {
+    carries(stored: Type.Static<Schema>): this is this & Type.Static<Schema> {
+        return Object.keys(stored).every((field) => Object.hasOwn(this, field))
+    }
+}
 
 export type EighteenXXStateDefinition<
     Schema extends TitleStateSchema = EighteenXXRuntimeSchema,
@@ -183,9 +209,15 @@ export type EighteenXXStateDefinition<
 
 export function defineEighteenXXState<Schema extends TitleStateSchema>(
     schema: Schema,
-    validations: readonly StateValidation<HydratedEighteenXXState<Schema>>[]
+    validations: readonly StateValidation<HydratedEighteenXXState<Schema>>[],
+    { bank }: { bank?: BankRules } = {}
 ): EighteenXXStateDefinition<Schema> {
     const validator = Compile(schema)
+    class TitleStateHydrator extends StateHydrator<Schema> {
+        get bankRules(): BankRules | undefined {
+            return bank
+        }
+    }
     function read(data: unknown): unknown {
         return data instanceof StateHydrator ? data.dehydrate() : data
     }
@@ -195,8 +227,8 @@ export function defineEighteenXXState<Schema extends TitleStateSchema>(
         hydrate(data, components) {
             const stored = read(data)
             if (!validator.Check(stored)) throw new Error(JSON.stringify(validator.Errors(stored)))
-            const core = new StateHydrator(stored, validator)
-            const state = Object.assign(core, core.dehydrate(), { turnManager: core.turnManager })
+            const state = new TitleStateHydrator(stored, validator)
+            assert(state.carries(stored), 'The hydrated state carries every stored field')
             assert(
                 new Set(state.players.map((player) => player.playerId)).size ===
                     state.players.length,
@@ -212,13 +244,13 @@ export type StateValidation<State> = (state: State, components: TitleComponents)
 
 export const validateRailwayComponents: StateValidation<EighteenXXState> = (
     state,
-    { map, tileSet, depot, market }
+    { map, tileSet, depot, market, sharesFullCities }
 ) => {
-    new RailwayMapState(map, tileSet, state.tileInventory).validateStations(state)
+    new RailwayMapState(map, tileSet, state.tileInventory).validateStations(state, sharesFullCities)
     const companyIds = state.companies.map((company) => company.id)
     const playerIds = state.players.map((player) => player.playerId)
     depot.validateInventory(state.trainInventory, companyIds, playerIds)
-    validateStations(state, companyIds)
+    validateStations(state, companyIds, map)
     market.validate(state.stockMarket, companyIds)
     validateFinances(state, playerIds)
 }
@@ -229,8 +261,13 @@ export const validateRailwayComponents: StateValidation<EighteenXXState> = (
  * earnings until play resumes.
  */
 export function railwayStateValidation({
-    operatingInterruptions = []
-}: { operatingInterruptions?: readonly string[] } = {}): StateValidation<EighteenXXState> {
+    operatingInterruptions = [],
+    phaseDecisionStates = []
+}: {
+    operatingInterruptions?: readonly string[]
+    /** A title's states that decide what a phase change brings before its trains are discarded. */
+    phaseDecisionStates?: readonly string[]
+} = {}): StateValidation<EighteenXXState> {
     return (state, components) => {
         validateStockRound(state)
         validateOperatingSet(state)
@@ -240,7 +277,7 @@ export function railwayStateValidation({
         validateFinalResults(state)
         validateCompanyDecisions(state)
         validateRouteStep(state)
-        validatePhaseChange(state)
+        validatePhaseChange(state, phaseDecisionStates)
         validateEarningsDistribution(state, operatingInterruptions)
         validateTrainPurchaseStep(state)
         validateRailwayComponents(state, components)

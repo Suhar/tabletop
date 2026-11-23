@@ -3,7 +3,6 @@ import { Compile } from 'typebox/compile'
 import {
     ActionSource,
     HydratableAction,
-    PlayerAction,
     assert,
     assertExists,
     type GameAction
@@ -13,7 +12,8 @@ import {
     StationPlacementDetails,
     addCompanyStations,
     applyStationPlacement,
-    recordPrivatePowerUse
+    recordPrivatePowerUse,
+    EighteenXXPlayerAction
 } from '@tabletop/18xx'
 import { privatePowerCompany, type PrivateConstructionState } from './privateConstruction.js'
 import { StationRules1846 } from './stations.js'
@@ -33,7 +33,7 @@ export function chicagoPrivateStation(state: PrivateConstructionState, playerId:
 }
 export const PlaceCWIStation = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('PlaceCWIStation'),
         companyId: Type.String(),
         metadata: Type.Optional(StationPlacementDetails)
@@ -69,7 +69,7 @@ export class PlaceCWIStationAction extends HydratableAction<typeof PlaceCWIStati
         const extra = state.stations.at(-1)
         assertExists(extra)
         const details = { ...choice, stationId: extra.id, cost: 0 }
-        applyStationPlacement(state, details)
+        applyStationPlacement(state, details, StationRules1846.map)
         recordPrivatePowerUse(state, 'C&WI')
         this.metadata = details
     }

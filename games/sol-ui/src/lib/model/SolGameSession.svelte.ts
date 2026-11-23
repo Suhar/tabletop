@@ -51,7 +51,9 @@ import {
     Fuel,
     Metamorphosize,
     Chain,
-    Deconstruct
+    Deconstruct,
+    gateKey,
+    HydratedDeconstruct
 } from '@tabletop/sol'
 import {
     assert,
@@ -215,7 +217,7 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
     isTributing = $derived(this.gameState.machineState === MachineState.Tributing)
     isMetamorphosizing = $derived(this.gameState.machineState === MachineState.Metamorphosizing)
     isChaining = $derived(this.gameState.machineState === MachineState.Chaining)
-    isEndOfGame = $derived(this.gameState.machineState === MachineState.EndOfGame)
+    isEndOfGame = $derived(this.gameState.result !== undefined)
     canDeconstruct = $derived(this.validActionTypes.includes(ActionType.Deconstruct))
 
     acting = $derived(
@@ -327,9 +329,22 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
     }
 
     locationForStationInCell(cell: Cell): Point | undefined {
+        if (sameCoordinates(cell.coords, CENTER_COORDS)) {
+            return { x: 0, y: 0 }
+        }
         const cellLayout = getCellLayout(cell, this.numPlayers, this.gameState.board)
         return cellLayout.station?.point
     }
+
+    deconstructableGateKeys = $derived.by(() => {
+        const myPlayerId = this.myPlayer?.id
+        if (!myPlayerId || !this.canDeconstruct) {
+            return []
+        }
+        return HydratedDeconstruct.deconstructableGates(this.gameState, myPlayerId).map((gate) =>
+            gateKey(gate.innerCoords, gate.outerCoords)
+        )
+    })
 
     validGateDestinations = $derived.by(() => {
         if (!this.myPlayer || this.chosenConvertType !== ConvertType.SolarGate) {
@@ -1061,6 +1076,16 @@ export class SolGameSession extends GameSession<SolGameState, HydratedSolGameSta
     async deconstruct() {
         const action = this.createPlayerAction(Deconstruct, {
             coords: this.chosenSource
+        })
+        await this.doAction(action)
+    }
+
+    async deconstructGate(gateKey: number) {
+        const gate = this.gameState.board.gates[gateKey]
+        assert(gate?.innerCoords && gate.outerCoords, 'No gate to deconstruct')
+        const action = this.createPlayerAction(Deconstruct, {
+            coords: gate.outerCoords,
+            innerCoords: gate.innerCoords
         })
         await this.doAction(action)
     }

@@ -31,8 +31,8 @@
 <g stroke={color} fill="none" stroke-linejoin="round">
     {#if kind === 'relay'}
         <!-- The signal runs outward: inner arcs, then outer, then quiet. -->
-        <polygon points="0,-8 7,0 0,8 -7,0" fill={color} stroke="none" />
-        <circle r="2.4" fill="#0b1222" fill-opacity="0.5" stroke="none" />
+        <polygon points="0,-8 7,0 0,8 -7,0" fill={color} stroke="none"></polygon>
+        <circle r="2.4" fill="#0b1222" fill-opacity="0.5" stroke="none"></circle>
         {#each [11, 17, 23] as radius, index (radius)}
             {#each [1, -1] as const as side (side)}
                 <path
@@ -41,16 +41,21 @@
                     d={arc(radius, side)}
                     stroke-width="2.5"
                     stroke-linecap="round"
-                />
+                ></path>
             {/each}
         {/each}
     {:else if kind === 'scanner'}
         <!-- A sweep turning inside the lens. -->
-        <circle r="14" stroke-width="4" />
-        <circle r="3.5" fill={color} stroke="none" />
+        <circle r="14" stroke-width="4"></circle>
+        <circle r="3.5" fill={color} stroke="none"></circle>
         <g>
-            <path d="M0,0 L0,-11" stroke-width="2.5" stroke-linecap="round" />
-            <path d="M0,0 L0,-11 A11,11 0 0 0 -7.8,-7.8 Z" fill={color} fill-opacity="0.3" stroke="none" />
+            <path d="M0,0 L0,-11" stroke-width="2.5" stroke-linecap="round"></path>
+            <path
+                d="M0,0 L0,-11 A11,11 0 0 0 -7.8,-7.8 Z"
+                fill={color}
+                fill-opacity="0.3"
+                stroke="none"
+            ></path>
             <animateTransform
                 attributeName="transform"
                 type="rotate"
@@ -58,13 +63,13 @@
                 to="360"
                 dur="6s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </g>
-        <path d="M10,10 L19,19" stroke-width="4" stroke-linecap="round" />
+        <path d="M10,10 L19,19" stroke-width="4" stroke-linecap="round"></path>
     {:else if kind === 'drone'}
         <!-- The claws open and close. -->
-        <circle r="7" fill={color} stroke="none" />
-        <path d="M0,7 L0,18" stroke-width="3" stroke-linecap="round" />
+        <circle r="7" fill={color} stroke="none"></circle>
+        <path d="M0,7 L0,18" stroke-width="3" stroke-linecap="round"></path>
         <path d="M-6,5 L-14,16" stroke-width="3" stroke-linecap="round">
             <animateTransform
                 attributeName="transform"
@@ -72,7 +77,7 @@
                 values="0 -6 5; 26 -6 5; 0 -6 5"
                 dur="3.6s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </path>
         <path d="M6,5 L14,16" stroke-width="3" stroke-linecap="round">
             <animateTransform
@@ -81,13 +86,13 @@
                 values="0 6 5; -26 6 5; 0 6 5"
                 dur="3.6s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </path>
     {:else if kind === 'beacon'}
         <!-- The lamp blinks; its halo turns. -->
-        <path d="M0,16 L0,-4" stroke-width="4" />
-        <path d="M-10,16 L10,16" stroke-width="4" stroke-linecap="round" />
-        <circle class="blink" cy="-9" r="6" fill={color} stroke="none" />
+        <path d="M0,16 L0,-4" stroke-width="4"></path>
+        <path d="M-10,16 L10,16" stroke-width="4" stroke-linecap="round"></path>
+        <circle class="blink" cy="-9" r="6" fill={color} stroke="none"></circle>
         <circle cy="-9" r="13" stroke-width="2" stroke-dasharray="3 4">
             <animateTransform
                 attributeName="transform"
@@ -96,16 +101,31 @@
                 to="360 0 -9"
                 dur="14s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </circle>
     {:else if kind === 'gate'}
         <!-- A glint runs round the doorway. -->
-        <circle r="17" stroke-width="5" stroke-opacity="0.55" />
-        <circle class="glint" r="17" stroke-width="5" stroke-dasharray="20 86.8" stroke-linecap="round" />
-        <circle class="breathe" r="8" stroke-width="2" />
+        <circle r="17" stroke-width="5" stroke-opacity="0.55"></circle>
+        <circle
+            class="glint"
+            r="17"
+            stroke-width="5"
+            stroke-dasharray="20 86.8"
+            stroke-linecap="round"
+        ></circle>
+        <circle class="breathe" r="8" stroke-width="2"></circle>
     {:else if kind === 'carrier'}
         <!-- The bays light in turn, and a craft circles the hull. -->
-        <rect x="-19" y="-7" width="38" height="14" rx="4" stroke-width="3" fill={color} fill-opacity="0.35" />
+        <rect
+            x="-19"
+            y="-7"
+            width="38"
+            height="14"
+            rx="4"
+            stroke-width="3"
+            fill={color}
+            fill-opacity="0.35"
+        ></rect>
         {#each [-10, 0, 10] as x, index (x)}
             <circle
                 class="bay"
@@ -114,7 +134,7 @@
                 r="3"
                 fill={color}
                 stroke="none"
-            />
+            ></circle>
         {/each}
         <path d="M0,-3 L2.6,3 L-2.6,3 Z" fill={color} stroke="none">
             <animateMotion
@@ -122,7 +142,7 @@
                 repeatCount="indefinite"
                 rotate="auto"
                 path="M-25,0 A25,14 0 1 1 25,0 A25,14 0 1 1 -25,0"
-            />
+            ></animateMotion>
         </path>
     {:else if kind === 'bastion'}
         <!-- The shield holds; a field outside it swells and fades. -->
@@ -131,23 +151,23 @@
             stroke-width="4"
             fill={color}
             fill-opacity="0.3"
-        />
+        ></path>
         <path
             class="field"
             d="M0,-25 L22,-15.5 L19.5,8.5 L0,25 L-19.5,8.5 L-22,-15.5 Z"
             stroke-width="1.8"
-        />
+        ></path>
     {:else if kind === 'terraformer'}
         <!-- The ground rolls under the peaks. -->
-        <circle r="17" fill={color} fill-opacity="0.22" stroke-width="2.5" />
-        <path d="M-10,4 L-3,-8 L1,-2 L5,-7 L11,4 Z" fill={color} stroke="none" />
+        <circle r="17" fill={color} fill-opacity="0.22" stroke-width="2.5"></circle>
+        <path d="M-10,4 L-3,-8 L1,-2 L5,-7 L11,4 Z" fill={color} stroke="none"></path>
         <path stroke-width="2.2" stroke-linecap="round" d="M-11,9 Q-5.5,5.5 0,9 T11,9">
             <animate
                 attributeName="d"
                 dur="4s"
                 repeatCount="indefinite"
                 values="M-11,9 Q-5.5,5.5 0,9 T11,9; M-11,9 Q-5.5,12.5 0,9 T11,9; M-11,9 Q-5.5,5.5 0,9 T11,9"
-            />
+            ></animate>
         </path>
     {:else if kind === 'world'}
         <!-- The globe's scaffold turns round the world being made. -->
@@ -159,13 +179,13 @@
                 to="360"
                 dur="30s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </circle>
-        <circle class="breathe" r="9" fill={color} stroke="none" />
+        <circle class="breathe" r="9" fill={color} stroke="none"></circle>
     {:else if kind === 'jammer-static'}
         <!-- The dish as it is, its broken waves flickering. -->
-        <path d="M-12,4 A14,14 0 0 1 12,4" stroke-width="4" stroke-linecap="round" />
-        <path d="M0,4 L0,16" stroke-width="4" />
+        <path d="M-12,4 A14,14 0 0 1 12,4" stroke-width="4" stroke-linecap="round"></path>
+        <path d="M0,4 L0,16" stroke-width="4"></path>
         {#each ['M-16,-10 L-10,-14', 'M-4,-16 L2,-18', 'M9,-16 L15,-11'] as d, index (d)}
             <path
                 class="flicker"
@@ -173,11 +193,11 @@
                 {d}
                 stroke-width="3"
                 stroke-linecap="round"
-            />
+            ></path>
         {/each}
     {:else if kind === 'jammer-rings'}
         <!-- Two broken rings turning against each other round a core. -->
-        <circle r="5" fill={color} stroke="none" />
+        <circle r="5" fill={color} stroke="none"></circle>
         <circle r="13" stroke-width="3.5" stroke-dasharray={BROKEN_INNER} stroke-linecap="round">
             <animateTransform
                 attributeName="transform"
@@ -186,7 +206,7 @@
                 to="360"
                 dur="30s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </circle>
         <circle
             r="21"
@@ -202,13 +222,13 @@
                 to="0"
                 dur="43s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </circle>
     {:else if kind === 'jammer-bolts'}
         <!-- A mast throwing jagged bolts to either side. -->
-        <path d="M0,18 L0,-8" stroke-width="4" stroke-linecap="round" />
-        <path d="M-8,18 L8,18" stroke-width="4" stroke-linecap="round" />
-        <circle cy="-12" r="4.5" fill={color} stroke="none" />
+        <path d="M0,18 L0,-8" stroke-width="4" stroke-linecap="round"></path>
+        <path d="M-8,18 L8,18" stroke-width="4" stroke-linecap="round"></path>
+        <circle cy="-12" r="4.5" fill={color} stroke="none"></circle>
         {#each ['M-6,-12 L-11,-17 L-13,-9 L-19,-15 L-22,-7', 'M6,-12 L11,-17 L13,-9 L19,-15 L22,-7', 'M-5,-4 L-11,-1 L-12,5 L-19,4', 'M5,-4 L11,-1 L12,5 L19,4'] as d, index (d)}
             <path
                 class="flicker"
@@ -216,24 +236,24 @@
                 {d}
                 stroke-width="2.4"
                 stroke-linecap="round"
-            />
+            ></path>
         {/each}
     {:else if kind === 'jammer-burst'}
         <!-- A burst of noise, swelling and shrinking. -->
         <g>
-            <polygon points={BURST} stroke-width="2.2" fill={color} fill-opacity="0.28" />
+            <polygon points={BURST} stroke-width="2.2" fill={color} fill-opacity="0.28"></polygon>
             <animateTransform
                 attributeName="transform"
                 type="scale"
                 values="1; 0.82; 1.06; 0.9; 1"
                 dur="2.2s"
                 repeatCount="indefinite"
-            />
+            ></animateTransform>
         </g>
-        <circle r="4" fill={color} stroke="none" />
+        <circle r="4" fill={color} stroke="none"></circle>
     {:else if kind === 'jammer-cut'}
         <!-- A relay's signal arcs, struck through with a jagged line: the signal it kills. -->
-        <polygon points="0,-7 6,0 0,7 -6,0" fill={color} stroke="none" />
+        <polygon points="0,-7 6,0 0,7 -6,0" fill={color} stroke="none"></polygon>
         {#each [12, 19] as radius (radius)}
             {#each [1, -1] as const as side (side)}
                 <path
@@ -243,14 +263,11 @@
                     stroke-width="2.5"
                     stroke-linecap="round"
                     stroke-opacity="0.75"
-                />
+                ></path>
             {/each}
         {/each}
-        <path
-            d="M-21,17 L-9,6 L-12,1 L3,-4 L0,-9 L21,-19"
-            stroke-width="3.5"
-            stroke-linecap="round"
-        />
+        <path d="M-21,17 L-9,6 L-12,1 L3,-4 L0,-9 L21,-19" stroke-width="3.5" stroke-linecap="round"
+        ></path>
     {/if}
 </g>
 

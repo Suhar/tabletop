@@ -115,7 +115,7 @@ export function reporterMessage(status, report, note, postUrl) {
         subject: stage.subject,
         eyebrow: stage.eyebrow,
         heading: stage.heading,
-        game: `${report.fields.Game} · ${report.game}`,
+        game: [report.fields.Game, report.game].filter(Boolean).join(' · '),
         lead: stage.lead,
         note,
         closing: stage.closing,
@@ -129,7 +129,10 @@ export function reporterMessage(status, report, note, postUrl) {
         message.heading,
         [message.lead, note, message.closing].filter(Boolean).join(' '),
         `You wrote: "${message.quote}"`,
-        `Your game (${message.game}): ${message.gameUrl}`,
+        // A hotseat game lives only in the reporter's browser, so its report has no link.
+        message.gameUrl
+            ? `Your game (${message.game}): ${message.gameUrl}`
+            : `Your game: ${message.game}`,
         `Your report on our Discord: ${postUrl} (not on the BoardTogether server yet? Join here: ${DISCORD_INVITE})`
     ].join('\n\n')
     return { ...message, text }

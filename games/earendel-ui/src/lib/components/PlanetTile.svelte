@@ -44,7 +44,7 @@
     fill-opacity="0.42"
     stroke="#2b3752"
     stroke-width="2"
-/>
+></polygon>
 <!-- Inset so a neighbor drawn later cannot paint over half of the line. -->
 <polygon
     points={inset}
@@ -53,7 +53,7 @@
     stroke-width="3"
     stroke-opacity="0.85"
     stroke-linejoin="round"
-/>
+></polygon>
 
 {#if hex.color === PlanetColor.Mint}
     <!-- Drawn behind the body here and again in front at partial opacity. -->
@@ -67,7 +67,7 @@
         stroke-width="5"
         stroke-opacity={hex.explored ? 0.9 : 0.4}
         transform="rotate(-20 {center.x} {center.y})"
-    />
+    ></ellipse>
 {/if}
 
 {#if hex.color === PlanetColor.Aqua}
@@ -81,7 +81,7 @@
             stroke={planetColor}
             stroke-width="3"
             stroke-dasharray={dash}
-        />
+        ></circle>
         <circle
             cx={center.x + 15}
             cy={center.y}
@@ -91,7 +91,7 @@
             stroke={planetColor}
             stroke-width="3"
             stroke-dasharray={dash}
-        />
+        ></circle>
     </g>
 {:else}
     <circle
@@ -103,7 +103,7 @@
         stroke={planetColor}
         stroke-width="3"
         stroke-dasharray={dash}
-    />
+    ></circle>
 {/if}
 
 {#if hex.color === PlanetColor.Teal}
@@ -116,7 +116,7 @@
         stroke-width="6"
         class="planet-aura"
         style={spin}
-    />
+    ></circle>
     <circle
         cx={center.x}
         cy={center.y}
@@ -126,7 +126,7 @@
         stroke-width="3"
         class="planet-aura planet-aura-late"
         style={spin}
-    />
+    ></circle>
 {/if}
 
 {#if hex.color === PlanetColor.Periwinkle}
@@ -137,13 +137,13 @@
             r="7"
             fill={planetColor}
             fill-opacity={hex.explored ? 1 : 0.5}
-        />
+        ></circle>
     </g>
 {/if}
 
 {#if hex.color === PlanetColor.Violet}
     <clipPath id={clipId}>
-        <circle cx={center.x} cy={center.y} r="27" />
+        <circle cx={center.x} cy={center.y} r="27"></circle>
     </clipPath>
     <g clip-path="url(#{clipId})">
         <g class="planet-phase" style={spin}>
@@ -153,13 +153,13 @@
                 r="26"
                 fill="#0d1424"
                 fill-opacity={hex.explored ? 0.72 : 0.4}
-            />
+            ></circle>
         </g>
     </g>
 {/if}
 
 {#if hex.technologyId}
-    <circle cx={center.x} cy={center.y} r="9" fill="#ffffff" fill-opacity="0.9" />
+    <circle cx={center.x} cy={center.y} r="9" fill="#ffffff" fill-opacity="0.9"></circle>
     <circle
         cx={center.x}
         cy={center.y}
@@ -168,7 +168,7 @@
         stroke="#ffffff"
         stroke-opacity="0.55"
         stroke-width="2"
-    />
+    ></circle>
 {:else if !hex.explored}
     <text
         x={center.x}

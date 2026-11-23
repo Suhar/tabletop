@@ -266,7 +266,12 @@ describe("Land Warden — the Search records both cards' plays in full", () => {
         const s = table([WOLVES, DAZZLE, FILLER])
         new HydratedSearch(search).apply(s)
         expect(
-            reasonCannotPairSecondPlay(s, 'dana', SearchPlay.Adviser, faceupAdviser(DAZZLE))
+            reasonCannotPairSecondPlay(
+                s,
+                'dana',
+                { keptCardId: WOLVES, play: SearchPlay.Adviser, faceUp: true },
+                faceupAdviser(DAZZLE)
+            )
         ).toBeDefined()
     })
 })
@@ -289,7 +294,7 @@ describe('Land Warden — the end of the Act Phase after both plays (R-7.3.3)', 
         expect(steps.indexOf(ActionType.TransferOathkeeper)).toBe(1)
     })
 
-    it('the second card is asked no When Played choice, so its "may" is not taken and Dana stays in her Act Phase', () => {
+    it('the second card is asked no When Played choice, so its "may" is not taken and Dana stays in their Act Phase', () => {
         // The second card's play carries no choices; a When Played "may" resolves as declined.
         const s = table([WOLVES, HEIR, FILLER])
         const { state, steps } = machineAfter(s, {

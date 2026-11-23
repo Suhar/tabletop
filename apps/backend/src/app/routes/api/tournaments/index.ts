@@ -36,7 +36,7 @@ export default async function (fastify: FastifyInstance) {
     )
     fastify.get('/titles', { preHandler: fastify.verifyRoleAdmin }, async () => ({
         status: 'ok',
-        payload: { titleIds: fastify.tournamentService.tournamentTitleIds() }
+        payload: fastify.tournamentService.tournamentTitles()
     }))
     fastify.post<{ Body: Static<typeof CreateTournamentRequest> }>(
         '/',
@@ -251,7 +251,7 @@ export default async function (fastify: FastifyInstance) {
             }
         )
     }
-    for (const operation of ['publish', 'cancel', 'lock'] as const) {
+    for (const operation of ['publish', 'cancel', 'lock', 'start'] as const) {
         fastify.post<{ Params: Static<typeof TournamentParams> }>(
             `/:id/${operation}`,
             { schema: { params: TournamentParams }, preHandler: fastify.verifyRoleAdmin },

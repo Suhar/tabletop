@@ -1,4 +1,8 @@
-import type { ReceivershipRules } from '../finance/receivership.js'
+import {
+    actionMayOperate,
+    automaticStepCredit,
+    type ReceivershipRules
+} from '../finance/receivership.js'
 import {
     ActionSource,
     type HydratedAction,
@@ -38,14 +42,13 @@ export class DistributingEarningsHandler implements MachineStateHandler<
                         action.companyId
                     ) === action.choice
                 )) ||
-            !action.playerId ||
-            !state.activePlayerIds.includes(action.playerId)
+            !actionMayOperate(state, action, action.companyId)
         )
             return false
         const distribution = new EarningsDistribution(state, this.rules, this.receivership)
         return (
             distribution.canAct(action.playerId, action.companyId) &&
-            !!distribution.evaluate(action.companyId, action.choice).details
+            !!distribution.evaluate(action.companyId, action.choice, action.separateChoice).details
         )
     }
     validActionsForPlayer(playerId: string, context: MachineContext<State>): string[] {
@@ -72,7 +75,7 @@ export class DistributingEarningsHandler implements MachineStateHandler<
         if (choice)
             context.addSystemAction(DistributeEarnings, {
                 companyId,
-                playerId: state.activePlayerIds[0],
+                ...automaticStepCredit(state, companyId),
                 choice
             })
     }

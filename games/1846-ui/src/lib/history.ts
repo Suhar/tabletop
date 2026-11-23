@@ -1,5 +1,4 @@
 import {
-    CorporateFinanceValidator,
     AssignSteamboatValidator,
     SettleIndependentValidator,
     isBuildPrivateTrack,
@@ -44,7 +43,7 @@ export function mapPlacement1846(action: GameAction): HistoryMapPlacement | unde
     return undefined
 }
 
-export const describe1846Action: TitleActionDescription = (action, companyName) => {
+export const describe1846Action: TitleActionDescription = (action, { companyName, place }) => {
     // A draft row never describes its protected card, even in the actor's projection.
     switch (action.type) {
         case 'ChooseDraftCard':
@@ -64,21 +63,17 @@ export const describe1846Action: TitleActionDescription = (action, companyName) 
         case 'ResumeOpeningPurchases':
             return { text: 'Opening purchases resume', omitActor: true }
     }
-    if (CorporateFinanceValidator.Check(action))
-        return {
-            text: `${companyName(action.companyId)} ${action.operation === 'issue' ? 'issued' : 'redeemed'} ${action.shares} ${action.shares === 1 ? 'share' : 'shares'} for $${action.amount}`
-        }
     if (AssignSteamboatValidator.Check(action))
         return {
             text: action.assignment
-                ? `assigned Steamboat to ${companyName(action.assignment.companyId)} at ${action.assignment.locationId}`
+                ? `assigned Steamboat to ${companyName(action.assignment.companyId)} at ${place(action.assignment.locationId)}`
                 : 'left Steamboat unassigned'
         }
     if (isBuildPrivateTrack(action))
         return {
             text: `${companyName(action.privateCompanyId)} built private track`,
             detail: action.metadata?.lays
-                .map((lay) => `${lay.locationId} · $${lay.cost}`)
+                .map((lay) => `${place(lay.locationId)} · $${lay.cost}`)
                 .join(', ')
         }
     if (isPlaceCWIStation(action))
@@ -86,7 +81,7 @@ export const describe1846Action: TitleActionDescription = (action, companyName) 
     if (isAssignRevenueMarker(action))
         return {
             text: action.locationId
-                ? `placed ${companyName(action.privateCompanyId)} at ${action.locationId}`
+                ? `placed ${companyName(action.privateCompanyId)} at ${place(action.locationId)}`
                 : `skipped ${companyName(action.privateCompanyId)} marker placement`
         }
     if (SettleIndependentValidator.Check(action))

@@ -130,6 +130,69 @@ describe('Second Wind — a free Travel, then a free Campaign', () => {
     })
 })
 
+describe('Second Wind — from revision 27 its free Travel and Campaign name it', () => {
+    it('in its own turn, the Travel and the Campaign after it each record Second Wind', () => {
+        const s = board(
+            [],
+            [SECOND_WIND],
+            { ruler: { favor: 4, secrets: 3 }, other: { siteId: 'c2' } },
+            {
+                oathRevision: OathRevision.EngineFixes23,
+                warbandsBySite: { c1: { other: 1 }, c2: { ruler: 2 }, p1: { other: 3 } }
+            }
+        )
+        new HydratedCampaign(
+            buildAction(Campaign, {
+                playerId: 'ruler',
+                defender: { kind: 'player', playerId: 'other' },
+                targets: [{ kind: CampaignTargetKind.Site, siteId: 'c1' }],
+                attackDice: 4,
+                plans: [battlePlanUse(SECOND_WIND)]
+            })
+        ).apply(s)
+        ongoingCampaign(s).swords = 5
+        ongoingCampaign(s).defense = 0
+        new HydratedCampaignSacrifice(
+            buildAction(CampaignSacrifice, {
+                playerId: 'ruler',
+                sacrifice: 0,
+                defeatKills: HydratedCampaignSacrifice.attackerDefeatKills(s, 0)
+            })
+        ).apply(s)
+        defendingSideChooses(s)
+        new HydratedCampaignResolveVictory(
+            buildAction(CampaignResolveVictory, {
+                playerId: 'ruler',
+                placements: [],
+                burnFavor: false
+            })
+        ).apply(s)
+        const me = s.getPlayerState('ruler')
+        expect(me).toMatchObject({
+            freeTravelGrantedBy: SECOND_WIND,
+            freeCampaignGrantedBy: SECOND_WIND
+        })
+        s.actionCount += 1
+        const travel = new HydratedTravel(buildAction(Travel, { playerId: 'ruler', siteId: 'c2' }))
+        travel.apply(s)
+        expect(travel.metadata).toMatchObject({ supplySpent: 0, freeActionOf: SECOND_WIND })
+        expect(me.freeTravelGrantedBy).toBeUndefined()
+        expect(me.freeCampaignGrantedBy).toBe(SECOND_WIND)
+        s.actionCount += 1
+        const campaign = new HydratedCampaign(
+            buildAction(Campaign, {
+                playerId: 'ruler',
+                defender: { kind: 'player', playerId: 'other' },
+                targets: [{ kind: CampaignTargetKind.PawnAndFavor }],
+                attackDice: 2
+            })
+        )
+        campaign.apply(s)
+        expect(campaign.metadata).toMatchObject({ supplySpent: 0, freeActionOf: SECOND_WIND })
+        expect(me.freeCampaignGrantedBy).toBeUndefined()
+    })
+})
+
 describe('Dream Thief — two facedown advisers change boards', () => {
     it('swaps across boards, refuses the same card twice, and a faceup adviser is no option', () => {
         const s = board([DREAM_THIEF], [])
@@ -494,27 +557,33 @@ describe('Map Library and Small Friends — a Trade with a card at another site'
 
 describe('Family Heirloom — a relic drawn, then asked about', () => {
     it('asks its own player; taking keeps it, refusing sends it to the bottom through the vault', () => {
-        const s = board([], [])
-        s.requireVault().relicDeck = ['relic.cup']
-        const a = playDrawnCard(s, FAMILY_HEIRLOOM, SearchPlay.Adviser)
-        expect(a.metadata?.whenPlayed).toBe(
-            'Family Heirloom: drew a relic — take it, or put it on the bottom'
-        )
-        expect(a.metadata?.peeked).toEqual(['relic.cup'])
-        expect(s.pendingQuestions?.queue[0]).toMatchObject({
-            kind: PowerQuestionKind.KeepOrBottomRelic,
-            askedPlayerId: 'ruler',
-            relicCardId: 'relic.cup'
-        })
-        const keep = new HydratedAnswerQuestion(
-            buildAction(AnswerQuestion, {
-                playerId: 'ruler',
-                answer: { kind: PowerQuestionKind.KeepOrBottomRelic, keep: true }
+        // R-X.3(c) — from revision 17 the keep shows the relic to the table, so it cannot be undone.
+        for (const [revision, reveals] of [
+            [OathRevision.EngineFixes13, true],
+            [OathRevision.EngineFixes12, false]
+        ] as const) {
+            const s = board([], [], {}, { oathRevision: revision })
+            s.requireVault().relicDeck = ['relic.cup']
+            const a = playDrawnCard(s, FAMILY_HEIRLOOM, SearchPlay.Adviser)
+            expect(a.metadata?.whenPlayed).toBe(
+                'Family Heirloom: drew a relic — take it, or put it on the bottom'
+            )
+            expect(a.metadata?.peeked).toEqual(['relic.cup'])
+            expect(s.pendingQuestions?.queue[0]).toMatchObject({
+                kind: PowerQuestionKind.KeepOrBottomRelic,
+                askedPlayerId: 'ruler',
+                relicCardId: 'relic.cup'
             })
-        )
-        keep.apply(s)
-        expect(s.getPlayerState('ruler').relicIds).toContain('relic.cup')
-        expect(keep.revealsInfo).toBe(false)
+            const keep = new HydratedAnswerQuestion(
+                buildAction(AnswerQuestion, {
+                    playerId: 'ruler',
+                    answer: { kind: PowerQuestionKind.KeepOrBottomRelic, keep: true }
+                })
+            )
+            keep.apply(s)
+            expect(s.getPlayerState('ruler').relicIds).toContain('relic.cup')
+            expect(keep.revealsInfo, `revision ${revision}`).toBe(reveals)
+        }
 
         const t = board([], [])
         t.requireVault().relicDeck = ['relic.cup']

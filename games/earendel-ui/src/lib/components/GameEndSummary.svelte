@@ -9,7 +9,9 @@
 </script>
 
 <div class="flex flex-col items-center gap-2 py-2 text-white" data-testid="game-end-summary">
-    <div class="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-base sm:text-lg font-semibold">
+    <div
+        class="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-base sm:text-lg font-semibold"
+    >
         {#each winners as winnerId, index (winnerId)}
             {#if index > 0}<span>and</span>{/if}
             <PlayerName playerId={winnerId} />

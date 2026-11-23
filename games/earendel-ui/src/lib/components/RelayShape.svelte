@@ -18,8 +18,8 @@
 </script>
 
 <g transform="translate({center.x} {center.y})">
-    <polygon points="0,-8 7,0 0,8 -7,0" fill={color} />
-    <circle r="2.4" fill="#0b1222" fill-opacity="0.5" />
+    <polygon points="0,-8 7,0 0,8 -7,0" fill={color}></polygon>
+    <circle r="2.4" fill="#0b1222" fill-opacity="0.5"></circle>
     {#each ARCS as ring (ring.radius)}
         {#each [1, -1] as const as side (side)}
             <path
@@ -29,7 +29,7 @@
                 stroke-width="2.5"
                 stroke-linecap="round"
                 stroke-opacity={ring.opacity}
-            />
+            ></path>
         {/each}
     {/each}
 </g>

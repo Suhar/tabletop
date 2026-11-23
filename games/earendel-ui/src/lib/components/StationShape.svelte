@@ -61,7 +61,7 @@
         fill={color}
         fill-opacity="0.75"
         transform="rotate({stub.degrees} {stub.x} {stub.y})"
-    />
+    ></rect>
 {/each}
 
 {#if hub}
@@ -74,14 +74,14 @@
             stroke={color}
             stroke-width="2"
             stroke-opacity="0.7"
-        />
+        ></circle>
         {#each POD_ANGLES as angle, index (index)}
             <circle
                 cx={center.x + 26 * Math.cos(angle)}
                 cy={center.y + 26 * Math.sin(angle)}
                 r="5"
                 fill={color}
-            />
+            ></circle>
         {/each}
     </g>
 {/if}
@@ -97,14 +97,14 @@
         stroke-opacity="0.5"
         stroke-width="1.2"
         stroke-dasharray="1.5 4.5"
-    />
+    ></circle>
 {/if}
 
 <polygon points={octagon(coreRadius)} fill={color}></polygon>
 {#if hub}
-    <circle cx={center.x} cy={center.y} r="6" fill="#fff6d8" fill-opacity="0.9" />
+    <circle cx={center.x} cy={center.y} r="6" fill="#fff6d8" fill-opacity="0.9"></circle>
 {:else}
-    <polygon points={octagon(7)} fill="#0b1222" fill-opacity="0.45" />
+    <polygon points={octagon(7)} fill="#0b1222" fill-opacity="0.45"></polygon>
 {/if}
 
 <style>

@@ -8,6 +8,7 @@ import {
     isFinishStockTurn,
     isFloatCompany,
     isEndGame,
+    isDeclareBankruptcy,
     isResolveAuction,
     isResolveSelectionAuction,
     isStartOperatingRound,
@@ -17,17 +18,19 @@ import {
     isPayInterest,
     type EighteenXXState,
     isStockInstructionAction,
+    isRunInstructionAction,
     type AuctionAward
 } from '@tabletop/18xx'
 import { ActionSource, assertExists, type GameAction } from '@tabletop/common'
 import { historyOperatingOrder, type HistoryOperatingOrder } from './historyOperatingOrder.js'
 import { historyCash, changedCompanyCash, type HistoryCash } from './historyCash.js'
 import { auctionHistory, type ActionHistoryEntry } from './auctionHistory.js'
+import { isGameEndAction } from './historyNavigation.js'
 import type { TitleRound } from '../session/titlePresentation.js'
 import {
     AuctionHeading,
     operatingRoundHeading,
-    titleStockRoundHeading,
+    titleRoundHeading,
     roundLabel,
     roundTitle,
     stockRoundHeading
@@ -51,6 +54,8 @@ function changedCompanyCashOf(cash: HistoryCash | undefined): boolean {
 export type HistoryTitle = {
     isEvent?: (action: GameAction) => boolean
     rounds?: readonly TitleRound[]
+    /** The title's own opening round, which heads the actions taken while it is under way. */
+    openingRound?: Pick<TitleRound, 'name' | 'abbreviation'>
 }
 
 /** The game's end shares the round of the action before it, which may close a title's round. */
@@ -82,18 +87,18 @@ export function historyRounds(
     for (const [position, action] of reversed.entries()) {
         const snapshot = states.get(action.id)
         if (!snapshot) continue
-        const { phase, stock, operating, set, round, auction, setUnderWay } = snapshot.after
+        const { phase, stock, operating, set, round, part, auction, opening } = snapshot.after
         const closing = roundClosingAction(reversed, position)
         openRound = titleRounds.find((round) => round.ends(closing)) ?? openRound
         const heading = auction
             ? AuctionHeading
             : openRound
-              ? openRound.followsStockRound && !setUnderWay
-                  ? titleStockRoundHeading(stock, openRound)
-                  : operatingRoundHeading(set, round, openRound)
-              : operating && !isCompleteStockRound(action)
-                ? operatingRoundHeading(set, round)
-                : stockRoundHeading(stock)
+              ? titleRoundHeading(openRound, snapshot.after)
+              : opening && title.openingRound
+                ? { ...title.openingRound, number: '' }
+                : operating && !isCompleteStockRound(action)
+                  ? operatingRoundHeading(set, round, undefined, part)
+                  : stockRoundHeading(stock)
         const label = roundLabel(heading)
         if (openRound?.starts(action)) openRound = undefined
         let section = rounds.at(-1)
@@ -120,6 +125,7 @@ export function historyRounds(
         const entry =
             (isStartOperatingRound(action) && !action.metadata?.payments.length) ||
             isStockInstructionAction(action) ||
+            isRunInstructionAction(action) ||
             isSetPrivatePowerRequest(action) ||
             isDropPrivatePowerRequest(action)
                 ? undefined
@@ -136,7 +142,8 @@ export function historyRounds(
                       action.metadata?.marketMoves.some(
                           (move) => move.fromMarketSpaceId !== move.toMarketSpaceId
                       )) ||
-                  isEndGame(action) ||
+                  isGameEndAction(action) ||
+                  isDeclareBankruptcy(action) ||
                   isExportTrains(action) ||
                   isPayInterest(action) ||
                   !!title.isEvent?.(action) ||

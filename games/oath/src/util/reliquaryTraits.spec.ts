@@ -24,7 +24,7 @@ import { BRUTAL, CARELESS, DECADENT, GREEDY, hasTrait, uncoveredTraits } from '.
 import '../powers/index.js'
 import { ongoingCampaign, required } from '../testing/required.js'
 import { buildAction } from '../testing/actions.js'
-import { modifierUse, player } from '../testing/choices.js'
+import { modifierUse, player, site } from '../testing/choices.js'
 import { FILLER, INN, TENTS } from '../testing/cards.js'
 import { IMPERIAL_WARBANDS } from '../model/warbandCounts.js'
 import { RunMode, engine } from '../testing/engine.js'
@@ -430,6 +430,48 @@ describe('Careless — Trade (R-6.6.2.a)', () => {
             expect(gainedBeside(board([], {}, {}, [INN], [RETURN]), TradeOption.ForSecrets)).toBe(0)
         })
     })
+
+    it('stays with a Chancellor who borrows advisers (Master of Disguise) or acts at a Beast site (Small Friends)', () => {
+        const SMALL_FRIENDS = 'denizen.beast.small-friends'
+        const WOLVES = 'denizen.beast.wolves'
+        const tradeWith = (
+            s: ReturnType<typeof board>,
+            cardId: string,
+            modifiers: ModifierUse[]
+        ) => {
+            const action = new HydratedTrade(
+                buildAction(Trade, {
+                    playerId: 'ruler',
+                    cardId,
+                    option: TradeOption.ForFavor,
+                    modifiers
+                })
+            )
+            action.apply(s)
+            return action.metadata?.favorGained ?? 0
+        }
+        const disguised = (uncovered: string[]) =>
+            tradeWith(board(uncovered, {}, {}, [INN], [DISGUISE]), INN, [
+                modifierUse(DISGUISE, [player('other')])
+            ])
+        expect(disguised([CARELESS])).toBe(disguised([]) + 1)
+        const friends = (uncovered: string[]) =>
+            tradeWith(
+                board(
+                    uncovered,
+                    {
+                        oathRevision: OathRevision.EngineFixes15,
+                        denizensBySite: { c1: [INN], p1: [WOLVES] }
+                    },
+                    {},
+                    [INN],
+                    [SMALL_FRIENDS]
+                ),
+                WOLVES,
+                [modifierUse(SMALL_FRIENDS, [site('p1')])]
+            )
+        expect(friends([CARELESS])).toBe(friends([]) + 1)
+    })
 })
 
 describe('Careless under Vow of Poverty — "You still don’t get the favor from Careless" (its Q&A)', () => {
@@ -701,11 +743,11 @@ describe('sideFavor under Vow of Poverty and with Secret Signal', () => {
             return s
         }
 
-        it('no Vow of her own, borrowing one: the Trade gains nothing beside, and the count says so', () => {
+        it('no Vow of their own, borrowing one: the Trade gains nothing beside, and the count says so', () => {
             expect(both(borrowing([RETURN], [POVERTY]), disguise)).toEqual([0, 0])
         })
 
-        it("her own Vow, borrowing advisers with none: the Trade gains Careless's favor, and the count shows it", () => {
+        it("their own Vow, borrowing advisers with none: the Trade gains Careless's favor, and the count shows it", () => {
             expect(both(borrowing([RETURN, POVERTY], [STEED]), disguise)).toEqual([1, 1])
         })
     })

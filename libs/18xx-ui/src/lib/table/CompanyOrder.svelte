@@ -4,28 +4,36 @@
     import { prefersReducedMotion } from 'svelte/motion'
     import type { Snippet } from 'svelte'
     import { assertExists } from '@tabletop/common'
+    import { chainSidewaysScroll } from '@tabletop/frontend-components'
     import {
         cashOwnedBy,
         trainsOwnedBy,
         type Company,
         type FinancialState,
         type TrainState,
+        type NeutralStations,
         type StationState,
+        type Train,
         type TrainDepot,
-        isObsoleteTrain
+        isObsoleteTrain,
+        placeableStations
     } from '@tabletop/18xx'
+    import type { TrainTokens } from '../session/titlePresentation.js'
     import type { StationAppearance } from '../maps/stationPresentation.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import CompanyOrderOverview from './CompanyOrderOverview.svelte'
     let {
+        stationToken,
         money,
         showDetails,
         companies,
         companyName,
         gameState,
+        neutral,
         trainDepot,
         trainColors,
+        trainTokens,
         requiresTrain,
         appearances,
         currentCompanyId,
@@ -37,13 +45,16 @@
         firstVisible = $bindable(-1),
         lastVisible = $bindable(-1)
     }: {
+        stationToken: string
         money: MoneyFormat
         showDetails: boolean
         companies: readonly Company[]
         companyName: (companyId: string) => string
         gameState: Pick<FinancialState, 'cash'> & TrainState & StationState
+        neutral: NeutralStations
         trainColors: Readonly<Record<string, string>>
         trainDepot: TrainDepot
+        trainTokens?: (train: Train) => TrainTokens | undefined
         requiresTrain: (companyId: string) => boolean
         appearances: Readonly<Record<string, StationAppearance>>
         currentCompanyId?: string
@@ -140,11 +151,10 @@
                     id: train.id,
                     color: trainColors[train.definitionId],
                     name: trainDepot.trainDefinition(train.definitionId).name,
-                    obsolete: isObsoleteTrain(train)
+                    obsolete: isObsoleteTrain(train),
+                    tokens: trainTokens?.(train)
                 })),
-                remainingTokens: gameState.stations.filter(
-                    (station) => station.companyId === company.id && station.status === 'available'
-                )
+                remainingTokens: placeableStations(gameState, neutral, company.id)
             }
         })
     )
@@ -156,7 +166,11 @@
             <CompanyOrderOverview {companies} {appearances} {firstVisible} {lastVisible} />
         </div>
     {/if}
-    <ol use:trackVisibleCompanies use:revealCurrentCompany={currentCompanyId}>
+    <ol
+        use:trackVisibleCompanies
+        use:revealCurrentCompany={currentCompanyId}
+        {@attach chainSidewaysScroll}
+    >
         {#each entries as { company, appearance, amount, trains, remainingTokens } (company.id)}
             {@const completed = completedCompanyIds.includes(company.id)}
             {@const detailed = showDetails || currentCompanyId === company.id}
@@ -167,7 +181,7 @@
                 data-company-id={company.id}
                 class:completed
                 aria-current={currentCompanyId === company.id ? 'step' : undefined}
-                aria-label={`${companyName(company.id)}, cash ${amount === undefined ? 'not applicable' : amount}, trains ${trains.map((train) => (train.obsolete ? `${train.name} obsolete` : train.name)).join(', ') || 'none'}, ${remainingTokens.length} station tokens remaining${currentCompanyId === company.id ? ', operating' : completed ? ', operated' : ''}`}
+                aria-label={`${companyName(company.id)}, cash ${amount === undefined ? 'not applicable' : amount}, trains ${trains.map((train) => (train.obsolete ? `${train.name} obsolete` : train.name)).join(', ') || 'none'}, ${remainingTokens.length} ${stationToken}s remaining${currentCompanyId === company.id ? ', operating' : completed ? ', operated' : ''}`}
                 title={companyName(company.id)}
             >
                 <button
@@ -195,7 +209,7 @@
                                 <span
                                     class="tokens"
                                     class:empty-tokens={remainingTokens.length === 0}
-                                    title={`${remainingTokens.length} station tokens remaining`}
+                                    title={`${remainingTokens.length} ${stationToken}s remaining`}
                                 >
                                     <span>{remainingTokens.length}</span>
                                     <CompanyToken {appearance} size={14} />
@@ -207,6 +221,7 @@
                                         name={train.name}
                                         color={train.color}
                                         obsolete={train.obsolete}
+                                        tokens={train.tokens}
                                     />
                                 {:else}
                                     <span

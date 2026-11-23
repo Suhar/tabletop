@@ -1,9 +1,9 @@
+import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
 import { recordStockAction } from './stockRoundRules.js'
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
     ActionSource,
-    PlayerAction,
     HydratableAction,
     assert,
     type GameAction,
@@ -17,11 +17,11 @@ import type { StockState } from './stockState.js'
 
 export const BuyShares = Type.Object(
     {
-        ...PlayerAction.properties,
+        ...EighteenXXPlayerAction.properties,
         type: Type.Literal('BuyShares'),
         buyer: Owner,
         certificateId: Type.String(),
-        expectedPrice: Type.Integer({ minimum: 1 }),
+        expectedPrice: Type.Integer({ minimum: 0 }),
         metadata: Type.Optional(SharePurchaseDetails)
     },
     { additionalProperties: false }
@@ -59,7 +59,7 @@ export class HydratedBuyShares extends HydratableAction<typeof BuyShares> implem
         recordTurnPurchase(state, this.#rules, {
             kind: 'share',
             companyId: result.details.companyId,
-            ...(result.poolId ? { poolId: result.poolId } : {})
+            ...(result.details.poolId ? { poolId: result.details.poolId } : {})
         })
         applySharePurchase(state, result.details)
         this.#rules.afterSharePurchase?.(state, result.details)

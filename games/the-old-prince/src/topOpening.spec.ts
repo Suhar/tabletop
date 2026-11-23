@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { ActionSource, type GameAction } from '@tabletop/common'
-import { OfferAuction, cashOwnedBy, getCompany } from '@tabletop/18xx'
+import { OfferAuction, cashOwnedBy, getCompany, presidentOf } from '@tabletop/18xx'
 import { Definition, TheOldPrinceAuctionRules, theOldPrinceRole } from './index.js'
 import { exampleGame } from '@tabletop/18xx/scenarios'
 import { TheOldPrinceScenarios } from './scenarios/index.js'
@@ -101,9 +101,9 @@ it.each([3, 4])('sets up and completes TOP for %i players', (count) => {
         cashOwnedBy(run.state, { kind: 'player', playerId })
     )
     expect(cash).toEqual([...cash].sort((a, b) => Number(a) - Number(b)))
-    expect(getCompany(run.state, main).president).toBeDefined()
-    expect(getCompany(run.state, short).president).toBeDefined()
-    expect(getCompany(run.state, 'PEIR').president).toBeDefined()
+    expect(presidentOf(run.state, main)).toBeDefined()
+    expect(presidentOf(run.state, short)).toBeDefined()
+    expect(presidentOf(run.state, 'PEIR')).toBeDefined()
     let replay = run.initial
     for (const action of run.history)
         replay = run.engine.applyProcessedAction({ game: run.game, state: replay, action })
@@ -165,9 +165,18 @@ it('pays player privates repeatedly until a forced purchase is affordable, exclu
     const price = run.model.price(run.model.auction.bidding!.lotId)
     for (const account of run.state.cash) if (account.owner.kind === 'player') account.amount = 0
     const result = run.act('PassAuction')
-    expect(result.processedActions.filter((a) => a.type === 'ResolveAuction')).toHaveLength(
-        Math.ceil(price / 5) + 1
-    )
+    const resolutions = result.processedActions.filter((a) => a.type === 'ResolveAuction')
+    expect(resolutions).toHaveLength(Math.ceil(price / 5) + 1)
+    expect(resolutions[0].metadata).toEqual({
+        kind: 'income',
+        payments: [
+            {
+                from: { kind: 'bank' },
+                to: { kind: 'player', playerId: earner },
+                amount: 5
+            }
+        ]
+    })
     expect(run.model.auction.awards.at(-1)?.playerId).toBe(earner)
     expect(cashOwnedBy(run.state, { kind: 'company', companyId: 'PEIR' })).toBe(200)
 })
@@ -178,6 +187,7 @@ it('preserves an unaffordable zero-income position and can undo the entire conse
     const before = structuredClone(run.state)
     const result = run.act('PassAuction')
     expect(run.model.auction.stalled).toBe(true)
+    expect(result.processedActions.at(-1)?.metadata).toEqual({ kind: 'income', payments: [] })
     expect(run.state.activePlayerIds).toEqual([])
     for (const player of run.state.players)
         expect(

@@ -5,11 +5,14 @@ import {
     getCompany,
     isStartOperatingRound,
     recordedRoundEnd,
-    sharesOwned
+    sharesOwned,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample, type ExamplePlay } from '@tabletop/18xx/scenarios'
 import {
     EighteenThirtyTwoTileSet,
+    isAnswerMerger,
+    isCompleteTakeover,
     isCompleteMergerPhase,
     mergerDecision,
     EighteenThirtyTwoStationRules,
@@ -17,9 +20,12 @@ import {
     mergerOptions,
     takeoverPayments,
     takeoverSales,
+    takeoverShortfall,
     type EighteenThirtyTwoState
 } from './index.js'
-import { EighteenThirtyTwoScenarios } from './scenarios/index.js'
+import { expectReplayableRecord } from '../../../libs/18xx/test/replayableRecord.js'
+import { turnRecord } from '../../../libs/18xx/test/turnRecord.js'
+import { addUnstartedRailroads, EighteenThirtyTwoScenarios } from './scenarios/index.js'
 
 type Play = ExamplePlay<EighteenThirtyTwoState>
 const player = (playerId: string) => ({ kind: 'player' as const, playerId })
@@ -63,18 +69,20 @@ describe('merger phase', () => {
         const play = mergerPhase()
         expect(play.state.machineState).toBe('Merging')
         const playerId = proposer(play)
-        expect(play.valid(playerId)).toEqual(['ProposeMerger', 'PassMerger'])
+        expect(play.valid(playerId)).toEqual(['ProposeMerger', 'PassMerger', 'SetRunInstruction'])
     })
 
     it('gives each proposer a turn in priority order, answers falling within it', () => {
         const play = mergerPhase()
-        const start = play.state.turnManager.series.length - 1
+        const first = play.state
+        const processedBefore = play.processed.length
+        const turns = turnRecord(play)
         const passed: string[] = []
         while (proposer(play) !== 'alex') {
             passed.push(proposer(play))
-            play.act('PassMerger', {}, proposer(play))
+            turns.act('PassMerger', {}, proposer(play))
         }
-        play.act(
+        turns.act(
             'ProposeMerger',
             { companyId: 'ACL', partnerId: 'CG', kind: 'system', yielded: false },
             'alex'
@@ -82,15 +90,19 @@ describe('merger phase', () => {
         const open = play.state.turnManager.series.at(-1)
         expect(open?.playerId).toBe('alex')
         expect(open?.end).toBeUndefined()
-        play.act('AnswerMerger', { accept: true }, 'blair')
-        const turns = play.state.turnManager.series.slice(start, start + passed.length + 1)
-        expect(turns.map((turn) => turn.playerId)).toEqual([...passed, 'alex'])
+        turns.act('AnswerMerger', { accept: true }, 'blair')
+        const proposers = [...passed, 'alex']
+        expect(turns.players.slice(0, proposers.length)).toEqual(proposers)
         const order = play.state.turnManager.turnOrder
-        expect(turns.map((turn) => order.indexOf(turn.playerId))).toEqual(
-            turns.map((turn) => order.indexOf(turn.playerId)).sort((a, b) => a - b)
+        expect(proposers.map((playerId) => order.indexOf(playerId))).toEqual(
+            proposers.map((playerId) => order.indexOf(playerId)).sort((a, b) => a - b)
         )
         // The answer ended alex's turn, as nothing was left for them to propose.
-        expect(turns.every((turn) => turn.end !== undefined)).toBe(true)
+        expect(turns.finished).toBe(proposers.length)
+        expectReplayableRecord(
+            { ...play, state: play.state, actions: play.processed.slice(processedBefore) },
+            first
+        )
     })
 
     it('does not open before the first 4-train', () => {
@@ -117,10 +129,10 @@ describe('merger phase', () => {
             'alex'
         )
         expect(play.state.activePlayerIds).toEqual(['blair'])
-        expect(play.valid('blair')).toEqual(['AnswerMerger'])
+        expect(play.valid('blair')).toEqual(['AnswerMerger', 'SetRunInstruction'])
         play.act('AnswerMerger', { accept: true }, 'blair')
         expect(play.state.systems).toEqual({ AMTK: ['ACL', 'CG'] })
-        expect(getCompany(play.state, 'AMTK').president).toEqual(player('alex'))
+        expect(presidentOf(play.state, 'AMTK')).toEqual(player('alex'))
         // Nothing remains to merge, so the phase ends and the operating set begins.
         expect(play.state.mergerPhase).toBeUndefined()
         expect(play.state.mergerPhaseHeld).toBeUndefined()
@@ -155,7 +167,9 @@ describe('merger phase', () => {
     })
 
     it('lets the buyer take over the partner, paying its holders', () => {
-        const play = mergerPhase()
+        const play = mergerPhase((state) => {
+            addUnstartedRailroads(state)
+        })
         while (proposer(play) !== 'alex') play.act('PassMerger', {}, proposer(play))
         expect(
             takeoverPayments(play.state, 'ACL', 'CG').reduce(
@@ -171,6 +185,11 @@ describe('merger phase', () => {
         play.act('AnswerMerger', { accept: true }, 'blair')
         expect(getCompany(play.state, 'CG').closed).toBe(true)
         expect(play.state.takeoverBuyerIds).toEqual(['ACL'])
+        // Nine of the ten railroads remain, lowering three players' limit (Table 2).
+        expect(play.processed.find(isAnswerMerger)?.metadata?.outcome?.certificateLimit).toEqual({
+            from: 20,
+            to: 17
+        })
         // ACL paid $1000 from its $600 and Alex's $400 and took CG's $600 treasury and the
         // coal fields private, whose $15 it collects as the operating set begins.
         expect(cashOwnedBy(play.state, { kind: 'company', companyId: 'ACL' })).toBe(615)
@@ -185,8 +204,9 @@ describe('merger phase', () => {
     })
 
     it('has the buyer’s president sell shares to raise a takeover’s price', () => {
-        // ACL's $600, Alex's $50 and the $300 for Alex's own CG shares leave $50 to raise.
-        const play = mergerPhase((state) => setCash(state, 'alex', 50))
+        // ACL's $600 and Alex's $350 leave $50 of the $1000 to raise. ACL pays Alex $300 for
+        // their own CG shares only after the takeover is funded.
+        const play = mergerPhase((state) => setCash(state, 'alex', 350))
         while (proposer(play) !== 'alex') play.act('PassMerger', {}, proposer(play))
         play.act('ProposeMerger', takeover, 'alex')
         play.act('AnswerMerger', { accept: true }, 'blair')
@@ -195,7 +215,7 @@ describe('merger phase', () => {
             targetId: 'CG',
             playerId: 'alex'
         })
-        expect(play.valid('alex')).toEqual(['SellTakeoverShares'])
+        expect(play.valid('alex')).toEqual(['SellTakeoverShares', 'SetRunInstruction'])
         const sales = takeoverSales(play.state, {
             buyerId: 'ACL',
             targetId: 'CG',
@@ -207,8 +227,26 @@ describe('merger phase', () => {
         ])
         play.act('SellTakeoverShares', { companyId: 'ACL', shares: 1 }, 'alex')
         expect(getCompany(play.state, 'CG').closed).toBe(true)
-        expect(getCompany(play.state, 'ACL').president).toEqual(player('alex'))
+        expect(presidentOf(play.state, 'ACL')).toEqual(player('alex'))
         expect(play.state.mergerPhase).toBeUndefined()
+        const payments = play.processed.find(isCompleteTakeover)?.metadata?.payments ?? []
+        const acl = { kind: 'company', companyId: 'ACL' }
+        expect(payments[0]).toEqual({ from: player('alex'), to: acl, amount: 400 })
+        expect(payments).toContainEqual({ from: acl, to: player('alex'), amount: 300 })
+        expect(
+            payments
+                .filter((payment) => payment.from.kind === 'company')
+                .reduce((sum, payment) => sum + payment.amount, 0)
+        ).toBe(1000)
+    })
+
+    it('does not count the president’s own target shares toward their contribution', () => {
+        // ACL's $600 and Alex's $50 leave $350 to raise, which Alex's sellable shares cannot,
+        // though the $300 ACL would pay for Alex's CG shares would nearly cover it.
+        const play = mergerPhase((state) => setCash(state, 'alex', 50))
+        while (proposer(play) !== 'alex') play.act('PassMerger', {}, proposer(play))
+        expect(takeoverShortfall(play.state, 'ACL', 'CG', 'alex')).toBe(350)
+        expect(mergerOptions(play.state, 'alex')).not.toContainEqual(takeover)
     })
 
     it('lets the proposer yield, so the partner’s company buys', () => {
@@ -288,9 +326,6 @@ describe('merger phase', () => {
                 if (certificate.id === 'CG:president') certificate.owner = player('alex')
                 else if (certificate.id === 'CG:share:2') certificate.owner = player('blair')
             }
-            const company = state.companies.find((entry) => entry.id === 'CG')
-            assertExists(company, 'CG is in play')
-            company.president = player('alex')
         })
         expect(play.state.machineState).toBe('Merging')
         expect(play.state.mergerPhase?.final).toBe(true)

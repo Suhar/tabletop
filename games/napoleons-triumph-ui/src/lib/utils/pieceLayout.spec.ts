@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { assertExists, type Point } from '@tabletop/common'
-import { Side, type Face } from '@tabletop/napoleons-triumph'
+import { AUSTERLITZ, Side, type Face } from '@tabletop/napoleons-triumph'
 import {
     TestGame,
     arrangeBattlefield,
@@ -13,9 +13,15 @@ import { BoardView, toView, viewRotation } from './boardView.js'
 import { APPROACH_GEOMETRY, LOCALE_GEOMETRY } from '$lib/map/boardGeometry.js'
 import { BLOCK_LENGTH, BLOCK_THICKNESS, blockSamples, coveredBy } from './blockShape.js'
 import { boxSamples } from './orientedBox.js'
-import { layoutPieces, type BlockSprite } from './pieceLayout.js'
+import { BAR_HALF_THICKNESS, layoutPieces, type BlockSprite } from './pieceLayout.js'
 import { insidePolygon } from './polygon.js'
-import { targetBarBox } from './targetBar.js'
+import { approachBarBox, targetBarBox } from './targetBar.js'
+
+// Counts the layout's point-in-locale tests, a measure of its work that does not depend on the machine.
+vi.mock('./polygon.js', async (importOriginal) => {
+    const polygon = await importOriginal<typeof import('./polygon.js')>()
+    return { ...polygon, insidePolygon: vi.fn(polygon.insidePolygon) }
+})
 
 const LOCALE = 94
 
@@ -309,6 +315,164 @@ describe('a corps in reserve', () => {
         for (const block of reserve) {
             expect(insidePolygon(block.centre, outline)).toBe(true)
         }
+    })
+})
+
+describe('a reserve of several groups in a locale long across the screen', () => {
+    const NARROW = 93
+
+    function crowded() {
+        const game = new TestGame()
+        game.deployBoth()
+        const map = game.hydrated.map
+        const beyond = (approach: number) => map.approach(approach).neighbour
+        const allied = (id: string, face: Face, facing?: number, commanderId?: string) => ({
+            id,
+            side: Side.Allied,
+            face,
+            locale: NARROW,
+            facing,
+            commanderId
+        })
+        arrangeBattlefield(game, [
+            allied('blocking-322', infantry(2), beyond(322)),
+            allied('blocking-283', infantry(2), beyond(283)),
+            allied('blocking-321', infantry(2), beyond(321)),
+            allied('langeron-0', infantry(2), undefined, 'langeron'),
+            allied('liechtenstein-0', infantry(1), undefined, 'liechtenstein'),
+            allied('liechtenstein-1', infantry(1), undefined, 'liechtenstein'),
+            allied('detached', cavalry(2))
+        ])
+        return layoutPieces(game.hydrated, { rotation: viewRotation(BoardView.Allied) })
+    }
+
+    function reserve() {
+        return crowded().filter((sprite) => sprite.group.position.approach === undefined)
+    }
+
+    it('keeps every block of it inside its locale', () => {
+        const { outline } = LOCALE_GEOMETRY[NARROW]
+        const blocks = reserve().flatMap((sprite) => sprite.blocks)
+        expect(blocks).toHaveLength(4)
+        for (const block of blocks) {
+            expect(insidePolygon(block.centre, outline)).toBe(true)
+        }
+    })
+
+    it('stands its groups side by side where one column would not fit', () => {
+        const rotation = viewRotation(BoardView.Allied)
+        const across = (commanderId: string) => {
+            const sprite = reserve().find((sprite) => sprite.group.commander?.id === commanderId)
+            assertExists(sprite, `${commanderId} stands in reserve`)
+            return toView(sprite.centre, rotation).x
+        }
+        expect(Math.abs(across('langeron') - across('liechtenstein'))).toBeGreaterThanOrEqual(
+            BLOCK_LENGTH
+        )
+    })
+})
+
+// From a reported game: Bessières' corps and a detached cavalry block in reserve at locale 43 stood one
+// above the other, the corps against the bar of the approach to 56, and was read as blocking it.
+describe("a reserve beside its locale's approaches", () => {
+    const SMALL = 43
+
+    function laidOut() {
+        const game = new TestGame()
+        game.deployBoth()
+        const french = (id: string, face: Face, commanderId?: string) => ({
+            id,
+            side: Side.French,
+            face,
+            locale: SMALL,
+            commanderId
+        })
+        arrangeBattlefield(game, [
+            french('F24', infantry(2), 'bessieres'),
+            french('F25', infantry(3), 'bessieres'),
+            french('F35', infantry(2), 'bessieres'),
+            french('F36', infantry(3), 'bessieres'),
+            french('F18', cavalry(2))
+        ])
+        const sprites = layoutPieces(game.hydrated, { rotation: viewRotation(BoardView.French) })
+        return { game, blocks: sprites.flatMap((sprite) => sprite.blocks) }
+    }
+
+    it('stands clear of the bar of the approach to 56, which lies level with it', () => {
+        const { game, blocks } = laidOut()
+        expect(blocks).toHaveLength(5)
+        const toward56 = game.hydrated.map.approachBetween(SMALL, 56).id
+        const bar = approachBarBox(toward56, BAR_HALF_THICKNESS)
+        expect(boxSamples(bar).filter(coveredBy(blocks, 5))).toEqual([])
+        const { outline } = LOCALE_GEOMETRY[SMALL]
+        for (const block of blocks) {
+            expect(insidePolygon(block.centre, outline)).toBe(true)
+        }
+    })
+
+    // From reported games: an impassable border has no bar drawn, and a reserve in a locale with one
+    // left the whole table blank.
+    it('stands in a locale with an impassable border, which has no bar to keep clear of', () => {
+        const withImpassableBorder = Object.keys(LOCALE_GEOMETRY)
+            .map(Number)
+            .filter((locale) =>
+                AUSTERLITZ.approachesOf(locale).some((approach) => approach.impassable)
+            )
+        expect(withImpassableBorder).toContain(58)
+        for (const locale of withImpassableBorder) {
+            const placed = new TestGame()
+            placed.deployBoth()
+            arrangeBattlefield(placed, [
+                { id: 'F24', side: Side.French, face: infantry(2), locale }
+            ])
+            for (const view of Object.values(BoardView)) {
+                const blocks = layoutPieces(placed.hydrated, {
+                    rotation: viewRotation(view)
+                }).flatMap((sprite) => sprite.blocks)
+                expect(blocks.map((block) => block.unit.id)).toContain('F24')
+            }
+        }
+    })
+})
+
+// From a reported game: four Allied corps in reserve at locale 63 made every layout of the turned
+// board take over 100 ms there, and every tap waited for several.
+describe('a reserve that cannot stand at its anchor', () => {
+    const CROWDED = 63
+
+    function laidOut() {
+        const game = new TestGame()
+        game.deployBoth()
+        const corps = { bagration: 3, constantine: 6, kollowrath: 3, prebyshevsky: 3 }
+        arrangeBattlefield(
+            game,
+            Object.entries(corps).flatMap(([commanderId, units]) =>
+                Array.from({ length: units }, (_, index) => ({
+                    id: `${commanderId}-${index}`,
+                    side: Side.Allied,
+                    face: infantry(2),
+                    locale: CROWDED,
+                    commanderId
+                }))
+            )
+        )
+        return () => layoutPieces(game.hydrated, { rotation: viewRotation(BoardView.Allied) })
+    }
+
+    it('keeps every block of it inside its locale', () => {
+        const { outline } = LOCALE_GEOMETRY[CROWDED]
+        const blocks = laidOut()().flatMap((sprite) => sprite.blocks)
+        expect(blocks).toHaveLength(15)
+        for (const block of blocks) {
+            expect(insidePolygon(block.centre, outline)).toBe(true)
+        }
+    })
+
+    it('gives up on dear spots instead of costing every one in full', () => {
+        const layout = laidOut()
+        vi.mocked(insidePolygon).mockClear()
+        layout()
+        expect(vi.mocked(insidePolygon).mock.calls.length).toBeLessThan(100_000)
     })
 })
 

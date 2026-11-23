@@ -67,7 +67,6 @@
 
     let gameSession = getGameSession()
 
-
     type Placed = {
         hex: Hex
         center: { x: number; y: number }
@@ -692,7 +691,7 @@
                 <polygon
                     points="{offset - 5},-7 {offset + 4},0 {offset - 5},7 {offset - 2},0"
                     fill={color}
-                />
+                ></polygon>
             {/each}
         </g>
     </g>
@@ -702,8 +701,8 @@
      around a planet or a piece. -->
 {#snippet markDot(center: { x: number; y: number }, color: string)}
     <g transform="translate({center.x} {center.y})" pointer-events="none">
-        <circle r="15" fill="none" stroke={color} stroke-width="1.5" stroke-opacity="0.4" />
-        <circle r="9" fill={color} stroke="#0b1222" stroke-width="1.5" />
+        <circle r="15" fill="none" stroke={color} stroke-width="1.5" stroke-opacity="0.4"></circle>
+        <circle r="9" fill={color} stroke="#0b1222" stroke-width="1.5"></circle>
     </g>
 {/snippet}
 
@@ -717,7 +716,7 @@
         stroke-width="2.5"
         stroke-opacity={0.9 * strength}
         pointer-events="none"
-    />
+    ></circle>
 {/snippet}
 
 {#snippet markRing(center: { x: number; y: number }, color: string, strength: number)}
@@ -729,13 +728,13 @@
                 stroke={color}
                 stroke-width="3"
                 stroke-opacity="0.9"
-            />
+            ></circle>
             {#each Array.from({ length: MARK_RING_TEETH }, (_, tooth) => tooth) as tooth (tooth)}
                 <polygon
                     points="{MARK_RING_RADIUS},-7 {MARK_RING_RADIUS},7 {MARK_RING_RADIUS - 14},0"
                     fill={color}
                     transform="rotate({(tooth * 360) / MARK_RING_TEETH})"
-                />
+                ></polygon>
             {/each}
         </g>
     </g>
@@ -781,28 +780,28 @@
                     fill-opacity="0.85"
                     stroke="#6b4fb0"
                     stroke-width="2"
-                />
+                ></polygon>
                 <circle
                     cx={entry.center.x - 10}
                     cy={entry.center.y - 6}
                     r="12"
                     fill="#7b5fcb"
                     fill-opacity="0.35"
-                />
+                ></circle>
                 <circle
                     cx={entry.center.x + 9}
                     cy={entry.center.y + 5}
                     r="14"
                     fill="#9d84e6"
                     fill-opacity="0.25"
-                />
+                ></circle>
                 <circle
                     cx={entry.center.x + 2}
                     cy={entry.center.y - 14}
                     r="7"
                     fill="#c3b3f5"
                     fill-opacity="0.25"
-                />
+                ></circle>
             {:else}
                 <polygon
                     points={entry.points}
@@ -810,7 +809,7 @@
                     fill-opacity="0.5"
                     stroke="#2b3752"
                     stroke-width="2"
-                />
+                ></polygon>
             {/if}
 
             {#if hex.kind === HexKind.Open && gameSession.isInterdictedGround(hex.coords)}
@@ -821,7 +820,7 @@
                     fill="#ff6b5e"
                     fill-opacity="0.13"
                     pointer-events="none"
-                />
+                ></polygon>
             {/if}
 
             {#if gameSession.spreading && gameSession.isSpreadTarget(hex.coords)}
@@ -831,11 +830,11 @@
                     fill-opacity="0.18"
                     stroke="#ffab6b"
                     stroke-width="4"
-                />
+                ></polygon>
             {/if}
 
             {#if highlighted && !showGhost}
-                <polygon points={entry.points} fill="#ffffff" fill-opacity="0.07" />
+                <polygon points={entry.points} fill="#ffffff" fill-opacity="0.07"></polygon>
             {/if}
         </g>
     {/each}
@@ -853,7 +852,7 @@
                 stroke-width="2"
                 stroke-linecap="round"
                 pointer-events="none"
-            />
+            ></path>
         {/if}
         {#if interdictedEdges.outer}
             <path
@@ -864,7 +863,7 @@
                 stroke-width="2.5"
                 stroke-linecap="round"
                 pointer-events="none"
-            />
+            ></path>
         {/if}
 
         <!-- Hexes closed to the probe in hand, above every tile so no neighbor covers an edge. -->
@@ -879,7 +878,7 @@
                     stroke-width="2"
                     stroke-dasharray="4 5"
                     pointer-events="none"
-                />
+                ></polygon>
             {/if}
         {/each}
 
@@ -896,7 +895,7 @@
                     width="0"
                     height={box.height}
                     data-width={box.width}
-                />
+                ></rect>
             </clipPath>
             <clipPath id="terraform-rest-{wipe.key}">
                 <rect
@@ -905,10 +904,10 @@
                     y={box.y}
                     width={box.width}
                     height={box.height}
-                />
+                ></rect>
             </clipPath>
             <clipPath id="terraform-hex-{wipe.key}">
-                <polygon points={outline} />
+                <polygon points={outline}></polygon>
             </clipPath>
             <g clip-path="url(#terraform-wipe-{wipe.key})" pointer-events="none">
                 <PlanetTile
@@ -930,7 +929,7 @@
                         stroke="#ffffff"
                         stroke-opacity="0.3"
                         stroke-width="10"
-                    />
+                    ></line>
                     <line
                         x1={box.x}
                         y1={box.y}
@@ -938,7 +937,7 @@
                         y2={box.y + box.height}
                         stroke="#ffffff"
                         stroke-width="2.5"
-                    />
+                    ></line>
                 </g>
             </g>
         {/each}
@@ -962,7 +961,7 @@
                 onpointerenter={(event) => onRoutePipEnter(event, pip.playerId, pip.planet)}
                 onpointerleave={onRoutePipLeave}
                 onclick={() => onHexClick(pip.planet)}
-            />
+            ></rect>
         {/each}
 
         <!-- Every so often a jammer sends a wave out to the edge of its reach, two hexes: a
@@ -983,7 +982,7 @@
                         stroke-dasharray="14 9 5 9"
                         vector-effect="non-scaling-stroke"
                         pointer-events="none"
-                    />
+                    ></circle>
                 {/each}
             {/if}
         {/each}
@@ -1009,14 +1008,14 @@
                                 keyPoints="0;0;1;0;0"
                                 keyTimes="0;{bot.start};{bot.turn};{bot.end};1"
                                 path={bot.path}
-                            />
+                            ></animateMotion>
                             <animate
                                 attributeName="opacity"
                                 dur={NANOBOT_CYCLE}
                                 repeatCount="indefinite"
                                 values="0;0;0.9;0.55;0;0"
                                 keyTimes="0;{bot.start};{bot.start + 0.02};{bot.turn};{bot.end};1"
-                            />
+                            ></animate>
                         </circle>
                     {/each}
                 </g>
@@ -1062,7 +1061,7 @@
                             fill={gameSession.colors.getPlayerUiColor(playerId)}
                             stroke="#0b1222"
                             stroke-width="1"
-                        />
+                        ></circle>
                     {/each}
                 </g>
             {/if}
@@ -1079,9 +1078,9 @@
             >
                 <!-- Strongest at the probe, fading out over the planet. -->
                 <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0" stop-color={color} stop-opacity="0" />
-                    <stop offset="0.5" stop-color={color} stop-opacity="0.28" />
-                    <stop offset="1" stop-color={color} stop-opacity="0.5" />
+                    <stop offset="0" stop-color={color} stop-opacity="0"></stop>
+                    <stop offset="0.5" stop-color={color} stop-opacity="0.28"></stop>
+                    <stop offset="1" stop-color={color} stop-opacity="0.5"></stop>
                 </linearGradient>
                 <polygon
                     points="0,-16 {beam.length},-5 {beam.length},5 0,16"
@@ -1090,7 +1089,7 @@
                         registry: orbits.beams,
                         key: beamKey(uplink.probe, uplink.planet)
                     }}
-                />
+                ></polygon>
             </g>
         {/each}
 
@@ -1183,7 +1182,7 @@
                             stroke-width="1.5"
                             stroke-dasharray="1.5 4.5"
                             opacity="0"
-                        />
+                        ></circle>
                         <circle
                             data-flourish="inner"
                             r="27"
@@ -1192,7 +1191,7 @@
                             stroke-width="1.5"
                             stroke-dasharray="1.5 4.5"
                             opacity="0"
-                        />
+                        ></circle>
                     </g>
                 </g>
             {/if}
@@ -1306,7 +1305,7 @@
                         stroke-opacity={previewing ? 0.9 : index === 0 ? 0.7 : 0.15}
                         stroke-width={previewing ? 4 : 2}
                         stroke-dasharray={previewing ? '' : '6 5'}
-                    />
+                    ></polygon>
                 {/each}
             </g>
         {/each}
@@ -1325,7 +1324,7 @@
                     stroke-linecap="round"
                     stroke-dasharray="9 8"
                     class="route-line"
-                />
+                ></line>
                 {#each route.planets as end (end.q + ',' + end.r)}
                     {@const at = hexGeometry(end).center}
                     <circle
@@ -1335,7 +1334,7 @@
                         fill="none"
                         stroke={color}
                         stroke-width="2.5"
-                    />
+                    ></circle>
                 {/each}
             </g>
         {/each}
@@ -1355,7 +1354,7 @@
                 stroke-linecap="round"
                 class="relay-line"
                 pointer-events="none"
-            />
+            ></line>
         {/each}
 
         {#each shownControlEdges as edge (edge.planet.q + ',' + edge.planet.r + '>' + edge.from.q + ',' + edge.from.r)}
@@ -1372,7 +1371,7 @@
                         stroke-linecap="round"
                         stroke-opacity="0.95"
                         pointer-events="none"
-                    />
+                    ></path>
                 {/if}
             {/if}
 
@@ -1386,7 +1385,7 @@
                         class="control-dot"
                         style="animation-delay: {dot.delay}s; animation-duration: {CONTROL_DOT_CYCLE}s;"
                         pointer-events="none"
-                    />
+                    ></circle>
                 {/each}
             {/if}
         {/each}
@@ -1423,7 +1422,7 @@
                         r="16"
                         fill={entry.destroyed ? '#ffd166' : '#ffe9a8'}
                         opacity="0"
-                    />
+                    ></circle>
                     <circle
                         data-blast="ring"
                         r="24"
@@ -1431,7 +1430,7 @@
                         stroke="#ff2f2f"
                         stroke-width="5"
                         opacity="0"
-                    />
+                    ></circle>
                     {#if entry.destroyed}
                         <g data-blast="sparks" opacity="0">
                             {#each [0, 45, 90, 135, 180, 225, 270, 315] as angle (angle)}
@@ -1444,7 +1443,7 @@
                                     stroke-width="4"
                                     stroke-linecap="round"
                                     transform="rotate({angle})"
-                                />
+                                ></line>
                             {/each}
                         </g>
                     {/if}
@@ -1496,7 +1495,7 @@
                     width="0"
                     height="16"
                     transform="translate({truss.start.x} {truss.start.y}) rotate({truss.degrees})"
-                />
+                ></rect>
             </clipPath>
             <g clip-path="url(#truss-grow-{truss.key})">
                 <TrussGirder start={truss.girder.start} end={truss.girder.end} {color} />
@@ -1515,7 +1514,7 @@
                 stroke-dasharray="2 6"
                 stroke-linecap="round"
                 pointer-events="none"
-            />
+            ></line>
         {/each}
         {#each sightSignals.pulses as pulse (pulse.key)}
             {@const run = insetRun(pulse.from, pulse.to, 18)}
@@ -1530,7 +1529,7 @@
                 style="animation-delay: {pulse.delay}s"
                 use:onSharedClock
                 pointer-events="none"
-            />
+            ></line>
         {/each}
         {#each sightSignals.bursts as burst (burst.key)}
             {@const at = hexGeometry(burst.at).center}
@@ -1545,7 +1544,7 @@
                 style="animation-delay: {burst.delay}s; transform-origin: {at.x}px {at.y}px"
                 use:onSharedClock
                 pointer-events="none"
-            />
+            ></circle>
         {/each}
 
         <!-- Marks above everything but the popups, so no piece, beam or girder covers a ring. -->
@@ -1586,7 +1585,7 @@
                     fill-opacity="0.75"
                     stroke="#8fb6ff"
                     stroke-width="2"
-                />
+                ></rect>
                 <text
                     x={x + 16}
                     y={y + 22}
@@ -1631,7 +1630,7 @@
                     fill-opacity="0.75"
                     stroke="#8fb6ff"
                     stroke-width="2"
-                />
+                ></rect>
                 <text
                     x={box.x + 16}
                     y={box.y + 27}
@@ -1661,7 +1660,7 @@
                     fill-opacity="0.75"
                     stroke="#8fb6ff"
                     stroke-width="2"
-                />
+                ></rect>
                 <text
                     x={box.x + 16}
                     y={box.y + 22}
@@ -1700,7 +1699,7 @@
                     fill-opacity="0.75"
                     stroke="#8fb6ff"
                     stroke-width="2"
-                />
+                ></rect>
                 <text x={box.x + 12} y={box.y + 21} class="fill-white text-[15px]">{label}</text>
             </g>
         {/if}

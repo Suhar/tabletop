@@ -1,4 +1,4 @@
-import { UserNotification, UserNotificationAction } from '@tabletop/common'
+import { PlayerVoteKind, UserNotification, UserNotificationAction } from '@tabletop/common'
 import {
     ButtonStyle,
     ComponentType,
@@ -37,7 +37,9 @@ const Color = {
     Invited: 0xa855f7,
     Joined: 0x14b8a6,
     Declined: 0x6b7280,
-    Vote: 0xf59e0b
+    Vote: 0xf59e0b,
+    Seated: 0x0ea5e9,
+    Unseated: 0x6b7280
 } as const
 
 export function discordNotificationMessage(
@@ -128,11 +130,33 @@ function notificationCopy(notification: UserNotification): NotificationCopy {
             }
         case UserNotificationAction.PlayerVoteRequested:
             return {
-                summary: `${notification.data.initiator.name} asks to go back in ${gameName}`,
-                heading: `${notification.data.initiator.name} asks everyone to go back`,
+                summary:
+                    notification.data.kind === PlayerVoteKind.Call
+                        ? `${notification.data.initiator.name} asks to end ${gameName}`
+                        : `${notification.data.initiator.name} asks to go back in ${gameName}`,
+                heading:
+                    notification.data.kind === PlayerVoteKind.Call
+                        ? `${notification.data.initiator.name} asks everyone to end the game`
+                        : `${notification.data.initiator.name} asks everyone to go back`,
                 color: Color.Vote,
                 path: gamePath,
                 buttonLabel: 'Vote'
+            }
+        case UserNotificationAction.TookOverSeat:
+            return {
+                summary: `You've taken over ${notification.data.formerHolder.name}'s seat in ${gameName}`,
+                heading: `An administrator gave you ${notification.data.formerHolder.name}'s seat`,
+                color: Color.Seated,
+                path: gamePath,
+                buttonLabel: 'Open game'
+            }
+        case UserNotificationAction.LostSeat:
+            return {
+                summary: `${notification.data.newHolder.name} has taken over your seat in ${gameName}`,
+                heading: `An administrator gave your seat to ${notification.data.newHolder.name}`,
+                color: Color.Unseated,
+                path: DASHBOARD_PATH,
+                buttonLabel: 'Open dashboard'
             }
     }
 }

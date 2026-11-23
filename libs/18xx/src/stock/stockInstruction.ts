@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
-import { President, type Owner } from '../finance/finance.js'
+import { getCompany, President, sharesOwned, type Owner } from '../finance/finance.js'
 import type { StockState } from './stockState.js'
+import { orderedSubset } from '../game/orderedSubset.js'
 
 const BuyUntil = Type.Union([
     Type.Object({ kind: Type.Literal('floated') }, { additionalProperties: false }),
@@ -37,11 +38,25 @@ export const StockInstruction = Type.Union([
     )
 ])
 export type StockInstruction = Type.Static<typeof StockInstruction>
+export type BuyStockInstruction = Extract<StockInstruction, { kind: 'buy' }>
+
+export function buyGoalMet(
+    state: StockState,
+    instruction: BuyStockInstruction,
+    playerId: string
+): boolean {
+    if (instruction.until.kind === 'floated')
+        return getCompany(state, instruction.companyId).floated === true
+    return (
+        sharesOwned(state, instruction.companyId, { kind: 'player', playerId }) >=
+        instruction.until.count
+    )
+}
 
 export function orderedIgnorableStops(
     stops: readonly IgnorableStockInstructionStop[]
 ): IgnorableStockInstructionStop[] {
-    return ignorableStockInstructionStops.filter((stop) => stops.includes(stop))
+    return orderedSubset(ignorableStockInstructionStops, stops)
 }
 
 export function withIgnoredStops(
@@ -139,6 +154,8 @@ export type StoppedStockInstruction = StandingStockInstruction & {
 }
 
 export interface StockInstructionRules {
+    /** Whether standing instructions wait, while a title's own step holds the turn. */
+    held?(state: StockState): boolean
     securePresidency?(state: StockState, companyId: string, owner: Owner): boolean
     titleSnapshot?(state: StockState, playerId: string): StockInstructionTitleSnapshot
     positionChange?(

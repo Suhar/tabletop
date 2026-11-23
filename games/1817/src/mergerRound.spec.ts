@@ -11,7 +11,8 @@ import {
     trainsOwnedBy,
     treasuryPoolId,
     type EighteenXXState,
-    type Train
+    type Train,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample, type ExamplePlay } from '@tabletop/18xx/scenarios'
 import {
@@ -77,7 +78,7 @@ describe('the merger round', () => {
     it('follows an operating round and offers each company in operating order', () => {
         const play = mergerRound()
         expect(mergerRoundCompanyId(play.state)).toBe('BA')
-        expect(play.valid('blair')).toEqual(['ConvertCompany', 'PassMerger'])
+        expect(play.valid('blair')).toEqual(['ConvertCompany', 'PassMerger', 'SetRunInstruction'])
         passOn(play)
         expect(mergerRoundCompanyId(play.state)).toBe('PLE')
         passOn(play)
@@ -141,7 +142,11 @@ describe('conversion', () => {
         // Casey may buy before Alex in this seating order.
         while (play.state.activePlayerIds[0] !== 'alex')
             play.act('PassConvertedShares', { companyId: 'BA' })
-        expect(play.valid('alex')).toEqual(['SellConvertedShares', 'PassConvertedShares'])
+        expect(play.valid('alex')).toEqual([
+            'SellConvertedShares',
+            'PassConvertedShares',
+            'SetRunInstruction'
+        ])
         const before = structuredClone(play.state)
         expect(() =>
             play.act('SellConvertedShares', { companyId: 'BA', shares: 1, expectedProceeds: 100 })
@@ -230,12 +235,17 @@ describe('conversion', () => {
 describe('mergers', () => {
     it('merges two 5-share companies at their average price under the largest holder', () => {
         const play = mergerRound(pleWithFiveShares)
-        expect(play.valid('blair')).toEqual(['ConvertCompany', 'MergeCompanies', 'PassMerger'])
+        expect(play.valid('blair')).toEqual([
+            'ConvertCompany',
+            'MergeCompanies',
+            'PassMerger',
+            'SetRunInstruction'
+        ])
         play.act('MergeCompanies', { companyId: 'BA', targetId: 'PLE' })
         expect(getCompany(play.state, 'BA').shareCount).toBe(10)
         expect(price(play.state, 'BA')).toBe(80)
         expect(sharesOwned(play.state, 'BA', player('alex'))).toBe(6)
-        expect(getCompany(play.state, 'BA').president).toEqual(player('alex'))
+        expect(presidentOf(play.state, 'BA')).toEqual(player('alex'))
         expect(treasury(play.state, 'BA')).toBe(300)
         expect(trainsOwnedBy(play.state, { kind: 'company', companyId: 'BA' })).toHaveLength(2)
         expect(stations(play.state, 'BA')).toBe(3)
@@ -259,7 +269,7 @@ describe('mergers', () => {
         expect(sharesOwned(play.state, 'PLE', player('alex'))).toBe(2)
         expect(sharesOwned(play.state, 'BA', player('alex'))).toBe(1)
         play.act('MergeCompanies', { companyId: 'BA', targetId: 'PLE' })
-        expect(getCompany(play.state, 'BA').president).toEqual(player('alex'))
+        expect(presidentOf(play.state, 'BA')).toEqual(player('alex'))
         expect(sharesOwned(play.state, 'BA', player('alex'))).toBe(3)
     })
 

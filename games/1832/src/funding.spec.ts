@@ -3,10 +3,10 @@ import { assert, assertExists } from '@tabletop/common'
 import {
     EmergencyTrainFunding,
     cashOwnedBy,
-    getCompany,
     isFundTrain,
     trainsOwnedBy,
-    type FundingChoice
+    type FundingChoice,
+    presidentOf
 } from '@tabletop/18xx'
 import { playExample, type ExamplePlay } from '@tabletop/18xx/scenarios'
 import {
@@ -30,8 +30,6 @@ function funding(play: ExamplePlay) {
 
 function act(play: ExamplePlay, choice: FundingChoice) {
     switch (choice.kind) {
-        case 'contribute':
-            return play.act('ContributeTrainFunds', { owner: choice.owner, amount: choice.amount })
         case 'sell': {
             const sale = choice.sales.at(-1)!
             return play.act('SellFundingShares', {
@@ -41,13 +39,7 @@ function act(play: ExamplePlay, choice: FundingChoice) {
                 expectedProceeds: sale.proceeds
             })
         }
-        case 'buy':
-            return play.act('BuyTrain', {
-                companyId: choice.purchase.companyId,
-                trainId: choice.purchase.trainId,
-                definitionId: choice.purchase.definitionId,
-                expectedPrice: choice.purchase.price
-            })
+        // Contributions and the purchase follow a decision by themselves; only sales rest.
         default:
             throw Error(`Unexpected funding choice ${choice.kind}`)
     }
@@ -74,7 +66,7 @@ describe('compulsory train purchases', () => {
         expect(play.state.bankruptcy).toBeUndefined()
         expect(play.state.phaseId).toBe('4')
         expect(cashOwnedBy(play.state, { kind: 'company', companyId: 'CG' })).toBe(0)
-        expect(play.state.companies.find((company) => company.id === 'CG')?.president).toEqual({
+        expect(presidentOf(play.state, 'CG')).toEqual({
             kind: 'player',
             playerId: 'blair'
         })
@@ -99,7 +91,7 @@ describe('voluntary System train purchases', () => {
         const state = structuredClone(play.state)
         state.phaseId = '4'
         formSystem(state, ['ACL', 'CG'], 'blair')
-        const president = getCompany(state, 'AMTK').president
+        const president = presidentOf(state, 'AMTK')
         assertExists(president, 'AMTK has a president')
         assertExists(state.operatingSet, 'The example is operating')
         state.operatingSet.companyOrder = ['AMTK']
@@ -135,7 +127,7 @@ describe('voluntary System train purchases', () => {
 
     it('lets the president add cash for the cheapest train, with the whole treasury spent', () => {
         const play = systemBuyingTrains(1, 100, 600)
-        const president = getCompany(play.state, 'AMTK').president!
+        const president = presidentOf(play.state, 'AMTK')!
         assert(president.kind === 'player')
         expect(play.valid(president.playerId)).toEqual(
             expect.arrayContaining(['FundTrain', 'FinishOperatingTurn'])
@@ -161,7 +153,7 @@ describe('voluntary System train purchases', () => {
         expect(trainsOwnedBy(play.state, amtk)).toHaveLength(3)
         fund(play)
         expect(trainsOwnedBy(play.state, amtk)).toHaveLength(4)
-        expect(cashOwnedBy(play.state, getCompany(play.state, 'AMTK').president!)).toBe(100)
+        expect(cashOwnedBy(play.state, presidentOf(play.state, 'AMTK')!)).toBe(100)
     })
 
     it('offers no help beyond one shell’s limit', () => {

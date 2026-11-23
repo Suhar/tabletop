@@ -79,7 +79,7 @@ it.each(Titles)(
                 offered.updatedState,
                 state.activePlayerIds[0]
             )
-        ).toEqual([])
+        ).toEqual(['SetRunInstruction'])
         expect(() =>
             engine.executeCanonicalAction({
                 game,
@@ -221,7 +221,6 @@ it.each(Titles)(
 it('TOP applies one explicit confirmation when the same player controls both companies through Union Bank', () => {
     const { game, engine, state } = example(Top, 'transfers')
     const controller = { kind: 'company', companyId: 'UB' } as const
-    getCompany(state, 'So').president = controller
     const certificate = state.certificates.find((item) => item.id === 'So:president')!
     certificate.owner = controller
     const request = purchaseChoices(
@@ -763,7 +762,9 @@ it.each([true, false])(
         }).updatedState
         expect(pending.privatePowerWindow).toEqual({ companyId: 'AR', passedPlayerIds: [] })
         expect(pending.activePlayerIds).toEqual(['casey'])
-        expect(engine.getValidActionTypesForPlayer(game, pending, 'blair')).toEqual([])
+        expect(engine.getValidActionTypesForPlayer(game, pending, 'blair')).toEqual([
+            'SetRunInstruction'
+        ])
         expect(Shikoku.runtime.hydrator.hydrateState(pending).dehydrate()).toEqual(pending)
         const choice = use
             ? portLay(pending, 'LayPrivateTile')
@@ -864,7 +865,10 @@ it('Hunslet resolves compulsory discards before returning to construction', () =
         machineState: 'LayingTrack',
         companyId: 'ML'
     })
-    expect(engine.getValidActionTypesForPlayer(game, bought, 'alex')).toEqual(['DiscardTrain'])
+    expect(engine.getValidActionTypesForPlayer(game, bought, 'alex')).toEqual([
+        'DiscardTrain',
+        'SetRunInstruction'
+    ])
     const discarded = engine.executeCanonicalAction({
         game,
         state: bought,

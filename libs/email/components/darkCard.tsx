@@ -29,6 +29,7 @@ export const darkPalette = {
     blue: '#93c5fd',
     brandBlue: '#4a7fd0',
     gold: '#fbbf24',
+    warningSurface: '#3a2f12',
     button: '#2563eb',
     buttonBorder: '#3b82f6',
 }
@@ -127,10 +128,10 @@ const wordmarkStyles = {
 
 const Wordmark = ({ href }: { href: string }) => (
     <Section style={wordmarkStyles.section}>
-        <Link href={href} style={wordmarkStyles.board}>
+        <Link href={href} style={wordmarkStyles.board} data-wordmark="true">
             BOARD
         </Link>
-        <Link href={href} style={wordmarkStyles.together}>
+        <Link href={href} style={wordmarkStyles.together} data-wordmark="true">
             {' '}
             TOGETHER
         </Link>

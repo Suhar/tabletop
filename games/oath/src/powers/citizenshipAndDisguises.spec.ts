@@ -23,7 +23,7 @@ import { testPlayer, testState, openTurn } from '../testing/fixture.js'
 import { PowerTiming, powerIndexOf } from '../data/cardPowers.js'
 import { MAX_SUPPLY } from '../util/rest.js'
 import '../powers/index.js'
-import { type ModifierUse } from '../util/modifiers.js'
+import type { ModifierUse } from '../util/modifiers.js'
 import { ongoingCampaign } from '../testing/required.js'
 import { bank, modifierUse, player, region, yes } from '../testing/choices.js'
 import { playDrawnCard } from '../testing/steps.js'
@@ -253,7 +253,7 @@ describe('choices on declared modifiers', () => {
     it("Errand Boy and Observatory — a Search from another region's discard pile", () => {
         const s = board({}, { ruler: [ERRAND] })
         expect(HydratedSearch.reasonCannotSearch(s, 'ruler', SearchSource.Discard)).toMatch(
-            /cradle discard pile is empty/
+            /the Cradle discard pile is empty/
         )
         expect(
             HydratedSearch.reasonCannotSearch(s, 'ruler', SearchSource.Discard, [

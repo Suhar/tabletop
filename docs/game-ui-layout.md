@@ -15,13 +15,15 @@ Top to bottom:
 
 `DefaultSideContent` renders both from `playersPanel`, `history`, and `chat` snippets. Compose `HistoryControls` and `DefaultTabs` directly when the title restyles them or inserts a strip between them. On small screens `DefaultTableLayout` renders the history controls above the table instead (`mobileControlsContent`), so the sidebar copy stays inside `max-sm:hidden`, as `DefaultSideContent` does.
 
+A title may let the sidebar fold on wide screens by passing `foldedSideContent` (and binding `sideFolded`). `DefaultTableLayout` then draws a pull tab on the sidebar's edge, narrows the sidebar to a 48px rail showing the folded content, and hosts the table's toaster itself, outside the folded sidebar; phones never fold. Keep the history controls in the rail (`HistoryControls` with `orientation="vertical"`) followed by one icon per tab that opens the sidebar at that tab (bind `DefaultTabs`' `selectedTab`). While folded the sidebar stays mounted, so the open tab and the player and history panels survive, but chat is closed: new messages toast and count as unread until the sidebar opens again. The tab takes its colours from `--side-fold-tab-color`, `--side-fold-tab-bg` and `--side-fold-tab-hover-bg`. `games/napoleons-triumph-ui` (`SideRail.svelte`) is the reference.
+
 ### Game column
 
 Top to bottom:
 
 1. **Turn header**: one row.
     - Left end: whose turn it is. `Your turn` for the acting player; otherwise the active player's name in possessive form, `[Player name]'s turn` (`PlayerName` with `possessive`). It reads `History` in History View and `End of game` once the game has a result.
-    - Right end: the single **Undo** button. Its behavior is defined in [user interaction patterns](user-interactions.md#undo).
+    - Right end: the **Undo** button, with **Restart turn** beside it in titles that offer it. Their behavior is defined in [user interaction patterns](user-interactions.md#undo).
 2. **Action area** (see [action area views](#action-area-views)): exactly one of
     - the action panel, holding prompts and controls for the decision the player is making now;
     - the waiting view, for players who are not acting;
@@ -65,7 +67,7 @@ Full screen is a modal dialog, so everything outside the wrapper sits behind it 
 
 ### Focus views
 
-`ScalingWrapper` can zoom to a region: bind the wrapper and call `focusRect(rect, { animate, maxScale, padding })`, and `fitToContent()` to return to the whole board. Offer focus controls sparingly. They earn their place when the map is too big to read at a fitted scale, or when the game has distinct areas players repeatedly inspect. Render the controls in the `overlay` snippet so they stay over the board in full screen too; `games/oath-ui` does this with its focus chooser over named board areas. When controls overlay the board's top edge, set `insetTop` so fitting and focusing keep content clear of them.
+`ScalingWrapper` can zoom to a region: bind the wrapper and call `focusRect(rect, { animate, maxScale, padding, align })`, and `fitToContent()` to return to the whole board. A focused region is centred; `align: 'top'` puts its top edge at the top of the view instead, below `insetTop`, so a short region printed along the board's top, such as a one-row stock market, doesn't open with blank space above it. Offer focus controls sparingly. They earn their place when the map is too big to read at a fitted scale, or when the game has distinct areas players repeatedly inspect. Render the controls in the `overlay` snippet so they stay over the board in full screen too; `games/oath-ui` does this with its focus chooser over named board areas. When controls overlay the board's top edge, set `insetTop` so fitting and focusing keep content clear of them.
 
 ### Reading the scale
 
@@ -80,6 +82,8 @@ Below the `sm` breakpoint, `DefaultTableLayout` moves the history controls above
 The **turn header** and **action area** need the most attention. Both sit in the `shrink-0` container, so every pixel of height they take comes out of the board. Compact the header on small screens (`games/magna-grecia-ui` shrinks its height and text under `max-sm:`). Keep the action area to the decision at hand: short prompts, button rows that wrap, targets large enough to tap, and secondary detail collapsed or moved elsewhere. Size these regions to fit the column width so they never force sideways scrolling inside the game column.
 
 Touch screens have no hover. Anything revealed on hover, such as previews or highlights, also needs a tap path, as `games/marracash-ui` does with `usesTouch`. On the board, full screen matters most on phones; when fitting the whole board would make its targets too small to tap, `coverBelowScale` rests it at a cover fit that fills the view and pans to the rest.
+
+Phones are also the tightest memory and paint budget. Draw the board by the [phone rendering](phone-rendering.md) rules and measure it in WebKit at 3x.
 
 ## Player panels
 
