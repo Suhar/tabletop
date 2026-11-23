@@ -11,9 +11,13 @@ import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { getHex, hexKey } from '../model/board.js'
 import { PlanetColor } from '../model/planetColor.js'
+import { refreshStanding } from '../util/standing.js'
+import { RouteChangeMetadata } from '../model/chains.js'
+import { routeChanges } from '../util/tradeRoutes.js'
 
 export type TerraformMetadata = Type.Static<typeof TerraformMetadata>
 export const TerraformMetadata = Type.Object({
+    ...RouteChangeMetadata,
     fromColor: Type.Optional(Type.Enum(PlanetColor)),
     toColor: Type.Optional(Type.Enum(PlanetColor)),
     declined: Type.Optional(Type.Boolean())
@@ -65,8 +69,14 @@ export class HydratedTerraform extends HydratableAction<typeof Terraform> implem
 
         const hex = state.board.hexes[hexKey(this.planet)]
         const fromColor = hex.color
+        const routes = [...state.tradeRoutes]
         hex.color = this.color
-        this.metadata = { ...(fromColor ? { fromColor } : {}), toColor: this.color }
+        refreshStanding(state)
+        this.metadata = {
+            ...(fromColor ? { fromColor } : {}),
+            toColor: this.color,
+            ...routeChanges(routes, state)
+        }
     }
 
     isValidTerraform(state: HydratedEarendelGameState): boolean {

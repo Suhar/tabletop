@@ -6,8 +6,15 @@
         getHex,
         hexKey,
         isElevatedKind,
+        categoryOfColor,
+        colorSetSize,
+        controlledColorCounts,
+        controlsEveryColor,
+        FIVE_COLOR_POINTS,
+        PLANET_COLORS,
         planetCoordinates,
-        planetPointsByPlayer,
+        ROUTE_POWER_INFO,
+        TECHNOLOGY_CATEGORY_INFO,
         TECHNOLOGY_EFFECT_INFO,
         technologyCard,
         TechnologyEffectKind,
@@ -36,14 +43,40 @@
         })
     )
 
-    let planetPoints = $derived(
-        planetPointsByPlayer(gameSession.gameState.board)[playerState.playerId] ?? 0
-    )
-    // One figure: banked points plus the planets held, as the game would score it now. Hovering
-    // or clicking it opens the breakdown for everyone.
-    let points = $derived(playerState.score + planetPoints)
+    // The trade route powers this player holds now, and how each is held.
+    let routePowers = $derived.by(() => {
+        const state = gameSession.gameState
+        const controlled = controlledColorCounts(state, playerState.playerId)
+        const needed = colorSetSize(state.players.length)
+        return (state.board.routePowers?.[playerState.playerId] ?? []).map((color) => {
+            const byRoute = state.tradeRoutes.some(
+                (route) => route.playerId === playerState.playerId && route.color === color
+            )
+            const byControl = (controlled.get(color) ?? 0) >= needed
+            const held = [
+                ...(byRoute ? [`a ${color} trade route`] : []),
+                ...(byControl ? [`control of ${needed} ${color} planets`] : [])
+            ].join(' and ')
+            return {
+                color,
+                info: ROUTE_POWER_INFO[color],
+                heading: {
+                    name: `${TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)].name} power`,
+                    color
+                },
+                detail: `Held through ${held}, and lost when that is.`
+            }
+        })
+    })
+
+    let holdsEveryColor = $derived(controlsEveryColor(gameSession.gameState, playerState.playerId))
+
+    // Hovering or clicking the score opens the breakdown for everyone.
+    let points = $derived(playerState.score)
     let scoreHovered = $state(false)
     let scorePinned = $state(false)
+    let heldButton: HTMLButtonElement | undefined = $state()
+    let heldPinned = $derived(gameSession.heldPlanetsPinnedFor === playerState.playerId)
     let scoreButton: HTMLButtonElement | undefined = $state()
     let card: HTMLDivElement | undefined = $state()
     // Fixed to the viewport, under the card, so the side column cannot clip it; kept inside the
@@ -89,6 +122,9 @@
     function unpinScore(event: PointerEvent) {
         if (scorePinned && scoreButton && event.target instanceof Node) {
             if (!scoreButton.contains(event.target)) scorePinned = false
+        }
+        if (heldPinned && heldButton && event.target instanceof Node) {
+            if (!heldButton.contains(event.target)) gameSession.heldPlanetsPinnedFor = undefined
         }
     }
 
@@ -243,9 +279,19 @@
             </div>
         {/if}
 
-        <div
-            class="flex items-center gap-2 px-3 pb-1 pt-2 text-[11px] text-white/65"
-            title="Planets controlled now, 1 point each at the end"
+        <!-- Hovering rings this player's planets on the board; a click keeps them ringed. -->
+        <button
+            bind:this={heldButton}
+            type="button"
+            class="mx-1 flex items-center gap-2 rounded-md px-2 pb-1 pt-2 text-[11px] text-white/65 hover:bg-white/10 hover:text-white {heldPinned
+                ? 'bg-white/10 text-white'
+                : ''}"
+            title="Show the planets controlled now"
+            aria-pressed={heldPinned}
+            onmouseenter={() => (gameSession.heldPlanetsHoveredFor = playerState.playerId)}
+            onmouseleave={() => (gameSession.heldPlanetsHoveredFor = undefined)}
+            onclick={() =>
+                (gameSession.heldPlanetsPinnedFor = heldPinned ? undefined : playerState.playerId)}
         >
             {#if controlledColors.length > 0}
                 <span class="inline-flex gap-[3px]" aria-hidden="true">
@@ -258,10 +304,36 @@
                 </span>
             {/if}
             <span>
-                {planetPoints}
-                {planetPoints === 1 ? 'planet' : 'planets'} held
+                {controlledColors.length}
+                {controlledColors.length === 1 ? 'planet' : 'planets'} held
             </span>
-        </div>
+        </button>
+
+        {#if routePowers.length > 0 || holdsEveryColor}
+            <div class="flex flex-wrap gap-1.5 px-3 pt-1">
+                {#if holdsEveryColor}
+                    <TechnologyChip
+                        name="Every color"
+                        note="+{FIVE_COLOR_POINTS} each turn"
+                        ability="Score {FIVE_COLOR_POINTS} points at the start of each of your turns."
+                        heading={{ name: 'Planet bonus', color: PLANET_COLORS[0] }}
+                        colors={PLANET_COLORS}
+                        detail="Held while you control a planet of each of the five colors, and lost when you do not."
+                        {tint}
+                    />
+                {/if}
+                {#each routePowers as power (power.color)}
+                    <TechnologyChip
+                        name={power.info.name}
+                        ability={power.info.ability}
+                        heading={power.heading}
+                        dot={power.color}
+                        detail={power.detail}
+                        {tint}
+                    />
+                {/each}
+            </div>
+        {/if}
 
         {#if technologyEntries.length > 0 || pendingTechnologies.length > 0}
             <div class="flex flex-wrap gap-1.5 px-3 pt-1">

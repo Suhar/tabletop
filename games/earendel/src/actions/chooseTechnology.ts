@@ -8,9 +8,12 @@ import { hexKey } from '../model/board.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { OrbitedProbe } from '../model/exploration.js'
 import { fireElevatedCard, isElevatedCardId } from '../util/elevated.js'
+import { RouteChangeMetadata } from '../model/chains.js'
+import { routeChanges } from '../util/tradeRoutes.js'
 
 export type ChooseTechnologyMetadata = Type.Static<typeof ChooseTechnologyMetadata>
 export const ChooseTechnologyMetadata = Type.Object({
+    ...RouteChangeMetadata,
     technologyId: Type.Optional(Type.String()),
     noTechnologyAvailable: Type.Optional(Type.Boolean()),
     // An elevated card: the planet is spent for everyone and its event begins.
@@ -59,6 +62,7 @@ export class HydratedChooseTechnology
             throw Error(`Invalid ChooseTechnology action: ${invalidReason}`)
         }
 
+        const routes = [...state.tradeRoutes]
         const pending = state.pendingExploration
         assertExists(pending, 'ChooseTechnology requires a pending exploration')
         const planet = pending.exploringPlanet
@@ -99,7 +103,8 @@ export class HydratedChooseTechnology
                             elevated: true,
                             event: fired.event,
                             everyone: fired.everyone,
-                            ...(fired.orbited.length > 0 ? { orbited: fired.orbited } : {})
+                            ...(fired.orbited.length > 0 ? { orbited: fired.orbited } : {}),
+                            ...routeChanges(routes, state)
                         }
                       : {})
               }

@@ -1,4 +1,6 @@
 import type { AxialCoordinates } from '@tabletop/common'
+import { hasRoutePower } from '../model/board.js'
+import { PlanetColor } from '../model/planetColor.js'
 import { type EarendelBoard, getHex, HEX_STEPS, HexKind, hexKey } from '../model/board.js'
 import { type Piece, PieceType } from '../model/pieces.js'
 import { jammedAt } from './specials.js'
@@ -47,6 +49,9 @@ export function probeBlockedBy(
     coords: AxialCoordinates,
     playerId: string
 ): string | undefined {
+    // Blockade Runners, the aqua power (rules.md, Chains and trade routes).
+    if (hasRoutePower(board, playerId, PlanetColor.Aqua)) return undefined
+
     for (let axis = 0; axis < 3; axis++) {
         const sighted = (seen: Along) =>
             isSightAnchor(seen.piece) &&

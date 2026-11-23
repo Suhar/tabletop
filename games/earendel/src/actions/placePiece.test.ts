@@ -49,6 +49,7 @@ function buildState(overrides: Partial<EarendelGameState> = {}): HydratedEarende
         queuedTechnologyEffects: [],
         planetControllers: {},
         tradeRoutes: [],
+        routesEstablished: 0,
         probeClaims: [],
         tileSupply: stackedBag([]),
         // The turn's draw happens when the turn opens, so a placement always arrives with

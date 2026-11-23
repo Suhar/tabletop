@@ -1,9 +1,9 @@
 import type { AxialCoordinates, Prng } from '@tabletop/common'
-import { getHex, hexKey } from '../model/board.js'
+import { getHex, hasRoutePower, hexKey } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import type { OrbitedProbe } from '../model/exploration.js'
 import { type Piece, PieceType } from '../model/pieces.js'
-import { PLANET_COLORS } from '../model/planetColor.js'
+import { PLANET_COLORS, PlanetColor } from '../model/planetColor.js'
 import {
     ELEVATED_PAIRS,
     siblingEventOf,
@@ -14,7 +14,7 @@ import {
 } from '../model/technology.js'
 import { elevatedCardId, technologyCard } from '../model/technologyCards.js'
 import { type EarendelGameConfig, ElevatedChoice, elevatedChoiceFor } from '../definition/config.js'
-import { refreshPlanetControl } from './control.js'
+import { refreshStanding } from './standing.js'
 import { returnToBag } from '../model/bags.js'
 import { salvageClaimant } from './specials.js'
 
@@ -76,7 +76,7 @@ export function fireElevatedCard(
         }
         planetHex.orbiters = [...(planetHex.orbiters ?? []), marker]
     }
-    refreshPlanetControl(state)
+    refreshStanding(state)
 
     const everyone = timingOf(card) === TechnologyTiming.Event
     const event = everyone ? card.effect : siblingEventOf(card.effect)
@@ -109,7 +109,9 @@ export function fireElevatedCard(
     return { orbited, event, everyone }
 }
 
-export type Salvaged = { piece: Piece; playerId: string }
+export type Salvaged = { piece: Piece; playerId: string; reclaimed?: boolean }
+
+const BAG_TYPES: PieceType[] = [PieceType.Probe, PieceType.Fighter, PieceType.Station]
 
 // Where a destroyed probe or fighter goes: a salvage drone in reach takes it into its owner's bag
 // (rules.md, Granted pieces); otherwise it is out of the game.
@@ -120,14 +122,30 @@ export function salvageDestroyed(
 ): Salvaged[] {
     const salvaged: Salvaged[] = []
     for (const { piece, at } of destroyed) {
-        if (piece.type !== PieceType.Probe && piece.type !== PieceType.Fighter) continue
+        const reclaims =
+            BAG_TYPES.includes(piece.type) &&
+            // A torpedo spends itself: it is not destroyed.
+            !piece.torpedo &&
+            hasRoutePower(state.board, piece.playerId, PlanetColor.Teal)
+        const salvageable = piece.type === PieceType.Probe || piece.type === PieceType.Fighter
+        if (!salvageable && !reclaims) continue
         const { torpedo: _torpedo, surveying: _surveying, ...rest } = piece
         const fresh: Piece = {
             ...rest,
             ...(piece.type === PieceType.Fighter && (piece.level ?? 2) < 2 ? { level: 2 } : {})
         }
-        const claimant = salvageClaimant(state, at, destroyerId)
-        if (!claimant) continue
+        const claimant = salvageable ? salvageClaimant(state, at, destroyerId) : undefined
+        if (!claimant) {
+            // Reclamation, the teal power (rules.md, Chains and trade routes).
+            if (!reclaims) continue
+            returnToBag(
+                state.getPlayerState(piece.playerId).bag,
+                [fresh],
+                state.getProtectedPrng().random
+            )
+            salvaged.push({ piece: fresh, playerId: piece.playerId, reclaimed: true })
+            continue
+        }
         const salvage: Piece = {
             ...fresh,
             playerId: claimant,

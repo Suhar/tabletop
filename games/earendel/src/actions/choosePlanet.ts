@@ -10,7 +10,8 @@ import {
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { getHex } from '../model/board.js'
+import { getHex, hasRoutePower } from '../model/board.js'
+import { PlanetColor } from '../model/planetColor.js'
 import { PieceType, PieceLevel } from '../model/pieces.js'
 import { choosableFrom } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
@@ -95,11 +96,13 @@ export class HydratedChoosePlanet
         markExplored(state.board, this.coords)
 
         assertExists(planet.color, 'Planets have a color')
+        // Wide Survey, the periwinkle power (rules.md, Chains and trade routes).
+        const wideSurvey = hasRoutePower(state.board, this.playerId, PlanetColor.Periwinkle) ? 1 : 0
         const piles = { deck: state.technologyDeck, discard: state.technologyDiscard }
         const result = revealForExploration(
             piles,
             planet.color,
-            probe?.level ?? PieceLevel.Two,
+            (probe?.level ?? PieceLevel.Two) + wideSurvey,
             state.getProtectedPrng()
         )
         state.technologyDeck = piles.deck

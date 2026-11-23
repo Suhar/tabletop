@@ -22,7 +22,8 @@ import {
     isUseTacticalFeint,
     isUseTradeRouteWormhole,
     isUseUpdatedLogistics,
-    type ScoredChain,
+    routeChangesOf,
+    type TradeRoute,
     type StationComplexSummary,
     technologyCard,
     technologyName
@@ -72,7 +73,6 @@ export function rationaleFor(
         lines.push(
             ...stationLines(action.metadata?.stationGroupPoints, action.metadata?.stationComplex)
         )
-        lines.push(...chainLines(action.metadata?.chains))
         if (isPlacePiece(action) && action.metadata?.torpedo) {
             lines.push(
                 'A fighter placed as a Gamma Torpedo is not a ship arriving: it scores and explores nothing, and must strike a station beside it.'
@@ -206,6 +206,7 @@ export function rationaleFor(
         lines.push('A player who has nowhere to place the ship they drew ends the game.')
     }
 
+    lines.push(...routeLines(action, nameOf))
     lines.push(...claimLines(action, nameOf))
     return lines
 }
@@ -228,21 +229,36 @@ function stationLines(
             }.`
         )
     }
-    if (complex && complex.hubs > 0) {
+    if (complex?.doubled) {
         lines.push(
-            `Each Station Hub in a complex doubles its score: ${complex.hubs} here, for ×${2 ** complex.hubs}.`
+            'A Station Hub doubles the score of its complex when it is placed. After that it counts as an ordinary station.'
         )
     }
     return lines
 }
 
-function chainLines(chains: ScoredChain[] | undefined): string[] {
-    return (chains ?? []).map(
-        (chain) =>
-            `Joining two ${chain.color} planets with an unbroken run of ${chain.length} of your own ${
-                chain.length === 1 ? 'ship' : 'ships'
-            } scores the ${ordinal(chain.length)} triangular number, ${chain.points}. Each pair of planets pays once, to whoever joins it first.`
+function routeLines(action: GameAction, nameOf: (playerId: string) => string): string[] {
+    const { established, broken } = routeChangesOf(
+        'metadata' in action ? action.metadata : undefined
     )
+    const whose = (route: TradeRoute) =>
+        route.playerId === action.playerId ? 'Their own' : `${nameOf(route.playerId)}'s`
+    const ships = (route: TradeRoute) => `${route.length} ${route.length === 1 ? 'ship' : 'ships'}`
+    return [
+        ...broken.map(
+            (route) =>
+                `${whose(route)} ${route.color} trade route ended: a route stands only while its owner has an unbroken chain of their own ships joining the two planets.`
+        ),
+        ...established.map((route) =>
+            route.playerId === action.playerId
+                ? `Joining two ${route.color} planets with an unbroken run of ${ships(route)} sets up a trade route${
+                      route.points > 0
+                          ? `, which scores 1 point for each ship: ${route.points}`
+                          : ', which scores nothing for the opening station'
+                  }. It carries its color's power for as long as it stands.`
+                : `${nameOf(route.playerId)}'s chain of ${ships(route)} was the only one left joining the two ${route.color} planets, so it took the trade route and scored ${route.points}.`
+        )
+    ]
 }
 
 function claimLines(action: GameAction, nameOf: (playerId: string) => string): string[] {
@@ -260,10 +276,4 @@ function claimLines(action: GameAction, nameOf: (playerId: string) => string): s
                 `${whose(change)} pending ${technology(change)} is back on: its claimant's probes lead the planet again.`
         )
     ]
-}
-
-function ordinal(n: number): string {
-    const tens = n % 100
-    if (tens >= 11 && tens <= 13) return `${n}th`
-    return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 }

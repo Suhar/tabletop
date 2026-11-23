@@ -56,7 +56,8 @@ import {
     PieceType,
     type PlacePiece,
     type PlaceTile,
-    type ScoredChain,
+    routeChangesOf,
+    type TradeRoute,
     technologyCard,
     technologyName,
     type UseImmediateDownload,
@@ -216,7 +217,11 @@ export function describeActionSegments(action: GameAction): DescriptionSegment[]
         ]
     }
     const describer = isEarendelActionType(action.type) ? DESCRIBERS[action.type] : undefined
-    return [text(describer?.(action) ?? action.type), ...claimChangeSegments(action)]
+    return [
+        text(describer?.(action) ?? action.type),
+        ...routeChangeSegments(action),
+        ...claimChangeSegments(action)
+    ]
 }
 
 export function describeAction(
@@ -252,13 +257,40 @@ function claimChangeSegments(action: GameAction): DescriptionSegment[] {
     ]
 }
 
-function describeChains(chains: ScoredChain[] | undefined): string[] {
-    return (chains ?? []).map(
-        (chain) =>
-            `and joined two ${chain.color} planets with ${chain.length} ${
-                chain.length === 1 ? 'ship' : 'ships'
-            } for ${pointsText(chain.points)}`
+// Trade routes the action set up or ended, its own player's or a rival's.
+function routeChangeSegments(action: GameAction): DescriptionSegment[] {
+    const { established, broken } = routeChangesOf(
+        'metadata' in action ? action.metadata : undefined
     )
+    const own = (route: TradeRoute) => route.playerId === action.playerId
+    const ships = (route: TradeRoute) => `${route.length} ${route.length === 1 ? 'ship' : 'ships'}`
+    const paid = (route: TradeRoute) => (route.points > 0 ? ` for ${pointsText(route.points)}` : '')
+    return [
+        ...broken.flatMap((route): DescriptionSegment[] =>
+            own(route)
+                ? [text(`and ended their own ${route.color} trade route`)]
+                : [
+                      text('and ended'),
+                      { kind: 'claimant', playerId: route.playerId },
+                      text(`${route.color} trade route`)
+                  ]
+        ),
+        ...established.flatMap((route): DescriptionSegment[] =>
+            own(route)
+                ? [
+                      text(
+                          `and set up a ${route.color} trade route with ${ships(route)}${paid(route)}`
+                      )
+                  ]
+                : [
+                      text('and left'),
+                      { kind: 'claimant', playerId: route.playerId },
+                      text(
+                          `chain of ${ships(route)} holding the ${route.color} trade route${paid(route)}`
+                      )
+                  ]
+        )
+    ]
 }
 
 function describePlacement(placed: PlacePiece): string {
@@ -274,7 +306,6 @@ function describePlacement(placed: PlacePiece): string {
             placed.metadata?.stationComplex
         )
     )
-    parts.push(...describeChains(placed.metadata?.chains))
     return parts.join(' ')
 }
 
@@ -305,7 +336,7 @@ function describeEventPick(pick: EventPick): string {
     const meta = pick.metadata
     if (!meta || meta.skipped) return 'had nothing to pick from the event'
     if (meta.destroyed) {
-        const salvage = (meta.salvaged?.length ?? 0) > 0 ? ', salvaged by a drone' : ''
+        const salvage = salvageNote(meta.salvaged)
         return `bombarded a ${describePiece(meta.destroyed)}${salvage}`
     }
     if (meta.moved) return `rode the wormhole storm with a ${describePiece(meta.moved)}`
@@ -315,16 +346,30 @@ function describeEventPick(pick: EventPick): string {
     return 'took a pick from the event'
 }
 
+// Where a destroyed ship went instead of out of the game: a Salvage Drone's owner, or back to
+// its own bag under Reclamation.
+function salvageNote(salvaged: { reclaimed?: boolean }[] | undefined): string {
+    const taken = salvaged ?? []
+    return [
+        ...(taken.some((entry) => !entry.reclaimed) ? [', salvaged by a drone'] : []),
+        ...(taken.some((entry) => entry.reclaimed) ? [", reclaimed into its owner's bag"] : [])
+    ].join('')
+}
+
+function bountyNote(bounty: number | undefined): string {
+    return bounty ? `, for a bounty of ${pointsText(bounty)}` : ''
+}
+
 function describeShot(shot: AttackPiece): string {
     if (shot.metadata?.declined) return 'held fire'
-    const salvage = (shot.metadata?.salvaged?.length ?? 0) > 0 ? ', salvaged by a drone' : ''
+    const salvage = salvageNote(shot.metadata?.salvaged) + bountyNote(shot.metadata?.bounty)
     if (shot.metadata?.torpedo) {
         const target = shot.metadata.target
         const whose = target && target.playerId === shot.playerId ? 'their own' : 'a'
-        return `set off the torpedo, destroying ${whose} ${target ? describePiece(target) : 'station'}`
+        return `set off the torpedo, destroying ${whose} ${target ? describePiece(target) : 'station'}${salvage}`
     }
     if (shot.metadata?.railgun) {
-        return `railgunned a ${shot.metadata?.target?.type ?? 'ship'} out of existence`
+        return `railgunned a ${shot.metadata?.target?.type ?? 'ship'} out of existence${salvage}`
     }
     if (shot.metadata?.damaged) {
         return `damaged a fighter down to level ${shot.metadata.levelAfter ?? 1}`
@@ -344,7 +389,11 @@ function describeSpread(spread: AttackSpread): string {
     const outcomes: string[] = []
     if (destroyed.length > 0) outcomes.push(`destroying ${listOf(destroyed)}`)
     if (damaged.length > 0) outcomes.push(`damaging ${listOf(damaged)}`)
-    return ['fired a Full Torpedo Spread', ...outcomes].join(', ')
+    return (
+        ['fired a Full Torpedo Spread', ...outcomes].join(', ') +
+        salvageNote(spread.metadata?.salvaged) +
+        bountyNote(spread.metadata?.bounty)
+    )
 }
 
 function describeUpdatedLogistics(woke: UseUpdatedLogistics): string {
@@ -364,6 +413,10 @@ function describeDraw(drew: DrawPieces): string {
     if (lapsed.length > 0) {
         parts.push(`lost the claim on ${lapsed.map(nameOf).join(' and ')}`)
     }
+    const fiveColors = drew.metadata?.fiveColorPoints
+    if (fiveColors) {
+        parts.push(`scored ${pointsText(fiveColors)} for controlling a planet of every color`)
+    }
     return parts.join(', ')
 }
 
@@ -380,7 +433,6 @@ function describeWormhole(hop: UseTradeRouteWormhole): string {
     parts.push(
         ...describeStationScore(hop.metadata?.stationGroupPoints, hop.metadata?.stationComplex)
     )
-    parts.push(...describeChains(hop.metadata?.chains))
     return parts.join(' ')
 }
 
@@ -391,7 +443,6 @@ function describeFeint(feint: UseTacticalFeint): string {
     parts.push(
         ...describeStationScore(feint.metadata?.stationGroupPoints, feint.metadata?.stationComplex)
     )
-    parts.push(...describeChains(feint.metadata?.chains))
     return parts.join(' ')
 }
 
@@ -436,7 +487,6 @@ function describeShift(
             shifted.metadata?.stationComplex
         )
     )
-    parts.push(...describeChains(shifted.metadata?.chains))
     return parts.join(' ')
 }
 

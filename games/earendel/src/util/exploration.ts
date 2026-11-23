@@ -2,8 +2,9 @@ import { sameCoordinates } from '@tabletop/common'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, getHex, HexKind, hexKey, neighborsThrough } from '../model/board.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
-import { type Piece, PieceType } from '../model/pieces.js'
-import { probeLeaderOf } from './probes.js'
+import { type Piece, PieceLevel, PieceType } from '../model/pieces.js'
+import type { ProbeClaim } from '../model/exploration.js'
+import { probeInfluence, probeLeaderOf } from './probes.js'
 import { quarantined } from './specials.js'
 
 // Also previews: a probe not yet standing on `coords` is counted there.
@@ -33,6 +34,33 @@ export function probeDestinations(
         }
         if (!hex.explored) return true
         return hex.technologyId !== undefined && !held.includes(hex.technologyId)
+    })
+}
+
+// Rival claims that fail only because this uncommitted probe stands beside their planet: they pay
+// again the moment it surveys somewhere else (rules.md, Gaining a technology).
+export function claimsBlockedBy(
+    state: HydratedEarendelGameState,
+    probeCoords: AxialCoordinates
+): ProbeClaim[] {
+    const probe = getHex(state.board, probeCoords)?.piece
+    if (probe?.type !== PieceType.Probe || probe.surveying) return []
+    const beside = neighborsThrough(state.board, probeCoords)
+
+    return state.probeClaims.filter((claim) => {
+        if (claim.playerId === probe.playerId) return false
+        if (!beside.some((coords) => sameCoordinates(coords, claim.coords))) return false
+        if (probeLeaderOf(state.board, claim.coords) === claim.playerId) return false
+
+        const influence = probeInfluence(state.board, claim.coords)
+        const without = {
+            ...influence,
+            [probe.playerId]: (influence[probe.playerId] ?? 0) - (probe.level ?? PieceLevel.Two)
+        }
+        const claimant = without[claim.playerId] ?? 0
+        return Object.entries(without).every(
+            ([playerId, value]) => playerId === claim.playerId || value < claimant
+        )
     })
 }
 

@@ -41,8 +41,17 @@ export const Hex = Type.Object({
 
 export type EarendelBoard = Type.Static<typeof EarendelBoard>
 export const EarendelBoard = Type.Object({
-    hexes: Type.Record(Type.Number(), Hex)
+    hexes: Type.Record(Type.Number(), Hex),
+    // The trade route powers in force, by player (rules.md, Chains and trade routes). Stored,
+    // not derived: Strongholds changes control and control can grant a power, so who holds what
+    // depends on what was held before, as sticky control does. Kept with the board because
+    // control and blockades are read off the board alone.
+    routePowers: Type.Optional(Type.Record(Type.String(), Type.Array(Type.Enum(PlanetColor))))
 })
+
+export function hasRoutePower(board: EarendelBoard, playerId: string, color: PlanetColor): boolean {
+    return board.routePowers?.[playerId]?.includes(color) ?? false
+}
 
 export function hexKey(coords: AxialCoordinates): number {
     return coordinatesToNumber(coords)
@@ -129,7 +138,13 @@ export function planetControl(board: EarendelBoard, coords: AxialCoordinates): P
     for (const neighbor of neighborsOf(coords)) {
         const piece = getHex(board, neighbor)?.piece
         if (!piece) continue
-        powerByPlayerId[piece.playerId] = (powerByPlayerId[piece.playerId] ?? 0) + powerOf(piece)
+        // Strongholds, the mint power (rules.md, Chains and trade routes).
+        const power =
+            piece.type === PieceType.Station &&
+            hasRoutePower(board, piece.playerId, PlanetColor.Mint)
+                ? 2
+                : powerOf(piece)
+        powerByPlayerId[piece.playerId] = (powerByPlayerId[piece.playerId] ?? 0) + power
     }
 
     let power = 0

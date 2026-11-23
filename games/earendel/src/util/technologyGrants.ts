@@ -1,6 +1,6 @@
 import { assertExists, type AxialCoordinates, sameCoordinates } from '@tabletop/common'
-import { getHex, neighborsOf } from '../model/board.js'
-import { refreshPlanetControl } from './control.js'
+import { getHex, neighborsThrough } from '../model/board.js'
+import { refreshStanding } from './standing.js'
 import type { HydratedEarendelGameState } from '../model/gameState.js'
 import { grantedPieceOf, storedEffectOf, TechnologyEffectKind } from '../model/technology.js'
 import { technologyCard } from '../model/technologyCards.js'
@@ -49,7 +49,7 @@ function sendProbesToOrbit(
     for (const planet of planets) {
         const planetHex = getHex(state.board, planet)
         assertExists(planetHex, 'A researched planet must be on the board')
-        for (const from of neighborsOf(planet)) {
+        for (const from of neighborsThrough(state.board, planet)) {
             const hex = getHex(state.board, from)
             const probe = hex?.piece
             if (!hex || probe?.type !== PieceType.Probe || probe.playerId !== playerId) continue
@@ -60,7 +60,7 @@ function sendProbesToOrbit(
             orbited.push({ probe, from, planet })
         }
     }
-    if (orbited.length > 0) refreshPlanetControl(state)
+    if (orbited.length > 0) refreshStanding(state)
     return orbited
 }
 
@@ -158,7 +158,7 @@ function probeOwnersBeside(
     except: string
 ): string[] {
     const owners = new Set<string>()
-    for (const neighbor of neighborsOf(planet)) {
+    for (const neighbor of neighborsThrough(state.board, planet)) {
         const piece = getHex(state.board, neighbor)?.piece
         if (piece?.type === PieceType.Probe && piece.playerId !== except) owners.add(piece.playerId)
     }

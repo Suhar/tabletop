@@ -13,14 +13,18 @@ import { ActionType } from '../definition/actions.js'
 import { hexKey } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
 import { destinationsFrom } from '../util/movement.js'
 import { spoofablePieces } from '../util/spoofing.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 
 export type UseSpoofedOrdersMetadata = Type.Static<typeof UseSpoofedOrdersMetadata>
 export const UseSpoofedOrdersMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     // The rival piece that was sent a step, as it stood before.
     piece: Type.Optional(Piece)
 })
@@ -68,7 +72,7 @@ export class HydratedUseSpoofedOrders
             throw Error(`Invalid UseSpoofedOrders action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         const fromHex = state.board.hexes[hexKey(this.from)]
         const piece = fromHex.piece
@@ -80,9 +84,9 @@ export class HydratedUseSpoofedOrders
         state.board.hexes[hexKey(this.to)].piece = piece
 
         state.getPlayerState(this.playerId).spendStoredEffect(TechnologyEffectKind.SpoofedOrders)
-        refreshPlanetControl(state)
+        refreshStanding(state)
 
-        this.metadata = { piece: moved, ...claimChanges(claims, state) }
+        this.metadata = { piece: moved, ...standingChanges(claims, state) }
     }
 
     isValidUseSpoofedOrders(state: HydratedEarendelGameState): boolean {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { PieceLevel, type Piece, PieceType } from '../model/pieces.js'
-import { hubMultiplier, stationGroupPoints } from './stations.js'
+import { stationGroupPoints } from './stations.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame, stackedBag } from '../testing/testHarness.js'
@@ -171,16 +171,24 @@ describe('Station Hub', () => {
         hub: true
     })
 
-    it('doubles the complex it stands in', () => {
+    it('doubles what its complex pays when it is the station placed', () => {
         const board = boardOf([
             [at(0, 0), { ship: station('p1') }],
             [at(1, 0), { ship: station('p1') }],
             [at(2, 0), { ship: hub('p1') }]
         ])
 
-        // Three stations, doubled by the hub among them - whichever one is asked about.
         expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(6)
-        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(6)
+    })
+
+    it('counts as an ordinary station when another station of its complex is placed', () => {
+        const board = boardOf([
+            [at(0, 0), { ship: station('p1') }],
+            [at(1, 0), { ship: station('p1') }],
+            [at(2, 0), { ship: hub('p1') }]
+        ])
+
+        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(3)
     })
 
     it('is a station for everything else', () => {
@@ -192,35 +200,20 @@ describe('Station Hub', () => {
         ])
 
         expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(4)
-    })
-
-    it('leaves a complex it is not part of alone', () => {
-        const board = boardOf([
-            [at(0, 0), { ship: hub('p1') }],
-            [at(1, 0), { ship: ship('p2', PieceType.Probe, PieceLevel.Two) }],
-            [at(2, 0), { ship: station('p1') }],
-            [at(3, 0), { ship: station('p1') }]
-        ])
-
-        // The probe breaks both kinds of link, so the far pair is an ordinary complex of two.
         expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(2)
-        expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(2)
     })
 
-    it('doubles again for a second hub in the same complex', () => {
+    it('doubles once, however many hubs the complex already holds', () => {
         const board = boardOf([
             [at(0, 0), { ship: hub('p1') }],
             [at(1, 0), { ship: station('p1') }],
             [at(2, 0), { ship: hub('p1') }]
         ])
 
-        // ASSUMED: each hub doubles, so two make it fourfold. See rules.md - the alternative is
-        // one doubling however many are present.
-        expect(hubMultiplier(board, 'p1', at(1, 0))).toBe(4)
-        expect(stationGroupPoints(board, 'p1', at(1, 0))).toBe(12)
+        expect(stationGroupPoints(board, 'p1', at(2, 0))).toBe(6)
     })
 
-    it('goes on paying for stations added later', () => {
+    it('pays a station added later as an ordinary complex', () => {
         const game = new TestGame()
         const mover = game.activePlayerId
 
@@ -241,8 +234,7 @@ describe('Station Hub', () => {
             pieceSource: PieceSource.Bag
         })
 
-        // A complex of two, doubled: the hub keeps paying long after it was placed.
-        expect(game.state.players.find((p) => p.playerId === mover)!.score - before).toBe(4)
+        expect(game.state.players.find((p) => p.playerId === mover)!.score - before).toBe(2)
     })
 })
 
@@ -276,10 +268,10 @@ describe('scoring stations in play', () => {
             pieceSource: PieceSource.Bag
         })
 
-        // 3 for a complex of three, and 3 more for a two-ship chain between the planets.
+        // 3 for a complex of three, and 2 more for a two-ship trade route between the planets.
         expect((placed as PlacePiece).metadata?.stationGroupPoints).toBe(3)
-        expect((placed as PlacePiece).metadata?.chains?.[0].points).toBe(3)
-        expect(scoreOf() - before).toBe(6)
+        expect((placed as PlacePiece).metadata?.routesEstablished?.[0].points).toBe(2)
+        expect(scoreOf() - before).toBe(5)
     })
 
     it('pays 1, then 2, then 3 as a cluster grows', () => {

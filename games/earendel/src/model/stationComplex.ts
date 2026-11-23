@@ -4,6 +4,7 @@ import * as Type from 'typebox'
 export type StationComplexSummary = Type.Static<typeof StationComplexSummary>
 export const StationComplexSummary = Type.Object({
     stations: Type.Number(),
-    hubs: Type.Number(),
+    // The station placed was a Station Hub, which doubled the score.
+    doubled: Type.Optional(Type.Boolean()),
     relays: Type.Number()
 })

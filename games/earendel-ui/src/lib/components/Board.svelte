@@ -13,6 +13,7 @@
         TECHNOLOGY_CATEGORY,
         TECHNOLOGY_CATEGORY_INFO,
         categoryOfColor,
+        controllerOf,
         hexKey,
         isPlacePiece,
         isStowShip,
@@ -1073,29 +1074,46 @@
         {/each}
 
         {#each gameSession.claimUplinks as uplink (uplink.planet.q + ',' + uplink.planet.r + '>' + uplink.probe.q + ',' + uplink.probe.r)}
-            {@const beam = uplinkBeam(uplink.planet, uplink.probe)}
             {@const color = gameSession.colors.getPlayerUiColor(uplink.playerId)}
-            {@const gradientId = `uplink-${uplink.planet.q}_${uplink.planet.r}-${uplink.probe.q}_${uplink.probe.r}`}
-            <g
-                transform="translate({beam.x} {beam.y}) rotate({beam.degrees})"
-                class="uplink-beam"
-                pointer-events="none"
-            >
-                <!-- Strongest at the probe, fading out over the planet. -->
-                <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0" stop-color={color} stop-opacity="0"></stop>
-                    <stop offset="0.5" stop-color={color} stop-opacity="0.28"></stop>
-                    <stop offset="1" stop-color={color} stop-opacity="0.5"></stop>
-                </linearGradient>
-                <polygon
-                    points="0,-16 {beam.length},-5 {beam.length},5 0,16"
-                    fill="url(#{gradientId})"
-                    use:registerElement={{
-                        registry: orbits.beams,
-                        key: beamKey(uplink.probe, uplink.planet)
-                    }}
-                ></polygon>
-            </g>
+            <!-- Through a gate pair the beam runs from the planet into the gate beside it, and out
+                 of the twin into the probe. -->
+            {@const legs = uplink.via
+                ? [
+                      { from: uplink.planet, to: uplink.via.near, toProbe: false },
+                      { from: uplink.via.far, to: uplink.probe, toProbe: true }
+                  ]
+                : [{ from: uplink.planet, to: uplink.probe, toProbe: true }]}
+            {#each legs as leg (leg.toProbe)}
+                {@const beam = uplinkBeam(leg.from, leg.to)}
+                {@const gradientId = `uplink-${leg.from.q}_${leg.from.r}-${leg.to.q}_${leg.to.r}`}
+                <g
+                    transform="translate({beam.x} {beam.y}) rotate({beam.degrees})"
+                    class="uplink-beam"
+                    pointer-events="none"
+                >
+                    <!-- Strongest at the probe, fading out over the planet. -->
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0" stop-color={color} stop-opacity="0"></stop>
+                        <stop offset="0.5" stop-color={color} stop-opacity="0.28"></stop>
+                        <stop offset="1" stop-color={color} stop-opacity="0.5"></stop>
+                    </linearGradient>
+                    {#if leg.toProbe}
+                        <polygon
+                            points="0,-16 {beam.length},-5 {beam.length},5 0,16"
+                            fill="url(#{gradientId})"
+                            use:registerElement={{
+                                registry: orbits.beams,
+                                key: beamKey(uplink.probe, uplink.planet)
+                            }}
+                        ></polygon>
+                    {:else}
+                        <polygon
+                            points="0,-16 {beam.length},-5 {beam.length},5 0,16"
+                            fill="url(#{gradientId})"
+                        ></polygon>
+                    {/if}
+                </g>
+            {/each}
         {/each}
 
         <!-- Above every hex so a piece can slide across; keyed by piece and hex so a moved piece remounts. -->
@@ -1567,7 +1585,17 @@
             {/if}
         {/each}
 
-        <!-- Popups last, so nothing on the board is drawn over them. -->
+        <!-- The planets a player controls, ringed in that player's color while their panel asks. -->
+        {#each gameSession.heldPlanetsShownFor ? placed : [] as entry (entry.hex.coords.q + ',' + entry.hex.coords.r)}
+            {#if entry.hex.kind === HexKind.Planet && controllerOf(gameSession.gameState, entry.hex.coords) === gameSession.heldPlanetsShownFor}
+                {@render markRing(
+                    entry.center,
+                    gameSession.colors.getPlayerUiColor(gameSession.heldPlanetsShownFor),
+                    1
+                )}
+            {/if}
+        {/each}
+
         {#each shownTechnology ? [shownTechnology] : [] as shown (shown.key)}
             {@const width = 300}
             {@const lines = wrap(technologyAbility(shown.card), 34)}

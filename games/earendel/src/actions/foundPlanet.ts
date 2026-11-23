@@ -4,7 +4,12 @@ import { assertExists, GameAction, HydratableAction, MachineContext } from '@tab
 import { HydratedEarendelGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { HexKind, hexKey, PlanetColor } from '../model/board.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
+import { RouteChangeMetadata } from '../model/chains.js'
+import { routeChanges } from '../util/tradeRoutes.js'
+
+export type FoundPlanetMetadata = Type.Static<typeof FoundPlanetMetadata>
+export const FoundPlanetMetadata = Type.Object({ ...RouteChangeMetadata })
 
 // An artificial planet just placed becomes an unexplored planet of the color chosen (rules.md,
 // Granted pieces).
@@ -15,7 +20,8 @@ export const FoundPlanet = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.FoundPlanet),
             playerId: Type.String(),
-            color: Type.Enum(PlanetColor)
+            color: Type.Enum(PlanetColor),
+            metadata: Type.Optional(FoundPlanetMetadata)
         })
     ])
 )
@@ -33,6 +39,7 @@ export class HydratedFoundPlanet
     declare type: ActionType.FoundPlanet
     declare playerId: string
     declare color: PlanetColor
+    declare metadata?: FoundPlanetMetadata
 
     constructor(data: FoundPlanet) {
         super(data, FoundPlanetValidator)
@@ -51,8 +58,10 @@ export class HydratedFoundPlanet
         hex.color = this.color
         hex.explored = false
         hex.piece = undefined
+        const routes = [...state.tradeRoutes]
         state.pendingFounding = undefined
-        refreshPlanetControl(state)
+        refreshStanding(state)
+        this.metadata = routeChanges(routes, state)
     }
 
     isValidFoundPlanet(state: HydratedEarendelGameState): boolean {

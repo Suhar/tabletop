@@ -96,7 +96,6 @@ describe('relay pieces', () => {
         expect(stationGroupPoints(board, 'p1', at(0, 0))).toBe(2)
         expect(stationComplexSummary(board, 'p1', at(0, 0))).toEqual({
             stations: 2,
-            hubs: 0,
             relays: 1
         })
     })

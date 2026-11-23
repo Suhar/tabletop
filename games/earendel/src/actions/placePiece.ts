@@ -7,9 +7,12 @@ import { getHex, hexKey, isOpenHex } from '../model/board.js'
 import { Piece, PieceType } from '../model/pieces.js'
 import { resolveArrival } from '../util/arrival.js'
 import { probeBlockedBy } from '../util/lineOfSight.js'
-import { ScoredChain } from '../model/chains.js'
 import { returnToBag } from '../model/bags.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 import { StationComplexSummary } from '../model/stationComplex.js'
 import { torpedoTargets } from '../util/attack.js'
 import { interdictedFor } from '../util/specials.js'
@@ -24,14 +27,13 @@ export enum PieceSource {
 
 export type PlacePieceMetadata = Type.Static<typeof PlacePieceMetadata>
 export const PlacePieceMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     // The fighter went down as a Gamma Torpedo, with its strike still to choose.
     torpedo: Type.Optional(Type.Boolean()),
     // The free station placed before the first turn (rules.md, Setup).
     founding: Type.Optional(Type.Boolean()),
     returnedToBag: Type.Optional(Piece),
-    chains: Type.Optional(Type.Array(ScoredChain)),
     stationGroupPoints: Type.Optional(Type.Number()),
     stationComplex: Type.Optional(StationComplexSummary),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
@@ -79,7 +81,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             throw Error(`Invalid PlacePiece action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         const playerState = state.getPlayerState(this.playerId)
 
@@ -126,7 +128,7 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
 
         state.board.hexes[hexKey(this.coords)].piece = piece
 
-        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.coords
@@ -138,12 +140,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
             ...(returnedToBag ? { returnedToBag } : {}),
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
             ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
-            ...(chains.length > 0
-                ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
-                : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidPlacePiece(state: HydratedEarendelGameState): boolean {
