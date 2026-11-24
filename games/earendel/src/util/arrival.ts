@@ -20,7 +20,8 @@ export type Arrival = {
 export function resolveArrival(
     state: HydratedEarendelGameState,
     playerId: string,
-    coords: AxialCoordinates
+    coords: AxialCoordinates,
+    { opening = false }: { opening?: boolean } = {}
 ): Arrival {
     const playerState = state.getPlayerState(playerId)
     const piece = getHex(state.board, coords)?.piece
@@ -28,9 +29,10 @@ export function resolveArrival(
         throw Error('resolveArrival called for a hex with no ship on it')
     }
 
-    // An opening station scores nothing on arrival (rules.md, Setup); it still counts toward
-    // control and is a station for every placement that follows.
-    const scores = piece.type === PieceType.Station && !piece.founding
+    // An opening station scores nothing when it is placed at the opening (rules.md, Setup).
+    // From then on it is a station in every respect, so one moved later by a feint, a shift, a
+    // warp, a rift or a wormhole arrives and scores like any other.
+    const scores = piece.type === PieceType.Station && !opening
     const stationPoints = scores ? stationGroupPoints(state.board, playerId, coords) : 0
     playerState.score += stationPoints
     const complex = scores ? stationComplexSummary(state.board, playerId, coords) : undefined
@@ -54,7 +56,7 @@ export function resolveArrival(
         state.pendingTerraform = { playerId, terraformerCoords: coords, planets: terraformable }
     }
 
-    refreshStanding(state, { unpaid: piece.founding === true })
+    refreshStanding(state, { unpaid: opening })
 
     return {
         stationPoints,
