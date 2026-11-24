@@ -11,7 +11,7 @@ import { EarendelPlayerState, HydratedEarendelPlayerState } from './playerState.
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { MachineState } from '../definition/states.js'
-import { EarendelBoard } from './board.js'
+import { EarendelBoard, getHex, hexKey } from './board.js'
 import { Piece } from './pieces.js'
 import {
     PendingExploration,
@@ -22,7 +22,7 @@ import {
 import { Tile } from './tile.js'
 import { HydratedTechnologyDeck, HydratedTileSupply, TechnologyDeck, TileSupply } from './bags.js'
 import { PendingAttack } from './attack.js'
-import { TradeRoute } from './chains.js'
+import { StoredTradeRoute, type TradeRoute } from './chains.js'
 import { PendingEvent } from './event.js'
 import { TechnologyEffectKind } from './technology.js'
 
@@ -56,7 +56,10 @@ export const EarendelGameState = Type.Evaluate(
             planetControllers: Type.Record(Type.String(), Type.String()),
             pendingAttack: Type.Optional(PendingAttack),
             pendingTerraform: Type.Optional(PendingTerraform),
-            tradeRoutes: Type.Array(TradeRoute),
+            tradeRoutes: Type.Array(StoredTradeRoute),
+            // How many routes have ever been established, which numbers each one. Absent in
+            // games stored before routes could break.
+            routesEstablished: Type.Optional(Type.Number()),
             probeClaims: Type.Array(ProbeClaim),
             // The setup draw's elevated card per planet color (rules.md, Elevated technologies).
             elevatedTechnologies: Type.Optional(Type.Record(Type.String(), Type.String())),
@@ -119,6 +122,7 @@ export class HydratedEarendelGameState
     declare bonusPlacementTileId?: string
     declare bonusPlacementPieceId?: string
     declare tradeRoutes: TradeRoute[]
+    declare routesEstablished: number
     declare probeClaims: ProbeClaim[]
     declare elevatedTechnologies?: Record<string, string>
     declare pieceTechnologies?: Record<string, TechnologyEffectKind>
@@ -136,5 +140,24 @@ export class HydratedEarendelGameState
         this.players = data.players.map((player) => new HydratedEarendelPlayerState(player))
         this.technologyDeck = new HydratedTechnologyDeck(data.technologyDeck)
         this.tileSupply = new HydratedTileSupply(data.tileSupply)
+        this.routesEstablished = data.routesEstablished ?? 0
+        this.tradeRoutes = data.tradeRoutes.flatMap((route) => this.currentRoute(route))
+    }
+
+    // A route stored before routes could break is kept, unpaid, for the next settling to judge.
+    private currentRoute(route: StoredTradeRoute): TradeRoute[] {
+        const color = route.color ?? getHex(this.board, route.planets[0])?.color
+        if (color === undefined) return []
+        const [from, to] = route.planets.map(hexKey)
+        return [
+            {
+                planets: route.planets,
+                playerId: route.playerId,
+                id: route.id ?? `stored:${from}:${to}`,
+                color,
+                length: route.length ?? 0,
+                points: route.points ?? 0
+            }
+        ]
     }
 }

@@ -73,26 +73,16 @@ export function stationComplexSummary(
     const pieceAt = (at: AxialCoordinates) => getHex(board, at)?.piece
     return {
         stations: anchors.filter((at) => isStation(board, at)).length,
-        hubs: anchors.filter((at) => {
-            const piece = pieceAt(at)
-            return piece !== undefined && isStationHub(piece)
-        }).length,
+        ...(placedHub(board, coords) ? { doubled: true } : {}),
         relays: anchors.filter((at) => pieceAt(at)?.type === PieceType.Relay).length
     }
 }
 
-// Hubs multiply (rules.md, Granted pieces).
-export function hubMultiplier(
-    board: EarendelBoard,
-    playerId: string,
-    coords: AxialCoordinates
-): number {
-    const hubs = stationComplex(board, playerId, coords).filter((at) => {
-        const piece = getHex(board, at)?.piece
-        return piece !== undefined && isStationHub(piece)
-    }).length
-
-    return 2 ** hubs
+// A Station Hub doubles what its complex pays when it is the station placed, and counts as an
+// ordinary station whenever the complex scores afterwards (rules.md, Components).
+function placedHub(board: EarendelBoard, coords: AxialCoordinates): boolean {
+    const piece = getHex(board, coords)?.piece
+    return piece !== undefined && isStationHub(piece)
 }
 
 export function stationGroupPoints(
@@ -101,5 +91,5 @@ export function stationGroupPoints(
     coords: AxialCoordinates
 ): number {
     const complex = stationComplex(board, playerId, coords)
-    return complex.length * hubMultiplier(board, playerId, coords)
+    return complex.length * (placedHub(board, coords) ? 2 : 1)
 }

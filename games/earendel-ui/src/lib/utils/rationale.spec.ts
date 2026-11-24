@@ -22,7 +22,7 @@ describe('rationaleFor', () => {
             metadata: {
                 pieceType: PieceType.Station,
                 stationGroupPoints: 3,
-                stationComplex: { stations: 3, hubs: 0, relays: 1 }
+                stationComplex: { stations: 3, doubled: false, relays: 1 }
             }
         }
         const lines = rationaleFor(placed)
@@ -42,15 +42,17 @@ describe('rationaleFor', () => {
             pieceSource: PieceSource.Bag,
             metadata: {
                 pieceType: PieceType.Probe,
-                chains: [
+                routesEstablished: [
                     {
+                        id: 'r1',
                         planets: [
                             { q: 0, r: 1 },
                             { q: 4, r: 1 }
                         ],
                         color: PlanetColor.Teal,
+                        playerId: base.playerId,
                         length: 3,
-                        points: 6
+                        points: 3
                     }
                 ],
                 claimsBroken: [
@@ -60,7 +62,7 @@ describe('rationaleFor', () => {
         }
         const lines = rationaleFor(placed, (id) => (id === 'p2' ? 'Bob' : id))
         expect(lines).toContain(
-            'Joining two teal planets with an unbroken run of 3 of your own ships scores the 3rd triangular number, 6. Each pair of planets pays once, to whoever joins it first.'
+            "Joining two teal planets with an unbroken run of 3 ships sets up a trade route, which scores 1 point for each ship: 3. It carries its color's power for as long as it stands."
         )
         expect(lines.some((line) => /^Bob's pending .+ broke/.test(line))).toBe(true)
     })

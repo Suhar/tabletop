@@ -1,6 +1,10 @@
 import {
     type Piece,
     PieceType,
+    categoryOfColor,
+    PLANET_COLORS,
+    ROUTE_POWER_INFO,
+    TECHNOLOGY_CATEGORY_INFO,
     TECHNOLOGY_EFFECT_INFO,
     TechnologyEffectKind,
     TechnologyTiming
@@ -16,7 +20,7 @@ export type RulesHelp = {
     title: string
     // A sentence on what is being decided.
     lead: string
-    // The rules that bear on it: two to four of them.
+    // The rules that bear on it: two to five of them.
     points: string[]
 }
 
@@ -83,7 +87,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         lead: 'Place your free station on any open hex. Everyone starts the game with one on the board.',
         points: [
             'It scores nothing when placed, but it counts as a station in its group when later stations score.',
-            'It counts 1 toward control of each planet it touches. Each planet you control at the end of the game is worth a point.',
+            'It counts 1 toward control of each planet it touches. If it joins two planets of the same color it sets up a trade route, with its power but no points.',
             'The opening runs in reverse turn order, so the last player places first and the first player takes the first turn.'
         ]
     },
@@ -195,7 +199,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         title: 'Terraforming',
         lead: 'Your terraformer may change the color of one planet beside it, or leave them all as they are.',
         points: [
-            'This action may create a trade route for one or more players, which scores.',
+            'This action may set up a trade route, which scores, or end one that joined the planet under its old color.',
             'The change is permanent, and a planet with a terraformer beside it cannot be changed again.'
         ]
     },
@@ -214,7 +218,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         points: [
             'The color decides which technologies it will offer when someone surveys it.',
             'It also decides which planets it can be joined to by a trade route: only two of the same color.',
-            'From now on it is a planet like any other: it can be surveyed, controlled and counted at the end of the game.'
+            'From now on it is a planet like any other: it can be surveyed, controlled and joined by a trade route.'
         ]
     },
     [RulesTopic.LayTile]: {
@@ -459,8 +463,10 @@ const IN_BRIEF: RulesHelp = {
     title: 'The game in brief',
     lead: 'Explore planets, gain their technologies, build stations and join planets with your ships. The player with the most points when the game ends wins.',
     points: [
+        'Your bag starts with 22 ships: 8 probes and 8 fighters (four each of level 2 and level 3) and 6 stations. At the opening you secretly add one more.',
         'On your turn you draw three ships from your bag, discard one and place the other two.',
-        'Stations and trade routes score during play. The planets you control score at the end.',
+        'Stations and trade routes score during play. Nothing is scored at the end.',
+        'A trade route gives you a power for as long as it stands. So does controlling enough planets.',
         'Scores are public and never go down.'
     ]
 }
@@ -471,20 +477,32 @@ const CONTROL_HELP: RulesHelp = {
     points: [
         'A probe counts 1, a fighter counts its level, a station counts 1 and a special unit counts 1.',
         'To take a planet you must get ahead. A tie changes nothing: whoever already controlled it keeps it while they are still tied for the most.',
-        'At the end of the game every planet pays 1 point to each player controlling it.',
+        "Control three planets of one color (two in a two-player game) and you have that color's trade route power without needing a route.",
+        'Control one planet of each of the five colors and you score 2 points at the start of each of your turns.',
         'A technology needs more than control: it takes strictly more probe strength than anyone else beside the planet.'
     ]
 }
 
 const ROUTES_HELP: RulesHelp = {
     title: 'Trade routes',
-    lead: 'Join two planets of the same color with an unbroken chain of your own ships and you score at once.',
+    lead: 'Join two planets of the same color with an unbroken chain of your own ships and the pair becomes your trade route.',
     points: [
-        'A chain of 1 ship scores 1, of 2 scores 3, of 3 scores 6, of 4 scores 10, and so on. The shortest run through your ships is the one counted.',
+        'Setting up a route scores 1 point for each ship in the chain, every time. The shortest run through your ships is the one counted.',
         'Any of your ships link a chain, whatever their type. Rival ships do not, and a chain must go around a planet.',
-        "A pair of planets pays once, to whoever joins it first, and is then spent for everyone. It is marked by a pip in that player's color under each planet.",
-        'One ship can complete several pairs at once; each is scored separately.'
+        'A pair of planets carries one route at a time. While yours stands, a rival chain joining the same pair earns nothing.',
+        'Your route ends the moment you have no chain joining the pair. Then anyone can take it: the only player with a chain there gets it at once, and if several have one, nobody does until one is left.'
     ]
+}
+
+const ROUTE_POWERS_HELP: RulesHelp = {
+    title: 'Trade route powers',
+    lead: "While you have a trade route of a color, you have that color's power. Lose your last route of that color and the power goes with it.",
+    points: PLANET_COLORS.map((color) => {
+        const power = ROUTE_POWER_INFO[color]
+        const theme = TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)].name
+        const colorName = color.charAt(0).toUpperCase() + color.slice(1)
+        return `${colorName} (${theme}), ${power.name}: ${power.ability}`
+    })
 }
 
 const END_HELP: RulesHelp = {
@@ -492,7 +510,7 @@ const END_HELP: RulesHelp = {
     lead: 'The game ends the moment any player places the last piece from their bag. There is no final round.',
     points: [
         'It also ends the moment a player cannot legally place a ship they drew and has no special unit to place instead.',
-        'Final scores are the points scored during play plus 1 for each planet controlled.',
+        'Final scores are the points scored during play. Nothing is added at the end.',
         'A tie for the highest score is a shared win.'
     ]
 }
@@ -513,6 +531,7 @@ export const RULES_OVERVIEW: readonly { group: OverviewGroup; note: RulesHelp }[
     { group: OverviewGroup.Ships, note: RULES_HELP[RulesTopic.PlaceStation] },
     { group: OverviewGroup.Scoring, note: CONTROL_HELP },
     { group: OverviewGroup.Scoring, note: ROUTES_HELP },
+    { group: OverviewGroup.Scoring, note: ROUTE_POWERS_HELP },
     { group: OverviewGroup.Technology, note: ELEVATED_HELP },
     { group: OverviewGroup.Technology, note: SPECIAL_UNITS_HELP },
     { group: OverviewGroup.Game, note: END_HELP }

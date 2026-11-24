@@ -5,7 +5,6 @@ import {
     MachineContext
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { planetPointsByPlayer } from '../util/scoring.js'
 
 export class EndOfGameStateHandler implements MachineStateHandler<
     HydratedAction,
@@ -27,11 +26,6 @@ export class EndOfGameStateHandler implements MachineStateHandler<
 
     enter(context: MachineContext<HydratedEarendelGameState>): void {
         const gameState = context.gameState
-
-        const planetPoints = planetPointsByPlayer(gameState.board)
-        for (const [playerId, points] of Object.entries(planetPoints)) {
-            gameState.getPlayerState(playerId).score += points
-        }
 
         const highScore = Math.max(...gameState.players.map((player) => player.score))
         const winningIds = gameState.players

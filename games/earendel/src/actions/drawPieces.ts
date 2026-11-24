@@ -1,4 +1,5 @@
 import * as Type from 'typebox'
+import { controlsEveryColor, FIVE_COLOR_POINTS } from '../util/routePowers.js'
 import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
@@ -7,14 +8,20 @@ import { Piece } from '../model/pieces.js'
 import { OrbitedProbe } from '../model/exploration.js'
 import { drawCountForPlayer, keepCountForPlayer } from '../util/turn.js'
 import { claimProbeTechnologies } from '../util/technologyGrants.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
 import { earendelConfig } from '../definition/config.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 
 export type DrawPiecesMetadata = Type.Static<typeof DrawPiecesMetadata>
 export const DrawPiecesMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     drawn: Type.Optional(Type.Array(Piece)),
+    // Paid for controlling a planet of every color (rules.md, What control is for).
+    fiveColorPoints: Type.Optional(Type.Number()),
     technologiesClaimed: Type.Optional(Type.Array(Type.String())),
     technologiesLapsed: Type.Optional(Type.Array(Type.String())),
     orbited: Type.Optional(Type.Array(OrbitedProbe)),
@@ -60,11 +67,11 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
             throw Error(`Invalid DrawPieces action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         // Claimed here rather than in StartOfTurnStateHandler.enter: enter() cannot change the
         // machine state, and an immediate effect may have to redirect the turn.
-        refreshPlanetControl(state)
+        refreshStanding(state)
 
         const {
             gained: technologiesClaimed,
@@ -74,6 +81,8 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         } = claimProbeTechnologies(state, this.playerId)
 
         const playerState = state.getPlayerState(this.playerId)
+        const fiveColorPoints = controlsEveryColor(state, this.playerId) ? FIVE_COLOR_POINTS : 0
+        playerState.score += fiveColorPoints
         const wanted = drawCountForPlayer(state, this.playerId, earendelConfig(context?.gameConfig))
 
         state.heldPieces = []
@@ -92,12 +101,13 @@ export class HydratedDrawPieces extends HydratableAction<typeof DrawPieces> impl
         this.revealsInfo = state.heldPieces.length > 0
         this.metadata = {
             drawn: [...state.heldPieces],
+            ...(fiveColorPoints > 0 ? { fiveColorPoints } : {}),
             ...(technologiesClaimed.length > 0 ? { technologiesClaimed } : {}),
             ...(technologiesLapsed.length > 0 ? { technologiesLapsed } : {}),
             ...(orbited.length > 0 ? { orbited } : {}),
             ...(shared.length > 0 ? { shared } : {})
         }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidDrawPieces(state: HydratedEarendelGameState): boolean {

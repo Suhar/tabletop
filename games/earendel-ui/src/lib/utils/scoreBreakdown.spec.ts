@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ActionSource, type GameAction } from '@tabletop/common'
-import { ActionType, PieceSource, type PlacePiece } from '@tabletop/earendel'
+import { ActionType, PieceSource, PlanetColor, type PlacePiece } from '@tabletop/earendel'
 import { scoreBreakdown } from './scoreBreakdown.js'
 
 const placement = (playerId: string, metadata: PlacePiece['metadata']): GameAction =>
@@ -16,43 +16,33 @@ const placement = (playerId: string, metadata: PlacePiece['metadata']): GameActi
     }) as GameAction
 
 describe('scoreBreakdown', () => {
-    it('splits banked points into complexes and chains, adds planets, and ranks by the total', () => {
+    it('splits banked points into complexes and routes, and ranks by the total', () => {
         const actions = [
             placement('a', { stationGroupPoints: 4 }),
-            placement('a', {
-                chains: [{ planets: [], color: 'teal', length: 2, points: 3 }]
-            } as never),
+            placement('b', {
+                routesEstablished: [
+                    {
+                        id: 'r1',
+                        planets: [
+                            { q: 0, r: 0 },
+                            { q: 3, r: 0 }
+                        ],
+                        color: PlanetColor.Teal,
+                        playerId: 'a',
+                        length: 3,
+                        points: 3
+                    }
+                ]
+            }),
             placement('b', { stationGroupPoints: 2 })
         ]
-        const rows = scoreBreakdown(
-            actions,
-            [
-                { playerId: 'a', score: 7 },
-                { playerId: 'b', score: 5 }
-            ],
-            { b: 4 }
-        )
+        const rows = scoreBreakdown(actions, [
+            { playerId: 'a', score: 7 },
+            { playerId: 'b', score: 5 }
+        ])
         expect(rows).toEqual([
-            {
-                playerId: 'b',
-                rank: 1,
-                complexes: 2,
-                chains: 0,
-                other: 3,
-                banked: 5,
-                planets: 4,
-                total: 9
-            },
-            {
-                playerId: 'a',
-                rank: 2,
-                complexes: 4,
-                chains: 3,
-                other: 0,
-                banked: 7,
-                planets: 0,
-                total: 7
-            }
+            { playerId: 'a', rank: 1, complexes: 4, routes: 3, bonus: 0, other: 0, total: 7 },
+            { playerId: 'b', rank: 2, complexes: 2, routes: 0, bonus: 0, other: 3, total: 5 }
         ])
     })
 })

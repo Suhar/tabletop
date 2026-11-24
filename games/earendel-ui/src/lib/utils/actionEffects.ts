@@ -12,13 +12,13 @@ import {
     isUseColonyShip,
     isUseWarpDrive,
     isUseDimensionalRift,
-    type ScoredChain
+    routeChangesOf
 } from '@tabletop/earendel'
 
 export type ScoreSource = {
     coords: AxialCoordinates
     points: number
-    caption: 'complex' | 'chain'
+    caption: 'complex' | 'route' | 'bounty'
     playerId: string
 }
 
@@ -31,10 +31,8 @@ export type PieceMove = { pieceId: string; from: AxialCoordinates; to: AxialCoor
 
 export function scoreSourcesOf(action: GameAction): ScoreSource[] {
     const arrival = arrivalOf(action)
-    if (!arrival) return []
-
     const sources: ScoreSource[] = []
-    if (arrival.stationGroupPoints) {
+    if (arrival?.stationGroupPoints) {
         sources.push({
             coords: arrival.coords,
             points: arrival.stationGroupPoints,
@@ -42,20 +40,34 @@ export function scoreSourcesOf(action: GameAction): ScoreSource[] {
             playerId: action.playerId ?? ''
         })
     }
-    for (const chain of arrival.chains ?? []) {
+    const metadata = 'metadata' in action ? action.metadata : undefined
+    for (const route of routeChangesOf(metadata).established) {
+        if (route.points === 0) continue
         sources.push({
-            coords: arrival.coords,
-            points: chain.points,
-            caption: 'chain',
-            playerId: action.playerId ?? ''
+            coords:
+                arrival && route.playerId === action.playerId ? arrival.coords : route.planets[0],
+            points: route.points,
+            caption: 'route',
+            playerId: route.playerId
         })
+    }
+    if ((isAttackPiece(action) || isAttackSpread(action)) && action.metadata?.bounty) {
+        const coords = isAttackPiece(action) ? action.coords : action.targets[0]
+        if (coords) {
+            sources.push({
+                coords,
+                points: action.metadata.bounty,
+                caption: 'bounty',
+                playerId: action.playerId
+            })
+        }
     }
     return sources
 }
 
 function arrivalOf(
     action: GameAction
-): { coords: AxialCoordinates; stationGroupPoints?: number; chains?: ScoredChain[] } | undefined {
+): { coords: AxialCoordinates; stationGroupPoints?: number } | undefined {
     if (isPlacePiece(action)) return { coords: action.coords, ...action.metadata }
     if (isUseTradeRouteWormhole(action) || isUseTacticalFeint(action)) {
         return { coords: action.to, ...action.metadata }

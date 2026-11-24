@@ -76,6 +76,7 @@ export class EarendelGameInitializer
             tileSupply: fullBag(buildTileSupply(game.players.length, secret)),
             planetControllers: {},
             tradeRoutes: [],
+            routesEstablished: 0,
             probeClaims: []
         })
 

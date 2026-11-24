@@ -24,6 +24,7 @@
     import Hand from './Hand.svelte'
     import ShipCard from './ShipCard.svelte'
     import StowChoices from './StowChoices.svelte'
+    import AsteroidChoices from './AsteroidChoices.svelte'
     import RulesPill from './RulesPill.svelte'
     import { PLANET_FILL } from '$lib/utils/planetColors.js'
 
@@ -347,6 +348,21 @@
                 {/each}
             </div>
         {/each}
+        {#each gameSession.surveyUnblocks as claim (claim.playerId + (claim.color ?? ''))}
+            <!-- What surveying would give up: this probe is all that stands in the way of a
+                 rival's claim next door. -->
+            <div
+                transition:slide={{ duration: 200 }}
+                class="flex py-1 flex-wrap items-center justify-center gap-x-1 text-center text-xs text-white/75"
+            >
+                <span>Surveying commits this probe, so it will stop blocking</span>
+                <PlayerName playerId={claim.playerId} possessive />
+                <span>
+                    claim on the {claim.color ? `${claim.color} planet` : 'planet'} beside it. Skip to
+                    keep blocking it.
+                </span>
+            </div>
+        {/each}
         {#each gameSession.ruleNotes as note (note.kind)}
             <!-- Why the game is behaving differently: a global in force, named by a chip that explains
                  itself on hover or click. -->
@@ -469,19 +485,7 @@
         {/if}
 
         {#if gameSession.asteroidShips.length > 0}
-            <!-- An Asteroid Field's three ships to choose from, as the cards they would be. -->
-            <div class="flex flex-wrap items-center justify-center gap-2">
-                {#each gameSession.asteroidShips as option (option.choice)}
-                    <button
-                        type="button"
-                        class="rounded-lg transition-transform hover:-translate-y-1"
-                        aria-label="Build three: {describePiece(option.piece)}"
-                        onclick={() => gameSession.useAsteroidField(option.choice)}
-                    >
-                        <ShipCard piece={option.piece} />
-                    </button>
-                {/each}
-            </div>
+            <AsteroidChoices />
         {/if}
 
         {#if gameSession.breachTargets.length > 0}

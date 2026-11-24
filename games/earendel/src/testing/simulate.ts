@@ -362,7 +362,10 @@ export function playRandomGame(
             })
             chainsScored += placed
                 .filter(isPlacePiece)
-                .reduce((total, action) => total + (action.metadata?.chains ?? []).length, 0)
+                .reduce(
+                    (total, action) => total + (action.metadata?.routesEstablished ?? []).length,
+                    0
+                )
         } else if (game.state.machineState === MachineState.Seeding) {
             // Random play leaves the nebula unlaid.
             game.run(SeedNebula, { type: ActionType.SeedNebula, playerId })

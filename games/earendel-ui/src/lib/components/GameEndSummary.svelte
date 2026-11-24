@@ -24,9 +24,6 @@
             <tr class="text-[11px] uppercase tracking-widest opacity-60">
                 <th class="px-2 font-normal"></th>
                 <th class="px-2 font-normal text-left">Player</th>
-                <th class="px-2 font-normal" title="Points for planets controlled at the end">
-                    Planets
-                </th>
                 <th class="px-2 font-normal">Total</th>
             </tr>
         </thead>
@@ -39,7 +36,6 @@
                 >
                     <td class="px-2 py-0.5 text-center opacity-70">{standing.rank}</td>
                     <td class="px-2 py-0.5"><PlayerName playerId={standing.playerId} /></td>
-                    <td class="px-2 py-0.5 text-center">+{standing.planetPoints}</td>
                     <td class="px-2 py-0.5 text-center font-semibold">{standing.score}</td>
                 </tr>
             {/each}

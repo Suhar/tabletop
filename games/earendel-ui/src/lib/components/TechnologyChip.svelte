@@ -22,6 +22,8 @@
         planet,
         colors,
         detail,
+        heading,
+        dot,
         elevated = false,
         dimmed = false,
         toPlace,
@@ -47,6 +49,10 @@
         colors?: readonly PlanetColor[]
         // A further line for the popup.
         detail?: string
+        // The popup's small heading when the chip is not a technology, in a planet's color.
+        heading?: { name: string; color: PlanetColor }
+        // A planet-colored dot before the name: a trade route power of that color.
+        dot?: PlanetColor
         // An elevated card, picked out in gold.
         elevated?: boolean
         dimmed?: boolean
@@ -80,7 +86,7 @@
     let popupHeight = $state(0)
 
     let open = $derived(hovered || pinned)
-    let category = $derived(kind ? TECHNOLOGY_CATEGORY_INFO[TECHNOLOGY_CATEGORY[kind]] : undefined)
+    let category = $derived(kind ? TECHNOLOGY_CATEGORY_INFO[TECHNOLOGY_CATEGORY[kind]] : heading)
     let timing = $derived(kind ? timingNote(kind) : undefined)
     let lastPointerType = 'mouse'
 
@@ -228,6 +234,13 @@
     onclick={onClick}
     aria-expanded={open}
 >
+    {#if dot}
+        <span
+            class="block h-2 w-2 shrink-0 rounded-full"
+            style="background-color: {PLANET_FILL[dot]}"
+            aria-hidden="true"
+        ></span>
+    {/if}
     {#if note}
         <span class="flex flex-col items-start text-left leading-tight">
             <span class="font-semibold">{name}{elevated ? ' ★' : ''}</span>
