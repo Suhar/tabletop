@@ -15,17 +15,19 @@ import { PieceType } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveArrival } from '../util/arrival.js'
 import { riftDestinationsFrom } from '../util/movement.js'
-import { ScoredChain } from '../model/chains.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 import { StationComplexSummary } from '../model/stationComplex.js'
 
 export type UseDimensionalRiftMetadata = Type.Static<typeof UseDimensionalRiftMetadata>
 export const UseDimensionalRiftMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
     stationComplex: Type.Optional(StationComplexSummary),
-    chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
@@ -72,7 +74,7 @@ export class HydratedUseDimensionalRift
             throw Error(`Invalid UseDimensionalRift action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         const fromHex = state.board.hexes[hexKey(this.from)]
         const piece = fromHex.piece
@@ -84,7 +86,7 @@ export class HydratedUseDimensionalRift
 
         state.getPlayerState(this.playerId).spendStoredEffect(TechnologyEffectKind.DimensionalRift)
 
-        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.to
@@ -94,12 +96,9 @@ export class HydratedUseDimensionalRift
             pieceType: piece.type,
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
             ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
-            ...(chains.length > 0
-                ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
-                : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidUseDimensionalRift(state: HydratedEarendelGameState): boolean {

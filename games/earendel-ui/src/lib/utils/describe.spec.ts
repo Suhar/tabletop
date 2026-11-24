@@ -92,7 +92,7 @@ describe('describeAction', () => {
             metadata: {
                 pieceType: PieceType.Station,
                 stationGroupPoints: 8,
-                stationComplex: { stations: 4, hubs: 1, relays: 0 }
+                stationComplex: { stations: 4, doubled: true, relays: 0 }
             }
         } satisfies PlacePiece
         expect(describeAction(placed)).toBe(

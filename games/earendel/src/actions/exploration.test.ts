@@ -4,14 +4,15 @@ import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
 import { type EarendelBoard, HexKind, hexKey, neighborsOf, PlanetColor } from '../model/board.js'
 import { type EarendelGameState, HydratedEarendelGameState } from '../model/gameState.js'
-import { PieceType, PieceLevel } from '../model/pieces.js'
+import { type Piece, PieceType, PieceLevel } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { focusedCardId } from '../model/technologyCards.js'
 import { HydratedTechnologyDeck } from '../model/bags.js'
 import type { PendingExploration } from '../model/exploration.js'
 import { HydratedChoosePlanet } from './choosePlanet.js'
 import { HydratedChooseTechnology } from './chooseTechnology.js'
-import { stackedBag } from '../testing/testHarness.js'
+import { stackedBag, TestGame } from '../testing/testHarness.js'
+import { claimsBlockedBy } from '../util/exploration.js'
 
 const PLANET_A: AxialCoordinates = { q: 0, r: 0 }
 const PLANET_B: AxialCoordinates = { q: 3, r: 0 }
@@ -72,6 +73,7 @@ function buildState(pending?: PendingExploration): HydratedEarendelGameState {
         queuedTechnologyEffects: [],
         planetControllers: {},
         tradeRoutes: [],
+        routesEstablished: 0,
         probeClaims: [],
         tileSupply: stackedBag([]),
         heldPieces: [],
@@ -246,5 +248,66 @@ describe('HydratedChooseTechnology', () => {
             'There was no technology to choose.'
         )
         expect(chooseTechnology('p1').invalidChooseTechnologyReason(state)).toBeUndefined()
+    })
+})
+
+describe('claimsBlockedBy', () => {
+    const planetAt = { q: 0, r: 0 }
+    const rivalProbeAt = { q: 1, r: 0 }
+    const myProbeAt = { q: -1, r: 0 }
+
+    function blockedState(myLevel: PieceLevel, surveying?: AxialCoordinates) {
+        const state = new TestGame().hydrated
+        const probe = (
+            playerId: string,
+            level: PieceLevel,
+            committed?: AxialCoordinates
+        ): Piece => ({
+            id: `${playerId}-probe`,
+            playerId,
+            type: PieceType.Probe,
+            level,
+            ...(committed ? { surveying: committed } : {})
+        })
+        const open = (coords: AxialCoordinates, piece: Piece) => ({
+            coords,
+            tileId: 't1',
+            kind: HexKind.Open,
+            piece
+        })
+        state.board = {
+            hexes: {
+                [hexKey(planetAt)]: {
+                    coords: planetAt,
+                    tileId: 't1',
+                    kind: HexKind.Planet,
+                    color: PlanetColor.Violet,
+                    explored: true,
+                    technologyId: 'updatedLogistics-1'
+                },
+                [hexKey(rivalProbeAt)]: open(rivalProbeAt, probe('p2', PieceLevel.Three, planetAt)),
+                [hexKey(myProbeAt)]: open(myProbeAt, probe('p1', myLevel, surveying))
+            }
+        }
+        state.probeClaims = [
+            { playerId: 'p2', coords: planetAt, technologyId: 'updatedLogistics-1' }
+        ]
+        return state
+    }
+
+    it('names a rival claim that an uncommitted probe is tying', () => {
+        const blocked = claimsBlockedBy(blockedState(PieceLevel.Three), myProbeAt)
+
+        expect(blocked.map((claim) => claim.playerId)).toEqual(['p2'])
+    })
+
+    it('names nothing when the rival leads anyway', () => {
+        expect(claimsBlockedBy(blockedState(PieceLevel.Two), myProbeAt)).toEqual([])
+    })
+
+    it('names nothing once the probe is committed elsewhere', () => {
+        expect(claimsBlockedBy(blockedState(PieceLevel.Three, { q: 5, r: 5 }), myProbeAt)).toEqual(
+            []
+        )
     })
 })

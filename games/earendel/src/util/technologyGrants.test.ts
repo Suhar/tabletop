@@ -380,6 +380,35 @@ describe('claiming a technology by surveying with probes', () => {
         expect(game.state.board.hexes[hexKey(at(8, 8))].piece?.playerId).toBe(other)
     })
 
+    it('sends a probe that surveyed through a gate pair into orbit when the claim pays', () => {
+        const game = new TestGame()
+        const mover = game.activePlayerId
+        game.state.board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Violet, technologyId: 'railgun-1' }],
+            [at(1, 0), {}],
+            [at(5, 0), {}],
+            [at(6, 0), { ship: [mover, PieceType.Probe, PieceLevel.Three], surveying: at(0, 0) }],
+            [at(8, 8), {}],
+            [at(9, 8), {}]
+        ])
+        for (const coords of [at(1, 0), at(5, 0)]) {
+            game.state.board.hexes[hexKey(coords)].piece = {
+                id: `gate-${coords.q}`,
+                playerId: mover,
+                type: PieceType.Gate,
+                pairId: 'pair'
+            }
+        }
+        game.state.probeClaims = [{ playerId: mover, coords: at(0, 0), technologyId: 'railgun-1' }]
+
+        game.run(DrawPieces, { type: ActionType.DrawPieces, playerId: mover })
+
+        expect(game.state.board.hexes[hexKey(at(6, 0))].piece).toBeUndefined()
+        expect(
+            game.state.board.hexes[hexKey(at(0, 0))].orbiters?.map((probe) => probe.playerId)
+        ).toEqual([mover])
+    })
+
     it('leaves a probe committed to another planet where it is when a neighboring claim pays', () => {
         // Planets A and B share the hex (1, 0); (3, -1) touches B alone.
         const game = new TestGame()

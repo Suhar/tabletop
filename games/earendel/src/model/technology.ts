@@ -315,7 +315,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.StationUpgrade]: {
         name: 'Station Upgrade',
         ability:
-            'Gain a Station Hub: a station that doubles the score of its cluster, when placed and thereafter.',
+            'Gain a Station Hub: a station that doubles the score of its cluster when it is placed. After that it counts as an ordinary station.',
         timing: TechnologyTiming.Grant
     },
     [TechnologyEffectKind.Terraforming]: {
@@ -399,7 +399,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.NoQuarter]: {
         name: 'No Quarter',
         ability:
-            'Escorts no longer protect anyone: every ship beside a fighter can be attacked, for the rest of the game.',
+            'Escorts no longer protect anyone: every ship beside a fighter can be attacked, for the rest of the game. The discoverer also destroys one enemy probe or fighter anywhere on the board.',
         timing: TechnologyTiming.Rule
     },
     [TechnologyEffectKind.WormholeStorm]: {
@@ -411,7 +411,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.FreeDrift]: {
         name: 'Free Drift',
         ability:
-            'At the start of every turn, the player may step one of their pieces one hex before placing, for the rest of the game.',
+            'At the start of every turn, the player may step one of their pieces one hex before placing, for the rest of the game. The discoverer also moves one of their pieces to any empty hex beside any planet.',
         timing: TechnologyTiming.Rule
     },
     [TechnologyEffectKind.SalvageRights]: {
@@ -423,7 +423,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.Overdrive]: {
         name: 'Overdrive',
         ability:
-            'Nobody discards any more: every player places all the ships they draw, for the rest of the game.',
+            'Nobody discards any more: every player places all the ships they draw, for the rest of the game. The discoverer also gains one technology from the discard pile.',
         timing: TechnologyTiming.Rule
     },
     [TechnologyEffectKind.SignalIntercept]: {
@@ -435,7 +435,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.SharedScience]: {
         name: 'Shared Science',
         ability:
-            "The moment a player's probe goes into orbit around a planet, every other player with a probe beside it gains the technology too, for the rest of the game.",
+            "The moment a player's probe goes into orbit around a planet, every other player with a probe beside it gains the technology too, for the rest of the game. The discoverer also gains the technology of any explored planet.",
         timing: TechnologyTiming.Rule
     },
     [TechnologyEffectKind.ShipyardWorld]: {
@@ -447,7 +447,7 @@ export const TECHNOLOGY_EFFECT_INFO: Record<
     [TechnologyEffectKind.Reinforcements]: {
         name: 'Global Recycling',
         ability:
-            "Discarded ships go back into their owner's bag instead of out of the game, for the rest of the game. Destroyed ships are still lost.",
+            "Discarded ships go back into their owner's bag instead of out of the game, for the rest of the game. Destroyed ships are still lost. The discoverer also takes one of the special units in play.",
         timing: TechnologyTiming.Rule
     }
 }

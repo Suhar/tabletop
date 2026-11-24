@@ -17,13 +17,25 @@ import {
     hasEventPick,
     invalidEventChoiceReason
 } from '../util/events.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 
 export type EventPickMetadata = Type.Static<typeof EventPickMetadata>
 export const EventPickMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     destroyed: Type.Optional(Piece),
-    salvaged: Type.Optional(Type.Array(Type.Object({ piece: Piece, playerId: Type.String() }))),
+    salvaged: Type.Optional(
+        Type.Array(
+            Type.Object({
+                piece: Piece,
+                playerId: Type.String(),
+                reclaimed: Type.Optional(Type.Boolean())
+            })
+        )
+    ),
     moved: Type.Optional(Piece),
     technologyId: Type.Optional(Type.String()),
     planet: Type.Optional(AxialCoordinates),
@@ -95,7 +107,7 @@ export class HydratedEventPick extends HydratableAction<typeof EventPick> implem
 
         const pending = state.pendingEvent
         assertExists(pending, 'Validated: an event is being resolved')
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         if (this.isSkip) {
             this.metadata = { skipped: true }
@@ -104,7 +116,7 @@ export class HydratedEventPick extends HydratableAction<typeof EventPick> implem
             this.metadata = { ...outcome }
         }
         pending.order?.shift()
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidEventPick(state: HydratedEarendelGameState): boolean {

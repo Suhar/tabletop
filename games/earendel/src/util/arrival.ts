@@ -3,21 +3,17 @@ import type { HydratedEarendelGameState } from './../model/gameState.js'
 import { getHex } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
 import { attackableTargets } from './attack.js'
-import { chainsCompletedBy, planetPairKey } from './chains.js'
-import { refreshPlanetControl } from './control.js'
+import { refreshStanding } from './standing.js'
 import { probeDestinations } from './exploration.js'
 import { stationComplexSummary, stationGroupPoints } from './stations.js'
 import type { StationComplexSummary } from '../model/stationComplex.js'
 import { terraformablePlanets } from './terraform.js'
-import type { CompletedChain } from './chains.js'
 
 // The ship must already stand at coords: it is read off the board, not passed in.
 export type Arrival = {
     stationPoints: number
     // Set when a station scored: what its complex held.
     complex?: StationComplexSummary
-    // Carries pairKey, which the caller strips before recording in metadata.
-    chains: CompletedChain[]
     probeDestinations: AxialCoordinates[]
 }
 
@@ -39,13 +35,6 @@ export function resolveArrival(
     playerState.score += stationPoints
     const complex = scores ? stationComplexSummary(state.board, playerId, coords) : undefined
 
-    const joined = state.tradeRoutes.map((route) => planetPairKey(...route.planets))
-    const chains = piece.founding ? [] : chainsCompletedBy(state.board, playerId, coords, joined)
-    for (const chain of chains) {
-        playerState.score += chain.points
-        state.tradeRoutes.push({ planets: chain.planets, playerId })
-    }
-
     const targets = attackableTargets(state.board, coords, playerId)
     if (targets.length > 0) {
         state.pendingAttack = { playerId, fighterCoords: coords, targets }
@@ -65,12 +54,11 @@ export function resolveArrival(
         state.pendingTerraform = { playerId, terraformerCoords: coords, planets: terraformable }
     }
 
-    refreshPlanetControl(state)
+    refreshStanding(state, { unpaid: piece.founding === true })
 
     return {
         stationPoints,
         ...(complex ? { complex } : {}),
-        chains,
         probeDestinations: destinations
     }
 }

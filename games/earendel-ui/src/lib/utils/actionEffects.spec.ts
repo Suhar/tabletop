@@ -31,11 +31,23 @@ describe('score sources', () => {
         const placed = action({
             type: ActionType.PlacePiece,
             coords: at(1, 0),
-            metadata: { stationGroupPoints: 3, chains: [{ color: 'aqua', length: 2, points: 4 }] }
+            metadata: {
+                stationGroupPoints: 3,
+                routesEstablished: [
+                    {
+                        id: 'r1',
+                        planets: [at(0, 0), at(3, 0)],
+                        color: 'aqua',
+                        playerId: 'a',
+                        length: 2,
+                        points: 2
+                    }
+                ]
+            }
         })
         expect(scoreSourcesOf(placed)).toEqual([
             { coords: at(1, 0), points: 3, caption: 'complex', playerId: 'a' },
-            { coords: at(1, 0), points: 4, caption: 'chain', playerId: 'a' }
+            { coords: at(1, 0), points: 2, caption: 'route', playerId: 'a' }
         ])
     })
 

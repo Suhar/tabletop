@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { AxialCoordinates } from '@tabletop/common'
 import { type EarendelBoard, HexKind, hexKey, PlanetColor } from '../model/board.js'
 import { PieceType } from '../model/pieces.js'
-import { chainsCompletedBy, planetPairKey, triangular } from './chains.js'
+import { chainLengthBetween, planetPairKey } from './chains.js'
+import { routeChanges, settleTradeRoutes } from './tradeRoutes.js'
 import { ActionType } from '../definition/actions.js'
 import { PieceSource, PlacePiece } from '../actions/placePiece.js'
 import { TestGame, stackedBag } from '../testing/testHarness.js'
+import { EarendelGameStateValidator, HydratedEarendelGameState } from '../model/gameState.js'
 
 // Hexes are axial with neighbors at (±1,0), (0,±1), (1,-1), (-1,1), so stepping q by one
 // walks a straight line - which is all these layouts need.
@@ -40,55 +42,33 @@ function boardOf(spec: Array<[AxialCoordinates, Spec]>): EarendelBoard {
     return board
 }
 
-describe('triangular', () => {
-    it('pays a longer chain far more than a short one', () => {
-        expect([1, 2, 3, 4, 5].map(triangular)).toEqual([1, 3, 6, 10, 15])
-    })
-})
+const PERIWINKLE_PAIR = [
+    [at(0, 0), { planet: PlanetColor.Periwinkle }],
+    [at(3, 0), { planet: PlanetColor.Periwinkle }]
+] satisfies Array<[AxialCoordinates, Spec]>
 
-describe('chainsCompletedBy', () => {
-    it('scores a single ship that touches two planets of one color', () => {
+describe('chainLengthBetween', () => {
+    it('counts a single ship that touches both planets as a chain of one', () => {
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
             [at(2, 0), { planet: PlanetColor.Periwinkle }]
         ])
 
-        const chains = chainsCompletedBy(board, 'p1', at(1, 0), [])
-
-        expect(chains).toHaveLength(1)
-        expect(chains[0].length).toBe(1)
-        expect(chains[0].points).toBe(1)
-        expect(chains[0].color).toBe(PlanetColor.Periwinkle)
+        expect(chainLengthBetween(board, 'p1', at(0, 0), at(2, 0))).toBe(1)
     })
 
     it('counts the ships between the planets and not the planets themselves', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            ...PERIWINKLE_PAIR,
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { ship: 'p1' }],
-            [at(3, 0), { planet: PlanetColor.Periwinkle }]
+            [at(2, 0), { ship: 'p1' }]
         ])
 
-        const chains = chainsCompletedBy(board, 'p1', at(2, 0), [])
-
-        expect(chains[0].length).toBe(2)
-        expect(chains[0].points).toBe(3)
-    })
-
-    it('ignores planets of different colors', () => {
-        const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle }],
-            [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Teal }]
-        ])
-
-        expect(chainsCompletedBy(board, 'p1', at(1, 0), [])).toEqual([])
+        expect(chainLengthBetween(board, 'p1', at(0, 0), at(3, 0))).toBe(2)
     })
 
     it('measures the shortest run when the ships bunch up', () => {
-        // A direct link at (1,0) plus a longer loop around the top. The pair is worth what
-        // the short route says, not what the scenic one does.
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { ship: 'p1' }],
@@ -97,15 +77,10 @@ describe('chainsCompletedBy', () => {
             [at(2, -1), { ship: 'p1' }]
         ])
 
-        const chains = chainsCompletedBy(board, 'p1', at(1, 0), [])
-
-        expect(chains).toHaveLength(1)
-        expect(chains[0].length).toBe(1)
+        expect(chainLengthBetween(board, 'p1', at(0, 0), at(2, 0))).toBe(1)
     })
 
     it('cannot route a chain through a planet', () => {
-        // A third planet sits directly between the two Periwinkle ones, so the chain has to go
-        // around it - planets are walls, since no ship can ever stand on one.
         const board = boardOf([
             [at(0, 0), { planet: PlanetColor.Periwinkle }],
             [at(1, 0), { planet: PlanetColor.Mint }],
@@ -114,49 +89,18 @@ describe('chainsCompletedBy', () => {
             [at(2, -1), { ship: 'p1' }]
         ])
 
-        const chains = chainsCompletedBy(board, 'p1', at(2, -1), [])
-
-        expect(chains).toHaveLength(1)
-        expect(chains[0].length).toBe(2)
-        expect(chains[0].points).toBe(3)
+        expect(chainLengthBetween(board, 'p1', at(0, 0), at(2, 0))).toBe(2)
     })
 
     it('does not run a chain through another player’s ships', () => {
         const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            ...PERIWINKLE_PAIR,
             [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { ship: 'p2' }],
-            [at(3, 0), { planet: PlanetColor.Periwinkle }]
+            [at(2, 0), { ship: 'p2' }]
         ])
 
-        expect(chainsCompletedBy(board, 'p1', at(1, 0), [])).toEqual([])
-        expect(chainsCompletedBy(board, 'p2', at(2, 0), [])).toEqual([])
-    })
-
-    it('scores every pair a placement joins at once', () => {
-        // One ship touching three Periwinkle planets joins three pairs, not one.
-        const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle }],
-            [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Periwinkle }],
-            [at(1, 1), { planet: PlanetColor.Periwinkle }]
-        ])
-
-        const chains = chainsCompletedBy(board, 'p1', at(1, 0), [])
-
-        expect(chains).toHaveLength(3)
-        expect(chains.every((chain) => chain.points === 1)).toBe(true)
-    })
-
-    it('never pays for a pair of planets that has already been joined', () => {
-        const board = boardOf([
-            [at(0, 0), { planet: PlanetColor.Periwinkle }],
-            [at(1, 0), { ship: 'p1' }],
-            [at(2, 0), { planet: PlanetColor.Periwinkle }]
-        ])
-
-        const spent = [planetPairKey(at(0, 0), at(2, 0))]
-        expect(chainsCompletedBy(board, 'p1', at(1, 0), spent)).toEqual([])
+        expect(chainLengthBetween(board, 'p1', at(0, 0), at(3, 0))).toBeUndefined()
+        expect(chainLengthBetween(board, 'p2', at(0, 0), at(3, 0))).toBeUndefined()
     })
 
     it('names a pair the same way whichever planet is reached first', () => {
@@ -164,6 +108,135 @@ describe('chainsCompletedBy', () => {
     })
 })
 
+describe('settleTradeRoutes', () => {
+    // Two rows of open space between the same two planets, so two players can each chain them.
+    const twoLanes = (top: Spec[], bottom: Spec[]): EarendelBoard =>
+        boardOf([
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            [at(2, 0), { planet: PlanetColor.Periwinkle }],
+            [at(1, 0), top[0]],
+            [at(1, -1), bottom[0]],
+            [at(2, -1), bottom[1]]
+        ])
+    const scoreOf = (game: HydratedEarendelGameState, playerId: string) =>
+        game.getPlayerState(playerId).score
+    const holders = (game: HydratedEarendelGameState) =>
+        game.tradeRoutes.map((route) => route.playerId)
+
+    function settled(board: EarendelBoard): HydratedEarendelGameState {
+        const game = new TestGame().hydrated
+        game.board = board
+        settleTradeRoutes(game)
+        return game
+    }
+
+    it('gives the pair to the only player with a chain and pays its length', () => {
+        const game = settled(twoLanes([{}], [{ ship: 'p1' }, { ship: 'p1' }]))
+
+        expect(holders(game)).toEqual(['p1'])
+        expect(game.tradeRoutes[0]).toMatchObject({
+            color: PlanetColor.Periwinkle,
+            length: 2,
+            points: 2
+        })
+        expect(scoreOf(game, 'p1')).toBe(2)
+    })
+
+    it('ignores planets of different colors', () => {
+        const game = settled(
+            boardOf([
+                [at(0, 0), { planet: PlanetColor.Periwinkle }],
+                [at(1, 0), { ship: 'p1' }],
+                [at(2, 0), { planet: PlanetColor.Teal }]
+            ])
+        )
+
+        expect(game.tradeRoutes).toEqual([])
+    })
+
+    it('sets up every pair one ship joins', () => {
+        const game = settled(
+            boardOf([
+                [at(0, 0), { planet: PlanetColor.Periwinkle }],
+                [at(1, 0), { ship: 'p1' }],
+                [at(2, 0), { planet: PlanetColor.Periwinkle }],
+                [at(1, 1), { planet: PlanetColor.Periwinkle }]
+            ])
+        )
+
+        expect(game.tradeRoutes).toHaveLength(3)
+        expect(scoreOf(game, 'p1')).toBe(3)
+    })
+
+    it('pays nothing to a rival who chains a pair that has a route', () => {
+        const game = settled(twoLanes([{ ship: 'p1' }], [{}, {}]))
+        game.board = twoLanes([{ ship: 'p1' }], [{ ship: 'p2' }, { ship: 'p2' }])
+        settleTradeRoutes(game)
+
+        expect(holders(game)).toEqual(['p1'])
+        expect(scoreOf(game, 'p2')).toBe(0)
+    })
+
+    it('hands a broken route to the rival whose chain is the only one standing', () => {
+        const game = settled(twoLanes([{ ship: 'p1' }], [{}, {}]))
+        game.board = twoLanes([{ ship: 'p1' }], [{ ship: 'p2' }, { ship: 'p2' }])
+        settleTradeRoutes(game)
+        const before = [...game.tradeRoutes]
+
+        game.board = twoLanes([{}], [{ ship: 'p2' }, { ship: 'p2' }])
+        settleTradeRoutes(game)
+
+        expect(holders(game)).toEqual(['p2'])
+        expect(scoreOf(game, 'p2')).toBe(2)
+        const changes = routeChanges(before, game)
+        expect(changes.routesBroken?.map((route) => route.playerId)).toEqual(['p1'])
+        expect(changes.routesEstablished?.map((route) => route.playerId)).toEqual(['p2'])
+    })
+
+    it('leaves a pair with no route while two players both chain it', () => {
+        const game = new TestGame().hydrated
+        game.board = twoLanes([{ ship: 'p1' }], [{ ship: 'p2' }, { ship: 'p2' }])
+        settleTradeRoutes(game)
+
+        expect(game.tradeRoutes).toEqual([])
+
+        game.board = twoLanes([{ ship: 'p1' }], [{ ship: 'p2' }, {}])
+        settleTradeRoutes(game)
+
+        expect(holders(game)).toEqual(['p1'])
+        expect(scoreOf(game, 'p1')).toBe(1)
+    })
+
+    it('pays the same player again for re-forming their own route', () => {
+        const game = settled(twoLanes([{ ship: 'p1' }], [{}, {}]))
+        game.board = twoLanes([{}], [{}, {}])
+        settleTradeRoutes(game)
+        expect(game.tradeRoutes).toEqual([])
+
+        game.board = twoLanes([{ ship: 'p1' }], [{}, {}])
+        settleTradeRoutes(game)
+
+        expect(holders(game)).toEqual(['p1'])
+        expect(scoreOf(game, 'p1')).toBe(2)
+    })
+
+    it('ends a route when one of its planets changes color', () => {
+        const game = settled(twoLanes([{ ship: 'p1' }], [{}, {}]))
+        game.board.hexes[hexKey(at(2, 0))].color = PlanetColor.Teal
+        settleTradeRoutes(game)
+
+        expect(game.tradeRoutes).toEqual([])
+    })
+
+    it('sets up an unpaid route for the opening station', () => {
+        const game = new TestGame().hydrated
+        game.board = twoLanes([{ ship: 'p1' }], [{}, {}])
+        settleTradeRoutes(game, { unpaid: true })
+
+        expect(holders(game)).toEqual(['p1'])
+        expect(scoreOf(game, 'p1')).toBe(0)
+    })
+})
 describe('scoring a chain in play', () => {
     it('pays the placing player and says so in the history', () => {
         const game = new TestGame()
@@ -179,8 +252,7 @@ describe('scoring a chain in play', () => {
             [at(7, 7), {}]
         ])
         game.state.technologyDeck = stackedBag([])
-        // A spare piece each, so no bag runs out and ends the game - planets pay out at the
-        // end, and this test is about what the chain paid.
+        // A spare piece each, so no bag runs out and ends the game.
         game.stackBags((playerId) =>
             ['a', 'b', 'c'].map((suffix) => ({
                 id: `${playerId}-${suffix}`,
@@ -215,13 +287,45 @@ describe('scoring a chain in play', () => {
             pieceSource: PieceSource.Bag
         })
 
-        expect(game.state.players.find((p) => p.playerId === mover)!.score).toBe(3)
+        expect(game.state.players.find((p) => p.playerId === mover)!.score).toBe(2)
         expect(game.state.players.find((p) => p.playerId === other)!.score).toBe(0)
         expect((completing as PlacePiece).metadata).toMatchObject({
-            chains: [{ length: 2, points: 3, color: PlanetColor.Periwinkle }]
+            routesEstablished: [{ length: 2, points: 2, color: PlanetColor.Periwinkle }]
         })
         expect(
             game.state.tradeRoutes.map((route) => [planetPairKey(...route.planets), route.playerId])
         ).toEqual([[planetPairKey(at(0, 0), at(3, 0)), mover]])
+    })
+})
+
+describe('a game stored before routes could break', () => {
+    it('still loads, with its routes brought up to date', () => {
+        const { routesEstablished: _routesEstablished, ...stored } = new TestGame().state
+        const board = boardOf([
+            [at(0, 0), { planet: PlanetColor.Periwinkle }],
+            [at(1, 0), { ship: 'p1' }],
+            [at(2, 0), { planet: PlanetColor.Periwinkle }]
+        ])
+        const state = {
+            ...stored,
+            board,
+            tradeRoutes: [
+                {
+                    planets: [at(0, 0), at(2, 0)] satisfies [AxialCoordinates, AxialCoordinates],
+                    playerId: 'p1'
+                }
+            ]
+        }
+
+        expect(EarendelGameStateValidator.Check(state)).toBe(true)
+
+        const hydrated = new HydratedEarendelGameState(state)
+        settleTradeRoutes(hydrated)
+
+        expect(hydrated.routesEstablished).toBe(0)
+        expect(hydrated.tradeRoutes).toMatchObject([
+            { playerId: 'p1', color: PlanetColor.Periwinkle, points: 0 }
+        ])
+        expect(hydrated.getPlayerState('p1').score).toBe(0)
     })
 })

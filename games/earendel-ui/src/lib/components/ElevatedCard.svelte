@@ -30,7 +30,7 @@
 
 <!-- A landscape card in the planet's color: the setup draw's elevated card for that color. -->
 <div
-    class="elevated-card relative flex h-[112px] w-[202px] shrink-0 flex-col overflow-hidden rounded-xl border-2 bg-[#0d1424] text-white shadow-xl transition-transform duration-200 ease-out {spent &&
+    class="elevated-card relative flex min-h-[112px] w-[202px] shrink-0 flex-col overflow-hidden rounded-xl border-2 bg-[#0d1424] text-white shadow-xl transition-transform duration-200 ease-out {spent &&
     event &&
     !enlarged
         ? 'opacity-70'

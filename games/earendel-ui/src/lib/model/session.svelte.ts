@@ -99,12 +99,14 @@ import {
     planetCoordinates,
     relayedProbesOf,
     relayStationsOf,
-    planetPointsByPlayer,
+    gateTwin,
     neighborsOf,
+    neighborsThrough,
     HexKind,
     type EarendelGameState,
     type HydratedEarendelGameState,
     type HydratedEarendelPlayerState,
+    claimsBlockedBy,
     getHex,
     hexesClosedToProbesOf,
     hexKey,
@@ -839,6 +841,30 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return pending.playerId === this.myPlayer?.id ? pending.candidatePlanets : []
     })
 
+    // The player whose controlled planets the board is ringing, asked for from their panel: a
+    // hover shows them, a click keeps them shown.
+    heldPlanetsHoveredFor: string | undefined = $state(undefined)
+    heldPlanetsPinnedFor: string | undefined = $state(undefined)
+    heldPlanetsShownFor: string | undefined = $derived(
+        this.heldPlanetsHoveredFor ?? this.heldPlanetsPinnedFor
+    )
+
+    // Rival claims the probe being surveyed with is holding off, on planets it cannot survey:
+    // surveying commits it elsewhere and lets them pay.
+    surveyUnblocks: { playerId: string; color?: PlanetColor }[] = $derived.by(() => {
+        const pending = this.gameState.pendingExploration
+        if (this.choosablePlanets.length === 0 || !pending) return []
+        return claimsBlockedBy(this.gameState, pending.probeCoords)
+            .filter(
+                (claim) =>
+                    !this.choosablePlanets.some((planet) => sameCoordinates(planet, claim.coords))
+            )
+            .map((claim) => ({
+                playerId: claim.playerId,
+                color: getHex(this.gameState.board, claim.coords)?.color
+            }))
+    })
+
     technologyChoices: TechnologyCard[] = $derived.by(() => {
         const pending = this.gameState.pendingExploration
         if (!this.isMyTurn || !pending?.exploringPlanet) return []
@@ -1139,8 +1165,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             this.gameState.players.map((player) => ({
                 playerId: player.playerId,
                 score: player.score
-            })),
-            planetPointsByPlayer(this.gameState.board)
+            }))
         )
     )
 
@@ -1207,23 +1232,43 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         )
     }
 
-    // Each probe staking a pending claim: the claimant's probes beside the claimed planet.
-    claimUplinks: { planet: AxialCoordinates; probe: AxialCoordinates; playerId: string }[] =
-        $derived(
-            this.pendingClaims.flatMap(({ coords, playerId }) =>
-                neighborsOf(coords)
-                    .filter((neighbor) => {
-                        const piece = getHex(this.gameState.board, neighbor)?.piece
-                        return (
-                            piece?.type === PieceType.Probe &&
-                            piece.playerId === playerId &&
-                            // A probe committed to another planet counts nothing here.
-                            (!piece.surveying || sameCoordinates(piece.surveying, coords))
-                        )
-                    })
-                    .map((probe) => ({ planet: coords, probe, playerId }))
-            )
-        )
+    // Each probe staking a pending claim: the claimant's probes beside the claimed planet, a
+    // gate pair counting as one place. A probe reached through gates names the gate beside the
+    // planet and its twin, so the beam can run into one and out of the other.
+    claimUplinks: {
+        planet: AxialCoordinates
+        probe: AxialCoordinates
+        playerId: string
+        via?: { near: AxialCoordinates; far: AxialCoordinates }
+    }[] = $derived(
+        this.pendingClaims.flatMap(({ coords, playerId }) => {
+            const board = this.gameState.board
+            const beside = neighborsOf(coords)
+            return neighborsThrough(board, coords)
+                .filter((neighbor) => {
+                    const piece = getHex(board, neighbor)?.piece
+                    return (
+                        piece?.type === PieceType.Probe &&
+                        piece.playerId === playerId &&
+                        // A probe committed to another planet counts nothing here.
+                        (!piece.surveying || sameCoordinates(piece.surveying, coords))
+                    )
+                })
+                .map((probe) => {
+                    if (beside.some((neighbor) => sameCoordinates(neighbor, probe))) {
+                        return { planet: coords, probe, playerId }
+                    }
+                    const via = beside.flatMap((near) => {
+                        const far = gateTwin(board, near)
+                        return far &&
+                            neighborsOf(far).some((neighbor) => sameCoordinates(neighbor, probe))
+                            ? [{ near, far }]
+                            : []
+                    })[0]
+                    return { planet: coords, probe, playerId, ...(via ? { via } : {}) }
+                })
+        })
+    )
 
     canUseUpdatedLogistics: boolean = $derived(
         this.isMyTurn && this.validActionTypes.includes(ActionType.UseUpdatedLogistics)
@@ -1541,10 +1586,15 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     choosingAsteroid: boolean = $derived(this.activePower === Power.Asteroid)
 
+    // The choice is made and being applied: no power is in progress while the session is busy,
+    // but the cards stay for the choice to play out on them (AsteroidChoices), until the state
+    // moves on.
+    private asteroidCardsHeld: boolean = $state(false)
+
     // The ships an Asteroid Field could build, as they would look in hand.
     asteroidShips: { choice: StowChoice; piece: Piece }[] = $derived.by(() => {
         const playerId = this.myPlayer?.id
-        if (!playerId || !this.choosingAsteroid) return []
+        if (!playerId || !(this.choosingAsteroid || this.asteroidCardsHeld)) return []
         return Object.values(StowChoice).map((choice) => ({
             choice,
             piece: { id: `asteroid-${choice}`, playerId, ...stowedShipKind(choice) }
@@ -1555,8 +1605,14 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         if (!this.canUseAsteroidField) return
 
         const action = this.createPlayerAction(UseAsteroidField, { choice })
+        this.asteroidCardsHeld = true
         this.resetAction()
-        await this.applyAction(action)
+        try {
+            await this.applyAction(action)
+        } catch (error) {
+            this.asteroidCardsHeld = false
+            throw error
+        }
     }
 
     // Security Breach: chosen from the panel, then the opponent whose bag takes the Scrap.
@@ -1738,8 +1794,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             this.gameState.players.map((player) => ({
                 playerId: player.playerId,
                 score: player.score
-            })),
-            planetPointsByPlayer(this.gameState.board)
+            }))
         )
     })
 
@@ -2274,6 +2329,7 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
 
     override beforeNewState(transition: PresentedTransition) {
         this.resetAction()
+        this.asteroidCardsHeld = false
         this.stowRevealDue = transition.kind === 'own-action' || transition.kind === 'other-action'
     }
 

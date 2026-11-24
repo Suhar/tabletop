@@ -8,7 +8,7 @@ import {
     MachineContext
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
 import { ActionType } from '../definition/actions.js'
 import { Tile } from '../model/tile.js'
 import {
@@ -85,7 +85,7 @@ export class HydratedPlaceTile extends HydratableAction<typeof PlaceTile> implem
         if (!this.coords) {
             state.pendingTile = undefined
             returnDrawn()
-            refreshPlanetControl(state)
+            refreshStanding(state)
 
             this.metadata = { noTilePlaced: true }
             return

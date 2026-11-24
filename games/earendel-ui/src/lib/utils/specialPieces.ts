@@ -13,7 +13,7 @@ const STATION_HUB: SpecialPieceInfo = {
     key: 'hub',
     name: 'Station Hub',
     grantedBy: TechnologyEffectKind.StationUpgrade,
-    rules: 'A station in every respect, with one addition: it doubles the score of its complex, when placed and every time that complex is scored afterwards. Two hubs in one complex make it fourfold.'
+    rules: 'A station in every respect, with one addition: it doubles the score of its complex when it is placed. After that it counts as an ordinary station.'
 }
 
 const TERRAFORMER: SpecialPieceInfo = {
@@ -49,7 +49,7 @@ const GRANTED: Partial<Record<PieceType, SpecialPieceInfo>> = {
         key: 'gate',
         name: 'Gate',
         grantedBy: TechnologyEffectKind.GateNetwork,
-        rules: 'A pair from one card, placed on separate turns. Once both stand they are one place: what stands beside one stands beside the other for chains, station links by touch, escorts and probe influence. Not for attacks, torpedoes or control.'
+        rules: "A pair from one card, placed on separate turns. Once both stand they are one place: what stands beside one stands beside the other for chains, station links by touch, escorts and probe influence. Not for attacks, torpedoes or control. Every player's ships are joined this way, not only yours."
     },
     [PieceType.ArtificialPlanet]: {
         key: 'planet',

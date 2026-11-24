@@ -29,15 +29,18 @@ export class ScoreFloatAnimator {
         const sources = scoreSourcesOf(action)
         if (sources.length === 0) return
 
-        const center = hexGeometry(sources[0].coords).center
-        this.floats = [
-            {
-                key: action.id,
-                points: sources.reduce((sum, source) => sum + source.points, 0),
-                playerId: sources[0].playerId,
+        // One float per player: a route a rival's chain took over pays that rival.
+        const scorers = [...new Set(sources.map((source) => source.playerId))]
+        this.floats = scorers.map((playerId) => {
+            const theirs = sources.filter((source) => source.playerId === playerId)
+            const center = hexGeometry(theirs[0].coords).center
+            return {
+                key: `${action.id}-${playerId}`,
+                points: theirs.reduce((sum, source) => sum + source.points, 0),
+                playerId,
                 at: { x: center.x, y: center.y }
             }
-        ]
+        })
 
         await tick()
 

@@ -8,6 +8,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { rationaleFor } from '$lib/utils/rationale.js'
     import { setAsideBy } from '$lib/utils/setAside.js'
+    import { gameEndReason } from '$lib/utils/gameEnd.js'
     import { technologyAbility, technologyName } from '@tabletop/earendel'
     import TechnologyChip from './TechnologyChip.svelte'
 
@@ -33,6 +34,10 @@
     // Rows settle with a little motion as play adds them. Stepping through history is a
     // restoration, shown as it stands: nothing fades or slides then.
     const settle = (duration: number) => (gameSession.isViewingHistory ? 0 : duration)
+
+    let endReason = $derived(
+        gameEndReason(gameSession.gameState.players, gameSession.actions, nameOf)
+    )
 
     let reversedActions = $derived.by(() => {
         const reversed = gameSession.actions
@@ -61,7 +66,7 @@
                     date={timeAgo.format(gameSession.game.finishedAt)}
                 >
                     <p class="mt-1 text-left text-sm text-base font-normal text-[#ad9c80">
-                        The game has ended.
+                        The game has ended. {endReason}
                     </p>
                 </TimelineItem>
             {/if}

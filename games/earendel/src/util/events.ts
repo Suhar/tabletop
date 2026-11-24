@@ -13,7 +13,7 @@ import { type Piece, PieceType } from '../model/pieces.js'
 import { SPECIAL_PIECE_TECHNOLOGIES, TechnologyEffectKind } from '../model/technology.js'
 import { probeBlockedBy } from './lineOfSight.js'
 import { grantedPieces, grantTechnology } from './technologyGrants.js'
-import { refreshPlanetControl } from './control.js'
+import { refreshStanding } from './standing.js'
 import { salvageDestroyed } from './elevated.js'
 import { interdictedFor } from './specials.js'
 
@@ -201,7 +201,7 @@ export function applyEventChoice(
                 [{ piece: destroyed, at: choice.coords! }],
                 playerId
             )
-            refreshPlanetControl(state)
+            refreshStanding(state)
             return { destroyed, ...(salvaged.length > 0 ? { salvaged } : {}) }
         }
         case TechnologyEffectKind.WormholeStorm: {
@@ -210,7 +210,7 @@ export function applyEventChoice(
             origin.piece = undefined
             delete moved.surveying
             state.board.hexes[hexKey(choice.to!)].piece = moved
-            refreshPlanetControl(state)
+            refreshStanding(state)
             return { moved }
         }
         case TechnologyEffectKind.SalvageRights: {

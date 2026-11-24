@@ -16,17 +16,19 @@ import { TechnologyEffectKind } from '../model/technology.js'
 import { resolveArrival } from '../util/arrival.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
 import { planetsBeside, wormholeDestinations } from '../util/wormhole.js'
-import { ScoredChain } from '../model/chains.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 import { StationComplexSummary } from '../model/stationComplex.js'
 
 export type UseTradeRouteWormholeMetadata = Type.Static<typeof UseTradeRouteWormholeMetadata>
 export const UseTradeRouteWormholeMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     pieceType: Type.Optional(Type.Enum(PieceType)),
     stationGroupPoints: Type.Optional(Type.Number()),
     stationComplex: Type.Optional(StationComplexSummary),
-    chains: Type.Optional(Type.Array(ScoredChain)),
     probeDestinations: Type.Optional(Type.Array(AxialCoordinates))
 })
 
@@ -70,7 +72,7 @@ export class HydratedUseTradeRouteWormhole
             throw Error(`Invalid UseTradeRouteWormhole action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         const fromHex = state.board.hexes[hexKey(this.from)]
         const piece = fromHex.piece
@@ -82,7 +84,7 @@ export class HydratedUseTradeRouteWormhole
 
         startCooldown(state, this.playerId, TechnologyEffectKind.TradeRouteWormhole)
 
-        const { stationPoints, complex, chains, probeDestinations } = resolveArrival(
+        const { stationPoints, complex, probeDestinations } = resolveArrival(
             state,
             this.playerId,
             this.to
@@ -92,12 +94,9 @@ export class HydratedUseTradeRouteWormhole
             pieceType: piece.type,
             ...(stationPoints > 0 ? { stationGroupPoints: stationPoints } : {}),
             ...(stationPoints > 0 && complex ? { stationComplex: complex } : {}),
-            ...(chains.length > 0
-                ? { chains: chains.map(({ pairKey: _pairKey, ...chain }) => chain) }
-                : {}),
             ...(probeDestinations.length > 0 ? { probeDestinations } : {})
         }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidUseTradeRouteWormhole(state: HydratedEarendelGameState): boolean {

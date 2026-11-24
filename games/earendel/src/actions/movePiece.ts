@@ -9,16 +9,20 @@ import {
     sameCoordinates
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
 import { ActionType } from '../definition/actions.js'
 import { hexKey } from '../model/board.js'
 import { Piece } from '../model/pieces.js'
 import { destinationsFrom, legalMovesFor } from '../util/movement.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 
 export type MovePieceMetadata = Type.Static<typeof MovePieceMetadata>
 export const MovePieceMetadata = Type.Object({
-    ...ClaimChangeMetadata,
+    ...StandingChangeMetadata,
     piece: Type.Optional(Piece),
     declined: Type.Optional(Type.Boolean()),
     noMoveAvailable: Type.Optional(Type.Boolean())
@@ -61,7 +65,7 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
             throw Error(`Invalid MovePiece action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         if (!this.from || !this.to) {
             const hadOptions = legalMovesFor(state.board, this.playerId).length > 0
@@ -78,10 +82,10 @@ export class HydratedMovePiece extends HydratableAction<typeof MovePiece> implem
         state.board.hexes[hexKey(this.to)].piece = piece
 
         state.pendingTechnology = undefined
-        refreshPlanetControl(state)
+        refreshStanding(state)
 
         this.metadata = { piece }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidMovePiece(state: HydratedEarendelGameState): boolean {

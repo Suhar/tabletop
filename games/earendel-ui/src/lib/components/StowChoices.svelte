@@ -5,6 +5,7 @@
     import type { AnimationContext } from '@tabletop/frontend-components'
     import { isStowShip, type StowChoice } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { animateCardChoice, cardLayersOf } from '$lib/utils/cardChoice.js'
     import { describePiece } from '$lib/utils/describe.js'
     import ShipCard from './ShipCard.svelte'
 
@@ -23,20 +24,11 @@
     const FLIP = 0.5
     const FLIP_GAP = 0.16
     const FLIP_LIFT = 12
-    const REJECT_FADE = 0.3
-    const TWIRL = 0.9
-    const TWIRL_LIFT = 16
-    const CHOSEN_FADE = 0.35
 
     let cards: HTMLElement[] = $state([])
     // The cards cannot be chosen until they have turned face up, nor once one has been.
     let revealed = $state(false)
     let chosen: StowChoice | undefined = $state()
-
-    // The cards' leaf planes fade, never their wrappers: opacity flattens 3D children.
-    const layersOf = (card: HTMLElement) => [
-        ...card.querySelectorAll<HTMLElement>('[data-card-layer]')
-    ]
 
     function choose(choice: StowChoice) {
         if (!revealed || chosen) return
@@ -55,32 +47,7 @@
     }) {
         if (!isStowShip(action) || action.choice === undefined) return
         const picked = gameSession.stowableShips.findIndex((ship) => ship.choice === action.choice)
-        const card = cards[picked]
-        if (!card) return
-
-        const timeline = animationContext.actionTimeline
-        const others = cards.filter((other, index) => other && index !== picked)
-        timeline.to(
-            others.flatMap(layersOf),
-            { opacity: 0, duration: REJECT_FADE, ease: 'power1.in' },
-            0
-        )
-        timeline.to(card, { rotationY: 360, duration: TWIRL, ease: 'power2.inOut' }, REJECT_FADE)
-        timeline.to(
-            card,
-            {
-                keyframes: [
-                    { y: -TWIRL_LIFT, duration: TWIRL * 0.4, ease: 'power1.out' },
-                    { y: 0, duration: TWIRL * 0.6, ease: 'power1.in' }
-                ]
-            },
-            REJECT_FADE
-        )
-        timeline.to(
-            layersOf(card),
-            { opacity: 0, duration: CHOSEN_FADE, ease: 'power1.in' },
-            REJECT_FADE + TWIRL
-        )
+        animateCardChoice(animationContext.actionTimeline, cards, picked)
     }
 
     onMount(() => {
@@ -98,7 +65,7 @@
             return unlisten
         }
 
-        const layers = shown.map(layersOf)
+        const layers = shown.map(cardLayersOf)
         gsap.set(shown, { rotationY: 180 })
         gsap.set(layers.flat(), { opacity: 0 })
 

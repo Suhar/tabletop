@@ -1,4 +1,5 @@
 import * as Type from 'typebox'
+import { payBounty } from '../util/routePowers.js'
 import { Compile } from 'typebox/compile'
 import {
     assertExists,
@@ -9,21 +10,35 @@ import {
     sameCoordinates
 } from '@tabletop/common'
 import { HydratedEarendelGameState } from '../model/gameState.js'
-import { refreshPlanetControl } from '../util/control.js'
+import { refreshStanding } from '../util/standing.js'
 import { ActionType } from '../definition/actions.js'
 
 import { Piece } from '../model/pieces.js'
 import { TechnologyEffectKind } from '../model/technology.js'
 import { isTorpedoAt, resolveShot } from '../util/attack.js'
 import { canUseCooldownEffect, startCooldown } from '../util/cooldowns.js'
-import { claimChanges, ClaimChangeMetadata, snapshotClaims } from '../util/claimChanges.js'
+import {
+    snapshotStanding,
+    standingChanges,
+    StandingChangeMetadata
+} from '../util/standingChanges.js'
 import { salvageDestroyed } from '../util/elevated.js'
 
 export type AttackSpreadMetadata = Type.Static<typeof AttackSpreadMetadata>
 export const AttackSpreadMetadata = Type.Object({
     // Salvage Operations: destroyed ships a drone's owner took into their bag.
-    salvaged: Type.Optional(Type.Array(Type.Object({ piece: Piece, playerId: Type.String() }))),
-    ...ClaimChangeMetadata,
+    salvaged: Type.Optional(
+        Type.Array(
+            Type.Object({
+                piece: Piece,
+                playerId: Type.String(),
+                reclaimed: Type.Optional(Type.Boolean())
+            })
+        )
+    ),
+    ...StandingChangeMetadata,
+    // Bounty, the violet power: points for the enemy pieces destroyed.
+    bounty: Type.Optional(Type.Number()),
     hits: Type.Optional(
         Type.Array(
             Type.Object({
@@ -73,7 +88,7 @@ export class HydratedAttackSpread
             throw Error(`Invalid AttackSpread action: ${invalidReason}`)
         }
 
-        const claims = snapshotClaims(state)
+        const claims = snapshotStanding(state)
 
         const pending = state.pendingAttack
         assertExists(pending, 'AttackSpread requires a pending attack')
@@ -93,14 +108,20 @@ export class HydratedAttackSpread
         }
 
         const salvaged = salvageDestroyed(state, destroyedAt, this.playerId)
-        refreshPlanetControl(state)
+        const bounty = payBounty(
+            state,
+            this.playerId,
+            destroyedAt.map(({ piece }) => piece)
+        )
+        refreshStanding(state)
 
         state.pendingAttack = undefined
         this.metadata = {
             hits,
+            ...(bounty > 0 ? { bounty } : {}),
             ...(salvaged.length > 0 ? { salvaged } : {})
         }
-        this.metadata = { ...this.metadata, ...claimChanges(claims, state) }
+        this.metadata = { ...this.metadata, ...standingChanges(claims, state) }
     }
 
     isValidAttackSpread(state: HydratedEarendelGameState): boolean {

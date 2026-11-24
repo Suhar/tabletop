@@ -93,8 +93,8 @@ pieces, or instead a power. Technology is the reward; a special piece is one for
 
 The first is the **Station Hub**, from _Station Upgrade_. It is a **station in every respect** —
 power 1, immune to fighters, links complexes by touch and by sight line, projects a blockade —
-with one addition: it **doubles the score of its complex**, when placed and every time that
-complex is scored afterwards.
+with one addition: it **doubles the score of its complex when it is placed**. Every time that
+complex is scored afterwards it counts as an ordinary station.
 
 The second is the **Terraformer**, from _Terraforming_. It is never in a bag. It counts **1
 toward control** of the planets beside it, like a station, and fighters cannot attack it.
@@ -129,7 +129,8 @@ start at 0.
 **The opening.** Before the first turn, each player places **one free station** on any open
 hex, the **last player in turn order first** and the first player last, so that going last
 is paid for with first choice of ground. The station comes from no bag and **scores nothing
-when placed**: it pays no complex point and completes no chain.
+when placed**: it pays no complex point, and a trade route it establishes pays nothing either,
+though the route stands and carries its power.
 From then on it is a station in every respect — it counts toward control of the planets
 beside it, links by touch and by sight, blockades, and is paid for by every later station
 that joins its complex. On the board it is marked by a faint dotted orbit, so the seed of each
@@ -240,7 +241,7 @@ A technology with nothing to act on does not hold the turn open — there is no 
 
 **Probe influence** is how strongly a player is surveying a planet: the sum of the **levels** of
 their probes adjacent to it. A level 3 probe counts 3 and a level 2 counts 2; stations and
-fighters count nothing. It is separate from control, which decides who scores a planet.
+fighters count nothing. It is separate from control, which decides who holds a planet.
 
 A probe that has **surveyed** a planet is committed to it: for as long as it stands where it
 surveyed, its level counts on that planet **alone**, not on the others it touches. A probe that
@@ -378,7 +379,7 @@ counts as one of your stations._
   the planet into one. It counts as one more station in that complex each time the complex
   scores.
 - **It scores at once**, as a station placed there would: the complex it has just joined pays
-  its size, hubs doubling as usual. With no station beside it, it is a complex of one.
+  its size. With no station beside it, it is a complex of one.
 - That is all it is. It is not a piece: it has no line of sight, so it links nothing at a
   distance and closes no hex to probes; it adds nothing toward control; nothing can attack,
   move, salvage or torpedo it; and the planet is surveyed, held and terraformed as before.
@@ -473,11 +474,10 @@ piece's business.
 claimed by holding the planet outright from one turn to the next, so one card can hand a hub to
 several players over a game — each getting their own.
 
-**Hubs multiply.** Two in one complex make it fourfold, which is what "doubles the score of its
-cluster" says of each hub taken on its own. It climbs fast, deliberately: a hub is won from a
-technology rather than drawn from the bag, so a player who has collected several has already
-spent a great deal of the game earning them, and a second one landing in the same complex as
-the first should be worth more than spreading them thin.
+**A hub doubles once.** The doubling belongs to the placement of the hub itself: a complex
+that already holds a hub pays a later station, or a later hub, as if the earlier one were an
+ordinary station. So a hub is worth most placed last, into the largest complex its owner can
+build.
 
 **One special unit per category.** Every special unit, the hub, terraformer and relay included,
 belongs to one technology. Each game has five units in play, one per category; the other units'
@@ -491,18 +491,18 @@ like a terraformer, and counts 1 toward control where it stands. They are meant 
 game flows rather than what it scores, and each has an answer: most are ships that a fighter of
 level 1 or more can destroy, so a piece that is winning a region is a target.
 
-| Technology (category)             | Piece                 | What it does                                                                                                                                                                                                                                                                                                       |
-| --------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Interdiction (Belligerence)       | **Interdictor**       | No enemy ship may be placed on, or moved, stormed or wormholed onto, a hex beside it. A feint swap still lands there.                                                                                                                                                                                              |
-| Bastion Works (Belligerence)      | **Bastion**           | Every friendly piece beside it is escorted, even under No Quarter. Fighters cannot touch the bastion itself; only a torpedo can.                                                                                                                                                                                   |
-| Gate Network (Mobility)           | **Gate** (a pair)     | Both gates come from one card and are placed on separate turns. Once both stand they are one place: what stands beside one stands beside the other for chains, station links by touch, escorts and probe influence. Not for attacks, torpedoes or control.                                                         |
-| Carrier Doctrine (Acquisitions)   | **Carrier**           | Counts as a level 3 probe for influence on every planet beside it; it never surveys. Only a level 3 fighter can touch it.                                                                                                                                                                                          |
-| Deep Scan (Acquisitions)          | **Deep Scanner**      | While it stands its owner draws one more ship each turn and throws one more out: draw four, keep two; under Overdrive, draw four, place three. Two scanners are no better than one.                                                                                                                                |
-| Quarantine (Espionage)            | **Quarantine Beacon** | No planet beside it can be surveyed by anyone while it stands, and pending claims on those planets wait, neither paying nor lapsing.                                                                                                                                                                               |
-| Jammer Array (Espionage)          | **Jammer**            | Every station and relay within two hexes, its owner's included, has no sight: no links, no blockades, no relay protection. It does not interrupt an Immediate Download.                                                                                                                                            |
-| Artificial World (Expansion)      | **Artificial Planet** | Placed on an empty hex, it becomes an unexplored planet of a color its owner chooses at once; the piece is gone. It is a planet for every rule from then on.                                                                                                                                                       |
-| Nebula Seeding (Expansion)        | **Nebula Seeder**     | At the start of each of its owner's turns, after the draw, it may turn one empty hex into **nebula**, up to four in all: a hex beside it, or beside any nebula joined to it through nebula (whoever laid it). Nothing is placed on nebula, moves through it, or sees past it: it blocks sight lines like a planet. |
-| Salvage Operations (Acquisitions) | **Salvage Drone**     | Any probe or fighter destroyed within two hexes goes into the drone owner's bag, as drawn, instead of out of the game. The nearest drone claims it; among equally near drones the destroyer's own first.                                                                                                           |
+| Technology (category)             | Piece                 | What it does                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interdiction (Belligerence)       | **Interdictor**       | No enemy ship may be placed on, or moved, stormed or wormholed onto, a hex beside it. A feint swap still lands there.                                                                                                                                                                                                                                                                       |
+| Bastion Works (Belligerence)      | **Bastion**           | Every friendly piece beside it is escorted, even under No Quarter. Fighters cannot touch the bastion itself; only a torpedo can.                                                                                                                                                                                                                                                            |
+| Gate Network (Mobility)           | **Gate** (a pair)     | Both gates come from one card and are placed on separate turns. Once both stand they are one place: what stands beside one stands beside the other for chains, station links by touch, escorts and probe influence. Not for attacks, torpedoes or control. The pair is open to everyone: a rival's ships beside the two gates are joined as well, so a gate can hand a rival a trade route. |
+| Carrier Doctrine (Acquisitions)   | **Carrier**           | Counts as a level 3 probe for influence on every planet beside it; it never surveys. Only a level 3 fighter can touch it.                                                                                                                                                                                                                                                                   |
+| Deep Scan (Acquisitions)          | **Deep Scanner**      | While it stands its owner draws one more ship each turn and throws one more out: draw four, keep two; under Overdrive, draw four, place three. Two scanners are no better than one.                                                                                                                                                                                                         |
+| Quarantine (Espionage)            | **Quarantine Beacon** | No planet beside it can be surveyed by anyone while it stands, and pending claims on those planets wait, neither paying nor lapsing.                                                                                                                                                                                                                                                        |
+| Jammer Array (Espionage)          | **Jammer**            | Every station and relay within two hexes, its owner's included, has no sight: no links, no blockades, no relay protection. It does not interrupt an Immediate Download.                                                                                                                                                                                                                     |
+| Artificial World (Expansion)      | **Artificial Planet** | Placed on an empty hex, it becomes an unexplored planet of a color its owner chooses at once; the piece is gone. It is a planet for every rule from then on.                                                                                                                                                                                                                                |
+| Nebula Seeding (Expansion)        | **Nebula Seeder**     | At the start of each of its owner's turns, after the draw, it may turn one empty hex into **nebula**, up to four in all: a hex beside it, or beside any nebula joined to it through nebula (whoever laid it). Nothing is placed on nebula, moves through it, or sees past it: it blocks sight lines like a planet.                                                                          |
+| Salvage Operations (Acquisitions) | **Salvage Drone**     | Any probe or fighter destroyed within two hexes goes into the drone owner's bag, as drawn, instead of out of the game. The nearest drone claims it; among equally near drones the destroyer's own first.                                                                                                                                                                                    |
 
 ### Cooldown effects
 
@@ -757,19 +757,23 @@ nobody.
 This is why control is _recorded_ rather than worked out from the board: the answer depends on who
 held it before.
 
-Ties are treated differently depending on what is at stake:
-
-| At stake                       | A tie                                                           |
-| ------------------------------ | --------------------------------------------------------------- |
-| End-game points for the planet | **Pays every tied player in full**                              |
-| The planet's technology        | **Pays nobody** — it takes strictly more power than anyone else |
-
-So sharing a planet's points is fine; sharing what it holds is not. One consequence worth
-knowing: deliberately _tying_ a planet freezes its technology out of everyone's reach, since
-no one is then holding it outright.
+A planet's technology likewise takes strictly more power than anyone else: a tie pays nobody.
+One consequence worth knowing: deliberately _tying_ a planet freezes its technology out of
+everyone's reach, since no one is then holding it outright.
 
 Scores are **public** and are a **running total that never decreases**: points scored for
 control during the game are kept even if control is later lost.
+
+### What control is for
+
+A planet pays nothing by itself, during play or at the end. Control matters through two
+bonuses, each in force for exactly as long as its condition holds:
+
+- **Three planets of one color** (two, in a two-player game): the player has that color's
+  trade route power (see _Chains and trade routes_) as if they held a route of that color.
+  Holding a route as well adds nothing.
+- **One planet of each of the five colors**: the player scores **2 points at the start of each
+  of their turns**.
 
 ### Relay
 
@@ -787,36 +791,51 @@ A **relay piece** (from _Relay Network_, below) serves as one of its owner's sta
 rule, and for station links and blockades, but **only planets, and the board's edge, block its
 sight**: a line with a relay at either end runs past any ships in between.
 
-### Chains
+### Chains and trade routes
 
-If a placement creates an unbroken chain of that player's own ships joining **two planets of
-the same color**, the player scores **T(n)**, where _n_ is the number of ships in the chain
-(planets aren't counted) and T(n) is the *n*th triangular number: 1, 3, 6, 10, 15, …
+A **chain** is an unbroken run of one player's own ships joining **two planets of the same
+color**: ships on adjacent hexes, the first touching one planet, the last touching the other.
+One ship touching both planets is a chain of one. Ship type is irrelevant — a probe links a
+chain as well as a fighter does. Only the player's _own_ ships link, and since no ship can
+stand on a planet, a planet is a wall a chain must go around.
 
-A chain is a run of ships on adjacent hexes; the first touches one planet, the last touches
-the other. Ship type is irrelevant — a probe links a chain as well as a fighter does. Only
-the player's _own_ ships link, and since no ship can stand on a planet, a planet is a wall a
-chain must go around.
+A pair of planets joined by a chain can carry a **trade route**, and a pair carries **one
+route at a time**:
 
-Because T grows faster than _n_, joining two **distant** planets of a color is worth far more
-than joining two that nearly touch — and costs the ships and turns to match, which is also
-the game's clock.
+- **Establishing.** Whenever a pair has no route and **exactly one player** has a chain joining
+  it, that player establishes the route. A placement that completes the only chain establishes
+  it; so does a rival's lone standing chain the moment the owner's breaks; so does the survivor
+  when one of two competing chains is broken.
+- **Contested pairs.** While two or more players have chains on a pair with no route, nobody
+  holds it. It goes to whoever is left when only one chain remains.
+- **Holding.** A route stays its owner's for as long as they have any chain joining the pair,
+  whatever rivals build beside it. A rival's chain on that pair earns nothing meanwhile.
+- **Breaking.** The route ends the moment its owner has no chain joining the pair, however
+  that came about: a ship destroyed, moved or swapped away, or a planet changing color.
+  The pair is then open to anyone, the former owner included: first come, first served.
 
-Three further rules:
+**Establishing a route scores its length**: _n_ points, where _n_ is the number of ships in
+the chain (planets aren't counted), every time a route is established, a player re-forming
+their own included. _n_ is the length of the **shortest** run through the player's ships:
+once ships bunch up there are many routes, and the shortest is the only measure that doesn't
+pay a player for wandering. One placement can establish **several routes at once** (a ship
+touching three planets of one color joins three pairs); each is measured and paid separately.
 
-- _n_ is the length of the **shortest** run through the player's ships. Once ships bunch up
-  there are many routes; the shortest is the one that is well defined, and it's the only
-  measure that doesn't pay a player for wandering.
-- A **pair of planets pays once, ever, to whoever joins it first** — it is then spent for
-  everyone. Otherwise the same two planets could be re-joined by a longer route for a bigger
-  payout. A spent pair stays spent even when the chain is broken and the ships are gone: the
-  record is of the joining, not of a connection still standing.
-  A joined pair becomes a **trade route**, shown on the board as a pip in the joining player's
-  color along the bottom of each of the two planets; hovering one shows the route. Two
-  same-colored planets
-  with no route between them can still be joined.
-- One placement can complete **several pairs at once** (a ship touching three planets of one
-  color joins three pairs); each is measured and paid separately.
+A route is shown on the board as a pip in its owner's color along the bottom of each of the
+two planets; hovering one shows the route.
+
+**A route carries its color's power.** A player with at least one standing route of a color
+has that color's power for as long as the route stands. A second route of the same color adds
+nothing. Lose the last route of a color and the power goes with it; re-establish one and it
+is back.
+
+| Color                  | Power while the player holds a route of that color                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Violet (Belligerence)  | Score 1 point each time one of the player's fighters or torpedoes destroys an enemy piece.                                              |
+| Aqua (Mobility)        | The player's probes ignore station blockades.                                                                                           |
+| Mint (Acquisitions)    | Each of the player's stations counts 2 toward control of the planets beside it.                                                         |
+| Periwinkle (Espionage) | The player's surveys reveal one more matching card to choose from.                                                                      |
+| Teal (Expansion)       | The player's own destroyed ships go back into their bag instead of out of the game, unless a rival's Salvage Drone in reach takes them. |
 
 ### Station groups
 
@@ -840,7 +859,7 @@ counter-play, given that stations cannot be destroyed. A planet breaks a line to
 cannot be seen past.
 
 Because it pays on every placement, a complex built up one station at a time pays 1, 2, 3, …
-— the same triangular total a chain pays, but earned incrementally and with no need for
+— a triangular total, earned incrementally and with no need for
 planets to line up. Placing stations apart and joining them later pays _less_ than building
 compactly from the start (1+1+3 = 5 against 1+2+3 = 6), which is the decision the rule
 creates. All six stations in one complex is 21 points, the practical ceiling — and sight lines
@@ -851,8 +870,8 @@ This gives each piece type a job: probes explore, fighters destroy, stations sco
 **A station can be paid twice for one placement.** Station complexes and chains are separate
 rules, and a station is a ship like any other where chains are concerned - so a station that
 joins a complex _and_ completes a run between two planets of one color collects under both. A
-third station joining a pair, on a hex that also bridges two same-colored planets, is 3 for
-the complex plus 3 for the chain.
+third station joining a pair, on a hex that also establishes a trade route, is 3 for
+the complex plus the route's length for the route.
 
 **The overlap stands.** It rewards a placement that does two jobs, and making
 station-and-planet geometry the most valuable thing on the board to spot is a fair thing for
@@ -937,9 +956,9 @@ probe were being played from hand. A feint's destination is occupied by definiti
 blockade check never had an empty hex to apply to.
 
 Note what this does to chains: the ship _leaves_ a hex, and a chain it was standing in is broken
-by its departure. Since a spent pair stays spent, a player can dismantle their own scored chain
-freely — but the ship arriving may complete a **new** pair at the far end, which is the trade the
-card is really offering.
+by its departure. If that was the player's only chain on the pair, the trade route there ends and
+its power may go with it — but the ship arriving may complete a **new** pair at the far end, which
+is the trade the card is really offering.
 
 ### Clear line of sight
 
@@ -984,19 +1003,11 @@ groups_ above. A wavy line therefore does two jobs at once, which is why breakin
 a piece to an opponent.
 
 Nothing else scores during play. Taking control of a planet from another player scores nothing
-at the time; planets pay at the end.
+at the time; control pays only through its bonuses (see _What control is for_).
 
 ### At the end of the game
 
-Every planet pays **1 point** to each player controlling it, explored or not. Ties pay in
-full, so one planet can pay two players a point each.
-
-This is the only scoring that waits until the end: control can change hands all game without
-anyone banking anything, so it's the board's final shape that counts.
-
-An explored planet is worth the same as an unexplored one.
-
-Technologies carry no end-game point value.
+Nothing is scored at the end: planets and technologies carry no end-game point value.
 
 ---
 
@@ -1023,8 +1034,7 @@ This can only be judged after the draw, since a hex shut to a probe is wide open
 fighter behind it in the same bag. At 4 tiles per player it is the less common ending, about one game in four. Players later
 in the turn order simply don't get another turn.
 
-A tie for the highest score is a **shared win**, just as tied control of a planet pays every
-tied player in full.
+A tie for the highest score is a **shared win**.
 
 Everyone starts with the same number of pieces (22, and one more stowed at the opening), so
 the player who empties their bag first is the one who has spent the fewest turns on special
@@ -1034,8 +1044,7 @@ advance that player's clock.
 An exploration owed by the final placement is still resolved — the game ends after it, not
 instead of it.
 
-Final scores are the points scored during play plus planet control at the end; there is no
-other final scoring.
+Final scores are the points scored during play; there is no final scoring.
 
 ---
 
