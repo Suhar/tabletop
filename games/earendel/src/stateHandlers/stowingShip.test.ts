@@ -26,13 +26,13 @@ describe('the ship stowed at the opening', () => {
         const processed = game.run(StowShip, { type: ActionType.StowShip, playerId, choice })
 
         const bag = bagOf(game, playerId)
-        expect(bag.remaining).toBe(23)
+        expect(bag.remaining).toBe(26)
         const added = bag.items.filter((piece) => !before.some((old) => old.id === piece.id))
         expect(added).toHaveLength(1)
         expect(added[0]).toMatchObject({ playerId, ...ship })
         // Every id is the player and a random token, so the stowed ship's says nothing of it.
         const ids = bag.items.map((piece) => piece.id)
-        expect(new Set(ids).size).toBe(23)
+        expect(new Set(ids).size).toBe(26)
         for (const id of ids) expect(id).toMatch(new RegExp(`^${playerId}-ship-[0-9a-z]+$`))
         expect(before.map((piece) => piece.id)).not.toContain(added[0].id)
         expect(processed.filter(isStowShip)).toHaveLength(1)

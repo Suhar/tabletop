@@ -872,21 +872,30 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return (pending.candidates ?? []).map(technologyCard)
     })
 
-    discardedTechnologies: { name: string; count: number; colors: string[] }[] = $derived.by(() => {
-        const groups = new Map<string, { name: string; count: number; colors: Set<string> }>()
+    discardedTechnologies: { name: string; count: number; colors: PlanetColor[] }[] = $derived.by(
+        () => {
+            const groups = new Map<
+                string,
+                { name: string; count: number; colors: Set<PlanetColor> }
+            >()
 
-        for (const card of (this.gameState.technologyDiscard ?? []).map(technologyCard)) {
-            const name = technologyName(card)
-            const group = groups.get(name) ?? { name, count: 0, colors: new Set<string>() }
-            group.count += 1
-            for (const color of card.colors) group.colors.add(color)
-            groups.set(name, group)
+            for (const card of (this.gameState.technologyDiscard ?? []).map(technologyCard)) {
+                const name = technologyName(card)
+                const group = groups.get(name) ?? { name, count: 0, colors: new Set<PlanetColor>() }
+                group.count += 1
+                for (const color of card.colors) group.colors.add(color)
+                groups.set(name, group)
+            }
+
+            return [...groups.values()]
+                .map((group) => ({
+                    name: group.name,
+                    count: group.count,
+                    colors: [...group.colors]
+                }))
+                .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
         }
-
-        return [...groups.values()]
-            .map((group) => ({ name: group.name, count: group.count, colors: [...group.colors] }))
-            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    })
+    )
 
     discardedTechnologyCount: number = $derived(this.gameState.technologyDiscard?.length ?? 0)
 

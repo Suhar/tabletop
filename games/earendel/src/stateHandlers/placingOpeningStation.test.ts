@@ -54,7 +54,7 @@ describe('the opening stations', () => {
         const state = new HydratedEarendelGameState(game.state)
         for (const player of state.players) {
             expect(player.score).toBe(0)
-            expect(player.bag.remaining).toBe(23)
+            expect(player.bag.remaining).toBe(26)
             expect(player.bag.items.some((piece) => piece.founding)).toBe(false)
         }
         const founding = Object.values(state.board.hexes).filter((hex) => hex.piece?.founding)

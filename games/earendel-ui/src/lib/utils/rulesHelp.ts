@@ -463,7 +463,7 @@ const IN_BRIEF: RulesHelp = {
     title: 'The game in brief',
     lead: 'Explore planets, gain their technologies, build stations and join planets with your ships. The player with the most points when the game ends wins.',
     points: [
-        'Your bag starts with 22 ships: 8 probes and 8 fighters (four each of level 2 and level 3) and 6 stations. At the opening you secretly add one more.',
+        'Your bag starts with 25 ships: 9 probes and 9 fighters (five of level 2 and four of level 3 each) and 7 stations. At the opening you secretly add one more.',
         'On your turn you draw three ships from your bag, discard one and place the other two.',
         'Stations and trade routes score during play. Nothing is scored at the end.',
         'A trade route gives you a power for as long as it stands. So does controlling enough planets.',

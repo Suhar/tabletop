@@ -19,7 +19,8 @@ import {
 // One planet per tile, settled by simulation (rules.md, Setup).
 export const PLANETS_PER_TILE = 1
 
-export const TILES_PER_PLAYER = 4
+// One planet of each of the five colors per player (rules.md, Setup).
+export const TILES_PER_PLAYER = 5
 
 // Beside those, tiles of open space alone: room to maneuver that no planet anchors
 // (rules.md, Setup).

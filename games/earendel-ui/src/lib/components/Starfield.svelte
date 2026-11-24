@@ -153,101 +153,108 @@
 
         return { stars, strands, lanes, clouds }
     })
+
+    // The band and its stars are tilted about the middle of the sky.
+    const tilt = (x: number, y: number) => {
+        const angle = (BAND_TILT * Math.PI) / 180
+        const dx = x - W / 2
+        const dy = y - H / 2
+        return {
+            x: W / 2 + dx * Math.cos(angle) - dy * Math.sin(angle),
+            y: H / 2 + dx * Math.sin(angle) + dy * Math.cos(angle)
+        }
+    }
+
+    const round = (value: number) => Math.round(value * 100) / 100
+
+    // The still sky is one image, drawn once: browsers keep an image as a bitmap, where a live
+    // SVG of this many shapes is drawn again under every animation that crosses it, which
+    // brought Firefox to under a frame a second.
+    const image = $derived.by(() => {
+        const ellipse = (
+            at: { x: number; y: number; rx: number; ry: number; o: number },
+            fill: string,
+            color = ''
+        ) =>
+            `<ellipse cx="${round(at.x)}" cy="${round(at.y)}" rx="${round(at.rx)}" ry="${round(at.ry)}" fill="url(#${fill})" opacity="${round(at.o)}"${color ? ` color="${color}"` : ''}/>`
+
+        const markup = [
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`,
+            '<defs>',
+            '<radialGradient id="glow"><stop offset="0%" stop-color="#cdd9ff" stop-opacity="0.15"/><stop offset="55%" stop-color="#8ea4d8" stop-opacity="0.06"/><stop offset="100%" stop-color="#8ea4d8" stop-opacity="0"/></radialGradient>',
+            '<radialGradient id="cloud"><stop offset="0%" stop-color="currentColor" stop-opacity="1"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient>',
+            '<radialGradient id="lane"><stop offset="0%" stop-color="#050912" stop-opacity="1"/><stop offset="100%" stop-color="#050912" stop-opacity="0"/></radialGradient>',
+            '</defs>',
+            `<rect width="${W}" height="${H}" fill="#070b16"/>`,
+            ...sky.clouds.map((cloud) => ellipse(cloud, 'cloud', cloud.hue)),
+            `<g transform="rotate(${BAND_TILT} ${W / 2} ${H / 2})">`,
+            ellipse(
+                { x: W / 2, y: BAND_Y, rx: W * 0.62, ry: H * 0.17, o: BAND_BRIGHTNESS },
+                'glow'
+            ),
+            ...sky.strands.flatMap((pools) => pools.map((pool) => ellipse(pool, 'glow'))),
+            ...sky.stars
+                .filter((star) => !star.twinkle)
+                .map(
+                    (star) =>
+                        `<circle cx="${round(star.x)}" cy="${round(star.y)}" r="${round(star.r)}" fill="#fff" opacity="${round(star.o)}"/>`
+                ),
+            ...sky.lanes.map((lane) => ellipse(lane, 'lane')),
+            '</g></svg>'
+        ].join('')
+
+        return `data:image/svg+xml,${encodeURIComponent(markup)}`
+    })
+
+    // The stars that twinkle are small elements of their own over the image, so a twinkle
+    // repaints one star and never the sky.
+    const twinkles = $derived(
+        sky.stars
+            .filter((star) => star.twinkle)
+            .map((star) => ({ ...star, ...tilt(star.x, star.y) }))
+    )
 </script>
 
-<svg
-    class="starfield"
-    viewBox="0 0 {W} {H}"
-    preserveAspectRatio="xMidYMid slice"
-    aria-hidden="true"
->
-    <defs>
-        <radialGradient id="sky-band-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="#cdd9ff" stop-opacity="0.15"></stop>
-            <stop offset="55%" stop-color="#8ea4d8" stop-opacity="0.06"></stop>
-            <stop offset="100%" stop-color="#8ea4d8" stop-opacity="0"></stop>
-        </radialGradient>
-        <radialGradient id="sky-cloud" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="currentColor" stop-opacity="1"></stop>
-            <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
-        </radialGradient>
-        <radialGradient id="sky-lane" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="#050912" stop-opacity="1"></stop>
-            <stop offset="100%" stop-color="#050912" stop-opacity="0"></stop>
-        </radialGradient>
-    </defs>
-
-    <rect x="0" y="0" width={W} height={H} fill="#070b16"></rect>
-
-    {#each sky.clouds as cloud, i (i)}
-        <ellipse
-            cx={cloud.x}
-            cy={cloud.y}
-            rx={cloud.rx}
-            ry={cloud.ry}
-            fill="url(#sky-cloud)"
-            color={cloud.hue}
-            opacity={cloud.o}
-        ></ellipse>
-    {/each}
-
-    <g transform="rotate({BAND_TILT} {W / 2} {H / 2})">
-        <ellipse
-            cx={W / 2}
-            cy={BAND_Y}
-            rx={W * 0.62}
-            ry={H * 0.17}
-            fill="url(#sky-band-glow)"
-            opacity={BAND_BRIGHTNESS}
-        ></ellipse>
-
-        {#each sky.strands as pools, strand (strand)}
-            {#each pools as pool, i (i)}
-                <ellipse
-                    cx={pool.x}
-                    cy={pool.y}
-                    rx={pool.rx}
-                    ry={pool.ry}
-                    fill="url(#sky-band-glow)"
-                    opacity={pool.o}
-                ></ellipse>
-            {/each}
+<div class="starfield" aria-hidden="true">
+    <div class="sky">
+        <img src={image} alt="" />
+        {#each twinkles as star, i (i)}
+            <span
+                class="sky-twinkle"
+                style="left: {(star.x / W) * 100}%; top: {(star.y / H) * 100}%; width: {((2 *
+                    star.r) /
+                    W) *
+                    100}%; animation-delay: {star.delay}s; animation-duration: {star.duration}s;"
+            ></span>
         {/each}
-
-        {#each sky.stars as star, i (i)}
-            <circle
-                cx={star.x}
-                cy={star.y}
-                r={star.r}
-                fill="#ffffff"
-                opacity={star.o}
-                class={star.twinkle ? 'sky-twinkle' : ''}
-                style={star.twinkle
-                    ? `animation-delay: ${star.delay}s; animation-duration: ${star.duration}s;`
-                    : ''}
-            ></circle>
-        {/each}
-
-        {#each sky.lanes as lane, i (i)}
-            <ellipse
-                cx={lane.x}
-                cy={lane.y}
-                rx={lane.rx}
-                ry={lane.ry}
-                fill="url(#sky-lane)"
-                opacity={lane.o}
-            ></ellipse>
-        {/each}
-    </g>
-</svg>
+    </div>
+</div>
 
 <style>
     .starfield {
         position: absolute;
         inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        container-type: size;
+        background: #070b16;
+    }
+
+    /* Covers the table whatever its shape, as the sky's own 16:9 cropped to fit. */
+    .sky {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: max(100cqw, 100cqh * 16 / 9);
+        height: max(100cqh, 100cqw * 9 / 16);
+        transform: translate(-50%, -50%);
+    }
+
+    .sky img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none;
     }
 
     @keyframes sky-twinkle-frames {
@@ -262,6 +269,11 @@
 
     /* Use the `animation` shorthand: Svelte rewrites scoped @keyframes names only there. */
     .sky-twinkle {
+        position: absolute;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: #ffffff;
+        transform: translate(-50%, -50%);
         animation: sky-twinkle-frames 4s ease-in-out infinite;
     }
 </style>

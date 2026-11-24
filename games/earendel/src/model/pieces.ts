@@ -95,9 +95,9 @@ export function powerOf(piece: Piece): number {
 }
 
 export const STARTING_BAG: Record<PieceType, number> = {
-    [PieceType.Probe]: 8,
-    [PieceType.Station]: 6,
-    [PieceType.Fighter]: 8,
+    [PieceType.Probe]: 9,
+    [PieceType.Station]: 7,
+    [PieceType.Fighter]: 9,
     [PieceType.Terraformer]: 0,
     [PieceType.Relay]: 0,
     [PieceType.Interdictor]: 0,

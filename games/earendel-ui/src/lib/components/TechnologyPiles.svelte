@@ -1,4 +1,5 @@
 <script lang="ts">
+    import PlanetBadge from './PlanetBadge.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
@@ -35,15 +36,21 @@
                         The discard — reshuffled into the draw pile when it runs dry.
                     </div>
                     <div class="max-h-[13rem] overflow-auto">
-                        {#each gameSession.discardedTechnologies as group (group.name)}
+                        {#each gameSession.discardedTechnologies as group, index (group.name)}
                             <div
-                                class="flex items-baseline justify-between gap-2 border-t border-white/10 py-1 first:border-t-0"
+                                class="flex items-center justify-between gap-2 border-t border-white/10 py-1 first:border-t-0"
                             >
                                 <span class="font-semibold">{group.name}</span>
-                                <span class="shrink-0 opacity-60">
-                                    {group.colors.join(' · ')}
+                                <span class="flex shrink-0 items-center gap-1">
+                                    {#each group.colors as color (color)}
+                                        <PlanetBadge
+                                            {color}
+                                            copy="discard-{index}-{color}"
+                                            height={18}
+                                        />
+                                    {/each}
                                     {#if group.count > 1}
-                                        <span class="ml-1 opacity-90">×{group.count}</span>
+                                        <span class="ml-1 opacity-60">×{group.count}</span>
                                     {/if}
                                 </span>
                             </div>
