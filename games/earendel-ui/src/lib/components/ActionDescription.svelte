@@ -4,6 +4,7 @@
     import { technologyAbility, technologyCard, technologyName } from '@tabletop/earendel'
     import { describeActionSegments } from '$lib/utils/describe.js'
     import TechnologyChip from './TechnologyChip.svelte'
+    import PlanetBadge from './PlanetBadge.svelte'
 
     let {
         action,
@@ -29,6 +30,14 @@
                 possessive
                 possessivePlayerId={action.playerId}
             />
+        {:else if segment.kind === 'planet'}
+            <span class="inline-block align-middle">
+                <PlanetBadge
+                    color={segment.color}
+                    copy="history-{justify}-{action.id}-{index}"
+                    height={18}
+                />
+            </span>
         {:else}
             {@const card = technologyCard(segment.technologyId)}
             <span class="inline-block align-middle">

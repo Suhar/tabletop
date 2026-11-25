@@ -1,7 +1,6 @@
 <script lang="ts">
     import {
         categoryOfColor,
-        PlanetColor,
         PLANET_COLORS,
         TECHNOLOGY_CATEGORY_INFO,
         TECHNOLOGY_EFFECT_INFO,
@@ -26,14 +25,7 @@
     import StowChoices from './StowChoices.svelte'
     import AsteroidChoices from './AsteroidChoices.svelte'
     import RulesPill from './RulesPill.svelte'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
-
-    // Pale planet colors need dark text on their buttons.
-    const DARK_TEXT = new Set<PlanetColor>([
-        PlanetColor.Periwinkle,
-        PlanetColor.Aqua,
-        PlanetColor.Mint
-    ])
+    import PlanetBadge from './PlanetBadge.svelte'
 
     let gameSession = getGameSession()
     const handAnimator = getHandAnimator()
@@ -359,10 +351,11 @@
             >
                 <span>Surveying commits this probe, so it will stop blocking</span>
                 <PlayerName playerId={claim.playerId} possessive />
-                <span>
-                    claim on the {claim.color ? `${claim.color} planet` : 'planet'} beside it. Skip to
-                    keep blocking it.
-                </span>
+                <span>claim on the</span>
+                {#if claim.color}
+                    <PlanetBadge color={claim.color} copy="unblock-{claim.color}" height={18} />
+                {/if}
+                <span>planet beside it. Skip to keep blocking it.</span>
             </div>
         {/each}
         {#each gameSession.ruleNotes as note (note.kind)}
@@ -574,14 +567,12 @@
                 {#each PLANET_COLORS as color (color)}
                     {@const category = TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)]}
                     <button
-                        class="rounded-md px-3 py-1.5 text-sm font-semibold border-2 border-white/70 hover:brightness-110"
-                        style="background-color: {PLANET_FILL[color]}; color: {DARK_TEXT.has(color)
-                            ? '#0b1222'
-                            : '#ffffff'}"
+                        class="inline-flex items-center gap-1.5 rounded-md border-2 bg-[#0d1424] px-3 py-1 text-sm font-semibold text-white hover:bg-[#1b2740]"
+                        style="border-color: {gameSession.planetFill(color)}"
                         onclick={() => gameSession.foundPlanet(color)}
                     >
-                        <span class="capitalize">{color}</span>
-                        <span class="font-normal opacity-80">· {category.name}</span>
+                        <PlanetBadge {color} copy="found-{color}" height={22} />
+                        <span>{category.name}</span>
                     </button>
                 {/each}
             </div>
@@ -592,14 +583,12 @@
                 {#each gameSession.terraformColors as color (color)}
                     {@const category = TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)]}
                     <button
-                        class="rounded-md px-3 py-1.5 text-sm font-semibold border-2 border-white/70 hover:brightness-110"
-                        style="background-color: {PLANET_FILL[color]}; color: {DARK_TEXT.has(color)
-                            ? '#0b1222'
-                            : '#ffffff'}"
+                        class="inline-flex items-center gap-1.5 rounded-md border-2 bg-[#0d1424] px-3 py-1 text-sm font-semibold text-white hover:bg-[#1b2740]"
+                        style="border-color: {gameSession.planetFill(color)}"
                         onclick={() => gameSession.terraform(color)}
                     >
-                        <span class="capitalize">{color}</span>
-                        <span class="font-normal opacity-80">· {category.name}</span>
+                        <PlanetBadge {color} copy="terraform-{color}" height={22} />
+                        <span>{category.name}</span>
                     </button>
                 {/each}
                 <button

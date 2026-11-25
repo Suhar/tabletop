@@ -1,7 +1,7 @@
 <script lang="ts">
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import type { Point } from '@tabletop/common'
     import { type Hex, PlanetColor } from '@tabletop/earendel'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
 
     let {
         hex,
@@ -26,7 +26,9 @@
         still?: boolean
     } = $props()
 
-    let planetColor = $derived(hex.color ? PLANET_FILL[hex.color] : '#1b2436')
+    const gameSession = getGameSession()
+
+    let planetColor = $derived(hex.color ? gameSession.planetFill(hex.color) : '#1b2436')
     let clipId = $derived(`planet-clip-${hex.coords.q},${hex.coords.r}${copy}`)
     let bodyOpacity = $derived(hex.explored ? 1 : 0.45)
     let dash = $derived(hex.explored ? '' : '5 4')

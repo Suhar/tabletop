@@ -1,4 +1,5 @@
 import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
+import { PLANET_FILL, PLANET_PLAYER_COLOR } from '$lib/utils/planetColors.js'
 import {
     GameSession,
     undoableStagedSelection,
@@ -141,6 +142,16 @@ function readRulesHelpShown(): boolean {
         return localStorage.getItem(RULES_HELP_KEY) !== 'off'
     } catch {
         return true
+    }
+}
+
+const PLANET_SCHEME_KEY = 'earendel:planet-colors'
+
+function readPlanetsInPlayerColors(): boolean {
+    try {
+        return localStorage.getItem(PLANET_SCHEME_KEY) === 'players'
+    } catch {
+        return false
     }
 }
 
@@ -2112,6 +2123,25 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             // Storage may be unavailable (a private window, blocked site data): the choice then
             // lasts for this visit alone.
         }
+    }
+
+    // Which colors the planets wear: their own five cool ones, or the table's five player colors,
+    // remembered in this browser. Only the look changes; a planet's kind is its shape either way.
+    planetsInPlayerColors: boolean = $state(readPlanetsInPlayerColors())
+
+    togglePlanetColors() {
+        this.planetsInPlayerColors = !this.planetsInPlayerColors
+        try {
+            localStorage.setItem(PLANET_SCHEME_KEY, this.planetsInPlayerColors ? 'players' : 'own')
+        } catch {
+            // As for the Rules pills: without storage the choice lasts for this visit alone.
+        }
+    }
+
+    planetFill(color: PlanetColor): string {
+        return this.planetsInPlayerColors
+            ? this.colors.getUiColor(PLANET_PLAYER_COLOR[color])
+            : PLANET_FILL[color]
     }
 
     // The note for the decision in front of the player, while the Rules pills are on.

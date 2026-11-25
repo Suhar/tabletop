@@ -22,6 +22,9 @@ import {
     isUseTacticalFeint,
     isUseTradeRouteWormhole,
     isUseUpdatedLogistics,
+    categoryOfColor,
+    type PlanetColor,
+    TECHNOLOGY_CATEGORY_INFO,
     routeChangesOf,
     type TradeRoute,
     type StationComplexSummary,
@@ -31,10 +34,39 @@ import {
 
 // Why an action came out as it did, in plain sentences for players learning the rules. Read from
 // the action's input and metadata only, like the rest of the history.
+// A line is words, with a planet's kind marked out so the history can draw its icon: planets are
+// told apart by shape, and never named by a color the player may have switched off.
+export type RationalePart = string | { planet: PlanetColor }
+export type RationaleLine = RationalePart[]
+
 export function rationaleFor(
     action: GameAction,
     nameOf: (playerId: string) => string = () => 'a rival'
+): RationaleLine[] {
+    return [
+        ...plainLines(action).map((line) => [line]),
+        ...routeLines(action, nameOf),
+        ...claimLines(action, nameOf).map((line) => [line])
+    ]
+}
+
+// The same lines as plain words, each planet named by the category of technology it holds.
+export function rationaleText(
+    action: GameAction,
+    nameOf: (playerId: string) => string = () => 'a rival'
 ): string[] {
+    return rationaleFor(action, nameOf).map((line) =>
+        line
+            .map((part) =>
+                typeof part === 'string'
+                    ? part
+                    : TECHNOLOGY_CATEGORY_INFO[categoryOfColor(part.planet)].name
+            )
+            .join(' ')
+    )
+}
+
+function plainLines(action: GameAction): string[] {
     const lines: string[] = []
 
     if (
@@ -206,8 +238,6 @@ export function rationaleFor(
         lines.push('A player who has nowhere to place the ship they drew ends the game.')
     }
 
-    lines.push(...routeLines(action, nameOf))
-    lines.push(...claimLines(action, nameOf))
     return lines
 }
 
@@ -237,7 +267,7 @@ function stationLines(
     return lines
 }
 
-function routeLines(action: GameAction, nameOf: (playerId: string) => string): string[] {
+function routeLines(action: GameAction, nameOf: (playerId: string) => string): RationaleLine[] {
     const { established, broken } = routeChangesOf(
         'metadata' in action ? action.metadata : undefined
     )
@@ -245,18 +275,27 @@ function routeLines(action: GameAction, nameOf: (playerId: string) => string): s
         route.playerId === action.playerId ? 'Their own' : `${nameOf(route.playerId)}'s`
     const ships = (route: TradeRoute) => `${route.length} ${route.length === 1 ? 'ship' : 'ships'}`
     return [
-        ...broken.map(
-            (route) =>
-                `${whose(route)} ${route.color} trade route ended: a route stands only while its owner has an unbroken chain of their own ships joining the two planets.`
-        ),
-        ...established.map((route) =>
+        ...broken.map((route): RationaleLine => [
+            whose(route),
+            { planet: route.color },
+            'trade route ended: a route stands only while its owner has an unbroken chain of their own ships joining the two planets.'
+        ]),
+        ...established.map((route): RationaleLine =>
             route.playerId === action.playerId
-                ? `Joining two ${route.color} planets with an unbroken run of ${ships(route)} sets up a trade route${
-                      route.points > 0
-                          ? `, which scores 1 point for each ship: ${route.points}`
-                          : ', which scores nothing for the opening station'
-                  }. It carries its color's power for as long as it stands.`
-                : `${nameOf(route.playerId)}'s chain of ${ships(route)} was the only one left joining the two ${route.color} planets, so it took the trade route and scored ${route.points}.`
+                ? [
+                      'Joining two',
+                      { planet: route.color },
+                      `planets with an unbroken run of ${ships(route)} sets up a trade route${
+                          route.points > 0
+                              ? `, which scores 1 point for each ship: ${route.points}`
+                              : ', which scores nothing for the opening station'
+                      }. It carries the power of its planets for as long as it stands.`
+                  ]
+                : [
+                      `${nameOf(route.playerId)}'s chain of ${ships(route)} was the only one left joining the two`,
+                      { planet: route.color },
+                      `planets, so it took the trade route and scored ${route.points}.`
+                  ]
         )
     ]
 }

@@ -8,7 +8,7 @@ import {
     type PlacePiece,
     PlanetColor
 } from '@tabletop/earendel'
-import { rationaleFor } from './rationale.js'
+import { rationaleFor, rationaleText } from './rationale.js'
 
 const base = { id: 'a', gameId: 'g', source: ActionSource.User, playerId: 'p1' }
 
@@ -25,7 +25,7 @@ describe('rationaleFor', () => {
                 stationComplex: { stations: 3, doubled: false, relays: 1 }
             }
         }
-        const lines = rationaleFor(placed)
+        const lines = rationaleText(placed)
         expect(lines[0]).toMatch(/1 for itself and 1 for every other friendly station.*3 here/)
         expect(lines.some((line) => /links chain/.test(line))).toBe(true)
         expect(
@@ -60,9 +60,9 @@ describe('rationaleFor', () => {
                 ]
             }
         }
-        const lines = rationaleFor(placed, (id) => (id === 'p2' ? 'Bob' : id))
+        const lines = rationaleText(placed, (id) => (id === 'p2' ? 'Bob' : id))
         expect(lines).toContain(
-            "Joining two teal planets with an unbroken run of 3 ships sets up a trade route, which scores 1 point for each ship: 3. It carries its color's power for as long as it stands."
+            'Joining two Expansion planets with an unbroken run of 3 ships sets up a trade route, which scores 1 point for each ship: 3. It carries the power of its planets for as long as it stands.'
         )
         expect(lines.some((line) => /^Bob's pending .+ broke/.test(line))).toBe(true)
     })
@@ -78,7 +78,7 @@ describe('rationaleFor', () => {
                 levelAfter: 2
             }
         }
-        expect(rationaleFor(shot)).toEqual([
+        expect(rationaleText(shot)).toEqual([
             'A hit on a fighter above level 1 wears it down a level instead of destroying it; at level 1 the next hit destroys it.'
         ])
     })

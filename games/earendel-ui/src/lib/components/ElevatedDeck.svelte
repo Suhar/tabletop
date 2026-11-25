@@ -1,7 +1,6 @@
 <script lang="ts">
     import { technologyName, TechnologyTiming, timingOf } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import { ELEVATED_HELP } from '$lib/utils/rulesHelp.js'
     import DealtCards from './DealtCards.svelte'
     import ElevatedCard from './ElevatedCard.svelte'
@@ -22,7 +21,7 @@
     label="Enhanced techs in play"
     caption="Enhanced techs in play"
     help={gameSession.rulesHelpShown ? ELEVATED_HELP : undefined}
-    tint={(entry) => PLANET_FILL[entry.color]}
+    tint={(entry) => gameSession.planetFill(entry.color)}
     title={(entry) =>
         `${technologyName(entry.card)}${spent(entry) ? (isEvent(entry) ? ' — resolved' : ' — active') : ''}`}
     dimmed={(entry) => spent(entry) && isEvent(entry)}
@@ -31,7 +30,7 @@
         <PlanetBadge color={entry.color} copy="mini-{entry.card.id}" height={26} />
         <span
             class="mt-0.5 line-clamp-2 text-center text-[9px] font-semibold leading-[1.1]"
-            style="color: {PLANET_FILL[entry.color]}">{technologyName(entry.card)}</span
+            style="color: {gameSession.planetFill(entry.color)}">{technologyName(entry.card)}</span
         >
         {#if spent(entry) && !isEvent(entry)}
             <span class="absolute inset-x-0 bottom-0 h-[3px] rounded-b-md bg-amber-300"></span>

@@ -10,7 +10,9 @@ import {
 import {
     ELEVATED_PAIRS,
     TECHNOLOGY_EFFECT_INFO,
-    TechnologyEffectKind
+    TechnologyEffectKind,
+    categoryOfColor,
+    TECHNOLOGY_CATEGORY_INFO
 } from '../model/technology.js'
 import { PLANET_COLORS, PlanetColor } from '../model/planetColor.js'
 
@@ -117,12 +119,13 @@ export function elevatedOptionId(color: PlanetColor): string {
 
 const elevatedOptions: ListConfigOption[] = PLANET_COLORS.map((color) => {
     const pair = ELEVATED_PAIRS[color]
-    const name = color[0].toUpperCase() + color.slice(1)
+    // Named by its category: the planets' colors are the player's to choose in the UI.
+    const name = TECHNOLOGY_CATEGORY_INFO[categoryOfColor(color)].name
     return {
         id: elevatedOptionId(color),
         type: ConfigOptionType.List,
         name: `${name} elevated technology`,
-        description: `Which elevated technology a ${color} planet may turn up: the setup draw decides, or choose one, or none.`,
+        description: `Which elevated technology a ${name} planet may turn up: the setup draw decides, or choose one, or none.`,
         default: ElevatedChoice.Random,
         alwaysShow: false,
         options: [

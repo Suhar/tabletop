@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import type { AxialCoordinates, Point } from '@tabletop/common'
     import {
         COOLDOWN_TURNS,
@@ -7,7 +8,6 @@
         type PlanetColor,
         type TechnologyEffectKind
     } from '@tabletop/earendel'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import PlanetBadge from './PlanetBadge.svelte'
     import { timingNote } from '$lib/utils/technologyTiming.js'
 
@@ -69,6 +69,8 @@
         // a second tap chooses.
         onchoose?: () => void
     } = $props()
+
+    const gameSession = getGameSession()
 
     // The popup's border, which the trace to a pending claim's planet continues.
     const ACCENT = '#8fb6ff'
@@ -237,7 +239,7 @@
     {#if dot}
         <span
             class="block h-2 w-2 shrink-0 rounded-full"
-            style="background-color: {PLANET_FILL[dot]}"
+            style="background-color: {gameSession.planetFill(dot)}"
             aria-hidden="true"
         ></span>
     {/if}
@@ -321,7 +323,7 @@
                 {#if category}
                     <div
                         class="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                        style="color: {PLANET_FILL[category.color]}"
+                        style="color: {gameSession.planetFill(category.color)}"
                     >
                         {category.name}
                     </div>
@@ -329,10 +331,7 @@
                 <div class="text-[19px] font-bold">{name}</div>
             </div>
             {#if colors}
-                <div
-                    class="flex shrink-0 gap-1"
-                    aria-label="Matches {colors.join(' and ')} planets"
-                >
+                <div class="flex shrink-0 gap-1">
                     {#each colors as color (color)}
                         <PlanetBadge {color} copy="{name}-{color}" />
                     {/each}
