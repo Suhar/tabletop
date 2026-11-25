@@ -131,7 +131,9 @@ export class HydratedPlacePiece extends HydratableAction<typeof PlacePiece> impl
         const { stationPoints, complex, probeDestinations } = resolveArrival(
             state,
             this.playerId,
-            this.coords
+            this.coords,
+            // The opening station is only ever placed once, at the opening.
+            { opening: piece.founding === true }
         )
 
         this.metadata = {

@@ -6,6 +6,14 @@
 
     const winners = $derived(gameSession.gameState.winningPlayerIds)
     const standings = $derived(gameSession.finalStandings)
+    // The viewer's own pill reads "You", which takes "win".
+    const verb = $derived(
+        winners.length > 1
+            ? 'share the win'
+            : winners[0] === gameSession.myPlayer?.id
+              ? 'win'
+              : 'wins'
+    )
 </script>
 
 <div class="flex flex-col items-center gap-2 py-2 text-white" data-testid="game-end-summary">
@@ -16,7 +24,7 @@
             {#if index > 0}<span>and</span>{/if}
             <PlayerName playerId={winnerId} />
         {/each}
-        <span>{winners.length > 1 ? 'share the win' : 'wins'}</span>
+        <span>{verb}</span>
     </div>
 
     <table class="text-sm">

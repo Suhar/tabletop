@@ -37,8 +37,8 @@ level 3 fighter both holds planets harder and kills more.
 Further piece types are expected to arrive as rewards from exploration; each will declare
 its own power.
 
-**Bags** — each player has their own bag containing **8 probes, 6 stations, 8 fighters** —
-22 pieces. The probes are four of level 2 and four of level 3, and the fighters likewise. Bag contents are hidden from
+**Bags** — each player has their own bag containing **9 probes, 7 stations, 9 fighters** —
+25 pieces. The probes are five of level 2 and four of level 3, and the fighters likewise. Bag contents are hidden from
 everyone, including the owner. Pieces are drawn blind.
 
 **Technology deck** — a shared deck. Each card has a **name**, an **ability**, and is
@@ -119,7 +119,8 @@ it scores nothing in a complex, is not linked by girders, and placing it scores 
 
 ## Setup
 
-The board starts as **4 planet tiles and 1 blank tile per player**, the blank tiles falling at
+The board starts as **5 planet tiles and 1 blank tile per player**, so that each of the five
+planet colors is on the board **once per player**, the blank tiles falling at
 random among the rest, grown outward from a single tile: each further tile
 is laid, at any rotation, where it touches the board most and strays least from its middle,
 with a little chance mixed in, so the map is one compact, irregular cluster with no enclosed
@@ -138,20 +139,24 @@ player's first complex can be told from the rest. A game option turns the openin
 
 **The stowed ship.** Just before placing that station, each player **stows one extra ship** in
 their bag: a level 3 probe, a level 3 fighter or a station. The choice is secret, so every bag
-holds 23 and nobody can be sure what a rival's still holds. The ship is shuffled in with the
+holds 26 and nobody can be sure what a rival's still holds. The ship is shuffled in with the
 rest and drawn like any other. Neither the stowed ship nor the station can be skipped.
 
-At this size the board is a little small for the bags: 12 open hexes per player, 11 once the
-opening stations are down, against 23 pieces. Most games still run to an empty bag — 116 of 159
-simulated games, measured with bags of 22 before the stowed ship was added, with players
-placing 19 or 20 of those 22 — and the rest end when a player cannot place the piece they drew
-(see _End of the game_). The board was 3 tiles per
-player before the opening was added; at that size the opening station cost each player about
-two placements and nearly every game ended jammed. A board of 7 tiles per player is where
-almost every game ends on an empty bag; the sizing notes below were measured there.
+At this size the board and the bags are matched closely: 19 open hexes per player, 18 once the
+opening stations are down. A drafted turn spends three ships to place two, so a bag of 26 lasts
+about nine turns and puts about 18 ships on the board. Games therefore end either on an empty
+bag or when a player cannot place the piece they drew (see _End of the game_).
 
-Planet colors are **dealt evenly**: each color is on the board equally often, give or take
-one, and every color appears once there are five planets or more. They land at random, then
+The board was 4 planet tiles per player, with bags of 22, until the trade route powers and
+planet bonuses made the count of each color matter. Four planets per player do not divide into
+five colors: at two players two colors had a single planet, so no route could form in them, and
+at three players only two colors had the three planets their bonus asks for. A fifth planet
+tile per player gives every color one planet per player, and one more probe, station and
+fighter in each bag fills the room it adds. This size has not been simulated; the figures in
+the sizing notes below were measured on older boards, 7 tiles per player with bags of 22.
+
+Planet colors are **dealt evenly**: each color is on the board equally often, which at five
+planet tiles per player is once per player. They land at random, then
 any two planets of one color within two hexes of each other are pulled apart (by trading
 colors with another planet, or moving within their tile), so partners are always at least
 three hexes apart.
@@ -1031,12 +1036,12 @@ no special piece they could place instead. A full board is one way that happens;
 drawn while every open hex is closed by enemy station blockades is another.
 
 This can only be judged after the draw, since a hex shut to a probe is wide open to the
-fighter behind it in the same bag. At 4 tiles per player it is the less common ending, about one game in four. Players later
+fighter behind it in the same bag. On the older board of 4 planet tiles per player it was the less common ending, about one game in four. Players later
 in the turn order simply don't get another turn.
 
 A tie for the highest score is a **shared win**.
 
-Everyone starts with the same number of pieces (22, and one more stowed at the opening), so
+Everyone starts with the same number of pieces (25, and one more stowed at the opening), so
 the player who empties their bag first is the one who has spent the fewest turns on special
 pieces, not the one who was luckiest with the order: a draw that goes back in the bag doesn't
 advance that player's clock.

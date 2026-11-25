@@ -57,6 +57,9 @@ import {
     type PlacePiece,
     type PlaceTile,
     routeChangesOf,
+    categoryOfColor,
+    type PlanetColor,
+    TECHNOLOGY_CATEGORY_INFO,
     type TradeRoute,
     technologyCard,
     technologyName,
@@ -171,7 +174,7 @@ const DESCRIBERS: Record<ActionType, Describer> = {
                 : 'laid nebula beside a seeder'
             : undefined,
     [ActionType.FoundPlanet]: (action) =>
-        isFoundPlanet(action) ? `founded a ${action.color} planet` : undefined,
+        isFoundPlanet(action) ? 'founded a new planet' : undefined,
     [ActionType.StowShip]: (action) => (isStowShip(action) ? describeStow(action) : undefined),
     [ActionType.EndTurn]: (action) =>
         isEndTurn(action) ? 'ended their turn, keeping their technology for later' : undefined
@@ -204,6 +207,10 @@ export type DescriptionSegment =
     | { kind: 'text'; text: string }
     | { kind: 'claimant'; playerId: string }
     | { kind: 'technology'; technologyId: string; planet: AxialCoordinates }
+    // A kind of planet, drawn as its icon: planets are never named by color.
+    | { kind: 'planet'; color: PlanetColor }
+
+const planet = (color: PlanetColor): DescriptionSegment => ({ kind: 'planet', color })
 
 const text = (words: string): DescriptionSegment => ({ kind: 'text', text: words })
 
@@ -214,6 +221,19 @@ export function describeActionSegments(action: GameAction): DescriptionSegment[]
             text('used a Security Breach, slipping a piece of Scrap into'),
             { kind: 'claimant', playerId: action.targetPlayerId },
             text('bag')
+        ]
+    }
+    // An action read back from an older record may lack its color; the describer's words stand.
+    if (isFoundPlanet(action) && action.color) {
+        return [text('founded a new'), planet(action.color), text('planet')]
+    }
+    if (isTerraform(action) && action.metadata?.toColor) {
+        const { fromColor, toColor } = action.metadata
+        return [
+            ...(fromColor
+                ? [text('terraformed the'), planet(fromColor), text('planet to')]
+                : [text('terraformed a planet to')]),
+            planet(toColor)
         ]
     }
     const describer = isEarendelActionType(action.type) ? DESCRIBERS[action.type] : undefined
@@ -232,6 +252,9 @@ export function describeAction(
         .map((segment) => {
             if (segment.kind === 'text') return segment.text
             if (segment.kind === 'claimant') return `${nameOf(segment.playerId)}'s`
+            if (segment.kind === 'planet') {
+                return TECHNOLOGY_CATEGORY_INFO[categoryOfColor(segment.color)].name
+            }
             return technologyName(technologyCard(segment.technologyId))
         })
         .join(' ')
@@ -249,7 +272,9 @@ function claimChangeSegments(action: GameAction): DescriptionSegment[] {
                   text('pending')
               ]),
         { kind: 'technology', technologyId: change.technologyId, planet: change.coords },
-        text(change.color ? `on the ${change.color} planet` : 'on its planet')
+        ...(change.color
+            ? [text('on the'), planet(change.color), text('planet')]
+            : [text('on its planet')])
     ]
     return [
         ...broken.flatMap((change) => claim('broke', change)),
@@ -268,26 +293,27 @@ function routeChangeSegments(action: GameAction): DescriptionSegment[] {
     return [
         ...broken.flatMap((route): DescriptionSegment[] =>
             own(route)
-                ? [text(`and ended their own ${route.color} trade route`)]
+                ? [text('and ended their own'), planet(route.color), text('trade route')]
                 : [
                       text('and ended'),
                       { kind: 'claimant', playerId: route.playerId },
-                      text(`${route.color} trade route`)
+                      planet(route.color),
+                      text('trade route')
                   ]
         ),
         ...established.flatMap((route): DescriptionSegment[] =>
             own(route)
                 ? [
-                      text(
-                          `and set up a ${route.color} trade route with ${ships(route)}${paid(route)}`
-                      )
+                      text('and set up the'),
+                      planet(route.color),
+                      text(`trade route with ${ships(route)}${paid(route)}`)
                   ]
                 : [
                       text('and left'),
                       { kind: 'claimant', playerId: route.playerId },
-                      text(
-                          `chain of ${ships(route)} holding the ${route.color} trade route${paid(route)}`
-                      )
+                      text(`chain of ${ships(route)} holding the`),
+                      planet(route.color),
+                      text(`trade route${paid(route)}`)
                   ]
         )
     ]
@@ -496,11 +522,10 @@ function listOf(items: string[]): string {
 }
 
 function describeTerraform(terraform: Terraform): string {
-    const { fromColor, toColor } = terraform.metadata ?? {}
-    if (!toColor) return 'left the planets beside their terraformer as they were'
-    return fromColor
-        ? `terraformed the ${fromColor} planet to ${toColor}`
-        : `terraformed a planet to ${toColor}`
+    // A change of color is written with planet icons, in describeActionSegments.
+    return terraform.metadata?.toColor
+        ? 'terraformed a planet'
+        : 'left the planets beside their terraformer as they were'
 }
 
 function pointsText(points: number): string {

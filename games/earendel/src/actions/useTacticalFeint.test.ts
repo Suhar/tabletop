@@ -78,6 +78,32 @@ describe('Tactical Feint', () => {
         expect(game.activePlayerId).toBe(mover)
     })
 
+    it('scores an opening station it moves, complex and trade route alike', () => {
+        // The opening station scored nothing when it was first placed; moved by a feint it is a
+        // station like any other (rules.md, Setup).
+        const { game, mover } = scenario(PieceType.Station, PieceType.Probe)
+        const board = game.state.board
+        board.hexes[hexKey(at(0, 0))].piece = { ...ship(mover, PieceType.Station), founding: true }
+        board.hexes[hexKey(at(2, 0))].piece = ship(mover, PieceType.Station)
+        // Two violet planets that the stations at (1, 0) and (2, 0) will join.
+        for (const coords of [at(1, -1), at(3, 0)]) {
+            board.hexes[hexKey(coords)] = {
+                coords,
+                tileId: 't1',
+                kind: HexKind.Planet,
+                color: PlanetColor.Violet
+            }
+        }
+        const scoreOf = () => game.state.players.find((p) => p.playerId === mover)!.score
+        const before = scoreOf()
+
+        const [action] = game.run(UseTacticalFeint, feint(mover, at(0, 0), at(1, 0)))
+
+        expect(isUseTacticalFeint(action) && action.metadata?.stationGroupPoints).toBe(2)
+        expect(isUseTacticalFeint(action) && action.metadata?.routesEstablished?.[0].points).toBe(2)
+        expect(scoreOf() - before).toBe(4)
+    })
+
     it('arrives shooting, and may shoot the ship it displaced', () => {
         const { game, mover } = scenario(PieceType.Fighter, PieceType.Probe, PieceLevel.Three)
 
