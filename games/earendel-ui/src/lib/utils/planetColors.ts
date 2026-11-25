@@ -24,8 +24,8 @@ export const PLANET_PLAYER_COLOR: Record<PlanetColor, Color> = {
 // (boldPlayerFill) so a planet never reads as a player's.
 export const SOFT_PLANET_FILL: Record<PlanetColor, string> = {
     [PlanetColor.Violet]: '#f4a8d4',
-    [PlanetColor.Aqua]: '#a8d4ff',
-    [PlanetColor.Mint]: '#9fe6cf',
+    [PlanetColor.Aqua]: '#a6bcff',
+    [PlanetColor.Mint]: '#b2e8a2',
     [PlanetColor.Teal]: '#ffc7a1',
     [PlanetColor.Periwinkle]: '#f0e6a0'
 }
