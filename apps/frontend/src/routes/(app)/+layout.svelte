@@ -16,8 +16,7 @@
         Toggle,
         Heading,
         Alert,
-        DropdownGroup,
-        Tooltip
+        DropdownGroup
     } from 'flowbite-svelte'
     import { afterNavigate, goto, onNavigate } from '$app/navigation'
     import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
@@ -53,7 +52,7 @@
     } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
     import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
-    import { BellSolid, DownloadOutline, HeartOutline, RefreshOutline } from 'flowbite-svelte-icons'
+    import { BellSolid, DownloadOutline, RefreshOutline } from 'flowbite-svelte-icons'
     import {
         isInstalledApp,
         pwaInstallPrompt,
@@ -288,10 +287,6 @@
         await goto('/about')
     }
 
-    async function gotoPayItForward() {
-        await goto('/pay-it-forward')
-    }
-
     async function installPwa() {
         await pwaInstallPrompt.prompt()
     }
@@ -508,25 +503,7 @@
                         >
                             About Us
                         </a>
-                        <a
-                            id="pay-it-forward-link"
-                            href="/pay-it-forward"
-                            class="hidden md:inline-flex items-center gap-1.5 text-sm font-medium text-amber-800 hover:text-amber-900 dark:text-[#f2dfae] dark:hover:text-[#fbefcf]"
-                        >
-                            <HeartOutline class="h-5 w-5" />
-                            <span class="pay-it-forward-label">Pay it forward</span>
-                        </a>
-                        <Tooltip triggeredBy="#pay-it-forward-link" placement="bottom" class="z-50">
-                            Help charities put games on more tables. Nothing goes to us.
-                        </Tooltip>
                         <div class="header-icons flex items-center gap-3">
-                            <a
-                                href="/pay-it-forward"
-                                class="pay-it-forward-icon inline-flex md:hidden items-center leading-none text-amber-600 hover:text-amber-700 dark:text-[#f2dfae] dark:hover:text-[#fbefcf]"
-                            >
-                                <span class="sr-only">Pay it forward</span>
-                                <HeartOutline class="h-6 w-6" />
-                            </a>
                             <a
                                 href="https://github.com/suhar/tabletop"
                                 target="_blank"
@@ -710,11 +687,6 @@
                                 <DropdownItem
                                     onclick={gotoAbout}
                                     class="{aboutMenuClass} w-full text-left">About us</DropdownItem
-                                >
-                                <DropdownItem
-                                    onclick={gotoPayItForward}
-                                    class="md:hidden w-full text-left whitespace-nowrap dark:text-[#f2dfae]"
-                                    >Pay it forward</DropdownItem
                                 >
 
                                 <DropdownDivider class={aboutMenuClass} />
@@ -939,14 +911,6 @@
     .game-session-header .about-link {
         display: none;
     }
-    .game-session-header .pay-it-forward-label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-    }
     @media (width < 640px) {
         .mobile-game-header :global(.site-navbar) {
             padding-block: 4px;
@@ -990,14 +954,10 @@
         .game-session-header .header-icons {
             gap: 0;
         }
-        .mobile-game-header .bug-report-button,
-        .mobile-game-header .pay-it-forward-icon {
+        .mobile-game-header .bug-report-button {
             justify-content: center;
             width: 40px;
             height: 40px;
-        }
-        .mobile-game-header .pay-it-forward-icon {
-            width: 32px;
         }
         .mobile-game-header .game-logo {
             display: block;

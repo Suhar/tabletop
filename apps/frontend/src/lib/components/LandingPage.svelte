@@ -4,7 +4,6 @@
     import LibraryShelf from '$lib/components/LibraryShelf.svelte'
     import { getLoginModal } from '$lib/stores/loginModal'
     import { ArrowRightOutline, ArrowDownOutline } from 'flowbite-svelte-icons'
-    import PayItForwardFooter from '$lib/components/project/PayItForwardFooter.svelte'
 
     let { signedIn = false, scrollTop = $bindable(0) }: { signedIn?: boolean; scrollTop?: number } =
         $props()
@@ -46,8 +45,7 @@
                     </a>
                 </div>
                 <p class="small-print">
-                    <strong>Always</strong> free to play. Fully open source. No tip jar, but you can
-                    <a href="/pay-it-forward">pay it forward →</a>
+                    <strong>Always</strong> free to play. Fully open source.
                 </p>
             </div>
 
@@ -113,9 +111,6 @@
                                 class={showAllGames ? 'h-4 w-4 rotate-180' : 'h-4 w-4'}
                             />
                         </button>
-                    {/if}
-                    {#if signedIn}
-                        <PayItForwardFooter />
                     {/if}
                 {/if}
             </div>
