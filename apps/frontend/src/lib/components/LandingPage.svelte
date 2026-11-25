@@ -44,9 +44,6 @@
                         Explore the games <ArrowDownOutline class="h-4 w-4" />
                     </a>
                 </div>
-                <p class="small-print">
-                    <strong>Always</strong> free to play. Fully open source.
-                </p>
             </div>
 
             <div class="showcase" aria-hidden="true">
@@ -207,19 +204,6 @@
         outline: 2px solid var(--color-blue-300);
         outline-offset: 6px;
         border-radius: 6px;
-    }
-
-    .small-print {
-        margin-top: 32px;
-        color: var(--color-gray-400);
-        font-size: 11px;
-    }
-    .small-print a {
-        color: var(--color-blue-300);
-    }
-    .small-print a:hover {
-        text-decoration: underline;
-        text-underline-offset: 3px;
     }
 
     .showcase {
@@ -393,9 +377,6 @@
             justify-content: center;
             gap: 10px 20px;
             margin-top: 24px;
-        }
-        .small-print {
-            font-size: 10px;
         }
         .showcase {
             display: none;
