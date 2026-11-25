@@ -310,7 +310,9 @@
     {:else if gameSession.prompt && !bagShown}
         <!-- The prompt, and beside it the Rules pill for the decision it asks for. -->
         <div class="text-center text-sm sm:text-base">
-            {gameSession.prompt}{#if gameSession.rulesHelp}<RulesPill
+            {#if gameSession.waitingFor}Waiting for <PlayerName
+                    playerId={gameSession.waitingFor}
+                />.{:else}{gameSession.prompt}{/if}{#if gameSession.rulesHelp}<RulesPill
                     help={gameSession.rulesHelp}
                 />{/if}
         </div>
@@ -655,7 +657,11 @@
         <!-- One line, the pill at its right. It may run past the box the hand holds for it
              (three cards wide), which keeps its width so the bag stays put when the cards come. -->
         <div class="flex items-center whitespace-nowrap text-left text-sm sm:text-base">
-            <span>{gameSession.prompt}</span>
+            {#if gameSession.waitingFor}
+                <span>Waiting for <PlayerName playerId={gameSession.waitingFor} />.</span>
+            {:else}
+                <span>{gameSession.prompt}</span>
+            {/if}
             {#if gameSession.rulesHelp}
                 <span class="shrink-0"><RulesPill help={gameSession.rulesHelp} /></span>
             {/if}

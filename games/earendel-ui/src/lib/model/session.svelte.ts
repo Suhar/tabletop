@@ -1811,6 +1811,15 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.highlightedHexes.some((candidate) => sameCoordinates(candidate, coords))
     }
 
+    // The one rival the table is waiting on, when the prompt has nothing more to say than that:
+    // the panel names them with their pill in place of the waiting text.
+    waitingFor: string | undefined = $derived.by(() => {
+        if (this.isMyTurn || this.isOpening) return undefined
+        if (this.eventPicker && this.eventName) return undefined
+        const [playerId, ...others] = this.gameState.activePlayerIds
+        return others.length === 0 ? playerId : undefined
+    })
+
     prompt: string = $derived.by(() => {
         if (!this.isMyTurn) {
             const picker = this.eventPicker
