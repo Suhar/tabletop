@@ -61,7 +61,6 @@
     import { frameBoard, FrameAnimator } from '$lib/animators/frameAnimator.svelte.js'
     import { boardFrame, viewBoxOf } from '$lib/utils/boardFrame.js'
     import { linkedStationNeighbors, stationTubeKey } from '$lib/utils/stationLinks.js'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import { sightSignal } from '$lib/utils/sightSignal.js'
     import { onSharedClock } from '$lib/utils/sharedClock.js'
     import { nanobotTrails } from '$lib/utils/nanobots.js'
@@ -1314,7 +1313,7 @@
                         points={hex.points}
                         fill={previewing
                             ? isPlanet && gameSession.pendingTile
-                                ? PLANET_FILL[gameSession.pendingTile.color]
+                                ? gameSession.planetFill(gameSession.pendingTile.color)
                                 : '#1d2942'
                             : '#ffffff'}
                         fill-opacity={previewing
@@ -1622,7 +1621,7 @@
                 <text
                     x={x + 16}
                     y={y + 22}
-                    fill={PLANET_FILL[category.color]}
+                    fill={gameSession.planetFill(category.color)}
                     class="text-[11px] font-semibold uppercase tracking-[0.12em]"
                 >
                     {category.name}
@@ -1667,7 +1666,7 @@
                 <text
                     x={box.x + 16}
                     y={box.y + 27}
-                    fill={PLANET_FILL[shown.category.color]}
+                    fill={gameSession.planetFill(shown.category.color)}
                     class="text-[19px] font-bold"
                 >
                     {shown.category.name}

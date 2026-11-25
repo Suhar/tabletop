@@ -7,7 +7,6 @@
         TechnologyEffectKind
     } from '@tabletop/earendel'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import { grantedPieceInfo } from '$lib/utils/specialPieces.js'
     import { SPECIAL_UNITS_HELP } from '$lib/utils/rulesHelp.js'
     import DealtCards from './DealtCards.svelte'
@@ -35,7 +34,7 @@
                     hub,
                     name: info.name,
                     rules: info.rules ?? TECHNOLOGY_EFFECT_INFO[kind].ability,
-                    fill: PLANET_FILL[TECHNOLOGY_CATEGORY_INFO[category].color]
+                    fill: gameSession.planetFill(TECHNOLOGY_CATEGORY_INFO[category].color)
                 }
             ]
         })

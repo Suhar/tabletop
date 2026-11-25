@@ -90,8 +90,8 @@ describe('planet colors', () => {
                 const total = playerCount * TILES_PER_PLAYER * PLANETS_PER_TILE
                 expect(counts.reduce((sum, count) => sum + count, 0)).toBe(total)
                 expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
-                // With at least five planets, every color is on the board.
-                expect(counts).toHaveLength(Math.min(5, total))
+                // Five planet tiles per player put each color on the board once per player.
+                expect(counts).toEqual([0, 1, 2, 3, 4].map(() => playerCount))
             }
         }
     })

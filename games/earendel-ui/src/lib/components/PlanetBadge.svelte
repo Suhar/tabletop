@@ -1,6 +1,7 @@
 <script lang="ts">
     import { HexKind, type PlanetColor } from '@tabletop/earendel'
     import { hexGeometry, insetPoints, verticesToPoints } from '$lib/utils/hexDefinition.js'
+    import { PLANET_SHAPE } from '$lib/utils/planetColors.js'
     import PlanetTile from './PlanetTile.svelte'
 
     let {
@@ -25,7 +26,7 @@
     viewBox="{box.x} {box.y} {box.width} {box.height}"
     {height}
     width={(height * box.width) / box.height}
-    aria-label="{color} planet"
+    aria-label={PLANET_SHAPE[color]}
     role="img"
 >
     <PlanetTile

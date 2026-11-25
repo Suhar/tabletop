@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
         type PlanetColor,
         technologyAbility,
@@ -7,7 +8,6 @@
         TechnologyTiming,
         timingOf
     } from '@tabletop/earendel'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import PlanetBadge from './PlanetBadge.svelte'
 
     let {
@@ -24,7 +24,9 @@
         enlarged?: boolean
     } = $props()
 
-    let fill = $derived(PLANET_FILL[color])
+    const gameSession = getGameSession()
+
+    let fill = $derived(gameSession.planetFill(color))
     let event = $derived(timingOf(card) === TechnologyTiming.Event)
 </script>
 

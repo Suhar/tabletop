@@ -1,4 +1,5 @@
 import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
+import { PLANET_FILL, PLANET_PLAYER_COLOR } from '$lib/utils/planetColors.js'
 import {
     GameSession,
     undoableStagedSelection,
@@ -141,6 +142,16 @@ function readRulesHelpShown(): boolean {
         return localStorage.getItem(RULES_HELP_KEY) !== 'off'
     } catch {
         return true
+    }
+}
+
+const PLANET_SCHEME_KEY = 'earendel:planet-colors'
+
+function readPlanetsInPlayerColors(): boolean {
+    try {
+        return localStorage.getItem(PLANET_SCHEME_KEY) === 'players'
+    } catch {
+        return false
     }
 }
 
@@ -872,21 +883,30 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return (pending.candidates ?? []).map(technologyCard)
     })
 
-    discardedTechnologies: { name: string; count: number; colors: string[] }[] = $derived.by(() => {
-        const groups = new Map<string, { name: string; count: number; colors: Set<string> }>()
+    discardedTechnologies: { name: string; count: number; colors: PlanetColor[] }[] = $derived.by(
+        () => {
+            const groups = new Map<
+                string,
+                { name: string; count: number; colors: Set<PlanetColor> }
+            >()
 
-        for (const card of (this.gameState.technologyDiscard ?? []).map(technologyCard)) {
-            const name = technologyName(card)
-            const group = groups.get(name) ?? { name, count: 0, colors: new Set<string>() }
-            group.count += 1
-            for (const color of card.colors) group.colors.add(color)
-            groups.set(name, group)
+            for (const card of (this.gameState.technologyDiscard ?? []).map(technologyCard)) {
+                const name = technologyName(card)
+                const group = groups.get(name) ?? { name, count: 0, colors: new Set<PlanetColor>() }
+                group.count += 1
+                for (const color of card.colors) group.colors.add(color)
+                groups.set(name, group)
+            }
+
+            return [...groups.values()]
+                .map((group) => ({
+                    name: group.name,
+                    count: group.count,
+                    colors: [...group.colors]
+                }))
+                .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
         }
-
-        return [...groups.values()]
-            .map((group) => ({ name: group.name, count: group.count, colors: [...group.colors] }))
-            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    })
+    )
 
     discardedTechnologyCount: number = $derived(this.gameState.technologyDiscard?.length ?? 0)
 
@@ -1802,6 +1822,15 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         return this.highlightedHexes.some((candidate) => sameCoordinates(candidate, coords))
     }
 
+    // The one rival the table is waiting on, when the prompt has nothing more to say than that:
+    // the panel names them with their pill in place of the waiting text.
+    waitingFor: string | undefined = $derived.by(() => {
+        if (this.isMyTurn || this.isOpening) return undefined
+        if (this.eventPicker && this.eventName) return undefined
+        const [playerId, ...others] = this.gameState.activePlayerIds
+        return others.length === 0 ? playerId : undefined
+    })
+
     prompt: string = $derived.by(() => {
         if (!this.isMyTurn) {
             const picker = this.eventPicker
@@ -2094,6 +2123,25 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
             // Storage may be unavailable (a private window, blocked site data): the choice then
             // lasts for this visit alone.
         }
+    }
+
+    // Which colors the planets wear: their own five cool ones, or the table's five player colors,
+    // remembered in this browser. Only the look changes; a planet's kind is its shape either way.
+    planetsInPlayerColors: boolean = $state(readPlanetsInPlayerColors())
+
+    togglePlanetColors() {
+        this.planetsInPlayerColors = !this.planetsInPlayerColors
+        try {
+            localStorage.setItem(PLANET_SCHEME_KEY, this.planetsInPlayerColors ? 'players' : 'own')
+        } catch {
+            // As for the Rules pills: without storage the choice lasts for this visit alone.
+        }
+    }
+
+    planetFill(color: PlanetColor): string {
+        return this.planetsInPlayerColors
+            ? this.colors.getUiColor(PLANET_PLAYER_COLOR[color])
+            : PLANET_FILL[color]
     }
 
     // The note for the decision in front of the player, while the Rules pills are on.

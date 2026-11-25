@@ -79,7 +79,7 @@ describe('describeAction', () => {
         }
         const names: Record<string, string> = { p2: 'Bob' }
         const description = describeAction(shot, (playerId) => names[playerId] ?? playerId)
-        expect(description).toMatch(/and broke Bob's pending .+ on the teal planet/)
+        expect(description).toMatch(/and broke Bob's pending .+ on the Expansion planet/)
         expect(description).toMatch(/and restored their own pending .+ on its planet$/)
     })
 

@@ -42,7 +42,7 @@ describe('Asteroid Field', () => {
         const added = bag.items.filter(
             (piece) => piece.type === ship.type && piece.level === ship.level
         )
-        expect(bag.remaining).toBe(22 - 1 + 3)
+        expect(bag.remaining).toBe(25 - 1 + 3)
         expect(added.length).toBeGreaterThanOrEqual(3)
         expect(new Set([...bag.items.map((piece) => piece.id), ...known]).size).toBe(
             bag.remaining + known.size

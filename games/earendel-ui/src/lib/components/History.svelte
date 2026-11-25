@@ -11,6 +11,7 @@
     import { gameEndReason } from '$lib/utils/gameEnd.js'
     import { technologyAbility, technologyName } from '@tabletop/earendel'
     import TechnologyChip from './TechnologyChip.svelte'
+    import PlanetBadge from './PlanetBadge.svelte'
 
     const timeAgo = new TimeAgo('en-US')
 
@@ -121,7 +122,20 @@
                                 class="mt-1 list-disc space-y-1 pl-4 text-left text-xs text-gray-300"
                             >
                                 {#each reasons as reason, index (index)}
-                                    <li>{reason}</li>
+                                    <li>
+                                        {#each reason as part, partIndex (partIndex)}
+                                            {partIndex > 0
+                                                ? ' '
+                                                : ''}{#if typeof part === 'string'}{part}{:else}<span
+                                                    class="inline-block align-middle"
+                                                    ><PlanetBadge
+                                                        color={part.planet}
+                                                        copy="reason-{action.id}-{index}-{partIndex}"
+                                                        height={16}
+                                                    /></span
+                                                >{/if}
+                                        {/each}
+                                    </li>
                                 {/each}
                             </ul>
                         {/if}

@@ -125,7 +125,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
             'A placed probe may survey one adjacent planet, whether it is explored or not, as long as its level exceeds that of all opponents.',
             'A level 3 probe turns up three technologies to choose from; a level 2 turns up two.',
             'A survey does not gain the technology immediately. You gain it at the start of your next turn, and only if your probe(s) still lead there.',
-            'A probe cannot go on a hex that lies on a clear line between two of one rival’s stations.'
+            'A clear straight line to one of your own stations, at any distance, keeps a probe from being shot. A clear line between two of one rival’s stations closes the hexes between them to your probes.'
         ]
     },
     [RulesTopic.PlaceFighter]: {
@@ -134,7 +134,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         points: [
             'A shot destroys a probe outright. Against a fighter of its own level or lower it knocks the target down one level, and a level 1 fighter is destroyed. A stronger fighter is out of reach.',
             'Stations cannot be shot at all.',
-            'Any ship with a friendly fighter beside it is escorted and cannot be shot.',
+            'Any ship with a friendly fighter beside it is escorted and cannot be shot. Neither can a probe with a clear straight line to one of its own stations, at any distance.',
             'A fighter also counts its level toward control of every planet it touches.'
         ]
     },
@@ -144,7 +144,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         points: [
             'It scores 1 for itself and 1 for every other station of yours in the same group.',
             'Stations are in one group when they touch, or when they see each other along a straight line with nothing between them.',
-            'That same line closes the hexes between the two stations to rival probes.',
+            'That same line closes the hexes between the two stations to rival probes. A probe of yours with a clear straight line to a station cannot be shot, until a piece stands in that line.',
             'Fighters cannot destroy a station. A station counts 1 toward control of the planets it touches.'
         ]
     },
@@ -180,7 +180,7 @@ export const RULES_HELP: Record<RulesTopic, RulesHelp> = {
         title: 'Firing',
         lead: 'Your fighter may fire on one highlighted enemy beside it, or hold fire.',
         points: [
-            'A probe is destroyed. A fighter loses a level, and a level 1 fighter is destroyed. Only the highlighted pieces are in reach: stations, and anything with a friendly fighter beside it, never are.',
+            'A probe is destroyed. A fighter loses a level, and a level 1 fighter is destroyed. Only the highlighted pieces are in reach: stations, anything with a friendly fighter beside it, and probes with a clear straight line to one of their own stations never are.',
             'A destroyed ship is out of the game, and the hex it stood on is free again.',
             'Control of the planets beside it is counted again without it, and a claim ends if the probes behind it no longer lead.',
             'Firing is never required.'
@@ -463,7 +463,7 @@ const IN_BRIEF: RulesHelp = {
     title: 'The game in brief',
     lead: 'Explore planets, gain their technologies, build stations and join planets with your ships. The player with the most points when the game ends wins.',
     points: [
-        'Your bag starts with 22 ships: 8 probes and 8 fighters (four each of level 2 and level 3) and 6 stations. At the opening you secretly add one more.',
+        'Your bag starts with 25 ships: 9 probes and 9 fighters (five of level 2 and four of level 3 each) and 7 stations. At the opening you secretly add one more.',
         'On your turn you draw three ships from your bag, discard one and place the other two.',
         'Stations and trade routes score during play. Nothing is scored at the end.',
         'A trade route gives you a power for as long as it stands. So does controlling enough planets.',

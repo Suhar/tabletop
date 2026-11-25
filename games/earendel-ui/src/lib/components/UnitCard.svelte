@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
         type PieceType,
         TECHNOLOGY_CATEGORY_INFO,
@@ -6,7 +7,6 @@
         type TechnologyCategory,
         type TechnologyEffectKind
     } from '@tabletop/earendel'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import UnitShape from './UnitShape.svelte'
 
     let {
@@ -28,7 +28,9 @@
         enlarged?: boolean
     } = $props()
 
-    let fill = $derived(PLANET_FILL[TECHNOLOGY_CATEGORY_INFO[category].color])
+    const gameSession = getGameSession()
+
+    let fill = $derived(gameSession.planetFill(TECHNOLOGY_CATEGORY_INFO[category].color))
 </script>
 
 <!-- A landscape card in the category's color: the special unit in play for that category. -->

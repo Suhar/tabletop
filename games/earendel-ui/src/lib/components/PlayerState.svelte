@@ -24,7 +24,6 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import TechnologyChip from './TechnologyChip.svelte'
     import ScoreBreakdown from './ScoreBreakdown.svelte'
-    import { PLANET_FILL } from '$lib/utils/planetColors.js'
     import { specialPieceInfo, type SpecialPieceInfo } from '$lib/utils/specialPieces.js'
 
     let gameSession = getGameSession()
@@ -39,7 +38,7 @@
         planetCoordinates(gameSession.gameState.board).flatMap((planet) => {
             if (controllerOf(gameSession.gameState, planet) !== playerState.playerId) return []
             const color = getHex(gameSession.gameState.board, planet)?.color
-            return color ? [{ key: hexKey(planet), fill: PLANET_FILL[color] }] : []
+            return color ? [{ key: hexKey(planet), fill: gameSession.planetFill(color) }] : []
         })
     )
 
@@ -54,8 +53,8 @@
             )
             const byControl = (controlled.get(color) ?? 0) >= needed
             const held = [
-                ...(byRoute ? [`a ${color} trade route`] : []),
-                ...(byControl ? [`control of ${needed} ${color} planets`] : [])
+                ...(byRoute ? ['a trade route joining two planets of this kind'] : []),
+                ...(byControl ? [`control of ${needed} planets of this kind`] : [])
             ].join(' and ')
             return {
                 color,
@@ -328,6 +327,7 @@
                         ability={power.info.ability}
                         heading={power.heading}
                         dot={power.color}
+                        colors={[power.color]}
                         detail={power.detail}
                         {tint}
                     />
