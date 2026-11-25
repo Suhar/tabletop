@@ -1,7 +1,23 @@
 <script lang="ts">
+    import type { ColorScheme } from '$lib/model/colorScheme.svelte.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
+
+    const SCHEMES: Record<ColorScheme, { name: string; title: string }> = {
+        classic: {
+            name: 'classic',
+            title: 'Warm player colors, and planets in five cool colors of their own.'
+        },
+        shared: {
+            name: 'shared',
+            title: 'Planets are drawn in the five player colors, so the table shows five colors in all.'
+        },
+        bold: {
+            name: 'bold',
+            title: 'Deep, saturated player colors, and soft light planets.'
+        }
+    }
 </script>
 
 <div
@@ -43,20 +59,14 @@
         Rules help: {gameSession.rulesHelpShown ? 'on' : 'off'}
     </button>
 
-    <!-- The planets' colors: their own five, or the five player colors. -->
+    <!-- The table's colors: each click moves on to the next of the three schemes. -->
     <button
         type="button"
-        class="mr-2 rounded-md border px-3 py-1 text-xs font-semibold uppercase max-sm:px-2 max-sm:py-0.5
-            {gameSession.planetsInPlayerColors
-            ? 'border-[#8fb6ff] bg-[#8fb6ff]/20 text-white hover:bg-[#8fb6ff]/30'
-            : 'border-white/40 text-white/60 hover:bg-white/10'}"
-        aria-pressed={gameSession.planetsInPlayerColors}
-        title={gameSession.planetsInPlayerColors
-            ? 'Planets are drawn in the five player colors. Click to give them their own colors.'
-            : 'Planets are drawn in their own colors. Click to draw them in the five player colors.'}
-        onclick={() => gameSession.togglePlanetColors()}
+        class="mr-2 rounded-md border border-white/40 px-3 py-1 text-xs font-semibold uppercase text-white/80 hover:bg-white/10 max-sm:px-2 max-sm:py-0.5"
+        title="{SCHEMES[gameSession.colorScheme].title} Click for the next color scheme."
+        onclick={() => gameSession.cycleColorScheme()}
     >
-        Planets: {gameSession.planetsInPlayerColors ? 'player colors' : 'own colors'}
+        Colors: {SCHEMES[gameSession.colorScheme].name}
     </button>
 
     {#if gameSession.canUndo}

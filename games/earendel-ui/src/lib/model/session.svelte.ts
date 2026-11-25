@@ -1,5 +1,6 @@
 import { type AxialCoordinates, sameCoordinates } from '@tabletop/common'
-import { PLANET_FILL, PLANET_PLAYER_COLOR } from '$lib/utils/planetColors.js'
+import { PLANET_FILL, PLANET_PLAYER_COLOR, SOFT_PLANET_FILL } from '$lib/utils/planetColors.js'
+import { colorScheme, type ColorScheme } from './colorScheme.svelte.js'
 import {
     GameSession,
     undoableStagedSelection,
@@ -142,16 +143,6 @@ function readRulesHelpShown(): boolean {
         return localStorage.getItem(RULES_HELP_KEY) !== 'off'
     } catch {
         return true
-    }
-}
-
-const PLANET_SCHEME_KEY = 'earendel:planet-colors'
-
-function readPlanetsInPlayerColors(): boolean {
-    try {
-        return localStorage.getItem(PLANET_SCHEME_KEY) === 'players'
-    } catch {
-        return false
     }
 }
 
@@ -2125,23 +2116,25 @@ export class EarendelGameSession extends GameSession<EarendelGameState, Hydrated
         }
     }
 
-    // Which colors the planets wear: their own five cool ones, or the table's five player colors,
-    // remembered in this browser. Only the look changes; a planet's kind is its shape either way.
-    planetsInPlayerColors: boolean = $state(readPlanetsInPlayerColors())
+    // The table's color scheme, this player's own choice (see colorScheme). Only the look
+    // changes; a planet's kind is its shape in every scheme.
+    get colorScheme(): ColorScheme {
+        return colorScheme.current
+    }
 
-    togglePlanetColors() {
-        this.planetsInPlayerColors = !this.planetsInPlayerColors
-        try {
-            localStorage.setItem(PLANET_SCHEME_KEY, this.planetsInPlayerColors ? 'players' : 'own')
-        } catch {
-            // As for the Rules pills: without storage the choice lasts for this visit alone.
-        }
+    cycleColorScheme() {
+        colorScheme.cycle()
     }
 
     planetFill(color: PlanetColor): string {
-        return this.planetsInPlayerColors
-            ? this.colors.getUiColor(PLANET_PLAYER_COLOR[color])
-            : PLANET_FILL[color]
+        switch (colorScheme.current) {
+            case 'shared':
+                return this.colors.getUiColor(PLANET_PLAYER_COLOR[color])
+            case 'bold':
+                return SOFT_PLANET_FILL[color]
+            default:
+                return PLANET_FILL[color]
+        }
     }
 
     // The note for the decision in front of the player, while the Rules pills are on.
