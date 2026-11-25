@@ -1,0 +1,714 @@
+{
+    "game": {
+        "id": "scenario-stacked-offer",
+        "isPublic": false,
+        "status": "started",
+        "typeId": "conduit",
+        "deleted": false,
+        "name": "stacked-offer",
+        "ownerId": "owner",
+        "players": [
+            {
+                "id": "p0",
+                "name": "Ada",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p1",
+                "name": "Ben",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p2",
+                "name": "Cleo",
+                "isHuman": true,
+                "status": "joined"
+            }
+        ],
+        "config": {},
+        "hotseat": false,
+        "winningPlayerIds": [],
+        "seed": 3367980177,
+        "activePlayerIds": [],
+        "createdAt": "2026-11-25T20:39:41.181Z",
+        "storage": "remote",
+        "category": "standard",
+        "startedAt": "2026-11-25T20:39:41.181Z",
+        "protectedInformation": true,
+        "progress": {
+            "fraction": 0,
+            "label": "Round 1 of 5"
+        }
+    },
+    "state": {
+        "systemVersion": 3,
+        "id": "_RqJb1n-seoC_4y7ORMUJ",
+        "gameId": "scenario-stacked-offer",
+        "seed": 3367980177,
+        "prng": {
+            "seed": 3367980177,
+            "invocations": 10
+        },
+        "protectedPrng": {
+            "algorithm": "chacha20-v1",
+            "seed": "033aacbe6212a2c9bee0cb5c71682e564dd13d1188be676e6f5a533a83f821c3",
+            "invocations": 119
+        },
+        "masterSeed": "0123456789abcdef0123456789abcdef",
+        "activePlayerIds": ["p0"],
+        "winningPlayerIds": [],
+        "actionCount": 10,
+        "actionChecksum": -235620619,
+        "players": [
+            {
+                "playerId": "p0",
+                "color": "blue",
+                "cash": 5,
+                "supply": 2,
+                "reserve": 10
+            },
+            {
+                "playerId": "p1",
+                "color": "purple",
+                "cash": 5,
+                "supply": 3,
+                "reserve": 10
+            },
+            {
+                "playerId": "p2",
+                "color": "red",
+                "cash": 5,
+                "supply": 3,
+                "reserve": 10
+            }
+        ],
+        "turnManager": {
+            "series": [
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 0,
+                    "end": 1
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 1,
+                    "end": 2
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 2,
+                    "end": 3
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 3,
+                    "end": 4
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 4,
+                    "end": 5
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 5,
+                    "end": 6
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 6,
+                    "end": 7
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 7,
+                    "end": 8
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 8,
+                    "end": 9
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 9,
+                    "end": 10
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 10
+                }
+            ],
+            "turnOrder": ["p0", "p2", "p1"],
+            "turnCounts": {
+                "p0": 4,
+                "p1": 3,
+                "p2": 3
+            }
+        },
+        "machineState": "Offering",
+        "roundManager": {
+            "series": [
+                {
+                    "type": "round",
+                    "start": 0,
+                    "number": 1
+                }
+            ]
+        },
+        "deck": {
+            "items": [
+                43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29, 46, 22, 45,
+                32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58, 62, 38, 6, 24, 17, 34,
+                49, 18, 8, 9, 50, 56, 63, 57, 44, 10, 26, 5, 27, 1
+            ],
+            "remaining": 57
+        },
+        "market": [
+            {
+                "tileId": 42,
+                "bids": ["p0", "p0", "p1", "p0"]
+            },
+            {
+                "tileId": 13,
+                "bids": ["p2", "p1", "p2"]
+            },
+            {
+                "tileId": 31,
+                "bids": []
+            }
+        ],
+        "board": {
+            "stations": [
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -1
+                    },
+                    "tileId": 2,
+                    "rotation": 1,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": 0
+                    },
+                    "tileId": 21,
+                    "rotation": 3,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": 1
+                    },
+                    "tileId": 47,
+                    "rotation": 1,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": 0
+                    },
+                    "tileId": 60,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                }
+            ]
+        },
+        "bidPasses": ["p2", "p1", "p0"]
+    },
+    "actions": [
+        {
+            "id": "stacked-offer-0",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 0,
+            "createdAt": "2026-11-25T20:39:41.183Z",
+            "index": 0,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/0/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-1",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 1,
+            "createdAt": "2026-11-25T20:39:41.183Z",
+            "index": 1,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1866586528
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-2",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 1,
+            "createdAt": "2026-11-25T20:39:41.184Z",
+            "index": 2,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 70992257
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-3",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 0,
+            "createdAt": "2026-11-25T20:39:41.184Z",
+            "index": 3,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1650430938
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-4",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 1,
+            "createdAt": "2026-11-25T20:39:41.184Z",
+            "index": 4,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 55291703
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/2"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-5",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 0,
+            "createdAt": "2026-11-25T20:39:41.184Z",
+            "index": 5,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2022779482
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/2"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-6",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "slot": 0,
+            "createdAt": "2026-11-25T20:39:41.185Z",
+            "index": 6,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 6
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -108902540
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/3"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-7",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-25T20:39:41.185Z",
+            "index": 7,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 7
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2144702087
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-8",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-25T20:39:41.185Z",
+            "index": 8,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -190036423
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "stacked-offer-9",
+            "gameId": "scenario-stacked-offer",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-25T20:39:41.186Z",
+            "index": 9,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1673837937
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/10"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        }
+    ]
+}
