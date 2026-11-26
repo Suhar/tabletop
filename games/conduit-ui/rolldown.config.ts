@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { importGlobPlugin } from 'rolldown/experimental'
 import { createGameUiRolldownConfig } from '@tabletop/rolldown-config'
 
 const packageRootUrl = new URL('.', import.meta.url)
@@ -20,4 +21,5 @@ const rawText = {
     }
 }
 
-export default { ...base, plugins: [rawText, ...base.plugins] }
+// The tile art is collected with import.meta.glob, which only Vite expands on its own.
+export default { ...base, plugins: [rawText, importGlobPlugin(), ...base.plugins] }
