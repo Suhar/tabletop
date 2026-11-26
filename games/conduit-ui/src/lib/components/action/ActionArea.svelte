@@ -18,10 +18,10 @@
     })
     const myBids = $derived(gameSession.myPlayer ? state.bidsBy(gameSession.myPlayer.id) : 0)
 
-    function tollLabel(tolls: string[]): string {
-        if (tolls.length === 0) return 'No toll'
+    function bonusLabel(bonuses: string[]): string {
+        if (bonuses.length === 0) return 'No bonus'
         const totals = new Map<string, number>()
-        for (const playerId of tolls) totals.set(playerId, (totals.get(playerId) ?? 0) + 1)
+        for (const playerId of bonuses) totals.set(playerId, (totals.get(playerId) ?? 0) + 1)
         return [...totals].map(([playerId, amount]) => `${name(playerId)} +$${amount}`).join(', ')
     }
 </script>
@@ -55,16 +55,15 @@
     {:else if gameSession.isBidding}
         <p class="prompt">{gameSession.canPassBid ? 'Bid on a tile or pass' : 'Bid on a tile'}</p>
         <p class="detail">
-            {#if myBids < MinimumBids}Bids {myBids} of {MinimumBids} ·{' '}{/if}{gameSession.mySupply}
+            {#if myBids < MinimumBids}{myBids} bid{myBids === 1 ? '' : 's'} made ·{' '}{/if}{gameSession.mySupply}
             in supply
         </p>
         {#if gameSession.canPassBid}
             <div class="buttons">
                 <button type="button" class="choice" onclick={() => gameSession.passBid()}
-                    >Pass</button
+                    >Pass for the round</button
                 >
             </div>
-            <p class="detail">You can't bid again this round</p>
         {/if}
     {:else if gameSession.isOffered && gameSession.offer}
         {@const offer = gameSession.offer}
@@ -95,7 +94,7 @@
         {/if}
     {:else if gameSession.routeChoice}
         {@const choice = gameSession.routeChoice}
-        <p class="prompt">Who gets the toll from your {letterOf(choice.tileId)} station?</p>
+        <p class="prompt">Who gets the bonus from your {letterOf(choice.tileId)} station?</p>
         <p class="detail">These routes tie; you choose</p>
         <div class="buttons">
             {#each choice.options as option, index (index)}
@@ -108,14 +107,14 @@
                     onfocus={() => gameSession.previewRoute(index)}
                     onmouseleave={() => gameSession.previewRoute(undefined)}
                     onblur={() => gameSession.previewRoute(undefined)}
-                    >{tollLabel(option.tolls)}</button
+                    >{bonusLabel(option.bonuses)}</button
                 >
             {/each}
         </div>
     {:else if state.machineState === MachineState.ChoosingRoutes && gameSession.shownRouteChoice}
         {@const choice = gameSession.shownRouteChoice}
         <p class="prompt">
-            {name(choice.playerId)} is choosing who gets the toll from their {letterOf(
+            {name(choice.playerId)} is choosing who gets the bonus from their {letterOf(
                 choice.tileId
             )} station
         </p>

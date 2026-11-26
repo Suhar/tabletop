@@ -174,7 +174,7 @@ function table(slug, playerCount) {
     scenario.playUntil((view) => view.machineState === MachineState.ChoosingRoutes)
     const choice = scenario.hydrated().pendingRouteChoice()
     console.log(
-        `route-choice: round ${scenario.hydrated().round}, ${choice.playerId}'s tile ${choice.tileId}, options ${choice.options.map((option) => option.tolls.join('+') || 'none').join(' / ')}`
+        `route-choice: round ${scenario.hydrated().round}, ${choice.playerId}'s tile ${choice.tileId}, options ${choice.options.map((option) => option.bonuses.join('+') || 'none').join(' / ')}`
     )
     scenario.write()
 }

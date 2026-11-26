@@ -296,7 +296,7 @@ describe('the route target', () => {
     })
 })
 
-describe('route tolls', () => {
+describe('route bonuses', () => {
     // Cal's A runs through Bea's C and a face-down tile to Dee's B.
     const stations = [
         ...negativeCross(),
@@ -310,7 +310,7 @@ describe('route tolls', () => {
         Object.fromEntries(
             stationEarnings({ stations: placed }).map((earning) => [
                 `${earning.ownerId} ${stationTile(earning.station.tileId).letter}`,
-                { amount: earning.amount, tolls: earning.tolls }
+                { amount: earning.amount, bonuses: earning.bonuses }
             ])
         )
 
@@ -318,7 +318,7 @@ describe('route tolls', () => {
         const earnings = earned(stations)
         expect(earnings['cal A']).toEqual({
             amount: 4,
-            tolls: [
+            bonuses: [
                 { playerId: 'bea', amount: 1 },
                 { playerId: 'dee', amount: 1 }
             ]
@@ -326,21 +326,21 @@ describe('route tolls', () => {
         // Bea's C runs to Dee's D through Dee's B: both pay Dee.
         expect(earnings['bea C']).toEqual({
             amount: 4,
-            tolls: [
+            bonuses: [
                 { playerId: 'dee', amount: 1 },
                 { playerId: 'dee', amount: 1 }
             ]
         })
     })
 
-    it('pays no toll to a station without a route', () => {
+    it('pays no bonus to a station without a route', () => {
         const earnings = earned([
             ...negativeCross(),
             station(StationLetter.B, { col: 10, row: 10 }, { ownerId: 'cal', cubes: 1 }),
             station(StationLetter.A, { col: 11, row: 10 }, { ownerId: 'bea', cubes: 1 })
         ])
-        expect(earnings['cal B']).toEqual({ amount: 0, tolls: [] })
-        expect(earnings['bea A']).toEqual({ amount: 3, tolls: [{ playerId: 'cal', amount: 1 }] })
+        expect(earnings['cal B']).toEqual({ amount: 0, bonuses: [] })
+        expect(earnings['bea A']).toEqual({ amount: 3, bonuses: [{ playerId: 'cal', amount: 1 }] })
     })
 
     it('pays nothing to the route owner’s own stations or to stations without cubes', () => {
@@ -353,6 +353,6 @@ describe('route tolls', () => {
         ]
         const cal = stationEarnings({ stations: own })[0]
         expect(cal.amount).toBe(5)
-        expect(cal.tolls).toEqual([{ playerId: 'dee', amount: 1 }])
+        expect(cal.bonuses).toEqual([{ playerId: 'dee', amount: 1 }])
     })
 })
