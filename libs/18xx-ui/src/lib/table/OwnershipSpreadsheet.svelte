@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte'
     import { holdsReceiverPresidentCertificate } from '../finance/companyOwnership.js'
     import { multiShareMark, type MultiShareMark } from '../finance/multiShareCertificates.js'
     import { chainSidewaysScroll } from '@tabletop/frontend-components'
@@ -38,6 +39,11 @@
     import PlayerName from './PlayerName.svelte'
     import IncomeHistory from './IncomeHistory.svelte'
     import { spreadsheetCompanies } from './spreadsheetCompanies.js'
+    import {
+        spreadsheetPrivates,
+        type PrivateHolderSide,
+        type SpreadsheetPrivateHolder
+    } from './spreadsheetPrivates.js'
     import { marketValueMark } from '../stock/marketColors.js'
     import '../stock/marketZoneTint.css'
     import { numberedSharesOwned } from './numberedShares.js'
@@ -294,6 +300,7 @@
     )
     type OwnerStatistics = {
         turnOrder?: number
+        passOrder?: number
         cash: number
         /** The cash a player's bids hold back, shown under it. */
         reserved?: number
@@ -311,18 +318,29 @@
         assertExists(first, 'A sortable column needs a sort direction')
         return first.direction
     }
-    const OwnerStatisticKeys = ['cash', 'shares', 'certs', 'netWorth'] as const
+    const passOrderShown = $derived(session.passing === 'pass-order')
+    const OwnerStatisticKeys = ['passOrder', 'cash', 'shares', 'certs', 'netWorth'] as const
     type OwnerStatistic = (typeof OwnerStatisticKeys)[number]
     const ownerStatisticKeys: readonly OwnerStatistic[] = $derived(
-        session.noCertificateLimit
-            ? OwnerStatisticKeys.filter((key) => key !== 'certs')
-            : OwnerStatisticKeys
+        OwnerStatisticKeys.filter(
+            (key) =>
+                (key !== 'certs' || !session.noCertificateLimit) &&
+                (key !== 'passOrder' || passOrderShown)
+        )
     )
     type OwnerStatisticColumn = SpreadsheetSortColumn<OwnerStatistics> & {
         label: string
+        ariaLabel?: string
         text: (values: OwnerStatistics) => string
     }
     const ownerStatisticColumns: Record<OwnerStatistic, OwnerStatisticColumn> = {
+        passOrder: {
+            label: 'Pass',
+            ariaLabel: 'Pass order',
+            value: (values) => values.passOrder,
+            text: (values) => (values.passOrder === undefined ? '' : String(values.passOrder)),
+            directions: ['ascending', 'descending']
+        },
         cash: {
             label: 'Cash',
             value: (values) => values.cash,
@@ -368,19 +386,34 @@
         ...lateTitleColumns.map((column) => column.label)
     ])
     const companyStatisticCount = $derived(companyStatisticHeadings.length)
-    let playerSort = $state<SpreadsheetSort<PlayerSortKey>>()
+    const defaultPlayerSort: SpreadsheetSort<PlayerSortKey> | undefined =
+        untrack(() => session.passing) === 'pass-order'
+            ? { key: 'turnOrder', direction: 'ascending' }
+            : undefined
+    let playerSort = $state(defaultPlayerSort)
+    function cyclePlayerSort(key: PlayerSortKey) {
+        const next = nextSpreadsheetSort(playerSort, key, playerSortColumns[key].directions)
+        playerSort = next ?? (key === 'turnOrder' ? undefined : defaultPlayerSort)
+    }
+    const passedPlayerIds = $derived(
+        session.gameState.machineState === 'StockRound' && !session.gameState.stockRound.completed
+            ? session.gameState.stockRound.passedPlayerIds
+            : []
+    )
     let companySort = $state<SpreadsheetSort<CompanyStatistic>>()
     const seatedPlayers = $derived(
         seatOrder.map((playerId) => {
             const turn = playersWithBankruptLast(session.gameState).indexOf(playerId)
             assert(turn >= 0, 'Every seated player has a turn position')
+            const passIndex = passedPlayerIds.indexOf(playerId)
             return {
                 playerId,
                 ...ownerStatisticsFor(
                     { kind: 'player', playerId },
                     session.playerCertificates(playerId)
                 ),
-                turnOrder: turn
+                turnOrder: turn,
+                ...(passIndex >= 0 ? { passOrder: passIndex + 1 } : {})
             }
         })
     )
@@ -396,6 +429,9 @@
                     id: `player:${playerId}`,
                     name: session.getPlayerName(playerId),
                     count: (companyId: string) => session.playerShares(companyId, playerId),
+                    sells: (certificate: PurchaseCertificate) =>
+                        certificate.owner.kind === 'player' &&
+                        certificate.owner.playerId === playerId,
                     holder: (): CertificateHolder => ({ owner: { kind: 'player', playerId } })
                 },
                 ...portfolioOwners.filter((owner) => owner.controllerId === playerId)
@@ -587,7 +623,7 @@
     )
     function ownerPlayerColor(ownerId: string) {
         return ownerId.startsWith('player:')
-            ? session.colors.getPlayerBgColorValue(ownerId.slice(7))
+            ? session.playerColorValue(ownerId.slice(7))
             : undefined
     }
     function poolAlternate(ownerId: string) {
@@ -603,9 +639,61 @@
         const controllerId = portfolioOwners.find((entry) => entry.id === ownerId)?.controllerId
         return (
             ownerPlayerColor(ownerId) ??
-            (controllerId ? session.colors.getPlayerBgColorValue(controllerId) : undefined)
+            (controllerId ? session.playerColorValue(controllerId) : undefined)
         )
     }
+    const privateHolders = $derived<SpreadsheetPrivateHolder[]>([
+        ...playerOrder.map((playerId) => ({
+            id: `player:${playerId}`,
+            owner: { kind: 'player', playerId } as const,
+            side: 'owner' as const
+        })),
+        ...portfolioCompanyIds.map((companyId) => ({
+            id: `company:${companyId}`,
+            owner: { kind: 'company', companyId } as const,
+            side: 'owner' as const
+        })),
+        ...companies
+            .filter((company) => !portfolioCompanyIds.includes(company.id))
+            .map((company) => ({
+                id: `company:${company.id}`,
+                owner: { kind: 'company', companyId: company.id } as const,
+                side: 'company' as const
+            }))
+    ])
+    const heldPrivates = $derived(
+        spreadsheetPrivates(
+            privateHolders,
+            (owner) => session.portfolio(owner).privates,
+            session.privates.companies.map((company) => company.id)
+        )
+    )
+    const legendPrivates = $derived(
+        heldPrivates.toSorted((a, b) =>
+            privateName(a.company.id).localeCompare(privateName(b.company.id))
+        )
+    )
+    const showLegend = $derived(heldPrivates.length > 0)
+    const showOwnerPrivates = $derived(heldPrivates.some((held) => held.side === 'owner'))
+    const showCompanyPrivates = $derived(heldPrivates.some((held) => held.side === 'company'))
+    function privatesHeldBy(holderId: string, side: PrivateHolderSide) {
+        return heldPrivates.filter((held) => held.holderId === holderId && held.side === side)
+    }
+    function privateInitials(companyId: string) {
+        return session.lotInitials(getCompany(session.gameState, companyId))
+    }
+    function privateName(companyId: string) {
+        return session.lotName({ id: companyId, name: session.companyName(companyId) })
+    }
+    const firstPoolOwnerId = $derived(owners.find((owner) => owner.id in poolColumnLabels)?.id)
+    const notchPoolSpan = $derived(
+        owners.filter((owner) => owner.id in poolColumnLabels).length +
+            (owners.some((owner) => parBefore(owner.id)) ? 1 : 0)
+    )
+    const notchCompanySpan = $derived(
+        notchPoolSpan + companyStatisticCount + (showCompanyPrivates ? 1 : 0)
+    )
+    const notchOwnerSpan = $derived(ownerStatisticKeys.length + (showOwnerPrivates ? 1 : 0))
     /** A company's stations left of all it has, or a dash for one that has none. */
     function stationCount(stations: readonly Station[]): string {
         if (!stations.length) return '—'
@@ -651,12 +739,7 @@
         'Player',
         spreadsheetSortDirection(playerSort, 'turnOrder'),
         'ascending',
-        () =>
-            (playerSort = nextSpreadsheetSort(
-                playerSort,
-                'turnOrder',
-                playerSortColumns.turnOrder.directions
-            )),
+        () => cyclePlayerSort('turnOrder'),
         { title: 'Sort players by turn order', toggle: true }
     )}
 {/snippet}
@@ -675,9 +758,18 @@
     direction: SpreadsheetSortDirection | undefined,
     firstDirection: SpreadsheetSortDirection,
     onclick: () => void,
-    { title, toggle = false }: { title?: string; toggle?: boolean } = {}
+    {
+        title,
+        toggle = false,
+        ariaLabel
+    }: { title?: string; toggle?: boolean; ariaLabel?: string } = {}
 )}
-    <button class="sort-header" {title} aria-pressed={toggle ? !!direction : undefined} {onclick}
+    <button
+        class="sort-header"
+        {title}
+        aria-label={ariaLabel}
+        aria-pressed={toggle ? !!direction : undefined}
+        {onclick}
         ><span class="sort-label">{label}</span>{#if direction}{@render sortArrow(
                 direction
             )}{:else}{@render sortArrow(firstDirection, true)}{/if}</button
@@ -716,12 +808,8 @@
             ownerStatisticColumns[key].label,
             direction,
             firstSortDirection(playerSortColumns[key]),
-            () =>
-                (playerSort = nextSpreadsheetSort(
-                    playerSort,
-                    key,
-                    playerSortColumns[key].directions
-                ))
+            () => cyclePlayerSort(key),
+            { ariaLabel: ownerStatisticColumns[key].ariaLabel }
         )}</th
     >
 {/snippet}
@@ -770,11 +858,62 @@
                 class:operating-column={row.company.id === operatingCompanyId}
                 class="bright-cell">{@render titleCell(column, row.company.id)}</td
             >{/each}
-        {#each ownerStatisticKeys as _, index (index)}<td
+        {@render ownerStatisticVoids()}
+    </tr>
+{/snippet}
+
+{#snippet ownerStatisticVoids()}
+    {#if !showLegend}{#each ownerStatisticKeys as _, index (index)}<td
                 class:stat-start={index === 0}
                 class="void"
-            ></td>{/each}
-    </tr>
+            ></td>{/each}{/if}
+{/snippet}
+
+{#snippet privateMarks(holderId: string, side: PrivateHolderSide)}
+    {@const held = privatesHeldBy(holderId, side)}
+    {#if held.length}<span class="private-marks"
+            >{#each held as entry (entry.company.id)}<span
+                    class="private-mark"
+                    title={privateName(entry.company.id)}>{privateInitials(entry.company.id)}</span
+                >{/each}</span
+        >{:else}<span class="empty">—</span>{/if}
+{/snippet}
+
+{#snippet privateLegend(colspan: number, rowspan: number)}
+    {@const showIncome = !session.presentation.privatesWithoutIncome}
+    {@const showValue = !session.presentation.privatesWithoutValue}
+    <td class="void private-legend" {colspan} {rowspan}>
+        <div class="private-legend-frame">
+            <div
+                class="private-legend-grid"
+                style:--legend-numbers={Number(showIncome) + Number(showValue)}
+                role="table"
+                aria-label="Privates held"
+            >
+                <div class="legend-row legend-head" role="row">
+                    <span role="columnheader">Privates</span>
+                    <span role="columnheader"><span class="sr-only">Name</span></span>
+                    {#if showIncome}<span role="columnheader" class="legend-number">Income</span
+                        >{/if}
+                    {#if showValue}<span role="columnheader" class="legend-number">Value</span>{/if}
+                </div>
+                {#each legendPrivates as entry (entry.company.id)}
+                    <div class="legend-row" role="row">
+                        <span role="cell" class="private-mark"
+                            >{privateInitials(entry.company.id)}</span
+                        >
+                        <span role="cell" class="legend-name">{privateName(entry.company.id)}</span>
+                        {#if showIncome}<span role="cell" class="legend-number"
+                                >{money(entry.income)}</span
+                            >{/if}
+                        {#if showValue}<span role="cell" class="legend-number"
+                                >{money(entry.value)}</span
+                            >{/if}
+                    </div>
+                {/each}
+            </div>
+        </div>
+    </td>
 {/snippet}
 
 {#snippet titleCell(column: (typeof titleColumns)[number], companyId: string)}
@@ -951,7 +1090,7 @@
                 players={seatOrder.map((playerId) => ({
                     playerId,
                     name: session.getPlayerName(playerId),
-                    color: session.colors.getPlayerBgColorValue(playerId)
+                    color: session.playerColorValue(playerId)
                 }))}
                 appearances={session.mapView.stations}
                 view={period === 'Player income' ? 'Player' : 'Company'}
@@ -980,10 +1119,13 @@
                                     {#if parBefore(owner.id)}<col class="pool-section" />{/if}
                                     <col class:pool-section={owner.id in poolColumnLabels} />
                                 {/each}
-                                <col span={companyStatisticCount} class="financial-section" />
+                                <col
+                                    span={companyStatisticCount + (showCompanyPrivates ? 1 : 0)}
+                                    class="financial-section"
+                                />
                             {:else}
                                 {#each companies as company (company.id)}<col />{/each}
-                                <col span={ownerStatisticKeys.length} class="financial-section" />
+                                <col span={notchOwnerSpan} class="financial-section" />
                             {/if}
                         </colgroup>
                         <thead>
@@ -1031,6 +1173,10 @@
                                         pricePresentation.label,
                                         'value'
                                     )}
+                                    {#if showCompanyPrivates}<th
+                                            scope="col"
+                                            class="company-stat-start">Privates</th
+                                        >{/if}
                                     {@render companySortHeader('col', 'Cash', 'cash')}
                                     <th scope="col">Trains</th>
                                     <th scope="col">{session.terms.stationTokensHeading}</th>
@@ -1058,10 +1204,13 @@
                                             >{@render companyLabel(row.company)}</th
                                         >
                                     {/each}
+                                    {#if showOwnerPrivates}<th scope="col" class="stat-start"
+                                            >Privates</th
+                                        >{/if}
                                     {#each ownerStatisticKeys as key, index (key)}{@render playerSortHeader(
                                             'col',
                                             key,
-                                            index === 0
+                                            index === 0 && !showOwnerPrivates
                                         )}{/each}
                                 {/if}
                             </tr>
@@ -1094,6 +1243,13 @@
                                                 row.shareNumbers[index]
                                             )}{/each}
                                         {@render companyValueCell(row, true, false)}
+                                        {#if showCompanyPrivates}<td
+                                                class="company-stat-start bright-cell"
+                                                >{@render privateMarks(
+                                                    `company:${row.company.id}`,
+                                                    'company'
+                                                )}</td
+                                            >{/if}
                                         <td class="company-stat-start bright-cell"
                                             >{@render companyCash(row.cash)}</td
                                         >
@@ -1119,31 +1275,55 @@
                                             >{/each}
                                     </tr>
                                 {/each}
-                                {#each ownerStatisticKeys as key, index (key)}
-                                    <tr class="financial-row" class:stat-start={index === 0}>
-                                        {@render playerSortHeader('row', key)}
-                                        {#each owners as owner (owner.id)}
-                                            {#if parBefore(owner.id)}<td class="pool-start void"
-                                                ></td>{/if}
+                                {#if showOwnerPrivates}
+                                    <tr class="financial-row stat-start">
+                                        <th scope="row">Privates</th>
+                                        {#each owners.filter((owner) => !(owner.id in poolColumnLabels)) as owner (owner.id)}
                                             <td
-                                                class:pool-start={owner.id === firstPoolId &&
-                                                    !parBefore(owner.id)}
                                                 class:bright-cell={statistics.has(owner.id)}
                                                 class:player-financial={!!ownerTintColor(owner.id)}
                                                 style:--player-color={ownerTintColor(owner.id)}
-                                                class:token-cell={key === 'shares' &&
-                                                    statistics.has(owner.id)}
-                                                class:empty={!statistics.has(owner.id)}
-                                                class:void={owner.id in poolColumnLabels}
-                                                >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
-                                                        owner.id,
-                                                        key
-                                                    )}{/if}</td
+                                                >{@render privateMarks(owner.id, 'owner')}</td
                                             >
                                         {/each}
-                                        {#each { length: companyStatisticCount } as _, column (column)}<td
-                                                class="void"
-                                            ></td>{/each}
+                                        {@render privateLegend(notchCompanySpan, notchOwnerSpan)}
+                                    </tr>
+                                {/if}
+                                {#each ownerStatisticKeys as key, index (key)}
+                                    <tr
+                                        class="financial-row"
+                                        class:stat-start={index === 0 && !showOwnerPrivates}
+                                    >
+                                        {@render playerSortHeader('row', key)}
+                                        {#each owners as owner (owner.id)}
+                                            {#if showLegend && owner.id in poolColumnLabels}{:else}
+                                                {#if parBefore(owner.id)}<td class="pool-start void"
+                                                    ></td>{/if}
+                                                <td
+                                                    class:pool-start={owner.id === firstPoolId &&
+                                                        !parBefore(owner.id)}
+                                                    class:bright-cell={statistics.has(owner.id)}
+                                                    class:player-financial={!!ownerTintColor(
+                                                        owner.id
+                                                    )}
+                                                    style:--player-color={ownerTintColor(owner.id)}
+                                                    class:token-cell={key === 'shares' &&
+                                                        statistics.has(owner.id)}
+                                                    class:empty={!statistics.has(owner.id)}
+                                                    class:void={owner.id in poolColumnLabels}
+                                                    >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
+                                                            owner.id,
+                                                            key
+                                                        )}{/if}</td
+                                                >{/if}
+                                        {/each}
+                                        {#if !showLegend}{#each { length: companyStatisticCount } as _, column (column)}<td
+                                                    class="void"
+
+                                                ></td>{/each}{:else if index === 0 && !showOwnerPrivates}{@render privateLegend(
+                                                notchCompanySpan,
+                                                notchOwnerSpan
+                                            )}{/if}
                                     </tr>
                                 {/each}
                             {:else}
@@ -1155,10 +1335,13 @@
                                                     row.par,
                                                     row.company.id === operatingCompanyId
                                                 )}{/each}
-                                            {#each ownerStatisticKeys as _, statIndex (statIndex)}<td
-                                                    class:stat-start={statIndex === 0}
-                                                    class="void"
-                                                ></td>{/each}
+                                            {#if showLegend}{@render privateLegend(
+                                                    notchOwnerSpan,
+                                                    notchCompanySpan
+                                                )}{:else}{#each ownerStatisticKeys as _, statIndex (statIndex)}<td
+                                                        class:stat-start={statIndex === 0}
+                                                        class="void"
+                                                    ></td>{/each}{/if}
                                         </tr>
                                     {/if}
                                     <tr
@@ -1191,22 +1374,38 @@
                                                 poolAlternate(owner.id),
                                                 row.shareNumbers[index]
                                             )}{/each}
-                                        {#each ownerStatisticKeys as key, statIndex (key)}
-                                            <td
-                                                class:stat-start={statIndex === 0}
-                                                class:bright-cell={statistics.has(owner.id)}
-                                                class:player-financial={!!ownerTintColor(owner.id)}
-                                                style:--player-color={ownerTintColor(owner.id)}
-                                                class:token-cell={key === 'shares' &&
-                                                    statistics.has(owner.id)}
-                                                class:empty={!statistics.has(owner.id)}
-                                                class:void={owner.id in poolColumnLabels}
-                                                >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
-                                                        owner.id,
-                                                        key
-                                                    )}{/if}</td
-                                            >
-                                        {/each}
+                                        {#if showLegend && owner.id in poolColumnLabels}{#if owner.id === firstPoolOwnerId && !parBefore(owner.id)}{@render privateLegend(
+                                                    notchOwnerSpan,
+                                                    notchCompanySpan
+                                                )}{/if}{:else}
+                                            {#if showOwnerPrivates}<td
+                                                    class="stat-start"
+                                                    class:bright-cell={statistics.has(owner.id)}
+                                                    class:player-financial={!!ownerTintColor(
+                                                        owner.id
+                                                    )}
+                                                    style:--player-color={ownerTintColor(owner.id)}
+                                                    >{@render privateMarks(owner.id, 'owner')}</td
+                                                >{/if}
+                                            {#each ownerStatisticKeys as key, statIndex (key)}
+                                                <td
+                                                    class:stat-start={statIndex === 0 &&
+                                                        !showOwnerPrivates}
+                                                    class:bright-cell={statistics.has(owner.id)}
+                                                    class:player-financial={!!ownerTintColor(
+                                                        owner.id
+                                                    )}
+                                                    style:--player-color={ownerTintColor(owner.id)}
+                                                    class:token-cell={key === 'shares' &&
+                                                        statistics.has(owner.id)}
+                                                    class:empty={!statistics.has(owner.id)}
+                                                    class:void={owner.id in poolColumnLabels}
+                                                    >{#if !(owner.id in poolColumnLabels)}{@render financialValue(
+                                                            owner.id,
+                                                            key
+                                                        )}{/if}</td
+                                                >
+                                            {/each}{/if}
                                     </tr>
                                 {/each}
                                 <tr class="company-stat-start financial-row">
@@ -1220,11 +1419,22 @@
                                             false,
                                             row.company.id === operatingCompanyId
                                         )}{/each}
-                                    {#each ownerStatisticKeys as _, index (index)}<td
-                                            class:stat-start={index === 0}
-                                            class="void"
-                                        ></td>{/each}
+                                    {@render ownerStatisticVoids()}
                                 </tr>
+                                {#if showCompanyPrivates}
+                                    <tr class="company-stat-start financial-row">
+                                        <th scope="row">Privates</th>
+                                        {#each rows as row (row.company.id)}<td
+                                                class:operating-column={row.company.id ===
+                                                    operatingCompanyId}
+                                                class="bright-cell"
+                                                >{@render privateMarks(
+                                                    `company:${row.company.id}`,
+                                                    'company'
+                                                )}</td
+                                            >{/each}
+                                    </tr>
+                                {/if}
                                 <tr class="company-stat-start financial-row">
                                     {@render companySortHeader('row', 'Cash', 'cash')}
                                     {#each rows as row (row.company.id)}<td
@@ -1232,10 +1442,7 @@
                                                 operatingCompanyId}
                                             class="bright-cell">{@render companyCash(row.cash)}</td
                                         >{/each}
-                                    {#each ownerStatisticKeys as _, index (index)}<td
-                                            class:stat-start={index === 0}
-                                            class="void"
-                                        ></td>{/each}
+                                    {@render ownerStatisticVoids()}
                                 </tr>
                                 <tr class="financial-row">
                                     <th scope="row">Trains</th>
@@ -1245,10 +1452,7 @@
                                             class="bright-cell"
                                             >{@render companyTrains(row.company.id)}</td
                                         >{/each}
-                                    {#each ownerStatisticKeys as _, index (index)}<td
-                                            class:stat-start={index === 0}
-                                            class="void"
-                                        ></td>{/each}
+                                    {@render ownerStatisticVoids()}
                                 </tr>
                                 <tr class="financial-row">
                                     <th scope="row">{session.terms.stationTokensHeading}</th>
@@ -1260,10 +1464,7 @@
                                             >{stationCount(row.stations)}</td
                                         >
                                     {/each}
-                                    {#each ownerStatisticKeys as _, index (index)}<td
-                                            class:stat-start={index === 0}
-                                            class="void"
-                                        ></td>{/each}
+                                    {@render ownerStatisticVoids()}
                                 </tr>
                                 {#if loansLabel}
                                     <tr class="company-stat-start financial-row">
@@ -1273,10 +1474,7 @@
                                                     operatingCompanyId}
                                                 class="bright-cell">{@render loansCell(row)}</td
                                             >{/each}
-                                        {#each ownerStatisticKeys as _, index (index)}<td
-                                                class:stat-start={index === 0}
-                                                class="void"
-                                            ></td>{/each}
+                                        {@render ownerStatisticVoids()}
                                     </tr>
                                 {/if}
                                 {#each earlyTitleColumns as column (column.id)}{@render titleRow(
@@ -1288,10 +1486,7 @@
                                             class:operating-column={row.company.id ===
                                                 operatingCompanyId}>{@render lastRunCell(row)}</td
                                         >{/each}
-                                    {#each ownerStatisticKeys as _, index (index)}<td
-                                            class:stat-start={index === 0}
-                                            class="void"
-                                        ></td>{/each}
+                                    {@render ownerStatisticVoids()}
                                 </tr>
                                 {#each lateTitleColumns as column (column.id)}{@render titleRow(
                                         column
@@ -1471,7 +1666,7 @@
     .trade-answer .company-buy {
         border-color: var(--rail-solid, #2c4652);
         background: var(--rail-solid, #2c4652);
-        color: #fff;
+        color: var(--rail-solid-text, #fff);
     }
     .trade-answer .company-buy:hover:not(:disabled) {
         filter: brightness(1.15);
@@ -1547,11 +1742,11 @@
         --sheet-cell: var(--rail-surface, #222c37);
         --sheet-label: var(--rail-surface-raised, #2b3744);
         --sheet-pool: var(--sheet-cell);
-        --sheet-market: #1b3d45;
+        --sheet-market: var(--rail-market, #1f343d);
         --sheet-financial: var(--rail-surface-inset, #1b232d);
-        --sheet-sold: #4a2a33;
-        --sheet-rule: #2f3b48;
-        --sheet-divider: #5b6d80;
+        --sheet-sold: var(--rail-sold-this-round, #4a2a33);
+        --sheet-rule: var(--rail-sheet-rule, #2f3b48);
+        --sheet-divider: var(--rail-sheet-divider, #5b6d80);
     }
     .share-cell {
         --cell-fill: var(--sheet-financial);
@@ -1573,13 +1768,17 @@
         --cell-fill: var(--sheet-financial);
     }
     td.player-financial {
-        --cell-fill: color-mix(in srgb, var(--player-color) 15%, var(--sheet-cell));
+        --cell-fill: color-mix(
+            in srgb,
+            var(--player-color) var(--player-tint, 15%),
+            var(--sheet-cell)
+        );
     }
     td.sold {
         --cell-fill: var(--sheet-sold);
     }
     td.value-cell {
-        --cell-fill: color-mix(in srgb, var(--sheet-market) 45%, var(--sheet-cell));
+        --cell-fill: var(--sheet-market);
     }
     td.value-cell.market-zone-tint {
         --cell-fill: var(--market-tint);
@@ -1859,7 +2058,7 @@
     }
     .view-toggle button[aria-pressed='true'] {
         background: var(--rail-solid, #40576b);
-        color: #ffffff;
+        color: var(--rail-solid-text, #ffffff);
         font-weight: 600;
     }
     .period-toggle {
@@ -1924,7 +2123,7 @@
     }
     /* :where() keeps these rules below the section dividers in specificity. */
     tr > :where(* + *:not(.void)) {
-        border-left: 1px solid #ffffff10;
+        border-left: 1px solid var(--sheet-rule);
     }
     thead th:has(> .column-owner-label > .incoming) {
         border-left: 0;
@@ -2059,6 +2258,59 @@
     }
     tbody tr:last-child > :not(.void) {
         border-bottom: 2px solid var(--sheet-divider);
+    }
+    .private-marks {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0 0.5em;
+        max-inline-size: 6.5em;
+        font-size: 0.85em;
+        line-height: 1.25;
+        vertical-align: middle;
+    }
+    .private-mark {
+        font-weight: 500;
+        letter-spacing: 0.02em;
+    }
+    td.private-legend {
+        vertical-align: top;
+        text-align: left;
+        padding: 7px 4px 4px 14px;
+    }
+    .private-legend-frame {
+        width: 0;
+        min-width: 100%;
+    }
+    .private-legend-grid {
+        display: grid;
+        grid-template-columns: auto minmax(0, max-content) repeat(var(--legend-numbers), auto);
+        justify-content: start;
+        row-gap: 1px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    .legend-row {
+        display: contents;
+    }
+    .legend-row > span {
+        padding-inline: 4px;
+    }
+    .legend-row > .legend-name {
+        padding-inline-end: 10px;
+    }
+    .legend-head > span {
+        color: var(--rail-muted, #a79888);
+        font-size: 11px;
+    }
+    .legend-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .legend-number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
     @container (max-width: 800px) {
         table {

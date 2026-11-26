@@ -11,12 +11,9 @@ import {
     presidentOf
 } from '@tabletop/18xx'
 import { playExample } from '@tabletop/18xx/scenarios'
-import {
-    EighteenSeventeenCompanyAuction,
-    EighteenSeventeenStockRules,
-    stationsOwed
-} from './index.js'
+import { EighteenSeventeenCompanyAuction, EighteenSeventeenStockRules } from './index.js'
 import { EighteenSeventeenScenarios } from './scenarios/index.js'
+import { EighteenSeventeenStations } from './index.js'
 
 const lansing = { locationId: 'B5', nodeId: 'city' }
 
@@ -119,8 +116,16 @@ describe('company auctions', () => {
         expect(play.state.activePlayerIds).toEqual(['casey'])
         play.act('PassCompanyAuction', { companyId: 'AS' })
         const auction = new CompanyAuctionModel(play.state, EighteenSeventeenStockRules)
-        expect(auction.formationPayment(['MAJC'])).toEqual({ privatesValue: 90, cash: 210 })
-        expect(auction.formationPayment(['MAJC', 'OBC'])).toEqual({ privatesValue: 130, cash: 170 })
+        expect(auction.formationPayment(['MAJC'])).toEqual({
+            privatesValue: 90,
+            subsidy: 0,
+            cash: 210
+        })
+        expect(auction.formationPayment(['MAJC', 'OBC'])).toEqual({
+            privatesValue: 130,
+            subsidy: 0,
+            cash: 170
+        })
         expect(() =>
             play.act('FormCompany', { companyId: 'AS', shareCount: 2, privateIds: ['MINC'] })
         ).toThrow()
@@ -171,7 +176,7 @@ describe('company auctions', () => {
             expect(getCompany(play.state, 'AS').shareCount).toBe(10)
             expect(play.treasury('AS')).toBe(100)
             expect(stations(play)).toBe(1)
-            expect(stationsOwed(play.state, 'AS')).toBe(3)
+            expect(EighteenSeventeenStations.stationsOwed(play.state, 'AS')).toBe(3)
         })
 
         it('buys its stations as soon as a treasury sale pays for them', () => {
@@ -184,7 +189,7 @@ describe('company auctions', () => {
             })
             expect(stations(play)).toBe(4)
             expect(play.treasury('AS')).toBe(0)
-            expect(stationsOwed(play.state, 'AS')).toBe(0)
+            expect(EighteenSeventeenStations.stationsOwed(play.state, 'AS')).toBe(0)
         })
 
         it('liquidates a company still owing stations when the stock round ends', () => {

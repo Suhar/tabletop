@@ -82,6 +82,9 @@ export const DEFAULT_TURN_REMINDER_CHOICES: TurnReminderChoices = {
     repeat: 'twiceDaily'
 }
 
+export type LocaleTag = Type.Static<typeof LocaleTag>
+export const LocaleTag = Type.String({ pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$' })
+
 export type UserPreferences = Type.Static<typeof UserPreferences>
 export const UserPreferences = Type.Object({
     preventWebNotificationPrompt: Type.Boolean(),
@@ -91,7 +94,8 @@ export const UserPreferences = Type.Object({
     bgStatsEnabled: Type.Optional(Type.Boolean()),
     reminderHours: Type.Optional(ReminderHours),
     turnReminders: Type.Optional(TurnReminderChoices),
-    gameAndCompetitionEmails: Type.Optional(Type.Boolean())
+    gameAndCompetitionEmails: Type.Optional(Type.Boolean()),
+    locale: Type.Optional(LocaleTag)
 })
 
 export function turnReminderChoices(preferences: UserPreferences | undefined): TurnReminderChoices {
@@ -114,6 +118,7 @@ export const User = Type.Object({
     emailVerified: Type.Optional(Type.Boolean()),
     sms: Type.Optional(Type.String()),
     timeZone: Type.Optional(Type.String()),
+    seenLocale: Type.Optional(LocaleTag),
     roles: Type.Array(Type.Enum(Role)),
     externalIds: Type.Array(Type.String()),
     preferences: Type.Optional(UserPreferences),
@@ -138,7 +143,8 @@ export const UserCreateRequest = Type.Evaluate(
             Type.Required(Type.Pick(User, ['username', 'email'])),
             Type.Object({
                 password: Type.String(),
-                ageConfirmed: Type.Optional(Type.Literal(true))
+                ageConfirmed: Type.Optional(Type.Literal(true)),
+                seenLocale: Type.Optional(LocaleTag)
             })
         ],
         { additionalProperties: false }

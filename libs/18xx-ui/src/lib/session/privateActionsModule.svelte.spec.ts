@@ -8,10 +8,8 @@ import {
 import { singleChoice } from './stagedSelection.svelte.js'
 import type {
     CompanyDecision,
-    PrivateMarkerOption,
     PrivateTileOption,
-    PrivateTrainOption,
-    PrivateTokenOption
+    PrivateTrainOption
 } from './companyDecisionsModule.svelte.js'
 import { testSession } from './moduleTestSession.js'
 
@@ -25,8 +23,6 @@ function privateActions(
     exchangeOptions: { playerId: string; privateCompanyId: string; certificateId: string }[] = [],
     titlePowers: TitlePrivatePower[] = [],
     offered?: { privateCompanyId: string; playerId: string },
-    privateTokenOptions: PrivateTokenOption[] = [],
-    privateMarkerOptions: PrivateMarkerOption[] = [],
     privateTrainOptions: PrivateTrainOption[] = []
 ) {
     let trackSelected = false
@@ -37,9 +33,7 @@ function privateActions(
             { ...power, details: tileDetails },
             { ...power, details: tileDetails }
         ]),
-        privateTrainOptions,
-        privateMarkerOptions,
-        privateTokenOptions
+        privateTrainOptions
     }
     const track = {
         undo: () => {
@@ -137,13 +131,22 @@ describe('PrivateActionsModule', () => {
     })
 
     it('waits for a manual choice between a tile power and a station power', () => {
-        const { module } = privateActions([Alpha], {}, {}, [], [], undefined, [
-            {
-                ...Beta,
-                companyId: 'R',
-                position: { locationId: 'A12', nodeId: 'city', slot: 0 }
-            }
-        ])
+        const { module } = privateActions(
+            [Alpha],
+            {},
+            {},
+            [],
+            [
+                {
+                    ...Beta,
+                    kind: 'location',
+                    label: 'Beta: station',
+                    prompt: 'Choose a city',
+                    locationIds: ['A12'],
+                    choose: async () => {}
+                }
+            ]
+        )
         module.choosePowers()
         expect(module.trackPowerSelection).toBeUndefined()
         module.chooseTrackPower(Alpha)
@@ -216,6 +219,7 @@ describe('PrivateActionsModule', () => {
             prompt: 'Lay Beta',
             construction: {
                 choices: () => [],
+                hasChoice: () => false,
                 canReach: () => false,
                 evaluate: () => ({ reason: 'none' }),
                 inventoryAfter: () => ({ placements: [] }) as never,
@@ -282,57 +286,25 @@ describe('PrivateActionsModule', () => {
         expect(module.undo()).toBe(false)
     })
 
-    it('offers a marker, station or train private from its Use, which opens the powers list', () => {
-        const bridge = (locationId: string): PrivateMarkerOption => ({
-            privateCompanyId: 'OBC',
-            playerId: 'alex',
-            kind: 'bridge',
-            locationId
-        })
-        const station: PrivateTokenOption = {
-            privateCompanyId: 'TS',
-            playerId: 'alex',
-            companyId: 'R',
-            position: { locationId: 'B2', nodeId: 'city', slot: 0 }
-        }
+    it('offers a train private from its Use, which opens the powers list', () => {
         const train = { privateCompanyId: 'OP', details: {} as TrainPurchaseDetails }
-        const { module } = privateActions(
-            [Alpha],
-            {},
-            {},
-            [],
-            [],
-            undefined,
-            [station],
-            [bridge('G6'), bridge('H3')],
-            [train]
-        )
-        const listed = (privateCompanyId: string) => ({
-            privateCompanyId,
-            playerId: 'alex',
-            kind: 'listed' as const
-        })
-        expect(module.powersFor('OBC')).toEqual([listed('OBC')])
-        expect(module.powersFor('TS')).toEqual([listed('TS')])
-        expect(module.powersFor('OP')).toEqual([listed('OP')])
+        const { module } = privateActions([Alpha], {}, {}, [], [], undefined, [train])
+        const listed = { privateCompanyId: 'OP', playerId: 'alex', kind: 'listed' as const }
+        expect(module.powersFor('OP')).toEqual([listed])
         expect(module.powersFor('alpha')).toEqual([Alpha])
-        expect(module.isChosen(listed('OBC'))).toBe(false)
-        module.startPower(listed('OBC'))
+        expect(module.isChosen(listed)).toBe(false)
+        module.startPower(listed)
         expect(module.selection).toBe('powers')
         expect(module.trackPowerSelection).toBeUndefined()
-        expect(module.isChosen(listed('OBC'))).toBe(true)
-        module.startPower(listed('TS'))
+        expect(module.isChosen(listed)).toBe(true)
+        module.startPower(listed)
         expect(module.undo()).toBe(true)
         expect(module.selection).toBeUndefined()
     })
 
     it('offers one Use for a private with a tile power and buttons of its own', () => {
-        const station: PrivateTokenOption = {
-            ...Alpha,
-            companyId: 'R',
-            position: { locationId: 'B2', nodeId: 'city', slot: 0 }
-        }
-        const { module } = privateActions([Alpha], {}, {}, [], [], undefined, [station])
+        const train = { privateCompanyId: 'alpha', details: {} as TrainPurchaseDetails }
+        const { module } = privateActions([Alpha], {}, {}, [], [], undefined, [train])
         expect(module.powersFor('alpha')).toEqual([Alpha])
     })
 

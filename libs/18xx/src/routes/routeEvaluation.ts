@@ -156,6 +156,16 @@ export interface RouteRules {
     /** A route may visit only one revenue center in each hex. */
     oneStopPerHex?: true
     /**
+     * The most of a company's routes in one run that may stop in a stop group, as no more than
+     * two of 18USA's trains run to Mexico (§12.4.1).
+     */
+    stopGroupRouteLimits?: Readonly<Record<string, number>>
+    /**
+     * Whether a route may begin or end at the revenue center, which it may otherwise pass
+     * through, as never at 18USA's rural junctions (P26); everywhere unless given.
+     */
+    endsRoutes?(state: TrainRunningState, companyId: string, center: RevenueCenter): boolean
+    /**
      * Whether the train may pass the stop without calling at it, as 1860's trains pass small
      * stations and halts. A stop passed by neither counts toward the train's distance nor pays,
      * and no route ends at one; a route calls at the optional stops worth most to it, revenue
@@ -177,8 +187,11 @@ export interface RouteRules {
         center: RevenueCenter,
         train: TrainDefinition
     ): number
-    /** Whether a route may not enter a hex again once it has left it, as in 1860. */
-    forbidsHexReentry?(state: TrainRunningState): boolean
+    /**
+     * Whether a route may not enter this hex again once it has left it, as 1860 forbids for every
+     * hex and 18USA for resource tiles (RB 13).
+     */
+    forbidsHexReentry?(state: TrainRunningState, locationId: string): boolean
     /**
      * How many tokened-out cities the company's trains may run through in one run, all its
      * routes together, as 1860 lets one train pass one (Running Trains); none unless given.
@@ -263,12 +276,14 @@ function routeSubsidies(routes: readonly RouteResult[]): number {
     return routes.reduce((sum, route) => sum + (route.subsidy ?? 0), 0)
 }
 
-/** Whether the route leaves a hex and later enters it again. */
-function reentersHex(route: TrainRoute): boolean {
+/** Whether the route leaves one of these hexes and later enters it again. */
+function reentersHex(route: TrainRoute, forbidden: (locationId: string) => boolean): boolean {
     const hexes = [route.start.locationId]
     for (const { locationId } of route.paths)
         if (hexes.at(-1) !== locationId) hexes.push(locationId)
-    return new Set(hexes).size !== hexes.length
+    return hexes.some(
+        (locationId, index) => forbidden(locationId) && hexes.indexOf(locationId) !== index
+    )
 }
 
 export function exceedsRouteDistance(train: TrainDefinition, trace: MeasuredTrace): boolean {
@@ -448,6 +463,9 @@ export class RouteEvaluation {
             : trace
         const seen = new Set<string>()
         const passableBlocks = this.rules.blockedCityPasses?.(this.state, companyId) ?? 0
+        const policy = this.rules.revenuePolicy?.(definition, this.state, companyId) ?? {}
+        // A city the train runs through on its own allowance, which pays it nothing.
+        const ownPasses = new Set<string>()
         let blockedPasses = 0
         for (const [index, visit] of trace.visits.entries()) {
             const key = JSON.stringify([visit.locationId, visit.nodeId])
@@ -460,11 +478,18 @@ export class RouteEvaluation {
                 trace.end.locationId === visit.locationId &&
                 trace.end.endpoint.nodeId === visit.nodeId
             if (index > 0 && !isEnd && this.passageBlocked(companyId, visit, visit.node)) {
-                if (visit.node.kind === 'offboard' || ++blockedPasses > passableBlocks)
+                if (visit.node.kind === 'offboard')
+                    return { reason: 'The route cannot pass through a blocked city or offboard.' }
+                if (policy.passesBlockedCity && !ownPasses.size) ownPasses.add(key)
+                else if (++blockedPasses > passableBlocks)
                     return { reason: 'The route cannot pass through a blocked city or offboard.' }
             }
         }
-        if (this.rules.forbidsHexReentry?.(this.state) && reentersHex(route))
+        const { forbidsHexReentry } = this.rules
+        if (
+            forbidsHexReentry &&
+            reentersHex(route, (locationId) => forbidsHexReentry(this.state, locationId))
+        )
             return { reason: 'A route may not enter a hex again once it has left it.' }
         const repeatedGroup = this.repeatedStopGroup(trace)
         if (repeatedGroup) return { reason: `A route may visit ${repeatedGroup} only once.` }
@@ -503,6 +528,11 @@ export class RouteEvaluation {
                 return { reason: `The ${definition.name} train starts and ends where it stops.` }
             if (isHalt(first.node) || isHalt(last.node))
                 return { reason: 'A route neither begins nor ends at a halt.' }
+            if (
+                this.rules.endsRoutes?.(this.state, companyId, first) === false ||
+                this.rules.endsRoutes?.(this.state, companyId, last) === false
+            )
+                return { reason: 'A route may not begin or end there.' }
             const minimumCitiesAndTowns = this.rules.minimumCitiesAndTowns ?? 0
             if (
                 !atStation &&
@@ -546,10 +576,13 @@ export class RouteEvaluation {
                 amount: this.revenue(companyId, visit, definition),
                 bonus: this.rules.stopBonus?.(this.state, definition, companyId, visit) ?? 0,
                 ...(bonusSourceIds.length ? { bonusSourceIds } : {}),
+                ...(visit.node.uncounted ? { uncounted: true } : {}),
+                ...(ownPasses.has(JSON.stringify([visit.locationId, visit.nodeId]))
+                    ? { blockedPass: true }
+                    : {}),
                 companyStation: usesStationAt(this.state, companyId, visit.locationId, visit.nodeId)
             }
         })
-        const policy = this.rules.revenuePolicy?.(definition, this.state, companyId) ?? {}
         const extension = route.extension ? this.extension(companyId, route, definition) : undefined
         if (extension?.reason) return { reason: extension.reason }
         const shape: RouteShape = {
@@ -652,6 +685,18 @@ export class RouteEvaluation {
             }
         }
     }
+    /** The stop group more of the run's routes stop in than the title allows, if any. */
+    overStopGroupLimit(routes: readonly Pick<RouteResult, 'visits'>[]): string | undefined {
+        const limits = this.rules.stopGroupRouteLimits ?? {}
+        return Object.keys(limits).find(
+            (group) =>
+                routes.filter((route) =>
+                    route.visits.some(
+                        (visit) => this.rules.map.location(visit.locationId).stopGroup === group
+                    )
+                ).length > limits[group]
+        )
+    }
     private evaluateRoutes(companyId: string, routes: readonly TrainRoute[]): OperatingEvaluation {
         if (this.state.routeStep?.companyId !== companyId || this.state.routeStep.result)
             return { reason: 'This company is not running trains.' }
@@ -691,6 +736,8 @@ export class RouteEvaluation {
                 }
             evaluated.push(evaluation.route)
         }
+        const overGroup = this.overStopGroupLimit(evaluated.map((route) => route.result))
+        if (overGroup) return { reason: `Too many of the company’s trains run to ${overGroup}.` }
         const results = this.oncePerRun(
             companyId,
             evaluated.map((route) => route.result),

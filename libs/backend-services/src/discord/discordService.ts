@@ -1,4 +1,5 @@
-import { canHoldAuthenticatedSession, ExternalAuthService } from '@tabletop/common'
+import { canHoldAuthenticatedSession, ExternalAuthService, type User } from '@tabletop/common'
+import { m, messageLocale, replyLocale, type Locale } from '@tabletop/email/i18n'
 import {
     APIBaseInteraction,
     APIApplicationCommandInteraction,
@@ -17,18 +18,22 @@ import { DiscordSubscription } from '../notifications/subscriptions/discordSubsc
 import { TransportType } from '../notifications/transports/notificationTransport.js'
 import { DiscordTransport } from '../notifications/transports/discordTransport.js'
 import { userTopic } from '../notifications/topics.js'
+import { announceTopicRegistrationsChanged } from '../notifications/topicRegistrationsChanged.js'
+import type { NotificationStore } from '../persistence/stores/notificationStore.js'
 
 const TEST_DISCORD_USER_ID = process.env['TEST_DISCORD_USER_ID']
 const NOTIFY_COMMAND_NAME = 'notify'
 const STOP_COMMAND_NAME = 'stop'
-const INSTALL_WELCOME_MESSAGE =
-    "You're all set! I'll message you here when it's your turn or you're invited to a game on BoardTogether. Type /stop to turn these notifications off."
 
 export class DiscordService {
     constructor(
         private readonly notificationService: NotificationService,
         private readonly userService: UserService,
-        private readonly discordTransport: DiscordTransport | undefined
+        private readonly discordTransport: DiscordTransport | undefined,
+        private readonly subscriptions: Pick<
+            NotificationStore,
+            'findNotificationSubscriptions' | 'findSubscriptionTopics'
+        >
     ) {
         if (TEST_DISCORD_USER_ID) {
             this.notificationService
@@ -38,6 +43,20 @@ export class DiscordService {
                 })
                 .catch(console.error)
         }
+    }
+
+    get isAvailable(): boolean {
+        return this.discordTransport !== undefined
+    }
+
+    async disconnect(userId: string): Promise<void> {
+        const registered = await this.subscriptions.findNotificationSubscriptions(userTopic(userId))
+        for (const subscription of registered) {
+            if (subscription.transport === TransportType.Discord) {
+                await this.notificationService.unregisterNotificationSubscription(subscription)
+            }
+        }
+        await announceTopicRegistrationsChanged(this.notificationService, [userTopic(userId)])
     }
 
     async handleInteraction(interaction: APIBaseInteraction<InteractionType, unknown>) {
@@ -73,95 +92,79 @@ export class DiscordService {
 
     private async handleNotifyCommand(commandInteraction: APIApplicationCommandInteraction) {
         const discordUserId = commandInteraction.user?.id ?? commandInteraction.member?.user?.id
+        const user = discordUserId ? await this.linkedUser(discordUserId) : undefined
+        const locale = replyLocale(user, commandInteraction.locale)
         if (!discordUserId) {
-            return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                    content: 'For some reason I could not identify your user id.  Try again?',
-                    flags: MessageFlags.Ephemeral
-                }
-            }
+            return this.reply(m.discord_unknown_user({}, { locale }))
+        }
+        if (!user) {
+            return this.reply(m.discord_not_linked({}, { locale }))
         }
 
-        const subscribed = await this.subscribeLinkedUser(discordUserId)
-        if (!subscribed) {
-            return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                    content:
-                        'Could not find your Discord linked user account on BoardTogether, please login there and go to your profile and link your Discord account.',
-                    flags: MessageFlags.Ephemeral
-                }
-            }
-        }
-
-        return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-                content: 'You will now be notified.  Type /stop to stop notifications.',
-                flags: MessageFlags.Ephemeral
-            }
-        }
+        await this.subscribe(discordUserId, user)
+        return this.reply(m.discord_notify_started({}, { locale }))
     }
 
     private async handleStopCommand(commandInteraction: APIApplicationCommandInteraction) {
         const discordUserId = commandInteraction.user?.id ?? commandInteraction.member?.user?.id
+        const user = discordUserId ? await this.linkedUser(discordUserId) : undefined
+        const locale = replyLocale(user, commandInteraction.locale)
         if (!discordUserId) {
-            return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                    content: 'For some reason I could not identify your user id.  Try again?',
-                    flags: MessageFlags.Ephemeral
-                }
-            }
+            return this.reply(m.discord_unknown_user({}, { locale }))
         }
 
         await this.unsubscribe(discordUserId)
+        return this.reply(m.discord_notify_stopped({}, { locale }))
+    }
+
+    private reply(content: string) {
         return {
             type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-                content: 'Notifications will no longer be sent.',
-                flags: MessageFlags.Ephemeral
-            }
+            data: { content, flags: MessageFlags.Ephemeral }
         }
     }
 
-    private async subscribeLinkedUser(discordUserId: string): Promise<boolean> {
+    private async linkedUser(discordUserId: string): Promise<User | undefined> {
         const user = await this.userService.getUserByExternalId(
             discordUserId,
             ExternalAuthService.Discord
         )
-        if (!user || !canHoldAuthenticatedSession(user)) {
-            return false
-        }
+        return user && canHoldAuthenticatedSession(user) ? user : undefined
+    }
 
+    private async subscribe(discordUserId: string, user: User) {
         await this.notificationService.registerNotificationSubscription({
             subscription: this.subscriptionFor(discordUserId),
             topic: userTopic(user.id)
         })
-        return true
+        await announceTopicRegistrationsChanged(this.notificationService, [userTopic(user.id)])
     }
 
     private async subscribeNewInstall(discordUserId: string) {
-        const subscribed = await this.subscribeLinkedUser(discordUserId)
-        if (subscribed) {
-            this.sendInstallWelcome(discordUserId)
-        }
+        const user = await this.linkedUser(discordUserId)
+        if (!user) return
+        await this.subscribe(discordUserId, user)
+        this.sendInstallWelcome(discordUserId, messageLocale(user))
     }
 
     // Not awaited: Discord requires a webhook event response within 3 seconds.
-    private sendInstallWelcome(discordUserId: string) {
+    private sendInstallWelcome(discordUserId: string, locale: Locale) {
         this.discordTransport
-            ?.sendMessage({ userId: discordUserId, message: { content: INSTALL_WELCOME_MESSAGE } })
+            ?.sendMessage({
+                userId: discordUserId,
+                message: { content: m.discord_install_welcome({}, { locale }) }
+            })
             .catch((error: unknown) => {
                 console.error('Could not send the Discord install welcome', discordUserId, error)
             })
     }
 
     private async unsubscribe(discordUserId: string) {
-        await this.notificationService.unregisterNotificationSubscription(
-            this.subscriptionFor(discordUserId)
-        )
+        const subscription = this.subscriptionFor(discordUserId)
+        const topics = await this.subscriptions.findSubscriptionTopics(subscription)
+        if (topics.length === 0) return
+        await this.notificationService.unregisterNotificationSubscription(subscription)
+        await announceTopicRegistrationsChanged(this.notificationService, topics)
     }
 
     private subscriptionFor(discordUserId: string): DiscordSubscription {

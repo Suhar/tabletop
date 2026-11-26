@@ -13,7 +13,11 @@
         saveTableWorkspace
     } from './tableWorkspace.js'
     import { historyMapFocus } from '../maps/historyMapFocus.js'
-    import { runLocationIds, trainRouteOverlays } from '../routes/routePresentation.js'
+    import {
+        routeColorVariables,
+        runLocationIds,
+        trainRouteOverlays
+    } from '../routes/routePresentation.js'
     import { LatestRouteSolver } from '../routes/latestRouteSolver.js'
     import type { QueuedRouteWorker } from '../routes/routeSolveQueue.js'
     import { provideTableRouteSolver } from '../routes/tableRouteSolver.js'
@@ -85,8 +89,11 @@
     import type { NumberedShareNames } from './companyPresentation.js'
     import { companiesOnOffer, spreadsheetCompanies } from './spreadsheetCompanies.js'
     import UnstartedCompanyCard from './UnstartedCompanyCard.svelte'
+    import CompanyStartPopover from '../stock/CompanyStartPopover.svelte'
+    import CompanyStartContent from '../stock/CompanyStartContent.svelte'
     import OwnershipSpreadsheet from './OwnershipSpreadsheet.svelte'
     import TrackTilePicker from '../maps/TrackTilePicker.svelte'
+    import TilePlanPicker from '../maps/TilePlanPicker.svelte'
     import LocationFollowUpPicker from '../maps/LocationFollowUpPicker.svelte'
     import LocationTileChoice from '../maps/LocationTileChoice.svelte'
     import PlayersPanel from './PlayersPanel.svelte'
@@ -96,6 +103,8 @@
     import type { TitleActionDescription } from './historyDescription.js'
     import History from './History.svelte'
     import TableHeader from './TableHeader.svelte'
+    import { inlineVariables, tablePaletteVariables } from '../colors/tablePalette.js'
+    import { PhoneLayoutQuery } from './displayChoices.js'
     import TrainBadge from '../trains/TrainBadge.svelte'
     import PhaseChart from '../phases/PhaseChart.svelte'
     import PhaseNotice from '../phases/PhaseNotice.svelte'
@@ -193,7 +202,15 @@
     const openMarketCertificates = $derived(marketCertificates(depotState))
 
     const publishedArtwork = $derived(session.publishedArtwork)
+    const tableColors = $derived(session.tablePresentation)
     const boardArtwork = $derived(publishedArtwork ? session.mapView.boardArtwork : undefined)
+    const tableVariables = $derived(
+        inlineVariables({
+            ...tablePaletteVariables(tableColors.palette),
+            ...routeColorVariables(session.routeColors),
+            '--player-tint': `${session.playerTint}%`
+        })
+    )
     const tileAppearance = $derived(session.tileAppearance)
     // The saved preference can also change from another window or a rejected save, so
     // the fit follows the value rather than the click.
@@ -337,7 +354,7 @@
     const stackedTurnAttention = $derived(turnAttention && !paneLayout.current)
     const paneStripStacking = new LabelStacking()
     const actionStripStacking = new LabelStacking()
-    const phoneLayout = new MediaQuery('(width < 40rem)')
+    const phoneLayout = new MediaQuery(PhoneLayoutQuery)
     const companyCardsWrapKey = $derived(
         paneLayout.current ? 'companyCardsWrap' : 'companyCardsWrapTabbed'
     )
@@ -498,6 +515,10 @@
                 choosingCity ||
                 session.track.showChoices ||
                 session.stations.canPlace)
+    )
+    const mapTakesTaps = $derived(
+        !consentPreview &&
+            (maskPlacementLocations || session.routes.editable || session.tilePlan.available)
     )
     const placementLocationIds = $derived(
         locationChoice
@@ -705,6 +726,11 @@
                     legalLocationIds: placementLocationIds,
                     highlightedLocationIds: highlightedPlacementLocationIds
                 }
+            if (session.tilePlan.locationId)
+                return {
+                    legalLocationIds: session.tilePlan.locationIds,
+                    highlightedLocationIds: session.tilePlan.pieceLocationIds
+                }
             if (
                 (session.titleMapRoutes.length ||
                     (routePreview && !session.routes.editor.trainId)) &&
@@ -748,7 +774,7 @@
         ).map((playerId) => ({
             playerId,
             name: session.getPlayerName(playerId),
-            color: session.colors.getPlayerBgColorValue(playerId)
+            color: session.playerColorValue(playerId)
         }))
     )
     const headerPlayerId = $derived(
@@ -789,6 +815,52 @@
               )
             : []
     )
+    type CardStartOpening = { number: number; companyId: string } & (
+        | {
+              place: 'popover'
+              card: HTMLElement
+              anchor: BoundingBox
+              pointerY: number
+              boardInView: boolean
+          }
+        | { place: 'action-area' }
+    )
+    let cardStartOpenings = 0
+    // Held here rather than on the card, as choosing a home may bring the map forward over it.
+    let cardStartOpening = $derived.by((): CardStartOpening | undefined => {
+        session.updatingVisibleState
+        session.cardStarts.stagedCompanyId
+        return undefined
+    })
+    const shownCardStart = $derived(
+        cardStartOpening && session.cardStarts.selected(cardStartOpening.companyId)
+            ? cardStartOpening
+            : undefined
+    )
+    function toggleCardStart(companyId: string, card: HTMLElement, pointerY: number) {
+        const reopening = shownCardStart?.companyId !== companyId
+        closeCardStart()
+        if (!reopening) return
+        session.cardStarts.open(companyId)
+        cardStartOpenings += 1
+        const boardInView = mapViewers().some(({ wrapper }) => wrapper.isVisible())
+        cardStartOpening =
+            session.cardStarts.awaitingHome && !boardInView
+                ? { number: cardStartOpenings, companyId, place: 'action-area' }
+                : {
+                      number: cardStartOpenings,
+                      companyId,
+                      place: 'popover',
+                      card,
+                      anchor: card.getBoundingClientRect(),
+                      pointerY,
+                      boardInView
+                  }
+    }
+    function closeCardStart() {
+        if (shownCardStart) session.cardStarts.close(shownCardStart.companyId)
+        cardStartOpening = undefined
+    }
     setGameSession(untrack(() => session))
     const layoutPreference = new DebouncedLayout(
         () => ({
@@ -979,18 +1051,24 @@
                 : undefined
             : session.map.selection}
         maskUnavailableLocations={!!mapMask}
+        selectableLocationIds={session.tilePlan.available
+            ? session.tilePlan.locationIds
+            : undefined}
         legalLocationIds={mapMask?.legalLocationIds}
         highlightedLocationIds={mapMask?.highlightedLocationIds}
         previewLocationId={session.track.displayedPreview?.locationId ??
-            session.stations.preview?.position.locationId}
-        tileGroups={session.track.showChoices ? session.mapView.tileGroups : undefined}
+            session.stations.preview?.position.locationId ??
+            session.tilePlan.previewedLocationId}
+        tileGroups={session.track.showChoices || session.tilePlan.locationId
+            ? session.mapView.tileGroups
+            : undefined}
         translucentLocationId={consentPreview?.details.locationId}
         appearance={tileAppearance}
         hexDiameter={MapHexDiameter}
         outlinedLocationIds={outlinedLocationId ? [outlinedLocationId] : []}
         {extents}
         {terrainDiscounts}
-        onselect={interactive && !consentPreview
+        onselect={interactive && mapTakesTaps
             ? (selection) =>
                   locationChoice?.locationIds.includes(selection.locationId)
                       ? locationChoice.choose(
@@ -999,6 +1077,16 @@
                         )
                       : session.map.select(selection, false)
             : undefined}
+    />
+{/snippet}
+
+{#snippet tilePlanPicker(viewport: HTMLDivElement)}
+    <TilePlanPicker
+        plan={session.tilePlan}
+        {viewport}
+        scene={session.map.scene}
+        mapView={session.mapView}
+        appearance={tileAppearance}
     />
 {/snippet}
 
@@ -1022,13 +1110,15 @@
                       marketGeometry(
                           session.stockMarketChart,
                           session.presentation.marketCell,
-                          session.presentation.marketZones
+                          session.presentation.marketZones,
+                          { wraps: session.presentation.marketWraps }
                       )
                   )
                 : undefined}
             <div class="board-market">
                 <StockMarketScene
                     cell={session.presentation.marketCell}
+                    wraps={session.presentation.marketWraps}
                     animation={session.marketAnimation}
                     appearances={session.mapView.stations}
                     chart={session.stockMarketChart}
@@ -1149,10 +1239,6 @@
                     <span class="next-rate">next {session.loans.nextRate}%</span></span
                 >
             </span>
-            <span class="game-information-item">
-                <span class="information-label">Loans</span>
-                <span>{session.loans.remaining} left</span>
-            </span>
         {/if}
         {#each session.presentation.gameFacts?.(session.gameState) ?? [] as fact (fact.label)}
             <span class="game-information-item">
@@ -1195,12 +1281,15 @@
         preview: routePreview,
         titleRoutes: session.titleMapRoutes
     }}
-    use:frameStartCompany={session.stock.selectedStartCompany}
+    use:frameStartCompany={shownCardStart?.place === 'popover' && !shownCardStart.boardInView
+        ? undefined
+        : session.stock.selectedStartCompany}
     use:frameHistory={settledHistoricalFocus}
     use:projectRuns={session.projectedRun.request}
     use:framePresentation={publishedArtwork}
-    style:--rail-table-background={boardArtwork?.backgroundColor}
-    data-theme="dark"
+    style={tableVariables}
+    style:color-scheme={tableColors.scheme}
+    data-theme={tableColors.scheme}
     aria-label="Game table"
     aria-busy={!session.preferences.ready}
 >
@@ -1225,7 +1314,7 @@
                     class:workspace-heading={paneLayout.current}
                     class:player-tinted-header={paneLayout.current && !!headerPlayerId}
                     style:--player-color={headerPlayerId
-                        ? session.colors.getPlayerBgColorValue(headerPlayerId)
+                        ? session.playerColorValue(headerPlayerId)
                         : undefined}
                 >
                     {#if paneLayout.current}<div class="workspace-history-controls">
@@ -1235,9 +1324,6 @@
                         </div>{/if}
                     <div class="table-heading">
                         <TableHeader
-                            artworkAvailable={session.publishedArtworkAvailable}
-                            {publishedArtwork}
-                            onToggleArtwork={() => session.toggleArtwork()}
                             {session}
                             bordered={!paneLayout.current}
                             centered={paneLayout.current}
@@ -1360,7 +1446,16 @@
                                         playerId={session.myPlayer.id}
                                         describeAction={historyDescription}
                                     />{/if}
-                                {@render actions(focusLocation, focusRoute)}
+                                {#if shownCardStart?.place === 'action-area'}<section
+                                        class="card-start"
+                                        aria-label={`Start ${session.companyName(shownCardStart.companyId)}`}
+                                    >
+                                        <CompanyStartContent
+                                            {session}
+                                            companyId={shownCardStart.companyId}
+                                        />
+                                    </section>
+                                {:else}{@render actions(focusLocation, focusRoute)}{/if}
                             {/if}
                             {#if !session.isViewingHistory}<InstructionBar {session} />{/if}
                         </section>
@@ -1472,6 +1567,9 @@
                                             appearance={tileAppearance}
                                         />
                                     {/if}
+                                    {#if active && session.tilePlan.locationId}
+                                        {@render tilePlanPicker(viewport)}
+                                    {/if}
                                     {#if active && locationChoice?.followUp}
                                         {@render followUpPicker(locationChoice.followUp, viewport)}
                                     {/if}
@@ -1514,6 +1612,9 @@
                                             appearance={tileAppearance}
                                         />
                                     {/if}
+                                    {#if active && session.tilePlan.locationId}
+                                        {@render tilePlanPicker(viewport)}
+                                    {/if}
                                     {#if active && locationChoice?.followUp}
                                         {@render followUpPicker(locationChoice.followUp, viewport)}
                                     {/if}
@@ -1530,6 +1631,7 @@
                                     <div class="market-with-loans">
                                         <StockMarketScene
                                             cell={session.presentation.marketCell}
+                                            wraps={session.presentation.marketWraps}
                                             animation={session.marketAnimation}
                                             appearances={session.mapView.stations}
                                             renderScale={2}
@@ -1596,6 +1698,9 @@
                                             {company}
                                             home={unstartedPresentation.home(gameState, company.id)}
                                             wide={companyCardsWide}
+                                            starting={shownCardStart?.companyId === company.id}
+                                            onToggleStart={(card, pointerY) =>
+                                                toggleCardStart(company.id, card, pointerY)}
                                         />{/each}{/if}
                             </CompanyCardLayout>
                         </div>{:else if id === 'Tiles'}<div class="workspace-view">
@@ -1679,6 +1784,20 @@
             </Lightbox>
         {/if}
 
+        {#if shownCardStart?.place === 'popover'}
+            {#key shownCardStart.number}
+                <CompanyStartPopover
+                    {session}
+                    companyId={shownCardStart.companyId}
+                    opener={shownCardStart.card}
+                    anchor={shownCardStart.anchor}
+                    pointerY={shownCardStart.pointerY}
+                    withinMap={(node) => node instanceof Element && !!node.closest('.map-area')}
+                    onclose={closeCardStart}
+                />
+            {/key}
+        {/if}
+
         {#if session.historicalMap}
             <HistoricalMapViewer
                 {money}
@@ -1694,6 +1813,12 @@
 </div>
 
 <style>
+    .card-start {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 12px;
+    }
     .layout-save {
         align-self: flex-end;
         flex: none;
@@ -1744,7 +1869,7 @@
         flex: none;
         align-items: center;
         gap: 8px;
-        border-bottom: 1px solid var(--rail-border, #b8a995);
+        border-bottom: 1px solid var(--rail-pane-border, var(--rail-border, #b8a995));
     }
     .workspace-history-controls {
         width: 320px;
@@ -1855,8 +1980,8 @@
     .railway-table {
         --workspace-text: var(--rail-text, #443c34);
         --workspace-muted: var(--rail-muted, #887969);
-        --workspace-inactive: var(--rail-inactive, #938371);
-        --workspace-border: var(--rail-border, #d2c5b7);
+        --workspace-inactive: var(--rail-tab-inactive, var(--rail-inactive, #938371));
+        --workspace-border: var(--rail-pane-border, var(--rail-border, #d2c5b7));
         --workspace-focus: var(--rail-focus, #7c634b);
         --workspace-hover: var(--rail-hover, #69554016);
         --workspace-surface: var(--rail-surface, #faf7f2);
@@ -1865,52 +1990,13 @@
         --workspace-attention-ink: var(--rail-surface-inset, #1b232d);
     }
     .railway-table {
-        color-scheme: dark;
-        --rail-text: #e3e9ef;
-        --rail-negative: #ff9c91;
-        --rail-warning: #f2b84b;
         --rail-phase-tint: 100%;
         --rail-phase-filter: none;
         --rail-phase-opacity: 1;
-        --rail-muted: #7f8e9e;
-        --rail-inactive: #596777;
-        --rail-surface: #222c37;
-        --rail-surface-inset: #1b232d;
-        --rail-surface-raised: #2b3744;
-        --rail-surface-selected: #3a4c5e;
-        --rail-solid: #40576b;
-        --rail-border: #485666;
-        --rail-interstitial-border: #18212b;
-        --rail-focus: #b8cddd;
-        --rail-hover: #b8cddd18;
-        --rail-shadow: #00000055;
-        --rail-backdrop: #080f18bb;
-        --rail-table-background: #18212b;
-    }
-    /* Published artwork: the board's own palette. Bright text is its light tan paper, dimmed
-       text the grey-tan of its stock market figures, and surfaces its slate market cells on the
-       near-black slate ground (MAP-JUNE-for-print: ground #1a292c, cells #213742, figures #b2a994). */
-    .railway-table.published-artwork {
-        --rail-text: #e6dbce;
-        --rail-muted: #a8a094;
-        --rail-inactive: #7a746a;
-        --rail-border: #34474f;
-        --rail-solid: #2c4652;
-        --rail-interstitial-border: #1a292c;
-        --rail-surface: #213742;
-        --rail-surface-inset: #182427;
-        --rail-surface-raised: #29434f;
-        --rail-surface-selected: #34505e;
-        --rail-hover: #e6dbce18;
-        --rail-focus: #e6dbce;
     }
     /* The history round index floats over the page, so it takes the page's dark background. */
     .railway-table.published-artwork :global(.round-index) {
         background: var(--rail-table-background);
-    }
-    /* Inactive tabs read in the dimmed-text colour, like the game information labels. */
-    .railway-table.published-artwork :global([role='tab'][aria-selected='false']) {
-        color: var(--rail-muted);
     }
     .game-information {
         display: flex;
@@ -2063,7 +2149,7 @@
     .action-panel :global(button.action-button) {
         background: var(--rail-solid, #443e35);
         border-color: var(--rail-focus, #443e35);
-        color: #fff;
+        color: var(--rail-solid-text, #fff);
     }
     .action-panel :global(button.action-button:hover:not(:disabled)) {
         background: var(--rail-solid, #302c26);

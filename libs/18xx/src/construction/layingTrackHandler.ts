@@ -55,19 +55,15 @@ export class LayingTrackHandler implements MachineStateHandler<
         const construction = new TrackConstruction(state, this.rules)
         if (!construction.canAct(playerId, companyId)) return []
         return this.rules.map.definition.locations.some((location) =>
-            construction
-                .choices(location.id)
-                .some((choice) => this.free(construction, choice, playerId))
+            construction.hasChoice(location.id, (choice) =>
+                this.free(construction, choice, playerId)
+            )
         )
             ? ['LayTile', 'FinishTrack']
             : ['FinishTrack']
     }
     enter(context: MachineContext<State>): void {
-        const state = context.gameState
-        if (state.trackStep) return
-        const companyId = nextOperatingCompany(state)
-        assertExists(companyId, 'Step entry requires an operating company')
-        state.trackStep = { companyId, lays: [], completed: false }
+        assertExists(context.gameState.trackStep, 'Laying Track is entered with its track step')
     }
     onAction(
         action: HydratedLayTile | HydratedFinishTrack,
@@ -75,4 +71,11 @@ export class LayingTrackHandler implements MachineStateHandler<
     ): string {
         return isFinishTrack(action) ? this.nextState : context.gameState.machineState
     }
+}
+
+export function startTrackStep(state: State): void {
+    if (state.trackStep) return
+    const companyId = nextOperatingCompany(state)
+    assertExists(companyId, 'Step entry requires an operating company')
+    state.trackStep = { companyId, lays: [], completed: false }
 }

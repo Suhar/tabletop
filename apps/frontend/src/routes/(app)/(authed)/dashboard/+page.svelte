@@ -2,28 +2,35 @@
     import { nextTabIndex } from '$lib/utils/tabNavigation'
     import { getAppContext } from '$lib/stores/appContext.svelte'
     import DashboardGameList from '$lib/components/DashboardGameList.svelte'
+    import { BookmarkOutline } from 'flowbite-svelte-icons'
     import DashboardHistory from '$lib/components/DashboardHistory.svelte'
     import DashboardStats from '$lib/components/DashboardStats.svelte'
-    import { currentDashboardGames, isUsersGameTurn } from '$lib/utils/dashboardGames'
+    import { currentDashboardGames } from '$lib/utils/dashboardGames'
+    import type { Game } from '@tabletop/common'
+    import { followFailureMessage } from '$lib/services/followedGames.svelte'
+    import { toast } from 'svelte-sonner'
+    import { m } from '$lib/paraglide/messages'
+    import RichMessage from '$lib/components/RichMessage.svelte'
 
-    const { gameService, authorizationService } = getAppContext()
+    const { gameService, followedGames, authorizationService } = getAppContext()
     const TABS = [
-        { id: 'current', label: 'Current' },
-        { id: 'history', label: 'History' },
-        { id: 'stats', label: 'Stats' }
+        { id: 'current', label: m.dashboard_tab_current },
+        { id: 'following', label: m.dashboard_tab_following },
+        { id: 'history', label: m.dashboard_tab_history },
+        { id: 'stats', label: m.dashboard_tab_stats }
     ] as const
     type Tab = (typeof TABS)[number]['id']
 
     let tab = $state<Tab>('current')
     let historyOpened = $state(false)
-    let onlyMyTurn = $state(false)
     const userId = $derived(authorizationService.getSessionUser()?.id)
     const games = $derived(
         currentDashboardGames(gameService.activeGames, gameService.waitingGames, userId)
     )
-    const turnCount = $derived(games.filter((game) => isUsersGameTurn(game, userId)).length)
-    const visible = $derived(games.filter((game) => !onlyMyTurn || isUsersGameTurn(game, userId)))
 
+    function unfollow(game: Game) {
+        followedGames.unfollow(game.id).catch((error) => toast.error(followFailureMessage(error)))
+    }
     function selectTab(selected: Tab) {
         tab = selected
         if (selected === 'history') historyOpened = true
@@ -38,14 +45,20 @@
     }
 </script>
 
-<svelte:head><title>My games — Board Together</title></svelte:head>
+{#snippet bookmarkIcon()}<BookmarkOutline class="inline-icon" aria-hidden="true" /><span
+        class="sr-only">{m.dashboard_follow_hint_bookmark()}</span
+    >{/snippet}
+
+<svelte:head><title>{m.dashboard_page_title()}</title></svelte:head>
 <main class="dashboard collection-page">
     <header class="page-heading collection-header">
-        <h1 class="collection-heading">Your games.</h1>
-        <a href="/library" class="find-game">Go to the library <span aria-hidden="true">→</span></a>
+        <h1 class="collection-heading">{m.dashboard_heading()}</h1>
+        <a href="/library" class="find-game"
+            >{m.dashboard_go_to_library()} <span aria-hidden="true">→</span></a
+        >
     </header>
     <div class="navigation">
-        <div class="collection-tabs" role="tablist" aria-label="My games">
+        <div class="collection-tabs" role="tablist" aria-label={m.dashboard_tabs_label()}>
             {#each TABS as choice (choice.id)}
                 <button
                     class="collection-tab"
@@ -57,21 +70,14 @@
                     onclick={() => selectTab(choice.id)}
                     onkeydown={moveTab}
                 >
-                    {choice.label}
-                    {#if choice.id === 'current'}<span class="count">{games.length}</span>{/if}
+                    {choice.label()}
+                    {#if choice.id === 'current'}<span class="count">{games.length}</span
+                        >{:else if choice.id === 'following' && followedGames.loaded}<span
+                            class="count">{followedGames.games.length}</span
+                        >{/if}
                 </button>
             {/each}
         </div>
-        {#if tab === 'current'}
-            <button
-                class="turn-filter rounded-md px-2 py-1.5 text-xs"
-                class:enabled={onlyMyTurn}
-                aria-pressed={onlyMyTurn}
-                onclick={() => (onlyMyTurn = !onlyMyTurn)}
-            >
-                Your turn <span>{turnCount}</span>
-            </button>
-        {/if}
     </div>
     <div
         class="panel"
@@ -81,16 +87,41 @@
         hidden={tab !== 'current'}
     >
         <div class="current-results" aria-busy={gameService.loading}>
-            {#if visible.length}
-                <DashboardGameList games={visible} />
+            {#if games.length}
+                <DashboardGameList {games} />
             {:else if gameService.loading}
-                <p class="empty" role="status">Loading your games…</p>
+                <p class="empty" role="status">{m.dashboard_loading_games()}</p>
             {:else}
                 <div class="empty">
-                    <p>
-                        {onlyMyTurn ? 'You’re all caught up.' : 'Ready for a game?'}
+                    <p>{m.dashboard_no_games()}</p>
+                    <a href="/library">{m.dashboard_explore_library()} →</a>
+                </div>
+            {/if}
+        </div>
+    </div>
+    <div
+        class="panel"
+        role="tabpanel"
+        id="dashboard-panel-following"
+        aria-labelledby="dashboard-tab-following"
+        hidden={tab !== 'following'}
+    >
+        <div class="following-results" aria-busy={followedGames.loading}>
+            {#if followedGames.games.length}
+                <DashboardGameList games={followedGames.games} onunfollow={unfollow} />
+            {:else if followedGames.loading}
+                <p class="empty" role="status">{m.dashboard_loading_followed()}</p>
+            {:else if !followedGames.loaded}
+                <p class="empty" role="status">{m.dashboard_followed_load_failed()}</p>
+            {:else}
+                <div class="empty">
+                    <p>{m.dashboard_no_followed()}</p>
+                    <p class="hint">
+                        <RichMessage
+                            parts={m.dashboard_follow_hint.parts()}
+                            markup={{ bookmark: bookmarkIcon }}
+                        />
                     </p>
-                    {#if !games.length}<a href="/library">Explore the library →</a>{/if}
                 </div>
             {/if}
         </div>
@@ -161,18 +192,10 @@
         font-size: 12px;
         color: var(--color-gray-400);
     }
-    .turn-filter {
-        border: 1px solid var(--color-gray-700);
-        color: var(--color-gray-300);
-        white-space: nowrap;
-    }
-    .turn-filter span {
-        margin-left: 8px;
-        color: var(--color-blue-300);
-    }
-    .turn-filter.enabled {
-        background: var(--color-blue-950);
-        border-color: var(--color-blue-400);
+    @media (width < 640px) {
+        .count {
+            display: none;
+        }
     }
     .panel {
         padding-top: 24px;
@@ -184,7 +207,8 @@
     .panel[hidden] {
         display: none;
     }
-    .current-results {
+    .current-results,
+    .following-results {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
@@ -197,6 +221,16 @@
         padding: 28px;
         color: var(--color-gray-400);
         font-size: 14px;
+    }
+    .empty .hint {
+        margin-top: 8px;
+    }
+    .empty :global(.inline-icon) {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        vertical-align: -3px;
+        color: var(--color-gray-300);
     }
     .empty a {
         display: inline-block;

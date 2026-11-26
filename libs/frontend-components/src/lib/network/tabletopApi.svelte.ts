@@ -37,6 +37,8 @@ import {
     type UtcDayRange,
     type SensitiveChangeRequest,
     type PendingEmailChange,
+    type DiscordWebhookConnectResult,
+    type UserTopicRegistrations,
     User,
     UserPreferences,
     Visibility,
@@ -61,7 +63,8 @@ import {
     type TournamentScheduleRequest,
     type TournamentDraft,
     type TournamentListQuery,
-    UndoVotePreview
+    UndoVotePreview,
+    type LocaleTag
 } from '@tabletop/common'
 import type {
     AblyTokenRequest,
@@ -431,6 +434,16 @@ export class TabletopApi {
         return response.payload.user
     }
 
+    async updateUserSeenLocale(locale: LocaleTag): Promise<User> {
+        const response = await this.wretch
+            .post({ locale }, '/user/updateSeenLocale')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UserResponse>()
+
+        return response.payload.user
+    }
+
     async unlinkExternalAccount(externalId: string): Promise<User> {
         const response = await this.wretch
             .post({ externalId }, '/user/unlinkExternalAccount')
@@ -509,6 +522,32 @@ export class TabletopApi {
             .json<GamesResponse>()
 
         return response.payload.games.map((game) => this.validateGame(game))
+    }
+
+    async getFollowedGames(): Promise<Game[]> {
+        const response = await this.wretch
+            .get('/games/followed')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<GamesResponse>()
+
+        return response.payload.games.map((game) => this.validateGame(game))
+    }
+
+    async followGame(gameId: string): Promise<void> {
+        await this.wretch
+            .post({ gameId }, '/game/follow')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<void>()
+    }
+
+    async unfollowGame(gameId: string): Promise<void> {
+        await this.wretch
+            .post({ gameId }, '/game/unfollow')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<void>()
     }
 
     async getMyGameHistory(before?: string): Promise<GameHistoryPage> {
@@ -1170,6 +1209,58 @@ export class TabletopApi {
     async unsubscribeFromPushNotifications(endpoint: string) {
         await this.wretch
             .post({ endpoint }, '/notification/webpush/unsubscribe')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .res()
+    }
+
+    async getTopicRegistrations(): Promise<UserTopicRegistrations> {
+        const response = await this.wretch
+            .get('/notification/registrations')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: { registrations: UserTopicRegistrations } }>()
+        return response.payload.registrations
+    }
+
+    async disconnectDiscordBot(): Promise<void> {
+        await this.wretch
+            .post({}, '/notification/discord/disconnect')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .res()
+    }
+
+    /** A one-time t.me link that connects the chat which opens it; it works for an hour. */
+    async createTelegramLink(): Promise<string> {
+        const response = await this.wretch
+            .post({}, '/notification/telegram/link')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: { url: string } }>()
+        return response.payload.url
+    }
+
+    async disconnectTelegram(): Promise<void> {
+        await this.wretch
+            .post({}, '/notification/telegram/disconnect')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .res()
+    }
+
+    async connectDiscordWebhook(url: string): Promise<DiscordWebhookConnectResult> {
+        const response = await this.wretch
+            .post({ url }, '/notification/discord-webhook/connect')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: { result: DiscordWebhookConnectResult } }>()
+        return response.payload.result
+    }
+
+    async disconnectDiscordWebhook(): Promise<void> {
+        await this.wretch
+            .post({}, '/notification/discord-webhook/disconnect')
             .unauthorized(this.on401)
             .badRequest(this.handleError)
             .res()

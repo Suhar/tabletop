@@ -1,33 +1,51 @@
-import {
-    gamePaceOf,
-    longestTurnWait,
-    MILLISECONDS_PER_MINUTE,
-    waitExceedsPace,
-    type Game
-} from '@tabletop/common'
-import { GAME_PACE_LABELS } from '@tabletop/frontend-components'
+import { GamePace, gamePaceOf, lastMoveAt, waitExceedsPace, type Game } from '@tabletop/common'
+import { m } from '$lib/paraglide/messages'
 
-export type TurnWaitDisplay = { wait: string; pastPace: boolean; description: string }
+type PaceTexts = {
+    name: () => string
+    line: () => string
+    summary: () => string
+    pastLimit: () => string
+}
 
-export function turnWaitDisplay(game: Game, now: Date): TurnWaitDisplay | undefined {
-    const waited = longestTurnWait(game, now)
-    if (waited === undefined) return undefined
-    const wait = waitText(waited)
-    const pastPace = waitExceedsPace(game, waited)
-    return {
-        wait,
-        pastPace,
-        description: pastPace
-            ? `${wait}, past ${GAME_PACE_LABELS[gamePaceOf(game).pace].limit}`
-            : wait
+const PACE_TEXTS: Record<GamePace, PaceTexts> = {
+    [GamePace.Live]: {
+        name: m.pace_live_name,
+        line: m.pace_live_name,
+        summary: m.pace_live_name,
+        pastLimit: m.pace_live_past_limit
+    },
+    [GamePace.Fast]: {
+        name: m.pace_fast_name,
+        line: m.pace_fast_line,
+        summary: m.pace_fast_summary,
+        pastLimit: m.pace_fast_past_limit
+    },
+    [GamePace.Brisk]: {
+        name: m.pace_brisk_name,
+        line: m.pace_brisk_line,
+        summary: m.pace_brisk_summary,
+        pastLimit: m.pace_brisk_past_limit
+    },
+    [GamePace.Daily]: {
+        name: m.pace_daily_name,
+        line: m.pace_daily_line,
+        summary: m.pace_daily_name,
+        pastLimit: m.pace_daily_past_limit
+    },
+    [GamePace.Relaxed]: {
+        name: m.pace_relaxed_name,
+        line: m.pace_relaxed_line,
+        summary: m.pace_relaxed_summary,
+        pastLimit: m.pace_relaxed_past_limit
     }
 }
 
-// Each unit takes over at twice its size, so a wait just past a pace never reads as the pace itself.
-export function waitText(milliseconds: number): string {
-    const minutes = Math.floor(milliseconds / MILLISECONDS_PER_MINUTE)
-    if (minutes < 120) return `${Math.max(1, minutes)} min`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 48) return `${hours} h`
-    return `${Math.floor(hours / 24)} days`
+export function paceTexts(pace: GamePace): PaceTexts {
+    return PACE_TEXTS[pace]
+}
+
+export function lastMovePaceWarning(game: Game, now: Date): string | undefined {
+    if (!waitExceedsPace(game, now.getTime() - lastMoveAt(game).getTime())) return undefined
+    return paceTexts(gamePaceOf(game).pace).pastLimit()
 }

@@ -38,7 +38,10 @@ import type {
     PendingEmailChange,
     SiteStatsNow,
     SiteStatsReport,
-    UtcDayRange
+    UtcDayRange,
+    DiscordWebhookConnectResult,
+    UserTopicRegistrations,
+    LocaleTag
 } from '@tabletop/common'
 import type {
     GameVersionProvider,
@@ -266,6 +269,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('updateUserTimeZone')
     }
 
+    async updateUserSeenLocale(_locale: LocaleTag): Promise<User> {
+        return this.fail('updateUserSeenLocale')
+    }
+
     async unlinkExternalAccount(_externalId: string): Promise<User> {
         return this.fail('unlinkExternalAccount')
     }
@@ -318,6 +325,18 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async getMyGames(): Promise<Game[]> {
         return this.fail('getMyGames')
+    }
+
+    async getFollowedGames(): Promise<Game[]> {
+        return this.fail('getFollowedGames')
+    }
+
+    async followGame(_gameId: string): Promise<void> {
+        return this.fail('followGame')
+    }
+
+    async unfollowGame(_gameId: string): Promise<void> {
+        return this.fail('unfollowGame')
     }
 
     async getOpenGames(_titleId: string): Promise<Game[]> {
@@ -469,6 +488,30 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async unsubscribeFromPushNotifications(_endpoint: string): Promise<void> {
         return this.fail('unsubscribeFromPushNotifications')
+    }
+
+    async getTopicRegistrations(): Promise<UserTopicRegistrations> {
+        return this.fail('getTopicRegistrations')
+    }
+
+    async disconnectDiscordBot(): Promise<void> {
+        return this.fail('disconnectDiscordBot')
+    }
+
+    async createTelegramLink(): Promise<string> {
+        return this.fail('createTelegramLink')
+    }
+
+    async disconnectTelegram(): Promise<void> {
+        return this.fail('disconnectTelegram')
+    }
+
+    async connectDiscordWebhook(_url: string): Promise<DiscordWebhookConnectResult> {
+        return this.fail('connectDiscordWebhook')
+    }
+
+    async disconnectDiscordWebhook(): Promise<void> {
+        return this.fail('disconnectDiscordWebhook')
     }
 
     async searchUsers(_query: string): Promise<User[]> {

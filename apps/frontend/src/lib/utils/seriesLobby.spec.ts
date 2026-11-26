@@ -5,8 +5,10 @@ import {
     GamePace,
     GameStatus,
     PlayerStatus,
+    PlayerVoteKind,
     type Game,
-    type Player
+    type Player,
+    type UndoVote
 } from '@tabletop/common'
 import {
     filterSeriesGames,
@@ -20,7 +22,6 @@ import {
     seriesFilterSearch,
     seriesPageView,
     shortTitleName,
-    takenSeats,
     titleGameCounts,
     widenFilterToShow,
     winnerText
@@ -213,14 +214,6 @@ describe('series games', () => {
     it('offers the player counts the games have', () => {
         expect(seatChoices(games)).toEqual([3, 4])
     })
-
-    it('counts the seats already taken', () => {
-        expect(
-            takenSeats(
-                game('o', '1830', { players: [seat(0), seat(1, { status: PlayerStatus.Open })] })
-            )
-        ).toBe(1)
-    })
 })
 
 describe('lobby entry', () => {
@@ -240,6 +233,20 @@ describe('lobby entry', () => {
         expect(lobbyEntry(game('a', '1830'), 'u1')).toBe('yourTurn')
         expect(lobbyEntry(game('a', '1830'), 'u2')).toBe('enter')
         expect(lobbyEntry(game('a', '1830'), 'u9')).toBe('watch')
+    })
+
+    it('asks for an answer to an undo request before the turn', () => {
+        const vote: UndoVote = {
+            id: 'v',
+            kind: PlayerVoteKind.Undo,
+            initiatorPlayerId: 'p0',
+            targetActionId: 'a',
+            targetActionIndex: 0,
+            approvingPlayerIds: ['p0']
+        }
+        expect(lobbyEntry(game('a', '1830', { vote }), 'u1')).toBe('answerRequest')
+        expect(lobbyEntry(game('a', '1830', { vote }), 'u2')).toBe('answerRequest')
+        expect(lobbyEntry(game('a', '1830', { vote }), 'u0')).toBe('enter')
     })
 
     it('revisits a finished game', () => {

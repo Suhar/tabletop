@@ -19,6 +19,8 @@ import {
     GameAction,
     GameEngine,
     type Player,
+    type PlayerVote,
+    undoVoteHoldsUp,
     GameState,
     type ActionInput,
     type HydratedGameState,
@@ -34,7 +36,7 @@ import {
 import { watch } from 'runed'
 import { toast } from 'svelte-sonner'
 import { nanoid } from 'nanoid'
-import { fromStore } from 'svelte/store'
+import { fromStore, readable } from 'svelte/store'
 import type { NotificationService } from '$lib/services/notificationService.js'
 import type { AuthorizationBridge } from '$lib/services/bridges/authorizationBridge.svelte.js'
 import type { BridgedContext } from '$lib/services/bridges/bridgedContext.svelte.js'
@@ -127,6 +129,7 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
     private authorizationBridge: AuthorizationBridge
     private chatBridge: ChatServiceBridge
     private explorationGamesStore: { current: Game[] }
+    private playerVoteStore: { current: PlayerVote | undefined }
     private showDebugStore: { current: boolean }
     private actAsAdminStore: { current: boolean }
     private sessionUserStore: { current: User | undefined }
@@ -203,8 +206,16 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         return this.actions.at(-1)
     })
 
-    // How the game was called, when the state on screen is the call's result
-    gameCall: GameCall | undefined = $derived.by(() => gameCallOf(this.currentAction))
+    // How the game was called, when the state on screen is the call's result. A game opens
+    // before its history loads, so the latest state may have only the game record's call.
+    gameCall: GameCall | undefined = $derived.by(() => {
+        const shownActionCount = this.gameState.actionCount
+        const action = this.currentAction
+        if (action?.index === shownActionCount - 1) return gameCallOf(action)
+        return shownActionCount === this.gameContext.state.actionCount
+            ? this.primaryGame.call
+            : undefined
+    })
 
     currentActionIndex = $derived.by(() => {
         return this.gameState.actionCount - 1
@@ -425,6 +436,16 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         return player ? { kind: 'player', player } : undefined
     })
 
+    heldUpByUndoVote: boolean = $derived.by(() => {
+        const player = this.myPlayer
+        return (
+            this.mode === GameSessionMode.Play &&
+            player !== undefined &&
+            player.userId === this.sessionUserStore.current?.id &&
+            undoVoteHoldsUp(this.playerVoteStore.current, player)
+        )
+    })
+
     myPlayerState: PlayerStateOf<U> | undefined = $derived.by(() =>
         this.gameState.findPlayerState(this.myPlayer?.id)
     )
@@ -617,6 +638,9 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         this.actAsAdminStore = fromStore(this.authorizationBridge.actAsAdmin)
         this.sessionUserStore = fromStore(this.authorizationBridge.user)
         this.explorationGamesStore = fromStore(bridgedContext.gameService.explorations)
+        this.playerVoteStore = fromStore(
+            bridgedContext.gameService.playerVote ?? readable(undefined)
+        )
         this.currentGameChatStore = fromStore(this.chatBridge.currentGameChat)
         this.hasUnreadMessagesStore = fromStore(this.chatBridge.hasUnreadMessages)
         this.chatService = chatService
@@ -1105,6 +1129,10 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         prepare: () => GameAction | undefined | Promise<GameAction | undefined>
     ) {
         if (!this.isPlayable || this.busy) {
+            return
+        }
+        if (this.heldUpByUndoVote) {
+            toast.info('Answer the undo request in the banner before you play')
             return
         }
         let prepared = this.preparedAction(prepare)

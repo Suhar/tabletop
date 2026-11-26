@@ -51,6 +51,7 @@ export { default as StockTrading } from './stock/StockTrading.svelte'
 export { default as StockMarket } from './stock/StockMarket.svelte'
 
 export * from './maps/stationPresentation.js'
+export { initialToken } from './maps/initialTokens.js'
 export type { BonusArrowFooter, MapBonusArrow } from './maps/bonusArrows.js'
 export { contrastingTextColor } from './colors/contrastingTextColor.js'
 export type { RevenueStageColor, RevenueStageColors } from './colors/revenueStageColors.js'
@@ -127,7 +128,7 @@ export type {
 export { printedHomeCompanies } from './session/titlePresentation.js'
 export { constructionOperatingSteps } from './table/operatingStep.js'
 export type { TileSymbolName } from './tiles/tileSymbols.js'
-export { tileSymbolMarkup } from './tiles/tileSymbols.js'
+export { skylineMarkup, tileSymbolMarkup } from './tiles/tileSymbols.js'
 export { counted } from './presentation/count.js'
 export { InstructedRunSolver } from './session/instructedRunSolver.js'
 export { currencyAffixes, moneyFormat, type MoneyFormat } from './presentation/money.js'
@@ -138,7 +139,7 @@ export {
     type TableTerms
 } from './presentation/tableTerms.js'
 export { clickedBackdrop } from './presentation/modalDialog.js'
-export { svgDataUrl } from './presentation/svgDataUrl.js'
+export { svgDataUrl, svgText } from './presentation/svgDataUrl.js'
 export { default as OperatingActions } from './table/OperatingActions.svelte'
 export { default as OperatingModeSwitch } from './table/OperatingModeSwitch.svelte'
 export { default as ConstructionPrompt } from './table/ConstructionPrompt.svelte'
@@ -265,3 +266,35 @@ export {
     describeNationalRailwayAction,
     type NationalRailwayNames
 } from './mergers/nationalRailwayHistory.js'
+export {
+    AcquisitionRoundModule,
+    CompanyExcessModule,
+    ConversionRoundModule,
+    CorporateBuyBackModule,
+    ShortSellingModule,
+    type SizedCompanyModuleSession
+} from './session/sizedCompanyModules.svelte.js'
+export {
+    SizedCompanySession,
+    type SizedCompanyMechanisms,
+    type SizedCompanySessionView,
+    type SizedCompanyStockPanel
+} from './session/sizedCompanySession.svelte.js'
+export { default as ConversionRoundPanel } from './sizedCompanies/ConversionRoundPanel.svelte'
+export { default as AcquisitionRoundPanel } from './sizedCompanies/AcquisitionRoundPanel.svelte'
+export { default as CompanyExcessPanel } from './sizedCompanies/CompanyExcessPanel.svelte'
+export { default as CorporateActionsPanel } from './sizedCompanies/CorporateActionsPanel.svelte'
+export { default as ShortSellingPanel } from './sizedCompanies/ShortSellingPanel.svelte'
+export { default as CompanyRoundPanel } from './sizedCompanies/CompanyRoundPanel.svelte'
+export {
+    companyAssetFacts,
+    companyFinanceFacts,
+    companyRoundFacts,
+    loansAgainstLimit,
+    takeLoanAction,
+    zoneFact
+} from './sizedCompanies/companyRoundFacts.js'
+export {
+    describeSizedCompanyAction,
+    type SizedCompanyHistoryTerms
+} from './sizedCompanies/sizedCompanyHistory.js'

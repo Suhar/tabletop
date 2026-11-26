@@ -1,5 +1,6 @@
 import { PubSubService, PubSubSubscriber } from '../pubsub/pubSubService.js'
-import { Notification } from '@tabletop/common'
+import { assertExists, Notification } from '@tabletop/common'
+import type { Locale } from '@tabletop/email/i18n'
 import { NotificationStore } from '../persistence/stores/notificationStore.js'
 import {
     NotificationDistributionMethod,
@@ -10,6 +11,7 @@ import { NotificationTransport, TransportType } from './transports/notificationT
 import { NotificationSubscription } from './subscriptions/notificationSubscription.js'
 import { NotificationSubscriptionIdentifier } from './subscriptions/notificationSubscriptionIdentifier.js'
 import { TopicTransport } from './transports/topicTransport.js'
+import { announceTopicRegistrationsChanged } from './topicRegistrationsChanged.js'
 import { GLOBAL_TOPIC, userTopic } from './topics.js'
 
 export const WEB_PUSH_REGISTRATIONS_PER_TOPIC = 20
@@ -91,11 +93,13 @@ export class DefaultNotificationService implements NotificationService {
     async sendNotification({
         notification,
         topics,
-        channels
+        channels,
+        locale
     }: {
         notification: Notification
         topics: string[]
         channels: NotificationDistributionMethod[]
+        locale?: Locale
     }) {
         for (const topic of topics) {
             if (channels.includes(NotificationDistributionMethod.Topical)) {
@@ -107,6 +111,7 @@ export class DefaultNotificationService implements NotificationService {
             }
 
             if (channels.includes(NotificationDistributionMethod.UserDirect)) {
+                assertExists(locale, 'A notification sent to a user names its language')
                 try {
                     const subscriptions =
                         await this.notificationStore.findNotificationSubscriptions(topic)
@@ -118,16 +123,20 @@ export class DefaultNotificationService implements NotificationService {
                             continue
                         }
                         transport
-                            .sendNotification(structuredClone(subscription), notification)
+                            .sendNotification(structuredClone(subscription), notification, locale)
                             .then(async (result) => {
                                 if (result.unregister) {
                                     await this.notificationStore.deleteNotificationSubscription(
                                         subscription
                                     )
+                                    await announceTopicRegistrationsChanged(this, [topic])
                                 }
                             })
                             .catch((e) => {
-                                console.log('Error sending web push notification', e)
+                                console.log(
+                                    `Error sending a ${subscription.transport} notification`,
+                                    e
+                                )
                             })
                     }
                 } catch (e) {

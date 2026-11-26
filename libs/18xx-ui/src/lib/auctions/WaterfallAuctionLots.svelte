@@ -7,6 +7,8 @@
     import CompanyToken from '../tokens/CompanyToken.svelte'
     import './auctionLotTable.css'
     import AuctionBidRow from './AuctionBidRow.svelte'
+    import AuctionPlayers from './AuctionPlayers.svelte'
+    import { auctionSummaryPlayers } from './auctionSummary.js'
 
     let { session }: { session: EighteenXXSessionView } = $props()
     const money = $derived(session.presentation.money)
@@ -81,7 +83,7 @@
     <span class="winner" title={`${winner} · ${money(award.price)}`}
         ><span
             class="dot"
-            style:background={session.colors.getPlayerBgColorValue(award.playerId)}
+            style:background={session.playerColorValue(award.playerId)}
             aria-hidden="true"
         ></span><span class="sr-only">{winner}</span>{money(award.price)}</span
     >
@@ -213,7 +215,7 @@
                 )}<span class="winner" title={winner}
                     ><span
                         class="dot"
-                        style:background={session.colors.getPlayerBgColorValue(lot.award.playerId)}
+                        style:background={session.playerColorValue(lot.award.playerId)}
                         aria-hidden="true"
                     ></span><span class="name">{winner}</span></span
                 >{:else if lot.bids.length}<ul aria-label={`Bids on ${session.lotName(lot)}`}>
@@ -224,9 +226,7 @@
                         >
                             <span
                                 class="dot"
-                                style:background={session.colors.getPlayerBgColorValue(
-                                    bid.playerId
-                                )}
+                                style:background={session.playerColorValue(bid.playerId)}
                                 aria-hidden="true"
                             ></span><span class="sr-only"
                                 >{session.getPlayerName(bid.playerId)}</span
@@ -265,8 +265,9 @@
             {/snippet}
             {#snippet figures()}
                 <span
-                    >High bidder <strong>{session.getPlayerName(contest.highBidderId)}</strong
-                    ></span
+                    >High bidder <AuctionPlayers
+                        players={auctionSummaryPlayers(session, [contest.highBidderId])}
+                    /></span
                 >
                 <span>High bid <strong>{money(contest.highBid)}</strong></span>
             {/snippet}

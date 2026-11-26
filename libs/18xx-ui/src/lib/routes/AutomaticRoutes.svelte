@@ -2,8 +2,9 @@
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import type { PendingRouteAnswer } from './routeSolveQueue.js'
     import { tableRouteSolver } from './tableRouteSolver.js'
-    import { DefaultRunSubsidyName } from './routePresentation.js'
+    import { titleRunNames } from './routePresentation.js'
     import TrainRunTable from './TrainRunTable.svelte'
+    import { RunStepTimeLimitMs } from '../session/routesModule.svelte.js'
 
     let {
         session,
@@ -15,7 +16,7 @@
         trainColors: Readonly<Record<string, string>>
     } = $props()
     const money = $derived(session.presentation.money)
-    const subsidyName = $derived(session.presentation.runSubsidyName ?? DefaultRunSubsidyName)
+    const runNames = $derived(titleRunNames(session.presentation))
     const solver = tableRouteSolver()
     let error = $state<string>()
     let attempt = $state(0)
@@ -24,6 +25,11 @@
     const trains = $derived(routes.editor.trains)
     const drawn = $derived(routes.editor.draft !== undefined)
     const chosenTrain = $derived(trains.find((train) => train.id === routes.editor.trainId))
+    const target = $derived(
+        routes.proven
+            ? { label: 'Most possible', phrase: 'the most possible' }
+            : { label: 'Best found', phrase: 'the best found' }
+    )
     type RouteSolve = {
         gameState: typeof session.gameState
         companyId: string | undefined
@@ -41,7 +47,11 @@
             pending = undefined
             if (!companyId || session.routes.solved) return
             error = undefined
-            const asked = solver.ask({ state: session.gameState.dehydrate(), companyId })
+            const asked = solver.ask({
+                state: session.gameState.dehydrate(),
+                companyId,
+                timeLimitMs: RunStepTimeLimitMs
+            })
             pending = asked
             void asked.answer.then((response) => {
                 if (pending !== asked) return
@@ -97,7 +107,7 @@
             attachments={routes.editor.attachments}
             movableAttachments={routes.editable ? routes.editor.movableAttachments : []}
             onAttach={(attachmentId) => routes.attach(attachmentId)}
-            {subsidyName}
+            {runNames}
             bonusName={(sourceId) => session.names.routeBonus(sourceId)}
             trainName={(id) => session.trainDepot.trainDefinition(id).name}
         />
@@ -113,17 +123,17 @@
         </span>
         {#if routes.drawnReason}<p class="note" role="alert">{routes.drawnReason}</p>
         {:else if routes.reducedRun && !routes.reducedRun.allowed}<p class="note" role="alert">
-                This run earns {money(routes.reducedRun.revenue)}; the most possible is
+                This run earns {money(routes.reducedRun.revenue)}; {target.phrase} is
                 {money(routes.revenueToReach ?? 0)}.
                 {#if routes.reducedRun.subsidyToBeat !== undefined}
-                    <br />To run for less, it must bring more {subsidyName} than
+                    <br />To run for less, it must bring more {runNames.subsidy} than
                     {money(routes.reducedRun.subsidyToBeat)}. It brings
                     {money(routes.reducedRun.subsidy)}.
                 {/if}
             </p>
         {:else if routes.reducedRun}<p class="note">
-                This run earns {money(routes.reducedRun.revenue)}, less than the
-                {money(routes.revenueToReach ?? 0)} possible, and brings {subsidyName} of
+                This run earns {money(routes.reducedRun.revenue)}, less than {target.phrase},
+                {money(routes.revenueToReach ?? 0)}, and brings {runNames.subsidy} of
                 {money(routes.reducedRun.subsidy)} instead of
                 {money(routes.reducedRun.subsidyToBeat ?? 0)}.
             </p>
@@ -135,11 +145,9 @@
         {:else if routes.editable && !drawn}<small>Tap a train to draw its route.</small>
         {/if}
         {#if drawn && routes.revenueToReach !== undefined && !routes.reducedRun}<small
-                >Most possible: {money(routes.revenueToReach)}.</small
+                >{target.label}: {money(routes.revenueToReach)}.</small
             >{/if}
-        {#if !drawn && !routes.solved?.exhaustive}<small
-                >Best routes found within the search time.</small
-            >{/if}
+        {#if !drawn && !routes.proven}<small>Best routes found within the search time.</small>{/if}
     {/if}
 </section>
 
@@ -165,7 +173,7 @@
         gap: 8px;
     }
     .run {
-        color: #fff;
+        color: var(--rail-solid-text, #fff);
         background: var(--rail-solid, #443e35);
         border-color: var(--rail-focus, #443e35);
     }

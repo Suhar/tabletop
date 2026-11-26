@@ -68,6 +68,10 @@
         "packageId": "south-african-railroads"
     },
     {
+        "gameId": "locomotive-werks",
+        "packageId": "locomotive-werks"
+    },
+    {
         "gameId": "reef-encounter",
         "packageId": "reef-encounter"
     },
@@ -222,6 +226,10 @@
     {
         "gameId": "1860",
         "packageId": "1860"
+    },
+    {
+        "gameId": "18usa",
+        "packageId": "18usa"
     },
     {
         "gameId": "earendel",

@@ -1,9 +1,12 @@
 import { Notification } from '@tabletop/common'
+import type { Locale } from '@tabletop/email/i18n'
 import { NotificationSubscription } from '../subscriptions/notificationSubscription.js'
 
 export enum TransportType {
     WebPush = 'webPush',
-    Discord = 'discord'
+    Discord = 'discord',
+    DiscordWebhook = 'discordWebhook',
+    Telegram = 'telegram'
 }
 
 export type NotificationResult = {
@@ -15,6 +18,7 @@ export interface NotificationTransport {
     type: TransportType
     sendNotification(
         subscription: NotificationSubscription,
-        notification: Notification
+        notification: Notification,
+        locale: Locale
     ): Promise<NotificationResult>
 }

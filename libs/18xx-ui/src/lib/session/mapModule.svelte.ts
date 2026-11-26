@@ -15,6 +15,7 @@ import {
     createMapDrawing,
     isMapSelectionValid,
     overfullCityKeys,
+    type MapDrawing,
     type MapSelection
 } from '../maps/mapDrawing.js'
 import { untrack } from 'svelte'
@@ -34,6 +35,7 @@ import {
 import type { RoutesModule, RoutesSession } from './routesModule.svelte.js'
 import type { StationsModule, StationsState } from './stationsModule.svelte.js'
 import type { TrackModule } from './trackModule.svelte.js'
+import type { TilePlanModule } from './tilePlanModule.svelte.js'
 import type { CompanyAuctionModule } from './companyAuctionModule.svelte.js'
 
 type MapState = Parameters<typeof stationMapTokens>[0] &
@@ -100,6 +102,7 @@ type Stations = Pick<
 export type HomeOffer = Pick<CompanyAuctionModule, 'homePositions' | 'chooseHome' | 'chosenHome'>
 type CityOffer = { locationIds: readonly string[]; select(selection: MapSelection): void }
 type Routes = Pick<RoutesModule<RoutesSession['state']>, 'tap'>
+type Plan = Pick<TilePlanModule, 'locationId' | 'inventory' | 'tap' | 'clear'>
 
 export class MapModule {
     showTrackAccess = $state(true)
@@ -113,6 +116,7 @@ export class MapModule {
         private readonly stations: Stations,
         private readonly routes: Routes,
         private readonly homeOffers: readonly HomeOffer[],
+        private readonly plan: Plan,
         private readonly displayState: () => MapState = () => session.state
     ) {}
 
@@ -140,9 +144,20 @@ export class MapModule {
     private cityOffer = $derived(this.cityOffers.find((offer) => offer.locationIds.length))
     offeredCityLocationIds = $derived(this.cityOffer?.locationIds ?? [])
 
-    // Held apart so a display state that only moves tokens doesn't redraw the board.
-    private tileInventory = $derived.by(() => this.displayState().tileInventory)
-    private placedLocationMarkers = $derived.by(() => this.displayState().locationMarkers)
+    // Held apart and keyed, so a display state that only moves tokens, or an action that leaves the
+    // map as it was, doesn't redraw the board.
+    private tileInventoryKey = $derived.by(() => JSON.stringify(this.displayState().tileInventory))
+    private tileInventory = $derived.by(() => {
+        void this.tileInventoryKey
+        return untrack(() => this.displayState().tileInventory)
+    })
+    private placedLocationMarkerKey = $derived.by(() =>
+        JSON.stringify(this.displayState().locationMarkers)
+    )
+    private placedLocationMarkers = $derived.by(() => {
+        void this.placedLocationMarkerKey
+        return untrack(() => this.displayState().locationMarkers)
+    })
     private stateMarkers = $derived.by(() => this.view().stateMarkers?.(this.displayState()) ?? [])
     // Keyed, so a display state implying the same markers doesn't redraw the board.
     private stateMarkerKey = $derived.by(() => JSON.stringify(this.stateMarkers))
@@ -168,14 +183,19 @@ export class MapModule {
     private companies = $derived.by(() => this.displayState().companies)
     private certificates = $derived.by(() => this.displayState().certificates)
     private phaseId = $derived.by(() => this.displayState().phaseId)
-    private liftedPrivateBlocks = $derived.by(() =>
+    private liftedPrivateBlockKey = $derived.by(() =>
         liftedPrivateBlocks(this.view().map.markedPrivateIds, this.session.rules.privateRules, {
             companies: this.companies,
             certificates: this.certificates,
             phaseId: this.phaseId
-        })
+        }).join('|')
     )
-    scene = $derived.by(() => this.draw(this.tileInventory))
+    private liftedPrivateBlocks = $derived(
+        this.liftedPrivateBlockKey ? this.liftedPrivateBlockKey.split('|') : []
+    )
+    // The last board drawn, whose unchanged locations the next drawing reuses.
+    private drawnScene: MapDrawing | undefined
+    scene = $derived.by(() => (this.drawnScene = this.draw(this.tileInventory, this.drawnScene)))
     tokens = $derived.by(() => stationMapTokens(this.displayState(), this.view()))
     tileCounts = $derived.by(() => this.view().tileSet.counts(this.session.state.tileInventory))
     /** The tiles of the supply, which the manifest lists; the board's own tiles are not among them. */
@@ -192,13 +212,16 @@ export class MapModule {
     private previewTileInventory = $derived.by(() =>
         this.landedLay ? this.track.construction.inventoryAfter(this.landedLay) : undefined
     )
-    displayedTileInventory = $derived.by(() => this.previewTileInventory ?? this.tileInventory)
+    displayedTileInventory = $derived.by(
+        () => this.plan.inventory ?? this.previewTileInventory ?? this.tileInventory
+    )
     displayedStationState = $derived.by(
         (): StationState => this.landedLayStations ?? this.stations.displayState
     )
-    displayedScene = $derived.by(() =>
-        this.previewTileInventory ? this.draw(this.previewTileInventory) : this.scene
-    )
+    displayedScene = $derived.by(() => {
+        const inventory = this.plan.inventory ?? this.previewTileInventory
+        return inventory ? this.draw(inventory, this.scene) : this.scene
+    })
     displayedTokens = $derived.by(() => {
         if (this.landedLayStations)
             return stationMapTokens(
@@ -225,6 +248,8 @@ export class MapModule {
         if (this.session.publishing) return undefined
         const constructionLocation = this.track.selection.locationId?.value
         if (constructionLocation) return { kind: 'hex', locationId: constructionLocation }
+        const plannedLocation = this.plan.locationId
+        if (plannedLocation) return { kind: 'hex', locationId: plannedLocation }
         const stationPosition = this.stations.selection.placement?.value.position
         if (stationPosition) return { kind: 'slot', ...stationPosition }
         const inspection = this.inspection
@@ -316,6 +341,7 @@ export class MapModule {
     }
     select(selection: MapSelection, allowInspection = true) {
         if (this.track.showChoices) {
+            this.plan.clear()
             const legal = this.track.locationIds
             const piece = tileGroupOf(this.view(), selection.locationId) ?? [selection.locationId]
             const previewed = this.track.preview?.locationId
@@ -335,6 +361,7 @@ export class MapModule {
         else if (this.stations.canPlace && this.stations.locationIds.includes(selection.locationId))
             this.placeStation(selection)
         else if (allowInspection) this.inspect(selection)
+        else this.plan.tap(selection.locationId)
     }
 
     private placeStation(selection: MapSelection) {
@@ -355,7 +382,7 @@ export class MapModule {
         this.stations.selectPosition(choice)
         void this.stations.confirm()
     }
-    private draw(inventory: MapState['tileInventory']) {
+    private draw(inventory: MapState['tileInventory'], previous?: MapDrawing) {
         const view = this.view()
         return createMapDrawing(
             view.map,
@@ -366,7 +393,8 @@ export class MapModule {
                 liftedPrivateBlocks: this.liftedPrivateBlocks,
                 overfullCities: this.overfullCities
             },
-            view
+            view,
+            previous
         )
     }
 }

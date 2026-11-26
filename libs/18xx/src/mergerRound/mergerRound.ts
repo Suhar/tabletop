@@ -29,7 +29,7 @@ import { SystemActionFirstHandler } from '../game/systemActionFirstHandler.js'
 import type { RailwayMap } from '../map/map.js'
 import { RailwayMapState } from '../map/mapState.js'
 import { cityBlockedForCompanies, replaceStation, type PlacedStation } from '../map/station.js'
-import { trainsAwaitingExport } from '../operating/exportTrains.js'
+import { exportAwaited } from '../operating/exportTrains.js'
 import { nextOperatingCompany, type OperatingRules } from '../operating/operatingSet.js'
 import { applyPresidencyChange, evaluatePresidency } from '../stock/presidency.js'
 import {
@@ -696,7 +696,7 @@ export class MergerRounds {
             set.privateIncomePaid &&
             !nextOperatingCompany(state) &&
             this.rules.phaseIds.includes(state.phaseId) &&
-            !trainsAwaitingExport(state, this.rules.operatingRules).length &&
+            !exportAwaited(state, this.rules.operatingRules) &&
             !state.gameEnding?.finalOperatingRound &&
             !(latest?.set === set.number && latest.round === set.roundNumber)
         )
@@ -769,8 +769,8 @@ export class MergerRounds {
 
     /**
      * The player with the most shares directs, even with only one; a tie goes to the owner of
-     * the merging minor earliest in operating order. The designer rules the All-Aboard text
-     * definitive over Grand Trunk's §9.2C (1861 §12.3, 1867 AAG §12.3).
+     * the merging minor earliest in operating order. The designer rules each title's Rules of
+     * Play definitive over Grand Trunk's §9.2C (1861 v2.0 §12.3, 1867 RoP §12.3).
      */
     private firstDirector(
         state: State,

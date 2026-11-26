@@ -6,6 +6,7 @@ import { AuthorizationService } from './authorizationService.svelte.js'
 import { stubLocalStorage, stubSessionStorage } from '$lib/test/localStorageStub'
 import { reauthentication } from '$lib/stores/reauthentication.svelte'
 import { signInWithGoogle } from '$lib/utils/googleSignIn'
+import { getLocale } from '$lib/paraglide/runtime'
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }))
 
@@ -31,7 +32,7 @@ describe('AuthorizationService developer tools', () => {
         { roles: [Role.Admin], expected: true },
         { roles: [Role.User], expected: false }
     ])('allows developer tools for $roles', ({ roles, expected }) => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(createUser(roles))
 
         expect(service.canUseDeveloperTools).toBe(expected)
@@ -41,7 +42,7 @@ describe('AuthorizationService developer tools', () => {
     })
 
     it('does not grant admin capabilities to a developer', () => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(createUser([Role.Developer]))
         service.adminCapabilitiesEnabled = true
 
@@ -56,7 +57,7 @@ describe('AuthorizationService session lifecycle', () => {
         const api = new TabletopApi()
         const first = { ...createUser([Role.User]), id: 'first', timeZone: 'UTC' }
         const second = { ...createUser([Role.User]), id: 'second', timeZone: 'UTC' }
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(first)
         const link = vi
             .spyOn(api, 'linkGoogle')
@@ -84,38 +85,38 @@ describe('AuthorizationService session lifecycle', () => {
     })
 
     it('cancels confirmation when another account is adopted', () => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(createUser([Role.User]))
-        reauthentication.request({ description: 'link Google', retry: vi.fn() })
+        reauthentication.request({ purpose: 'link-google', retry: vi.fn() })
         service.setSessionUser({ ...createUser([Role.User]), id: 'another-user' })
         expect(reauthentication.pending).toBeUndefined()
     })
 
     it('cancels confirmation on a new login to the same account', async () => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         const user = { ...createUser([Role.User]), timeZone: 'UTC' }
         service.setSessionUser(user)
-        reauthentication.request({ description: 'link Google', retry: vi.fn() })
+        reauthentication.request({ purpose: 'link-google', retry: vi.fn() })
         await service.onLogin(user)
         expect(reauthentication.pending).toBeUndefined()
     })
 
     it('keeps confirmation during a profile refresh for the same account', () => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         const user = createUser([Role.User])
         service.setSessionUser(user)
-        reauthentication.request({ description: 'link Google', retry: vi.fn() })
+        reauthentication.request({ purpose: 'link-google', retry: vi.fn() })
         const pending = reauthentication.pending
         service.setSessionUser({ ...user, timeZone: 'UTC' })
         expect(reauthentication.pending).toBe(pending)
     })
 
     it('does not reopen confirmation when an old request is refused after logout', async () => {
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn())
+        const service = new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(createUser([Role.User]))
         const response = Promise.withResolvers<void>()
         const request = reauthentication.run({
-            description: 'link Google',
+            purpose: 'link-google',
             retry: () => response.promise
         })
         service.clearSessionUser()
@@ -131,7 +132,12 @@ describe('AuthorizationService session lifecycle', () => {
 
     it('notifies after establishing a session and after signing out and back in', () => {
         const onSessionUserSet = vi.fn()
-        const service = new AuthorizationService(new TabletopApi(), onSessionUserSet, vi.fn())
+        const service = new AuthorizationService(
+            new TabletopApi(),
+            onSessionUserSet,
+            vi.fn(),
+            vi.fn()
+        )
         expect(onSessionUserSet).not.toHaveBeenCalled()
         service.setSessionUser(createUser([Role.User]))
         expect(onSessionUserSet).toHaveBeenCalledTimes(1)
@@ -150,7 +156,7 @@ describe('AuthorizationService session lifecycle', () => {
                 endSession = resolve
             })
         )
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
         service.setSessionUser(createUser([Role.User]))
 
         const signingOut = service.logout()
@@ -170,7 +176,7 @@ describe('AuthorizationService session lifecycle', () => {
                 signedIn ? createUser([Role.User]) : undefined
             )
             const onSessionUserSet = vi.fn()
-            const service = new AuthorizationService(api, onSessionUserSet, vi.fn())
+            const service = new AuthorizationService(api, onSessionUserSet, vi.fn(), vi.fn())
             await Promise.all([service.initialize(), service.initialize()])
             expect(onSessionUserSet).toHaveBeenCalledTimes(signedIn ? 1 : 0)
             expect(api.getSelf).toHaveBeenCalledTimes(1)
@@ -180,7 +186,7 @@ describe('AuthorizationService session lifecycle', () => {
 
 describe('AuthorizationService stored session user', () => {
     function storeUser(user: User) {
-        new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn()).setSessionUser(user)
+        new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn()).setSessionUser(user)
     }
 
     function pendingSelf(api: TabletopApi) {
@@ -197,7 +203,7 @@ describe('AuthorizationService stored session user', () => {
         storeUser(createUser([Role.User]))
         const api = new TabletopApi()
         pendingSelf(api)
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
 
         await service.initialize()
 
@@ -209,7 +215,7 @@ describe('AuthorizationService stored session user', () => {
         storeUser(createUser([Role.User]))
         const api = new TabletopApi()
         const resolveSelf = pendingSelf(api)
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
         await service.initialize()
 
         resolveSelf(createUser([Role.User, Role.Admin]))
@@ -223,7 +229,7 @@ describe('AuthorizationService stored session user', () => {
         storeUser(createUser([Role.User]))
         const api = new TabletopApi()
         const resolveSelf = pendingSelf(api)
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
         await service.initialize()
 
         resolveSelf(undefined)
@@ -238,7 +244,7 @@ describe('AuthorizationService stored session user', () => {
         storeUser(createUser([Role.User]))
         const api = new TabletopApi()
         const resolveSelf = pendingSelf(api)
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
         await service.initialize()
 
         resolveSelf({ ...createUser([Role.User]), status: UserStatus.Incomplete })
@@ -252,7 +258,7 @@ describe('AuthorizationService stored session user', () => {
         localStorage.setItem('sessionUser', '{"id":1}')
         const api = new TabletopApi()
         const resolveSelf = pendingSelf(api)
-        const service = new AuthorizationService(api, vi.fn(), vi.fn())
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
 
         const initialization = service.initialize()
         expect(service.getSessionUser()).toBeUndefined()
@@ -264,12 +270,86 @@ describe('AuthorizationService stored session user', () => {
 
     it('forgets the stored user and notifies when the session is cleared', () => {
         const onSessionUserCleared = vi.fn()
-        const service = new AuthorizationService(new TabletopApi(), vi.fn(), onSessionUserCleared)
+        const service = new AuthorizationService(
+            new TabletopApi(),
+            vi.fn(),
+            onSessionUserCleared,
+            vi.fn()
+        )
         service.setSessionUser(createUser([Role.User]))
 
         service.clearSessionUser()
 
         expect(localStorage.getItem('sessionUser')).toBeNull()
         expect(onSessionUserCleared).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('AuthorizationService seen language', () => {
+    function signedInUser(seenLocale?: string): User {
+        return { ...createUser([Role.User]), timeZone: 'UTC', seenLocale }
+    }
+
+    function loadWithServerUser(serverUser: User) {
+        const api = new TabletopApi()
+        vi.spyOn(api, 'getSelf').mockResolvedValue(serverUser)
+        const report = vi
+            .spyOn(api, 'updateUserSeenLocale')
+            .mockImplementation(async (locale) => ({ ...serverUser, seenLocale: locale }))
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
+        return { service, report }
+    }
+
+    it('does not report a page load in the language the server already has', async () => {
+        const { service, report } = loadWithServerUser(signedInUser(getLocale()))
+        await service.initialize()
+
+        expect(report).not.toHaveBeenCalled()
+    })
+
+    it('reports a different language once and keeps the saved user', async () => {
+        const { service, report } = loadWithServerUser(signedInUser())
+        await service.initialize()
+
+        await vi.waitFor(() => expect(service.getSessionUser()?.seenLocale).toBe(getLocale()))
+        expect(report).toHaveBeenCalledTimes(1)
+        expect(report).toHaveBeenCalledWith(getLocale())
+    })
+
+    it('does not report again when a stored user is verified unchanged', async () => {
+        const storedUser = signedInUser(getLocale())
+        new AuthorizationService(new TabletopApi(), vi.fn(), vi.fn(), vi.fn()).setSessionUser(
+            storedUser
+        )
+        const { service, report } = loadWithServerUser(storedUser)
+        await service.initialize()
+        await service.whenSessionVerified()
+
+        expect(report).not.toHaveBeenCalled()
+    })
+
+    it('reports a different language on sign-in', async () => {
+        const api = new TabletopApi()
+        const report = vi
+            .spyOn(api, 'updateUserSeenLocale')
+            .mockImplementation(async (locale) => signedInUser(locale))
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
+        await service.onLogin(signedInUser())
+
+        expect(report).toHaveBeenCalledTimes(1)
+        expect(report).toHaveBeenCalledWith(getLocale())
+    })
+
+    it('keeps the session when the report fails', async () => {
+        const api = new TabletopApi()
+        vi.spyOn(api, 'getSelf').mockResolvedValue(signedInUser())
+        vi.spyOn(api, 'updateUserSeenLocale').mockRejectedValue(new Error('offline'))
+        const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const service = new AuthorizationService(api, vi.fn(), vi.fn(), vi.fn())
+        await service.initialize()
+
+        await vi.waitFor(() => expect(logged).toHaveBeenCalledTimes(1))
+        expect(service.getSessionUser()?.id).toBe('user-id')
+        logged.mockRestore()
     })
 })

@@ -3,21 +3,23 @@ import { actsFor } from '../finance/receivership.js'
 import * as Type from 'typebox'
 import { Owner, cashOwnedBy } from '../finance/finance.js'
 import type { CompanyState } from '../company/companyState.js'
-import { RailwayMapState, type MapStateData } from '../map/mapState.js'
-import type { RailwayMap } from '../map/map.js'
+import { RailwayMapState, type MapStateData, type MapTile } from '../map/mapState.js'
+import type { MapLocation, RailwayMap } from '../map/map.js'
 import {
     PlacedStation,
     type Station,
     type StationReservation,
     type StationState
 } from '../map/station.js'
-import { reservationFulfilled } from '../stations/stationPlacement.js'
+import { reservationFulfilled, type StationStep } from '../stations/stationPlacement.js'
+import { awaitsFinishStations } from '../stations/stationsWithTrackHandler.js'
 import { CashPayment } from '../finance/cashPayments.js'
 import {
     TilePlacement,
     withTiles,
     type BoardTile,
     type TileInventory,
+    type TilePiece,
     type TileSet
 } from '../tiles/inventory.js'
 import {
@@ -28,7 +30,7 @@ import {
     type TileNode,
     type TilePath
 } from '../tiles/tile.js'
-import { rotateTileEdge, rotateTileFace } from '../tiles/topology.js'
+import { TileEdges, faceRunsToEdge, rotateTileEdge, rotateTileFace } from '../tiles/topology.js'
 import { carriedTrackStops, withTrackStops, type TrackStop } from '../tiles/trackStops.js'
 import { ConstructionReachability } from './constructionReachability.js'
 import { addedTrack, fixedNodeRevenue, type TileNodeMapping } from './trackUpgrade.js'
@@ -36,6 +38,7 @@ import {
     keepsExits,
     keptFace,
     replacementMappings,
+    colorStep,
     replacesColorAndStops,
     requiredLabels,
     sameLabels,
@@ -57,6 +60,12 @@ export const TrackStep = Type.Object(
                     locationId: Type.String(),
                     /** The tile laid; stored games from before it was recorded lack it. */
                     definitionId: Type.Optional(Type.String()),
+                    /**
+                     * Whether the lay counted as an upgrade, where its colour does not say: it
+                     * skipped colours, as 18USA's plain track does as an upgrade and its green
+                     * cities on empty hexes do as a lay (§12.2.4).
+                     */
+                    upgrade: Type.Optional(Type.Boolean()),
                     // Stored games from before these stopped being recorded may hold them; never read.
                     color: Type.Optional(Type.Unsafe<never>(Type.String())),
                     cost: Type.Optional(Type.Unsafe<never>(Type.Integer({ minimum: 0 })))
@@ -135,6 +144,8 @@ export const TrackLayDetails = Type.Object(
         consentPlayerId: Type.Optional(Type.String()),
         terrainCost: Type.Integer({ minimum: 0 }),
         allowanceCost: Type.Integer({ minimum: 0 }),
+        /** The lay skipped colours, and whether that counts as an upgrade (18USA §12.2.4). */
+        upgrade: Type.Optional(Type.Boolean()),
         /** Who the allowance's cost is paid to, where not the bank. */
         allowanceRecipient: Type.Optional(Owner),
         movedStations: Type.Array(PlacedStation),
@@ -149,8 +160,17 @@ export const TrackLayDetails = Type.Object(
     { additionalProperties: false }
 )
 export type TrackLayDetails = Type.Static<typeof TrackLayDetails>
+/** An edge new track crosses, and what its border costs. */
+type BorderCrossing = { edge: TileEdge; cost: number }
+/** A tile laid on a hex a particular way, whoever lays it. */
+export type TrackPlacement = Omit<TrackRequest, 'companyId'>
+/** A way a tile may one day replace a hex's tile, with the supply's piece for it if any remains. */
+export type FutureLay = TrackPlacement & { placement?: TilePlacement }
 export type TrackEvaluation =
     { details: TrackLayDetails; reason?: never } | { reason: string; details?: never }
+/** What a lay skipping colours costs beyond the lay, and whether it counts as an upgrade. */
+export type ColorSkip = { cost: number; upgrade: boolean }
+
 export interface TrackRules {
     map: RailwayMap
     tileSet: TileSet
@@ -185,6 +205,11 @@ export interface TrackRules {
     sharesFullCities?: true
     /** Whether the company's network may continue through a revenue center, as its routes may. */
     stopAllowed?(state: ConstructionState, companyId: string, center: RevenueCenter): boolean
+    /**
+     * Whether the company's network may continue through this city though other companies'
+     * stations fill it, as 18USA's Company Town never blocks (P27).
+     */
+    passesStations?(state: ConstructionState, companyId: string, center: RevenueCenter): boolean
     preservesStops(before: TileFace, after: TileFace): boolean
     /**
      * Stops of the replaced tile that this replacement removes, by their node ids: the rest of
@@ -201,6 +226,13 @@ export interface TrackRules {
     /** Whether a tile on this hex must be one of the tiles of its colour with the most exits. */
     mostExits?(before: TileFace): boolean
     restriction(state: ConstructionState, request: TrackRequest): string | undefined
+    /**
+     * Why a tile may never lie on this hex this way, whatever the game's state: a rule of the
+     * hex, the tile, its rotation and the tile it replaces, such as 1822's London tiles laid only
+     * unrotated. Looking ahead at a hex honours it as every lay does; a rule that depends on the
+     * game, such as the phase or who lays, belongs in ``restriction``.
+     */
+    placementRestriction?(placement: TrackPlacement, before: MapTile): string | undefined
     /**
      * Whether a lay is allowed: on a home hex, touching the company's network (``connected``),
      * adding connected track, raising a connected city's revenue, or putting a city, town or
@@ -231,11 +263,26 @@ export interface TrackRules {
     ): number
     terrainCost?(state: ConstructionState, request: TrackRequest, cost: number): number
     /**
+     * A tile that replaces a face more than one colour below it, where the title allows one: what
+     * that costs beyond the lay, and whether it counts as an upgrade, as 18USA's plain track
+     * skipping colours at $10 each, and its green city on an empty city hex, from phase 5
+     * (§12.2.4). Undefined forbids it.
+     */
+    colorSkip?(
+        state: ConstructionState,
+        locationId: string,
+        before: TileFace,
+        after: TileFace
+    ): ColorSkip | undefined
+    /**
      * Tiles a lay places beside its own as one piece, such as 18RoyalGorge's brown gorge across
      * its three hexes: drawn with it while previewed and laid with it, for its one lay and cost.
      * Stations stay on a companion hex's nodes as they were, so its tile keeps their node ids.
      */
-    companionTiles?(state: ConstructionState, details: TrackLayDetails): readonly BoardTile[]
+    companionTiles?(
+        state: ConstructionState,
+        details: Pick<TrackLayDetails, 'locationId' | 'definitionId' | 'rotation'>
+    ): readonly BoardTile[]
     /** Effects of a lay just made; `ordinary` is false for a lay outside the step's own lays. */
     afterLay?(
         state: ConstructionState,
@@ -290,12 +337,22 @@ export class TrackConstruction {
         )
     }
     choices(locationId: string): TrackLayDetails[] {
-        const companyId = this.state.trackStep?.companyId
-        if (!companyId || !this.canReach(locationId)) return []
-        const choices: TrackLayDetails[] = []
         const reservations = this.state.stationReservations.filter(
             (reservation) => reservation.locationId === locationId
         )
+        const choices: TrackLayDetails[] = []
+        for (const details of this.lays(locationId))
+            if (!choices.some((choice) => samePlacement(choice, details, reservations)))
+                choices.push(details)
+        return choices
+    }
+    hasChoice(locationId: string, test: (details: TrackLayDetails) => boolean = () => true) {
+        for (const details of this.lays(locationId)) if (test(details)) return true
+        return false
+    }
+    private *lays(locationId: string): Generator<TrackLayDetails> {
+        const companyId = this.state.trackStep?.companyId
+        if (!companyId || !this.canReach(locationId)) return
         for (const definition of this.rules.tileSet.definitions) {
             if (
                 !this.basicTileAllowed(locationId, definition) ||
@@ -303,7 +360,7 @@ export class TrackConstruction {
                     this.rules.allowance(
                         this.state,
                         definition.face.color,
-                        this.replacesTile(locationId)
+                        this.countsAsUpgrade(locationId, definition)
                     )
             )
                 continue
@@ -316,24 +373,17 @@ export class TrackConstruction {
                     rotateTileFace(definition.face, rotation)
                 ).face
                 for (const nodeMapping of this.layMappings(locationId, before, after)) {
-                    const result = this.evaluate({
+                    const { details } = this.evaluate({
                         companyId,
                         locationId,
                         definitionId: definition.id,
                         rotation,
                         nodeMapping
                     })
-                    if (
-                        result.details &&
-                        !choices.some((choice) =>
-                            samePlacement(choice, result.details, reservations)
-                        )
-                    )
-                        choices.push(result.details)
+                    if (details) yield details
                 }
             }
         }
-        return choices
     }
     /**
      * The players whose agreement lets the lay go ahead, the one asked unless another is named
@@ -397,12 +447,14 @@ export class TrackConstruction {
         const allowance = this.rules.allowance(
             this.state,
             definition.face.color,
-            this.replacesTile(locationId)
+            this.countsAsUpgrade(locationId, definition)
         )
         if ('reason' in allowance) return allowance
-        const restriction = this.rules.restriction(this.state, request)
-        if (restriction) return { reason: restriction }
         const previous = this.mapState.tile(locationId)
+        const restriction =
+            this.rules.placementRestriction?.(request, previous) ??
+            this.rules.restriction(this.state, request)
+        if (restriction) return { reason: restriction }
         const before = rotateTileFace(previous.face, previous.rotation)
         const { face: after, trackStops } = replacingFace(
             this.rules,
@@ -418,39 +470,13 @@ export class TrackConstruction {
             )
         )
             return { reason: 'Existing track and stops must be preserved' }
-        let borderCost = 0
-        const edges = new Set(
-            after.paths.flatMap((path) =>
-                path.endpoints.flatMap((end) => (end.kind === 'edge' ? [end.edge] : []))
-            )
+        const crossing = this.newTrackBorders(location, before, after)
+        if ('reason' in crossing) return crossing
+        const borderCost = crossing.borders.reduce(
+            (sum, { edge, cost }) =>
+                sum + (this.rules.borderCost?.(this.state, request, edge, cost) ?? cost),
+            0
         )
-        for (const edge of edges) {
-            const neighbor = this.rules.map.neighbor(locationId, edge)
-            if (!neighbor) return { reason: 'Track cannot run off the map' }
-            const opposite = rotateTileEdge(edge, 3)
-            const borders = [
-                ...(location.borders?.filter((border) => border.edge === edge) ?? []),
-                ...(neighbor.borders?.filter((border) => border.edge === opposite) ?? [])
-            ]
-            if (borders.some((border) => border.kind === 'impassable'))
-                return { reason: 'Track cannot cross an impassable border' }
-            const adjacent = this.mapState.tile(neighbor.id)
-            if (
-                !neighbor.buildable &&
-                !rotateTileFace(adjacent.face, adjacent.rotation).paths.some((path) =>
-                    path.endpoints.some((end) => end.kind === 'edge' && end.edge === opposite)
-                )
-            )
-                return { reason: 'Track must meet the track in a fixed neighboring hex' }
-            if (
-                !before.paths.some((path) =>
-                    path.endpoints.some((end) => end.kind === 'edge' && end.edge === edge)
-                )
-            ) {
-                const cost = Math.max(0, ...borders.map((border) => border.cost ?? 0))
-                borderCost += this.rules.borderCost?.(this.state, request, edge, cost) ?? cost
-            }
-        }
         const printedTerrainCost =
             (!previous.placement ? (location.terrain?.cost ?? 0) : 0) +
             (before.upgradeCost ?? 0) +
@@ -458,20 +484,15 @@ export class TrackConstruction {
         const terrainCost =
             this.rules.terrainCost?.(this.state, request, printedTerrainCost) ?? printedTerrainCost
         const consentPlayerId = this.rules.consentPlayerId?.(this.state, request)
-        const cost = terrainCost + allowance.cost
+        const skip = this.colorSkip(locationId, definition)
+        const cost = terrainCost + allowance.cost + (skip?.cost ?? 0)
         const cash = cashOwnedBy(this.state, this.payer ?? { kind: 'company', companyId })
         const borrowable = this.payer
             ? 0
             : (this.rules.borrowing?.capacity(this.state, companyId) ?? 0)
         if (cash === undefined || (cash !== 'unlimited' && cash + borrowable < cost))
             return { reason: 'The company cannot afford construction' }
-        const piece =
-            this.availablePieces(definitionId)[0] ??
-            this.rules.tileSet.pieces.find(
-                (piece) =>
-                    piece.id === previous.placement?.pieceId &&
-                    piece.faceDefinitionIds.includes(definitionId)
-            )
+        const piece = this.supplyPiece(locationId, definitionId)
         if (!piece) return { reason: 'No tile remains in the supply' }
         const migrated = this.migrateStations(
             request,
@@ -531,6 +552,7 @@ export class TrackConstruction {
                 ...(previous.placement ? { previous: previous.placement } : {}),
                 cost,
                 terrainCost,
+                ...(skip ? { upgrade: skip.upgrade } : {}),
                 ...(consentPlayerId ? { consentPlayerId } : {}),
                 allowanceCost: allowance.cost,
                 ...(allowance.recipient ? { allowanceRecipient: allowance.recipient } : {}),
@@ -543,7 +565,9 @@ export class TrackConstruction {
     stationsAfter(details: TrackLayDetails): StationState {
         return stationsAfterLay(this.state, details, this.rules)
     }
-    inventoryAfter(details: TrackLayDetails): TileInventory {
+    inventoryAfter(
+        details: Pick<TrackLayDetails, 'locationId' | 'definitionId' | 'rotation' | 'placement'>
+    ): TileInventory {
         const { tileSet } = this.rules
         return withTiles(
             tileSet,
@@ -556,12 +580,11 @@ export class TrackConstruction {
         )
     }
     private network(companyId: string): ConstructionReachability {
-        return (this.reachability ??= new ConstructionReachability(
-            this.mapState,
+        return (this.reachability ??= trackReachability(
             this.state,
+            this.rules,
             companyId,
-            (locationId, nodeId) =>
-                this.rules.stopAllowed?.(this.state, companyId, { locationId, nodeId }) === false
+            this.mapState
         ))
     }
     private availablePieces(definitionId: string): ReturnType<TileSet['availablePieces']> {
@@ -571,6 +594,146 @@ export class TrackConstruction {
             this.pieces.set(definitionId, pieces)
         }
         return pieces
+    }
+    /** A piece the hex may take this tile from: one in the supply, or the hex's own flipped over. */
+    private supplyPiece(locationId: string, definitionId: string): TilePiece | undefined {
+        const previous = this.mapState.tile(locationId).placement
+        return (
+            this.availablePieces(definitionId)[0] ??
+            this.rules.tileSet.pieces.find(
+                (piece) =>
+                    piece.id === previous?.pieceId && piece.faceDefinitionIds.includes(definitionId)
+            )
+        )
+    }
+    /**
+     * Every way a tile of the set may replace the hex's tile by the map and the tiles alone, as a
+     * player looking ahead sees it: whatever the phase, the company, its cash and reach, the
+     * hex's stations or the title's restrictions. A tile the supply has run out of has no
+     * placement.
+     */
+    futureLays(locationId: string): FutureLay[] {
+        const lays = [...this.unrankedFutureLays(locationId)]
+        return this.rules.mostExits?.(this.mapState.tile(locationId).face)
+            ? this.withMostExits(lays)
+            : lays
+    }
+    /** Whether some tile may one day replace the hex's tile, as ``futureLays`` would offer. */
+    hasFutureLay(locationId: string): boolean {
+        return !this.unrankedFutureLays(locationId).next().done
+    }
+    private *unrankedFutureLays(locationId: string): Generator<FutureLay> {
+        const location = this.rules.map.location(locationId)
+        const tile = this.mapState.tile(locationId)
+        const before = rotateTileFace(tile.face, tile.rotation)
+        for (const definition of this.rules.tileSet.definitions) {
+            if (!this.basicTileAllowed(locationId, definition, this.rules.colorOrder)) continue
+            const piece = this.supplyPiece(locationId, definition.id)
+            for (const rotation of Rotations) {
+                const { face: after, trackStops } = replacingFace(
+                    this.rules,
+                    before,
+                    rotateTileFace(definition.face, rotation)
+                )
+                if ('reason' in this.newTrackBorders(location, before, after)) continue
+                const placement = this.layMappings(locationId, before, after)
+                    .map((nodeMapping) => ({
+                        locationId,
+                        definitionId: definition.id,
+                        rotation,
+                        nodeMapping
+                    }))
+                    .find((placement) => !this.rules.placementRestriction?.(placement, tile))
+                if (!placement) continue
+                yield {
+                    ...placement,
+                    ...(piece && this.companionsInSupply(placement)
+                        ? {
+                              placement: {
+                                  pieceId: piece.id,
+                                  definitionId: definition.id,
+                                  rotation,
+                                  ...(trackStops.length ? { trackStops } : {})
+                              }
+                          }
+                        : {})
+                }
+            }
+        }
+    }
+    private companionsInSupply(placement: TrackPlacement): boolean {
+        return (this.rules.companionTiles?.(this.state, placement) ?? []).every(
+            (tile) => this.availablePieces(tile.definitionId).length > 0
+        )
+    }
+    /** Whether the hex has track, or a neighbour's track runs to the edge they share. */
+    meetsTrack(locationId: string): boolean {
+        if (this.placedFace(locationId).paths.length) return true
+        return TileEdges.some((edge) => {
+            const neighbor = this.rules.map.neighbor(locationId, edge)
+            return (
+                !!neighbor && faceRunsToEdge(this.placedFace(neighbor.id), rotateTileEdge(edge, 3))
+            )
+        })
+    }
+    private placedFace(locationId: string): TileFace {
+        const tile = this.mapState.tile(locationId)
+        return rotateTileFace(tile.face, tile.rotation)
+    }
+    /**
+     * The lays a hex that must take the most exits of a colour allows: of each colour, those with
+     * no fewer exits than any the supply still has, as ``hasMoreExitsElsewhere`` judges a lay.
+     */
+    private withMostExits(lays: readonly FutureLay[]): FutureLay[] {
+        const exits = (lay: FutureLay) => {
+            const definition = this.tileDefinition(lay.definitionId)
+            assertExists(definition, 'A future lay names a known tile')
+            return { color: definition.face.color, count: tileExitCount(definition.face) }
+        }
+        const most = new Map<string, number>()
+        for (const lay of lays.filter((lay) => lay.placement)) {
+            const { color, count } = exits(lay)
+            most.set(color, Math.max(count, most.get(color) ?? 0))
+        }
+        return lays.filter((lay) => {
+            const { color, count } = exits(lay)
+            return count >= (most.get(color) ?? 0)
+        })
+    }
+    /**
+     * The borders the face's new track crosses, by edge, or why its track cannot leave the hex:
+     * off the map, across an impassable border, or onto a fixed hex without track to meet it.
+     */
+    private newTrackBorders(
+        location: MapLocation,
+        before: TileFace,
+        after: TileFace
+    ): { reason: string } | { borders: BorderCrossing[] } {
+        const borders: BorderCrossing[] = []
+        const edges = new Set(
+            after.paths.flatMap((path) =>
+                path.endpoints.flatMap((end) => (end.kind === 'edge' ? [end.edge] : []))
+            )
+        )
+        for (const edge of edges) {
+            const neighbor = this.rules.map.neighbor(location.id, edge)
+            if (!neighbor) return { reason: 'Track cannot run off the map' }
+            const opposite = rotateTileEdge(edge, 3)
+            const crossed = [
+                ...(location.borders?.filter((border) => border.edge === edge) ?? []),
+                ...(neighbor.borders?.filter((border) => border.edge === opposite) ?? [])
+            ]
+            if (crossed.some((border) => border.kind === 'impassable'))
+                return { reason: 'Track cannot cross an impassable border' }
+            if (!neighbor.buildable && !faceRunsToEdge(this.placedFace(neighbor.id), opposite))
+                return { reason: 'Track must meet the track in a fixed neighboring hex' }
+            if (!faceRunsToEdge(before, edge))
+                borders.push({
+                    edge,
+                    cost: Math.max(0, ...crossed.map((border) => border.cost ?? 0))
+                })
+        }
+        return { borders }
     }
     hasFutureUpgrade(locationId: string): boolean {
         const tile = this.mapState.tile(locationId)
@@ -605,6 +768,14 @@ export class TrackConstruction {
     private replacesTile(locationId: string): boolean {
         return this.rules.colorOrder.indexOf(this.mapState.tile(locationId).face.color) > 0
     }
+    private colorSkip(locationId: string, definition: TileDefinition): ColorSkip | undefined {
+        const before = this.mapState.tile(locationId).face
+        if (colorStep(this.rules, before, definition.face) < 2) return undefined
+        return this.rules.colorSkip?.(this.state, locationId, before, definition.face)
+    }
+    private countsAsUpgrade(locationId: string, definition: TileDefinition): boolean {
+        return this.replacesTile(locationId) || !!this.colorSkip(locationId, definition)?.upgrade
+    }
     private basicTileAllowed(
         locationId: string,
         definition: TileDefinition,
@@ -616,7 +787,13 @@ export class TrackConstruction {
         if (
             !location.buildable ||
             !colors.includes(after.color) ||
-            !replacesColorAndStops(this.rules, locationId, before, after)
+            !replacesColorAndStops(
+                this.rules,
+                locationId,
+                before,
+                after,
+                !!this.colorSkip(locationId, definition)
+            )
         )
             return false
         return (
@@ -864,18 +1041,41 @@ function sameMembers(first: readonly unknown[], second: readonly unknown[]): boo
     return JSON.stringify(keys(first)) === JSON.stringify(keys(second))
 }
 
-export function validateTrackStep(state: {
-    machineState: string
-    trackStep?: TrackStep
-    operatingSet?: { companyOrder: readonly string[] }
-}): void {
+export function validateTrackStep(
+    state: {
+        machineState: string
+        trackStep?: TrackStep
+        stationStep?: Pick<StationStep, 'companyId' | 'completed'>
+        operatingSet?: { companyOrder: readonly string[] }
+    },
+    { stationsWithTrack = false }: { stationsWithTrack?: boolean } = {}
+): void {
     if (state.machineState !== 'LayingTrack' && state.machineState !== 'PlacingStation') return
+    const { trackStep } = state
     assert(
-        state.trackStep && state.operatingSet?.companyOrder.includes(state.trackStep.companyId),
+        trackStep && state.operatingSet?.companyOrder.includes(trackStep.companyId),
         'Track step requires an operating company'
     )
-    assert(
-        state.trackStep.completed === (state.machineState !== 'LayingTrack'),
-        'Track completion does not match the machine state'
+    const finished =
+        state.machineState === 'PlacingStation' ||
+        (stationsWithTrack && awaitsFinishStations(state))
+    assert(trackStep.completed === finished, 'Track completion does not match the machine state')
+}
+
+/** The company's network as its track rules trace it: the stops it may not continue through, and the full cities it may. */
+export function trackReachability(
+    state: ConstructionState,
+    rules: Pick<TrackRules, 'map' | 'tileSet' | 'stopAllowed' | 'passesStations'>,
+    companyId: string,
+    mapState = new RailwayMapState(rules.map, rules.tileSet, state.tileInventory)
+): ConstructionReachability {
+    return new ConstructionReachability(
+        mapState,
+        state,
+        companyId,
+        (locationId, nodeId) =>
+            rules.stopAllowed?.(state, companyId, { locationId, nodeId }) === false,
+        (locationId, nodeId) =>
+            rules.passesStations?.(state, companyId, { locationId, nodeId }) ?? false
     )
 }

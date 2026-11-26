@@ -36,10 +36,20 @@ export type SolverTrain = {
     revenues: number[]
     first_bonus: number[]
     paying_stop_limit: number | null
+    /** Stops called at without counting toward the train, which pay outside the paying limit. */
+    uncounted?: boolean[]
+    /** Tokened-out cities the train may run through on its own allowance, which pay it nothing. */
+    blocked_passes?: number
     require_paying_token: boolean
     bonuses_along_route: boolean
     major_limit: number | null
-    connection_bonuses: { from: (number | null)[]; to: (number | null)[]; ends_only: boolean }[]
+    connection_bonuses: {
+        from: (number | null)[]
+        to: (number | null)[]
+        ends_only: boolean
+        /** Stops the route must also call at, one of each mask's, for the bonus. */
+        requires?: boolean[][]
+    }[]
     interconnections: { from: number[]; to: number[]; amount: number }[]
     allowed_stops: boolean[]
     /** The stops the train may pass without calling at them. */
@@ -78,9 +88,19 @@ export type SolverProblem = {
     minimum_cities_and_towns: number
     /** A route may not leave a hex and enter it again. */
     no_reentry: boolean
+    /** The hexes, by index, a route may not leave and enter again, when not every hex. */
+    no_reentry_hexes?: boolean[]
     /** How many blocked cities or towns the company's routes may run through, all together. */
     blocked_passes: number
+    /** The most of the company's routes that may stop in each of these stop groups. */
+    group_route_limits?: { group: number; routes: number }[]
     budget_ms: number
+    /**
+     * The time the search's stages are paced for, where the time left to it is not the time it
+     * was planned with: one of several searches under one limit takes the same course whatever
+     * the others left it.
+     */
+    pace_ms?: number
     memory_budget_bytes: number
     fleet?: SolverFleet
 }

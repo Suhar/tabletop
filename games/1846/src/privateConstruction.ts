@@ -72,13 +72,13 @@ export function constructionPrivateIds(
     state: PrivateConstructionState,
     playerId: string
 ): ConstructionPrivateId[] {
-    return ConstructionPrivateIds.filter(
-        (id) => new PrivateConstruction(state, playerId, id).choices([]).length > 0
+    return ConstructionPrivateIds.filter((id) =>
+        new PrivateConstruction(state, playerId, id).hasChoice()
     )
 }
+type PlannedLays = { state: PrivateConstructionState; lays: TrackLayDetails[] }
 type ConstructionPlan =
-    | { state: PrivateConstructionState; lays: TrackLayDetails[]; reason?: never }
-    | { reason: string; state?: never; lays?: never }
+    (PlannedLays & { reason?: never }) | { reason: string; state?: never; lays?: never }
 export class PrivateConstruction {
     constructor(
         readonly state: PrivateConstructionState,
@@ -89,9 +89,18 @@ export class PrivateConstruction {
         return this.privateId === 'LSL' ? 1 : 2
     }
     choices(requests: readonly TrackRequest[]): TrackLayDetails[] {
-        if (requests.length >= this.maximumLays) return []
         const plan = this.evaluate(requests, false)
-        if (!plan.state) return []
+        return plan.state ? [...this.offers(plan)] : []
+    }
+    hasChoice(): boolean {
+        const plan = this.evaluate([], false)
+        return !!plan.state && this.canExtend(plan)
+    }
+    private canExtend(plan: PlannedLays): boolean {
+        return !this.offers(plan).next().done
+    }
+    private *offers(plan: PlannedLays): Generator<TrackLayDetails> {
+        if (plan.lays.length >= this.maximumLays) return
         const companyId = privatePowerCompany(this.state, this.playerId, this.privateId)
         assertExists(companyId)
         const construction = privateTrackConstruction(
@@ -99,18 +108,14 @@ export class PrivateConstruction {
             this.terms(companyId),
             TrackRules1846
         )
-        return Locations[this.privateId]
-            .filter((id) => !requests.some((lay) => lay.locationId === id))
-            .flatMap((id) => construction.choices(id))
-            .filter((choice) => {
-                const plan = [...requests, choice]
-                if (requests.length) return this.evaluate(plan).state !== undefined
-                // A first lay must either complete the power or leave a second lay that does.
-                return (
-                    this.evaluate(plan, false).state !== undefined &&
-                    (this.evaluate(plan).state !== undefined || this.choices(plan).length > 0)
-                )
-            })
+        for (const locationId of Locations[this.privateId]) {
+            if (plan.lays.some((lay) => lay.locationId === locationId)) continue
+            for (const choice of construction.choices(locationId)) {
+                const next = this.extend(plan, choice)
+                // A lay must either complete the power or leave a further lay that does.
+                if (!this.incomplete(next) || this.canExtend(next)) yield choice
+            }
+        }
     }
     evaluate(requests: readonly TrackRequest[], complete = true): ConstructionPlan {
         const companyId = privatePowerCompany(this.state, this.playerId, this.privateId)
@@ -120,53 +125,53 @@ export class PrivateConstruction {
             return { reason: 'Choose one or two permitted tile lays.' }
         if (this.privateId === 'LM' && this.miamiConnected(this.state))
             return { reason: 'Cincinnati and Dayton are already connected.' }
-        const planned = stateWith(this.state, {
-            cash: structuredClone(this.state.cash),
-            bank: { ...this.state.bank }
-        })
-        const lays: TrackLayDetails[] = []
+        let plan: PlannedLays = { state: this.state, lays: [] }
         for (const request of requests) {
             if (
                 request.companyId !== companyId ||
-                lays.some((lay) => lay.locationId === request.locationId)
+                plan.lays.some((lay) => lay.locationId === request.locationId)
             )
                 return { reason: 'Use each permitted hex at most once.' }
             const result = privateTrackConstruction(
-                planned,
+                plan.state,
                 this.terms(companyId),
                 TrackRules1846
             ).evaluate(request)
             if (!result.details) return { reason: result.reason }
-            lays.push(
-                applyTrackLay(
-                    planned,
-                    TrackRules1846,
-                    result.details,
-                    { kind: 'company', companyId },
-                    false
-                )
-            )
+            plan = this.extend(plan, result.details)
         }
-        if (complete) {
-            const map = this.map(planned)
-            if (
-                (this.privateId === 'MC' || this.privateId === 'O&I') &&
-                lays.length === 2 &&
-                !map
-                    .connections(lays[0].locationId)
-                    .some((connection) => connection.neighborLocationId === lays[1].locationId)
-            )
-                return { reason: 'The two private tiles must connect to each other.' }
-            if (
-                this.privateId === 'LM' &&
-                (!this.miamiConnected(planned) ||
-                    !lays.every((lay) => this.miamiUsesNewExit(planned, lay)))
-            )
-                return {
-                    reason: 'Each Little Miami tile must add track used to connect Cincinnati and Dayton.'
-                }
-        }
-        return { state: planned, lays }
+        const reason = complete ? this.incomplete(plan) : undefined
+        return reason ? { reason } : plan
+    }
+    private extend(plan: PlannedLays, details: TrackLayDetails): PlannedLays {
+        const state = stateWith(plan.state, {
+            cash: structuredClone(plan.state.cash),
+            bank: { ...plan.state.bank }
+        })
+        const lay = applyTrackLay(
+            state,
+            TrackRules1846,
+            details,
+            { kind: 'company', companyId: details.companyId },
+            false
+        )
+        return { state, lays: [...plan.lays, lay] }
+    }
+    private incomplete({ state, lays }: PlannedLays): string | undefined {
+        if (
+            (this.privateId === 'MC' || this.privateId === 'O&I') &&
+            lays.length === 2 &&
+            !this.map(state)
+                .connections(lays[0].locationId)
+                .some((connection) => connection.neighborLocationId === lays[1].locationId)
+        )
+            return 'The two private tiles must connect to each other.'
+        if (
+            this.privateId === 'LM' &&
+            (!this.miamiConnected(state) || !lays.every((lay) => this.miamiUsesNewExit(state, lay)))
+        )
+            return 'Each Little Miami tile must add track used to connect Cincinnati and Dayton.'
+        return undefined
     }
     private terms(companyId: string): PrivateTrackTerms {
         const colors =

@@ -39,10 +39,10 @@ shorter-distance train's routes, sorted by revenue, then streams the other's
 routes through a partner search. A tighter major-stop limit breaks distance ties;
 input order breaks remaining ties. This is a candidate-count heuristic, including
 when the trains use different distance measures; the choice does not affect
-exactness. The stored profile gets half the remaining time, and streaming gets
-the rest, including time the first train did not use. Only an improving streamed
-route is copied. Either train may run alone. Resource conflicts include extension
-track, and bounds account for the longest-route bonus once for the fleet.
+exactness. The listing and the stream take turns in slices of search steps, as
+described below. Only an improving streamed route is copied. Either train may
+run alone. Resource conflicts include extension track, and bounds account for
+the longest-route bonus once for the fleet.
 
 Identical-profile pairs and fleets of three or more keep candidate enumeration
 followed by branch-and-bound selection: enumeration may use three quarters of
@@ -77,14 +77,44 @@ reported with
 `metrics.memoryLimited` and `exhaustive: false`. Streaming alone does not make a
 completed enumeration non-exhaustive.
 
+One train's best route is searched with a bound on what the rest of a route can
+still earn, and without connections that differ from one already walked only in
+track nothing after it needed. A fleet without a fleet policy is first listed
+outright as above, for a fiftieth of the time, which settles nearly every fleet.
+One it does not settle is outlined: each train's best route alone, and a first
+operation found by routing one train after another. Its routes are then listed
+only above what a better operation needs of each train, and two trains are also
+settled without lists, by closing a piece of track both run on to each in turn.
+The [design review](../../research/18xx/autorouter-design.md#route-bound-alike-connections-and-two-trains-kept-apart)
+gives the bounds and the order of these steps.
+
+Two trains without a fleet policy run these stages in slices (`rust/src/pair.rs`).
+The listing, the stream through the whole list, a stream through the most
+valuable routes of a list not yet whole, and keeping the trains apart take
+turns; each slice is twice the last, and every search goes on from where its
+last slice stopped. A stage ends on a count of search steps, not on the clock.
+The same problem under the same time limit therefore takes the same course on
+any machine and returns the same operation, until the limit itself cuts the
+last stage short. `pace_ms` is the time the step counts are sized for: the
+`Autorouter` passes each search its part of the request's whole limit, so one
+way of attaching rolling stock is searched the same way whatever time the ways
+before it left. A list that fills its memory waits for a better operation to
+raise its floor; with none to come it discards duplicates and then keeps its
+more valuable half, or cuts at once when too little time is left for the list
+to be finished. The
+[design review](../../research/18xx/autorouter-design.md#two-trains-in-slices-of-steps)
+describes the slices.
+
 A two-train fleet cut for memory, with time left, is solved again exactly above
 what its first answer proves. A better pair needs a route worth more than half
 the first answer when the trains are alike, or a stored route worth more than the
 first answer less the other train's best route (known once its streaming pass
 finished). Only those routes are stored, and every route of the other train is
 streamed through them; route values include the longest-route bonus, so the
-bound holds with it. When that pass completes, the result is exhaustive and not
-memory-limited; if it is cut or interrupted, the first answer stands.
+bound holds with it. Two alike trains with an outline are solved this way from
+the start. When that pass completes, the result is exhaustive and not
+memory-limited; if it is cut or interrupted, the best operation either pass
+found stands.
 The WebAssembly instance is built with a 64 MiB memory maximum, so an
 allocation beyond it traps instead of growing the tab. WebAssembly memory never
 shrinks, so after a solve that left the instance above 32 MiB, or one that
@@ -144,11 +174,16 @@ discarded immediately by streaming.
 These mechanisms come from `RouteRules`, `TrainDefinition`, `RouteNetwork` and
 station state. The encoder does not maintain a second title configuration.
 Map locations that share a `stopGroup` (1830's Canada) are encoded as the native
-core's exclusive stop groups, so a route visits one of them. The core's additive
+core's exclusive stop groups, so a route visits one of them. A title's limit on
+how many of a run's routes may stop in a group (`RouteRules.stopGroupRouteLimits`,
+18USA's two routes to Mexico) goes to the core as `group_route_limits`, and the
+one search holds the run to it: `exhaustive` is proved under the limits. They
+are counted among trains routed together, so they are rejected beside a fleet
+policy, a required route, or station-run or track-sharing trains. The core's additive
 traversal/first-stop bonuses have no consumer in the current repository models and
 are not invented as title policies here.
 
-The internal wire format is version 9; workers and WASM must be rebuilt together. It is private to this package; callers use
+The internal wire format is version 12; workers and WASM must be rebuilt together. It is private to this package; callers use
 the shared game models. Other distance, gauge, payment-selection or fleet-coupled
 rules need explicit encoding support before another title can use this solver.
 Fleet policies are optional family data, not settlement callbacks. The native
@@ -183,5 +218,8 @@ executable and `CARGO_TARGET_DIR` selects a build-output directory.
 
 Tests exercise the public interface, compare with exhaustive enumeration on
 small maps, and use both titles' actual maps and every train definition. The
-native suite includes a separate unpruned permutation oracle. Build the package
-before running title tests so they use the current WASM artifact.
+native suite includes a separate unpruned permutation oracle, and generated
+networks that hold the pruned searches to a listing of every route
+(`PRUNING_CASES=20000 cargo test --locked --lib pruning` runs more of them).
+Build the package before running title tests so they use the current WASM
+artifact.

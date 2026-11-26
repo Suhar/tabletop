@@ -1,5 +1,6 @@
 import { lookupTitle, lookupTitles, type TitleLookup } from './titleLookup.js'
 import { enqueueTournamentTask } from '../competitions/tournamentTasks.js'
+import { messageLocale } from '@tabletop/email/i18n'
 import { watchTournamentGame } from '../competitions/tournamentStalls.js'
 import { Timed, measure, measureSync, countTiming } from '../diagnostics/requestTimings.js'
 import type { ProjectedHistoryCache } from './projectedHistoryCache.js'
@@ -40,6 +41,8 @@ import {
     UndoVote,
     UndoVotePreview,
     playerVoteIneligibility,
+    gameHoldsUpPlayer,
+    awaitsAnswerFrom,
     callRequestIneligibility,
     playerUndoRestriction,
     PlayerUndoRestriction,
@@ -52,6 +55,7 @@ import {
     findPlayerForUserId,
     gameUserIds,
     isListedPublicGame,
+    isFollowableGame,
     ownerMayDeleteGame,
     Game,
     GameAction,
@@ -142,6 +146,7 @@ import { GameInvitationTokenData } from '../tokens/tokenData.js'
 import { nanoid } from 'nanoid'
 import { seatHandover, type SeatHolder } from './seatHandover.js'
 import { GameStore, type GameData, type UndoActionWindow } from '../persistence/stores/gameStore.js'
+import type { GameFollowStore } from '../persistence/stores/gameFollowStore.js'
 import { UpdateValidationResult } from '../persistence/stores/validator.js'
 import { Retryable } from 'typescript-retry-decorator'
 import { RedisCacheService } from '../cache/cacheService.js'
@@ -213,6 +218,10 @@ export class GameService {
         private readonly notificationService: NotificationService,
         private readonly cacheService: RedisCacheService,
         private readonly availableTitles: TitleLookup,
+        private readonly gameFollows: Pick<
+            GameFollowStore,
+            'findFollowerIds' | 'removeFollow' | 'deleteFollowsForGame'
+        >,
         private readonly projectedHistory?: ProjectedHistoryCache
     ) {}
 
@@ -550,6 +559,8 @@ export class GameService {
     ): Promise<void> {
         await this.cacheService.delete(this.makeTurnNotificationCacheKey(formerUserId, game.id))
         await this.notifyGamePlayers(GameNotificationAction.Update, { game }, [formerUserId])
+        const newUserId = game.players.find((player) => player.id === playerId)?.userId
+        if (newUserId) await this.stopFollowingSeatedGame(newUserId, game)
         if (game.activePlayerIds?.includes(playerId))
             await this.scheduleTurnNotifications(game, [playerId], FIRST_TURN_REMINDER_INDEX)
     }
@@ -696,7 +707,8 @@ export class GameService {
                 payload: {
                     removedUserId: user.id,
                     gameId: game.id,
-                    toEmail: recipient.email
+                    toEmail: recipient.email,
+                    recipientId: recipient.id
                 } satisfies PlayerRemovedEmailTask,
                 uniqueName: `player-removed-${user.id}-${game.id}-${recipient.id}`
             })
@@ -740,6 +752,7 @@ export class GameService {
             }
         })
         await this.notifyGameAudience(GameNotificationAction.Delete, { game })
+        await this.forgetGameFollows(game)
     }
 
     async forkGame({
@@ -937,6 +950,10 @@ export class GameService {
         return this.gameStore.findTitleActivity(titleId)
     }
 
+    getTitleName(titleId: string): string {
+        return this.getTitle(titleId)?.info.metadata.name ?? titleId
+    }
+
     getSeriesTitleIds(seriesId: string, roles: readonly Role[]): string[] {
         return this.getTitles()
             .filter(
@@ -954,6 +971,11 @@ export class GameService {
             inProgress: listed(activity.inProgress),
             recentlyFinished: listed(activity.recentlyFinished)
         }
+    }
+
+    /** Every Title's open games in a Series lobby, whoever may discover the Title. */
+    async getOpenSeriesGames(seriesId: string): Promise<Game[]> {
+        return (await this.gameStore.findSeriesActivity(seriesId)).open
     }
 
     async getCompletedGamesForUser(user: User): Promise<Game[]> {
@@ -1297,6 +1319,7 @@ export class GameService {
             await this.notifyJoined(user, updatedGame, player)
         }
         await this.ensureAutoStartScheduled(updatedGame)
+        await this.stopFollowingSeatedGame(user.id, updatedGame)
         return updatedGame
     }
 
@@ -1374,7 +1397,8 @@ export class GameService {
             userId: owner.id,
             gameId: game.id,
             token,
-            toEmail: user.email
+            toEmail: user.email,
+            inviteeId: user.id
         })
     }
 
@@ -1550,6 +1574,9 @@ export class GameService {
             this.verifyUserIsActionPlayer(action, game, user)
         }
 
+        // Checked again with the stored Game below; checked here first because superseding a
+        // declaration persists its reversal before the Action is applied.
+        this.assertNotHeldUpByUndoVote(game, player, user, action)
         game = await this.supersedeDeclaration({ definition, game, action, user })
         const reconciledRace = await this.reconcileRace({ definition, game, action })
 
@@ -1589,6 +1616,8 @@ export class GameService {
                     if (existingGame.status !== GameStatus.Started) {
                         throw new GameNotInProgressError({ id: gameId })
                     }
+
+                    this.assertNotHeldUpByUndoVote(existingGame, player, user, action)
 
                     const executedState = actionResult.actionCascade.before
                     if (
@@ -1814,6 +1843,21 @@ export class GameService {
             })
         action.index = state.actionCount
         return raced
+    }
+
+    private assertNotHeldUpByUndoVote(
+        game: Game,
+        player: Player,
+        user: User,
+        action: GameAction
+    ): void {
+        if (player.userId === user.id && gameHoldsUpPlayer(game, player)) {
+            throw new DisallowedActionError({
+                gameId: game.id,
+                actionId: action.id,
+                reason: 'the undo request needs your answer first'
+            })
+        }
     }
 
     private async supersedeDeclaration({
@@ -2145,10 +2189,7 @@ export class GameService {
                 if (vote?.id !== voteId || vote.kind !== PlayerVoteKind.Call) {
                     throw new DisallowedPlayerVoteError({ gameId, reason: 'the vote is closed' })
                 }
-                if (
-                    vote.approvingPlayerIds.includes(player.id) ||
-                    vote.decliningPlayerIds.includes(player.id)
-                ) {
+                if (!awaitsAnswerFrom(vote, player.id)) {
                     return UpdateValidationResult.Cancel
                 }
                 const declined = {
@@ -2934,11 +2975,48 @@ export class GameService {
         formerUserIds: string[] = []
     ): Promise<void> {
         const notification = createGameNotification(action, data)
+        const userIds = new Set([
+            ...gameUserIds(data.game),
+            ...formerUserIds,
+            ...(await this.findGameFollowerIds(data.game))
+        ])
         await this.notificationService.sendNotification({
             notification,
-            topics: [...gameUserIds(data.game), ...formerUserIds].map(userTopic),
+            topics: [...userIds].map(userTopic),
             channels: [NotificationDistributionMethod.Topical]
         })
+    }
+
+    // The seat change has already committed. A follow left behind is pruned the next time the
+    // user's followed games load, so a failed removal must not fail the seat change.
+    private async stopFollowingSeatedGame(userId: string, game: Game): Promise<void> {
+        try {
+            await this.gameFollows.removeFollow({ userId, gameId: game.id })
+        } catch (error) {
+            console.error('Removing a seated game follow failed', { gameId: game.id, error })
+        }
+    }
+
+    // The deletion has already committed. Follows left behind are pruned the next time each
+    // follower's list loads, so a failed cleanup must not fail the deletion.
+    private async forgetGameFollows(game: Game): Promise<void> {
+        try {
+            await this.gameFollows.deleteFollowsForGame(game.id)
+        } catch (error) {
+            console.error('Deleting game follows failed', { gameId: game.id, error })
+        }
+    }
+
+    // Followers only follow the game from their lists, so a failed lookup must not stop the
+    // players' notification.
+    private async findGameFollowerIds(game: Game): Promise<string[]> {
+        if (!isFollowableGame(game)) return []
+        try {
+            return await this.gameFollows.findFollowerIds(game.id)
+        } catch (error) {
+            console.error('Game follower lookup failed', { gameId: game.id, error })
+            return []
+        }
     }
 
     private async sendGameStartedEmail(game: Game): Promise<void> {
@@ -3258,7 +3336,8 @@ export class GameService {
         await this.notificationService.sendNotification({
             notification,
             topics: [topic],
-            channels: [NotificationDistributionMethod.UserDirect]
+            channels: [NotificationDistributionMethod.UserDirect],
+            locale: messageLocale(recipient)
         })
     }
 

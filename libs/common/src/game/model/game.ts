@@ -1,7 +1,7 @@
 import * as Type from 'typebox'
 import { TournamentGameReference } from '../../site/tournamentGameReference.js'
 import { DateType } from '../../util/typebox.js'
-import { Player } from './player.js'
+import { Player, PlayerStatus } from './player.js'
 import { GameState } from './gameState.js'
 import { GameResult } from './gameResult.js'
 import { GameConfig } from './gameConfig.js'
@@ -136,11 +136,43 @@ export function isListedOpenGame(game: Pick<Game, 'isPublic' | 'unlisted' | 'sta
     return isListedPublicGame(game) && game.status === GameStatus.WaitingForPlayers
 }
 
+export function takenSeats(game: Pick<Game, 'players'>): number {
+    return game.players.filter((player) => player.status !== PlayerStatus.Open).length
+}
+
 export function gameUserIds(game: Pick<Game, 'players' | 'ownerId' | 'tournament'>): string[] {
     const playerUserIds = game.players.flatMap((player) =>
         player.userId == null ? [] : [player.userId]
     )
     return [...new Set(game.tournament ? playerUserIds : [game.ownerId, ...playerUserIds])]
+}
+
+export const GAME_FOLLOW_LIMIT = 50
+
+export function isFollowableGame(game: Pick<Game, 'hotseat' | 'category' | 'storage'>): boolean {
+    return (
+        (game.storage ?? GameStorage.Remote) === GameStorage.Remote &&
+        !game.hotseat &&
+        game.category !== GameCategory.Exploration
+    )
+}
+
+const FOLLOWABLE_STATUSES = [
+    ...getGameStatusesForCategory(GameStatusCategory.Active),
+    ...getGameStatusesForCategory(GameStatusCategory.Completed)
+]
+
+export type FollowEligibility = Pick<
+    Game,
+    'players' | 'ownerId' | 'tournament' | 'hotseat' | 'category' | 'storage' | 'status'
+>
+
+export function canFollowGame(game: FollowEligibility, userId: string): boolean {
+    return (
+        isFollowableGame(game) &&
+        FOLLOWABLE_STATUSES.includes(game.status) &&
+        !gameUserIds(game).includes(userId)
+    )
 }
 
 export const GameValidator = Compile(Game)

@@ -60,7 +60,7 @@
                 <PrivateExchangeButton {session} {option} />
             </span>
         {/each}
-        {#each trackPowers as power (`${power.playerId}:${power.privateCompanyId}`)}
+        {#each trackPowers as power (`${power.playerId}:${power.privateCompanyId}:${power.option?.id ?? ''}`)}
             <span class="power">
                 <span class="name"
                     >{owner(power.playerId)}{session.actionCompanyName(
@@ -70,7 +70,7 @@
                 <PrivatePowerButton
                     {session}
                     {power}
-                    label={prompts[power.privateCompanyId] ?? 'Lay a tile'}
+                    label={power.option?.label ?? prompts[power.privateCompanyId] ?? 'Lay a tile'}
                 />
             </span>
         {/each}
@@ -158,7 +158,7 @@
     .request[aria-pressed='true'] {
         background: var(--rail-solid, #695540);
         border-color: var(--rail-focus, #695540);
-        color: #fffaf4;
+        color: var(--rail-solid-text, #fffaf4);
     }
     .request:disabled {
         opacity: 0.45;

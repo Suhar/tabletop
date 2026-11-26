@@ -19,7 +19,7 @@
     data-description-exclude
     aria-label={'label' in power
         ? power.label
-        : `Use ${session.companyName(power.privateCompanyId)}`}
+        : `Use ${session.companyName(power.privateCompanyId)}${power.option ? `: ${power.option.label}` : ''}`}
     aria-pressed={selected}
     disabled={session.busy}
     onclick={() => session.privateActions.startPower(power)}>{label}</button

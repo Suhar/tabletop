@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ExternalAuthService, UserStatus, type User } from '@tabletop/common'
 import {
+    ExternalAuthService,
+    SystemNotificationAction,
+    UserStatus,
+    type User
+} from '@tabletop/common'
+import {
+    ApplicationCommandType,
     ApplicationIntegrationType,
     ApplicationWebhookEventType,
     ApplicationWebhookType,
+    InteractionType,
+    Locale,
     OAuth2Scopes,
+    type APIBaseInteraction,
     type APIUser,
     type APIWebhookEvent
 } from 'discord-api-types/v10'
@@ -13,6 +22,7 @@ import { UserService } from '../users/userService.js'
 import { NotificationService } from '../notifications/notificationService.js'
 import { TransportType } from '../notifications/transports/notificationTransport.js'
 import { DiscordTransport } from '../notifications/transports/discordTransport.js'
+import type { DiscordSubscription } from '../notifications/subscriptions/discordSubscription.js'
 
 const discordUser: APIUser = {
     id: 'discord-1',
@@ -29,7 +39,7 @@ const linkedUser: User = {
     externalIds: []
 }
 
-const expectedSubscription = {
+const expectedSubscription: DiscordSubscription = {
     id: discordUser.id,
     transport: TransportType.Discord,
     discordUserId: discordUser.id
@@ -63,6 +73,23 @@ const deauthorizedEvent: APIWebhookEvent = {
     }
 }
 
+function stopCommand(locale: Locale): APIBaseInteraction<InteractionType, unknown> {
+    return {
+        id: 'interaction-1',
+        application_id: 'app-1',
+        type: InteractionType.ApplicationCommand,
+        data: { id: 'command-1', name: 'stop', type: ApplicationCommandType.ChatInput },
+        user: discordUser,
+        token: 'interaction-token',
+        version: 1,
+        app_permissions: '0',
+        locale,
+        entitlements: [],
+        authorizing_integration_owners: {},
+        attachment_size_limit: 0
+    }
+}
+
 describe('DiscordService webhook events', () => {
     let notificationService: NotificationService
     let userService: UserService
@@ -84,7 +111,11 @@ describe('DiscordService webhook events', () => {
         vi.spyOn(userService, 'getUserByExternalId').mockResolvedValue(linkedUser)
         discordTransport = Object.create(DiscordTransport.prototype)
         vi.spyOn(discordTransport, 'sendMessage').mockResolvedValue(undefined)
-        service = new DiscordService(notificationService, userService, discordTransport)
+        service = new DiscordService(notificationService, userService, discordTransport, {
+            findNotificationSubscriptions: async (topic: string) =>
+                topic === `user-${linkedUser.id}` ? [expectedSubscription] : [],
+            findSubscriptionTopics: async () => [`user-${linkedUser.id}`]
+        })
     })
 
     it('does not subscribe or welcome a banned user who adds the bot', async () => {
@@ -152,5 +183,81 @@ describe('DiscordService webhook events', () => {
         expect(notificationService.unregisterNotificationSubscription).toHaveBeenCalledWith(
             expectedSubscription
         )
+    })
+
+    it('tells an open Notifications page when a user adds or removes the bot', async () => {
+        await service.handleWebhookEvent(authorizedEvent(ApplicationIntegrationType.UserInstall))
+        await service.handleWebhookEvent(deauthorizedEvent)
+
+        expect(notificationService.sendNotification).toHaveBeenCalledTimes(2)
+        expect(notificationService.sendNotification).toHaveBeenCalledWith(
+            expect.objectContaining({
+                notification: expect.objectContaining({
+                    action: SystemNotificationAction.TopicRegistrationsChanged
+                }),
+                topics: [`user-${linkedUser.id}`]
+            })
+        )
+    })
+
+    it('stops direct messages when the user disconnects on the Notifications page', async () => {
+        await service.disconnect(linkedUser.id)
+
+        expect(notificationService.unregisterNotificationSubscription).toHaveBeenCalledWith(
+            expectedSubscription
+        )
+        expect(notificationService.sendNotification).toHaveBeenCalled()
+    })
+
+    it('replies to a command in the language the person uses Discord in', async () => {
+        const reply = await service.handleInteraction(stopCommand(Locale.German))
+
+        expect(reply).toEqual(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    content: 'Es werden keine Benachrichtigungen mehr gesendet.'
+                })
+            })
+        )
+    })
+
+    it("replies in the linked account's language when Discord reports one the site lacks", async () => {
+        vi.spyOn(userService, 'getUserByExternalId').mockResolvedValue({
+            ...linkedUser,
+            seenLocale: 'de'
+        })
+
+        const reply = await service.handleInteraction(stopCommand(Locale.Korean))
+
+        expect(reply).toEqual(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    content: 'Es werden keine Benachrichtigungen mehr gesendet.'
+                })
+            })
+        )
+    })
+
+    it('replies in the language the account chose over the one Discord reports', async () => {
+        vi.spyOn(userService, 'getUserByExternalId').mockResolvedValue({
+            ...linkedUser,
+            preferences: {
+                preventWebNotificationPrompt: false,
+                preferredColorsEnabled: false,
+                preferredColors: [],
+                locale: 'de'
+            }
+        })
+
+        const reply = await service.handleInteraction(stopCommand(Locale.French))
+
+        expect(reply).toEqual(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    content: 'Es werden keine Benachrichtigungen mehr gesendet.'
+                })
+            })
+        )
+        expect(userService.getUserByExternalId).toHaveBeenCalledOnce()
     })
 })

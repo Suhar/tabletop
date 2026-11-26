@@ -1,9 +1,4 @@
-import {
-    GameCatalogEntry,
-    Notification,
-    NotificationCategory,
-    UserNotification
-} from '@tabletop/common'
+import { isUserNotification, Notification } from '@tabletop/common'
 
 import { CatalogService } from '../../games/catalogService.js'
 import { LibraryService } from '../../games/libraryService.js'
@@ -15,6 +10,8 @@ import {
 } from './notificationTransport.js'
 import { discordNotificationMessage } from './discordNotificationMessage.js'
 import { DiscordBotApi } from '../../discord/discordBotApi.js'
+import { notificationCatalogEntry } from './notificationCatalogEntry.js'
+import type { Locale } from '@tabletop/email/i18n'
 
 import {
     RESTPostAPIChannelMessageJSONBody,
@@ -36,9 +33,10 @@ export class DiscordTransport implements NotificationTransport {
 
     async sendNotification(
         subscription: DiscordSubscription,
-        notification: Notification
+        notification: Notification,
+        locale: Locale
     ): Promise<NotificationResult> {
-        const message = await this.generateMessage(notification)
+        const message = await this.generateMessage(notification, locale)
         if (!message) {
             return {
                 success: false,
@@ -104,33 +102,23 @@ export class DiscordTransport implements NotificationTransport {
     }
 
     private async generateMessage(
-        notification: Notification
+        notification: Notification,
+        locale: Locale
     ): Promise<RESTPostAPIChannelMessageJSONBody | undefined> {
-        if (!this.isUserNotification(notification)) {
+        if (!isUserNotification(notification)) {
             return
         }
 
-        const catalogEntry = await this.catalogEntry(notification.data.game.typeId)
+        const catalogEntry = await notificationCatalogEntry(
+            { library: this.libraryService, catalog: this.catalogService },
+            notification.data.game.typeId
+        )
         return discordNotificationMessage(notification, {
             frontendHost: FRONTEND_HOST,
             gameTitle: catalogEntry?.metadata.name,
             thumbnailUrl: catalogEntry?.thumbnailUrl,
-            sentAt: new Date()
+            sentAt: new Date(),
+            locale
         })
-    }
-
-    private isUserNotification(notification: Notification): notification is UserNotification {
-        return notification.type === NotificationCategory.User
-    }
-
-    private async catalogEntry(typeId: string): Promise<GameCatalogEntry | undefined> {
-        try {
-            const manifest = await this.libraryService.getServedManifest()
-            const catalog = await this.catalogService.getCatalog(manifest)
-            return catalog.find((entry) => entry.id === typeId)
-        } catch (error) {
-            console.error('Could not load the game catalog for a Discord notification', error)
-            return undefined
-        }
     }
 }

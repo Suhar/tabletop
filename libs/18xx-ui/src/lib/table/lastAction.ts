@@ -19,7 +19,6 @@ import {
     isRunTrains,
     isSellFundingShares,
     isStartOperatingTurn,
-    isStartStockRound,
     type DistributeEarnings,
     type FloatCompany,
     type Owner
@@ -33,6 +32,7 @@ import {
     type HistoryDescription
 } from './historyDescription.js'
 import { isAutomaticStockDecision, isHistoryBookkeeping } from './historyNavigation.js'
+import { startsStockRound } from './roundProgress.js'
 
 export type LastActionCredit =
     { kind: 'company'; companyId: string } | { kind: 'player'; playerId: string }
@@ -76,7 +76,7 @@ export function turnRecap(
     playerId: string,
     routine: (action: GameAction) => boolean
 ): TurnRecapLine[] {
-    const roundStart = actions.findLastIndex(isStartStockRound)
+    const roundStart = actions.findLastIndex(startsStockRound)
     const previousTurnEnd = actions.findLastIndex(
         (action) => isFinishStockTurn(action) && action.playerId === playerId
     )

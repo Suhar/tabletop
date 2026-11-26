@@ -9,9 +9,18 @@ import {
     type HydratedGameState
 } from '@tabletop/common'
 import { EighteenXXPlayerAction } from '../actions/eighteenXXPlayerAction.js'
-import { CompanyStationsOnly, StationPosition, sameStationPosition } from '../map/station.js'
+import {
+    CompanyStationsOnly,
+    StationPosition,
+    addCompanyStations,
+    sameStationPosition
+} from '../map/station.js'
 import { StationPlacementDetails, applyStationPlacement } from '../stations/stationPlacement.js'
-import { recordPrivatePowerUse, type CompanyDecisionState } from './companyDecision.js'
+import {
+    privatePowerUsed,
+    recordPrivatePowerUse,
+    type CompanyDecisionState
+} from './companyDecision.js'
 import type { PrivatePowerRules, PrivateTokenTerms } from './privatePowers.js'
 
 export const PlacePrivateToken = Type.Object(
@@ -44,8 +53,9 @@ export function privateTokenStationId(
 }
 
 /**
- * A private's power to place its owning company's next station free, apart from the turn's
- * station placement, as 1894's London shipping does in A12. Used once.
+ * A private's power to place its owning company's next station free, or an extra one from the
+ * supply, apart from the turn's station placement, as 1894's London shipping does in A12. Used
+ * once.
  */
 export class HydratedPlacePrivateToken
     extends HydratableAction<typeof PlacePrivateToken>
@@ -64,8 +74,9 @@ export class HydratedPlacePrivateToken
     private terms(state: CompanyDecisionState): PrivateTokenTerms | undefined {
         const terms = this.#powers.tokenTerms?.(state, this.privateCompanyId, this.playerId)
         return this.source === ActionSource.User &&
+            !privatePowerUsed(state, this.privateCompanyId) &&
             state.activePlayerIds.includes(this.playerId) &&
-            !!privateTokenStationId(state, terms?.companyId ?? '') &&
+            (!!terms?.fromSupply || !!privateTokenStationId(state, terms?.companyId ?? '')) &&
             terms?.positions.some((position) => sameStationPosition(position, this.position))
             ? terms
             : undefined
@@ -76,7 +87,9 @@ export class HydratedPlacePrivateToken
     apply(state: HydratedGameState & CompanyDecisionState): void {
         const terms = this.terms(state)
         assert(terms, 'This private cannot place a station there now')
-        const stationId = privateTokenStationId(state, terms.companyId)
+        const [stationId] = terms.fromSupply
+            ? addCompanyStations(state, terms.companyId, 1)
+            : [privateTokenStationId(state, terms.companyId)]
         assertExists(stationId, 'The company has a station to place')
         const details = {
             companyId: terms.companyId,

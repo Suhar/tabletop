@@ -1,5 +1,6 @@
 import { AccountChangeType, UserStatus, type User } from '@tabletop/common'
 import { Type, type Static } from 'typebox'
+import { recipientLanguage } from '../email/emailService.js'
 import type { GameService } from '../games/gameService.js'
 import { userTopic } from '../notifications/topics.js'
 import type { NotificationStore } from '../persistence/stores/notificationStore.js'
@@ -9,6 +10,7 @@ import type { SessionService } from '../sessions/sessionService.js'
 import type { TaskService } from '../tasks/taskService.js'
 import type { TokenService } from '../tokens/tokenService.js'
 import type { UserStore } from '../persistence/stores/userStore.js'
+import type { GameFollowStore } from '../persistence/stores/gameFollowStore.js'
 import { AccountModerationError } from './errors.js'
 import type { UserService } from './userService.js'
 
@@ -16,6 +18,7 @@ export type AccountDeletionDependencies = {
     sessions: Pick<SessionService, 'revokeAll'>
     tokens: Pick<TokenService, 'cancelAllChallenges'>
     preferences: Pick<UserStore, 'deletePreferences'>
+    follows: Pick<GameFollowStore, 'deleteFollowsForUser'>
     subscriptions: Pick<
         NotificationStore,
         'findNotificationSubscriptions' | 'deleteNotificationSubscription'
@@ -30,6 +33,7 @@ export async function releaseAccountHoldings(
     await deletion.sessions.revokeAll(userId)
     await deletion.tokens.cancelAllChallenges(userId)
     await deletion.preferences.deletePreferences(userId)
+    await deletion.follows.deleteFollowsForUser(userId)
     const subscriptions = await deletion.subscriptions.findNotificationSubscriptions(
         userTopic(userId)
     )
@@ -131,7 +135,7 @@ export class AccountModeration {
     private async afterDeletion([tombstone, original]: [User, User]): Promise<User> {
         await this.queueCleanUp(tombstone.id)
         await this.closeRealtimeConnections(tombstone.id)
-        if (original.email) await this.confirmDeletion(tombstone.id, original.email)
+        if (original.email) await this.confirmDeletion(original, original.email)
         return tombstone
     }
 
@@ -152,16 +156,17 @@ export class AccountModeration {
     }
 
     // The Account is already gone, so a lost confirmation is logged rather than failing the request.
-    private async confirmDeletion(userId: string, email: string): Promise<void> {
+    private async confirmDeletion(original: User, email: string): Promise<void> {
         try {
             await this.tasks.sendAccountChangeNotificationEmail({
                 email,
                 changeType: AccountChangeType.AccountDeleted,
-                timestamp: this.now()
+                timestamp: this.now(),
+                ...recipientLanguage(original)
             })
         } catch (error) {
             console.error('Account deletion confirmation was not dispatched', {
-                userId,
+                userId: original.id,
                 error: error instanceof Error ? error.name : typeof error
             })
         }

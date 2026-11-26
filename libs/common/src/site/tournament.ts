@@ -336,9 +336,15 @@ export function tournamentAveragePlace(
 }
 
 export function formatTournamentAveragePlace(
-    row: Pick<TournamentScore, 'completed' | 'placeTotal'>
+    row: Pick<TournamentScore, 'completed' | 'placeTotal'>,
+    locale: string
 ): string | undefined {
-    return tournamentAveragePlace(row)?.toFixed(2)
+    const averagePlace = tournamentAveragePlace(row)
+    return averagePlace === undefined ? undefined : formatTwoDecimals(averagePlace, locale)
+}
+
+export function formatTwoDecimals(value: number, locale: string): string {
+    return value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export const placementScoringDescription =
@@ -383,22 +389,19 @@ export function formatTournamentTiebreaks(
         const tiebreak = rankedTiebreak(row)
         if (tiebreak === undefined) return undefined
         return tournamentTiebreakRule(row) === 'shareOfWinner'
-            ? `${tiebreak.toFixed(2)}%`
+            ? (tiebreak / 100).toLocaleString(locale, {
+                  style: 'percent',
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+              })
             : tiebreak.toLocaleString(locale, { maximumFractionDigits: 3 })
     })
 }
 
-export function tournamentTiebreakDescription(
+export function standingsTiebreakRule(
     rows: Pick<TournamentScore, 'pointsBehind' | 'shareOfWinner'>[]
-): string {
-    switch (rows.map(tournamentTiebreakRule).find((rule) => rule !== undefined)) {
-        case 'pointsBehind':
-            return "Tiebreak is the average points behind the top score at each player's tables, as a negative, plus one hundredth of their average final score. Higher is better."
-        case 'shareOfWinner':
-            return "Tiebreak is each player's average final score as a percentage of the top final score at their tables. Higher is better."
-        case undefined:
-            return "Tiebreak is the sum of each player's final scores from their games."
-    }
+): TiebreakRule | undefined {
+    return rows.map(tournamentTiebreakRule).find((rule) => rule !== undefined)
 }
 
 export const TournamentStanding = Type.Object({

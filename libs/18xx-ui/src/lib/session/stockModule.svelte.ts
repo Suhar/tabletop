@@ -535,7 +535,13 @@ export class StockModule implements LocalSelection {
                         certificate.kind === 'share' &&
                         (certificate.poolId !== undefined ||
                             (certificate.owner.kind === 'company' &&
-                                certificate.owner.companyId === certificate.companyId))
+                                certificate.owner.companyId === certificate.companyId) ||
+                            (certificate.owner.kind === 'player' &&
+                                !sameOwner(certificate.owner, buyer) &&
+                                !!rules.stockRules.sellsFromPlayers?.(
+                                    state,
+                                    certificate.companyId
+                                )))
                 )
                 .map((certificate) => {
                     const request = { playerId, buyer, certificateId: certificate.id }
@@ -660,6 +666,20 @@ export class StockModule implements LocalSelection {
         this.trade.clear()
         this.start.clear()
         this.start.choose('company', request)
+    }
+    cardStarts(companyId: string) {
+        if (!this.session.interactive) return []
+        return this.startChoices.filter(
+            (choice) =>
+                choice.request.companyId === companyId &&
+                choice.prices.some((price) => price.result.details)
+        )
+    }
+    chooseStartBuyer(request: CompanyStartStages['company']) {
+        const home = this.selectedStartHome
+        this.selectCompanyStart(request)
+        if (home && this.homePositions.some((position) => sameCenter(position, home)))
+            this.start.choose('home', home)
     }
     chooseHome(home: HomePosition) {
         this.assertAvailable(this.session.playerId)

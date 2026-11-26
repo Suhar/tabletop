@@ -39,6 +39,20 @@ export type EncodingBudget = {
     fleet?: readonly EncodedTrain[]
 }
 
+/** Every hex or none forbids re-entry as one flag; otherwise the hexes that do, by index. */
+function reentryRules(
+    state: TrainRunningState,
+    rules: RouteRules,
+    locations: readonly { id: string }[]
+): Pick<SolverProblem, 'no_reentry' | 'no_reentry_hexes'> {
+    const forbids = rules.forbidsHexReentry
+    const hexes = forbids ? locations.map((location) => forbids(state, location.id)) : []
+    if (hexes.length && hexes.every(Boolean)) return { no_reentry: true }
+    return hexes.some(Boolean)
+        ? { no_reentry: false, no_reentry_hexes: hexes }
+        : { no_reentry: false }
+}
+
 export class EncodedRoutes {
     readonly problem: SolverProblem
     private readonly centers: RevenueCenter[]
@@ -204,7 +218,8 @@ export class EncodedRoutes {
                 endpoint:
                     (rules.fleet?.routeShape?.endKinds.includes(node.kind) ?? true) &&
                     (stopsAt[0]?.[index] ?? true) &&
-                    !isHalt(node),
+                    !isHalt(node) &&
+                    (rules.endsRoutes?.(state, companyId, center) ?? true),
                 allowed: rules.stopAllowed?.(state, companyId, center) ?? true,
                 groups: [
                     ...(group === undefined ? [] : [this.indexFor(groupIds, group)]),
@@ -212,6 +227,16 @@ export class EncodedRoutes {
                 ]
             }
         })
+        const groupRouteLimits = Object.entries(rules.stopGroupRouteLimits ?? {}).flatMap(
+            ([group, routes]) => {
+                const id = groupIds.get(group)
+                return id === undefined ? [] : [{ group: id, routes }]
+            }
+        )
+        assert(
+            !groupRouteLimits.length || !rules.fleet,
+            'Stop group route limits are not counted across a declared fleet'
+        )
         this.unlimitedTrainIds = new Set(
             fleet
                 .filter(({ definition }) => definition.distance.maximum === 'unlimited')
@@ -334,11 +359,15 @@ export class EncodedRoutes {
                 visit_costs: visitCosts,
                 requires_city: rules.requiresCity(definition),
                 paying_stop_limit: policy?.payingStopLimit ?? null,
+                ...(policy?.payingStopLimit !== undefined && nodes.some((node) => node.uncounted)
+                    ? { uncounted: nodes.map((node) => !!node.uncounted) }
+                    : {}),
+                ...(policy?.passesBlockedCity ? { blocked_passes: 1 } : {}),
                 require_paying_token: policy?.requirePayingStation ?? false,
                 bonuses_along_route: policy?.bonusesAlongRoute ?? false,
                 connection_bonuses: [
                     ...(policy?.connectionBonuses ?? []).map(
-                        ({ from, to, nodeIds, destinationAtEnd }) => {
+                        ({ from, to, nodeIds, destinationAtEnd, requires }) => {
                             const amounts = (values: Readonly<Record<string, number>>) =>
                                 this.centers.map((center) => {
                                     const nodeId = nodeIds?.[center.locationId]
@@ -349,7 +378,16 @@ export class EncodedRoutes {
                             return {
                                 from: amounts(from),
                                 to: amounts(to),
-                                ends_only: destinationAtEnd ?? false
+                                ends_only: destinationAtEnd ?? false,
+                                ...(requires?.length
+                                    ? {
+                                          requires: requires.map((locationId) =>
+                                              this.centers.map(
+                                                  (center) => center.locationId === locationId
+                                              )
+                                          )
+                                      }
+                                    : {})
                             }
                         }
                     ),
@@ -377,7 +415,7 @@ export class EncodedRoutes {
         this.junctionKeys = [...junctions.keys()]
         this.groupKeys = [...groupIds.keys()]
         this.problem = {
-            version: 11,
+            version: 12,
             stops,
             arcs,
             trains,
@@ -389,8 +427,9 @@ export class EncodedRoutes {
             ),
             longest_route_bonus_per_stop: rules.longestRouteBonusPerStop?.(state, companyId) ?? 0,
             minimum_cities_and_towns: rules.minimumCitiesAndTowns ?? 0,
-            no_reentry: rules.forbidsHexReentry?.(state) ?? false,
+            ...reentryRules(state, rules, locations),
             blocked_passes: blockedPasses,
+            ...(groupRouteLimits.length ? { group_route_limits: groupRouteLimits } : {}),
             budget_ms: budget.timeLimitMs,
             memory_budget_bytes: budget.memoryBudgetBytes
         }
@@ -436,6 +475,26 @@ export class EncodedRoutes {
 
     decode(solution: SolverSolution): TrainRoute[] {
         return this.decodeRoutes(this.problem.trains, solution)
+    }
+
+    /**
+     * Whether this search, of the same position and trains as the other, pays every train at
+     * least as much at every stop and is otherwise the same, so that its best run earns no less.
+     */
+    outearns(other: EncodedRoutes): boolean {
+        const besidesRevenues = ({ arcs: _arcs, budget_ms: _budget, ...problem }: SolverProblem) =>
+            JSON.stringify({
+                ...problem,
+                trains: problem.trains.map(({ revenues: _revenues, ...train }) => train)
+            })
+        return (
+            besidesRevenues(this.problem) === besidesRevenues(other.problem) &&
+            this.problem.trains.every((train, index) =>
+                train.revenues.every(
+                    (revenue, stop) => revenue >= other.problem.trains[index].revenues[stop]
+                )
+            )
+        )
     }
 
     private decodeRoutes(trains: SolverProblem['trains'], solution: SolverSolution): TrainRoute[] {
@@ -503,6 +562,7 @@ export class EncodedRoutes {
             if (arc.from !== null)
                 departures.set(arc.from, [...(departures.get(arc.from) ?? []), id])
         const extendsPastBlocked = trains.some((train) => train.interconnections.length > 0)
+        const trainPassesBlocked = trains.some((train) => (train.blocked_passes ?? 0) > 0)
         const reachedStops = new Set<number>()
         const reachedArcs = new Set<number>()
         const pending: ({ stop: number } | { arc: number })[] = stops.flatMap((stop, index) =>
@@ -515,7 +575,8 @@ export class EncodedRoutes {
                 const stop = stops[next.stop]
                 const passable =
                     extendsPastBlocked ||
-                    (this.problem.blocked_passes > 0 && (stop.city || stop.town))
+                    ((this.problem.blocked_passes > 0 || trainPassesBlocked) &&
+                        (stop.city || stop.town))
                 if (!stop.allowed || (stop.blocked && !stop.token && !passable)) continue
                 for (const arc of departures.get(next.stop) ?? []) pending.push({ arc })
                 continue
@@ -552,7 +613,7 @@ export class EncodedRoutes {
                 ]
             }),
             trains: trains.map((train) => {
-                const perStop = (values: readonly (number | null)[]) =>
+                const perStop = <T>(values: readonly T[]) =>
                     stopIndices.map((index) => values[index])
                 const locations = (hexes: readonly number[]) =>
                     hexes.map((hex) => this.locationIds[hex])
@@ -567,16 +628,21 @@ export class EncodedRoutes {
                     ...(train.fleet ? { fleet: train.fleet } : {}),
                     major_limit: train.major_limit,
                     paying_stop_limit: train.paying_stop_limit,
+                    ...(train.uncounted ? { uncounted: perStop(train.uncounted.map(Number)) } : {}),
+                    ...(train.blocked_passes ? { blocked_passes: train.blocked_passes } : {}),
                     require_paying_token: train.require_paying_token,
                     bonuses_along_route: train.bonuses_along_route,
                     visit_costs: perStop(train.visit_costs),
                     revenues: perStop(train.revenues),
                     first_bonus: perStop(train.first_bonus),
-                    connection_bonuses: train.connection_bonuses.map(({ from, to, ends_only }) => ({
-                        from: perStop(from),
-                        to: perStop(to),
-                        ends_only
-                    })),
+                    connection_bonuses: train.connection_bonuses.map(
+                        ({ from, to, ends_only, requires }) => ({
+                            from: perStop(from),
+                            to: perStop(to),
+                            ends_only,
+                            ...(requires ? { requires: requires.map(perStop) } : {})
+                        })
+                    ),
                     interconnections: train.interconnections.map(({ from, to, amount }) => ({
                         from: locations(from),
                         to: locations(to),
@@ -590,7 +656,21 @@ export class EncodedRoutes {
             longest_route_bonus_per_stop: this.problem.longest_route_bonus_per_stop,
             minimum_cities_and_towns: this.problem.minimum_cities_and_towns,
             no_reentry: this.problem.no_reentry,
-            blocked_passes: this.problem.blocked_passes
+            ...(this.problem.no_reentry_hexes
+                ? {
+                      no_reentry_hexes: this.problem.no_reentry_hexes.flatMap((forbidden, hex) =>
+                          forbidden ? [this.locationIds[hex]] : []
+                      )
+                  }
+                : {}),
+            blocked_passes: this.problem.blocked_passes,
+            ...(this.problem.group_route_limits
+                ? {
+                      group_route_limits: this.problem.group_route_limits.map(
+                          ({ group, routes }) => [this.groupKeys[group], routes]
+                      )
+                  }
+                : {})
         })
     }
 

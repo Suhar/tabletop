@@ -15,7 +15,12 @@ const account = (status: UserStatus, username = 'Bob'): User => ({
 })
 
 const tombstone: User = { id: 'bob', status: UserStatus.Deleted, roles: [], externalIds: [] }
-const withEmail: User = { ...account(UserStatus.Active), email: 'bob@example.test' }
+const withEmail: User = {
+    ...account(UserStatus.Active),
+    email: 'bob@example.test',
+    seenLocale: 'de',
+    timeZone: 'Europe/Berlin'
+}
 
 function fixture(stored: User = account(UserStatus.Active)) {
     const users = {
@@ -45,6 +50,7 @@ function fixture(stored: User = account(UserStatus.Active)) {
         sessions: { revokeAll: vi.fn(async () => undefined) },
         tokens: { cancelAllChallenges: vi.fn(async () => undefined) },
         preferences: { deletePreferences: vi.fn(async () => undefined) },
+        follows: { deleteFollowsForUser: vi.fn(async () => undefined) },
         subscriptions: {
             findNotificationSubscriptions: vi.fn(async (): Promise<NotificationSubscription[]> => [
                 { id: 'discord-1', transport: TransportType.Discord, discordUserId: 'd-1' }
@@ -181,6 +187,8 @@ describe('AccountModeration', () => {
                 })
             )
             expect(tasks.sendAccountChangeNotificationEmail).toHaveBeenCalledWith({
+                locale: 'de',
+                timeZone: 'Europe/Berlin',
                 email: 'bob@example.test',
                 changeType: AccountChangeType.AccountDeleted,
                 timestamp: new Date('2026-11-04T00:00:10Z')
@@ -206,6 +214,7 @@ describe('AccountModeration', () => {
             expect(deletion.sessions.revokeAll).toHaveBeenCalledWith('bob')
             expect(deletion.tokens.cancelAllChallenges).toHaveBeenCalledWith('bob')
             expect(deletion.preferences.deletePreferences).toHaveBeenCalledWith('bob')
+            expect(deletion.follows.deleteFollowsForUser).toHaveBeenCalledWith('bob')
             expect(deletion.subscriptions.findNotificationSubscriptions).toHaveBeenCalledWith(
                 'user-bob'
             )

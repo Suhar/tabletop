@@ -7,11 +7,17 @@ import type { PrivatesModule } from './privatesModule.svelte.js'
 import type { ModuleSession } from './moduleSession.js'
 import { StagedSelection } from './stagedSelection.svelte.js'
 
-export type PrivateTrackPower = { privateCompanyId: string; playerId: string }
+/** A private's tile power, under one of its options where its terms offer several. */
+export type PrivateTrackPower = {
+    privateCompanyId: string
+    playerId: string
+    option?: { id: string; label: string }
+}
 /**
- * A private power whose rules the title applies itself, offered with the shared powers. A track
- * power lays through the ordinary track selection on the map, a location power is chosen on the
- * map, a confirm power asks before acting, and an immediate power acts when chosen.
+ * A private power offered beside the shared tile powers: one whose rules the title applies
+ * itself, or a shared marker or station placed on the map. A track power lays through the
+ * ordinary track selection on the map, a location power is chosen on the map, a confirm power
+ * asks before acting, and an immediate power acts when chosen.
  */
 export type TitlePrivatePower = PrivateTrackPower & { label: string; prompt: string } & (
         | {
@@ -53,23 +59,23 @@ export type PrivateActionsSession = ModuleSession<
 >
 type Decisions = Pick<
     CompanyDecisionsModule,
-    | 'choice'
-    | 'privateTileOptions'
-    | 'privateTrainOptions'
-    | 'privateMarkerOptions'
-    | 'privateTokenOptions'
+    'choice' | 'privateTileOptions' | 'privateTrainOptions'
 >
 type TrackSelection = Pick<LocalSelection, 'undo' | 'clear'>
 type Exchanges = Pick<PrivatesModule, 'exchangeOptions'>
 
 function samePower(left: PrivateTrackPower, right: PrivateTrackPower) {
-    return left.privateCompanyId === right.privateCompanyId && left.playerId === right.playerId
+    return (
+        left.privateCompanyId === right.privateCompanyId &&
+        left.playerId === right.playerId &&
+        left.option?.id === right.option?.id
+    )
 }
 
 function distinctPowers(options: readonly PrivateTrackPower[]): PrivateTrackPower[] {
     const powers: PrivateTrackPower[] = []
-    for (const { privateCompanyId, playerId } of options) {
-        const power = { privateCompanyId, playerId }
+    for (const { privateCompanyId, playerId, option } of options) {
+        const power = { privateCompanyId, playerId, ...(option ? { option } : {}) }
         if (!powers.some((listed) => samePower(listed, power))) powers.push(power)
     }
     return powers
@@ -122,17 +128,15 @@ export class PrivateActionsModule implements LocalSelection {
     /** Private tile powers under the shared rules. */
     sharedTrackPowers = $derived.by(() => distinctPowers(this.decisions.privateTileOptions))
     private listedPowers = $derived.by((): PrivateListedPower[] =>
-        distinctPowers([
-            ...this.decisions.privateMarkerOptions,
-            ...this.decisions.privateTokenOptions,
-            ...this.decisions.privateTrainOptions.map((option) => {
+        distinctPowers(
+            this.decisions.privateTrainOptions.map((option) => {
                 const { playerId } = this.session
                 assertExists(playerId, 'Only a player is offered a private train')
                 return { privateCompanyId: option.privateCompanyId, playerId }
             })
-        ]).map((power) => ({ ...power, kind: 'listed' }))
+        ).map((power) => ({ ...power, kind: 'listed' }))
     )
-    trackPowers = $derived.by(() => [
+    trackPowers = $derived.by((): PrivateTrackPower[] => [
         ...this.sharedTrackPowers,
         ...this.titlePowers
             .filter((power) => power.kind === 'track')
@@ -158,7 +162,7 @@ export class PrivateActionsModule implements LocalSelection {
             return selected
         if (this.offeredPower) return { value: this.offeredPower, source: 'auto' as const }
         // A lone power needs no choice; an immediate one still waits to be pressed, and a power
-        // with its own button, such as a free station, leaves the player a choice to make.
+        // with its own button, such as a private train, leaves the player a choice to make.
         const powers = [...this.trackPowers, ...this.choosableTitlePowers]
         return powers.length === 1 &&
             !this.powersWithOwnButtons &&
@@ -166,7 +170,8 @@ export class PrivateActionsModule implements LocalSelection {
             ? {
                   value: {
                       privateCompanyId: powers[0].privateCompanyId,
-                      playerId: powers[0].playerId
+                      playerId: powers[0].playerId,
+                      ...(powers[0].option ? { option: powers[0].option } : {})
                   },
                   source: 'auto' as const
               }

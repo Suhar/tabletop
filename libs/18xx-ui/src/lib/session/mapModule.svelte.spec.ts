@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { assertExists } from '@tabletop/common'
 import {
     minimalPlayState,
     minimalRouteRules,
@@ -35,6 +36,7 @@ function homeOffer(offer: Partial<HomeOffer>): HomeOffer {
     return { homePositions: [], chooseHome: () => {}, chosenHome: undefined, ...offer }
 }
 const noAuctionHomes = homeOffer({})
+const noPlan = { locationId: undefined, inventory: undefined, tap() {}, clear() {} }
 
 function table(
     machineState: 'LayingTrack' | 'StockRound',
@@ -90,9 +92,10 @@ function table(
         track,
         stations,
         routes,
-        homeOffers
+        homeOffers,
+        noPlan
     )
-    return { map, track }
+    return { map, track, stations, routes, session }
 }
 
 describe('MapModule', () => {
@@ -102,6 +105,47 @@ describe('MapModule', () => {
         expect(map.tokens).toMatchObject([
             { locationId: TestTrackHomeLocationId, label: TestCompanyId }
         ])
+    })
+
+    it('keeps the drawn board through a new state with the same map, and redraws for a new tile', () => {
+        const { session, track, stations, routes } = table('StockRound', [])
+        let shown = $state.raw(session.state)
+        const map = new MapModule(
+            session,
+            () => view,
+            track,
+            stations,
+            routes,
+            [noAuctionHomes],
+            noPlan,
+            () => shown
+        )
+        const drawn = map.scene
+        shown = {
+            ...shown,
+            tileInventory: structuredClone(shown.tileInventory),
+            locationMarkers: structuredClone(shown.locationMarkers),
+            companies: shown.companies.map((company) => ({ ...company })),
+            certificates: shown.certificates.map((certificate) => ({ ...certificate }))
+        }
+        expect(map.scene).toBe(drawn)
+        const locationId = minimalTrackMap.definition.locations.find(
+            (location) => location.id !== TestTrackHomeLocationId
+        )?.id
+        assertExists(locationId)
+        shown = {
+            ...shown,
+            tileInventory: tileSet.replace(shown.tileInventory, {
+                locationId,
+                placement: {
+                    pieceId: 'test-straight/straight/1',
+                    definitionId: '18xx:9',
+                    rotation: 0
+                },
+                returnPrevious: true
+            })
+        }
+        expect(map.scene).not.toBe(drawn)
     })
 
     it('lists the supply’s tiles in the manifest, each with its count, and none of the board’s', () => {
@@ -245,7 +289,15 @@ describe('MapModule', () => {
             () => {}
         )
         const routes = new RoutesModule(session, () => [])
-        const map = new MapModule(session, () => view, track, stations, routes, [noAuctionHomes])
+        const map = new MapModule(
+            session,
+            () => view,
+            track,
+            stations,
+            routes,
+            [noAuctionHomes],
+            noPlan
+        )
         expect(stations.homeLocationIds).toEqual([TestTrackHomeLocationId])
         map.select({ kind: 'slot', ...home, slot: 0 })
         await Promise.resolve()
@@ -348,7 +400,15 @@ describe('MapModule', () => {
             () => {}
         )
         const routes = new RoutesModule(session, () => [])
-        const map = new MapModule(session, () => view, track, stations, routes, [noAuctionHomes])
+        const map = new MapModule(
+            session,
+            () => view,
+            track,
+            stations,
+            routes,
+            [noAuctionHomes],
+            noPlan
+        )
         expect(stations.privateStationLocationIds).toEqual([TestTrackHomeLocationId])
         map.select({ kind: 'hex', locationId: TestTrackHomeLocationId })
         await Promise.resolve()

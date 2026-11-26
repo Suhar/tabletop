@@ -7,7 +7,9 @@ import {
     rotateTileFace,
     tileExits,
     type ConstructionState,
-    type TrackRequest,
+    type TileFace,
+    type TileNode,
+    type TrackPlacement,
     type TrackRules
 } from '@tabletop/18xx'
 import { BcrId, P4Id } from './companies.js'
@@ -44,12 +46,23 @@ function untrackedHomes(state: ConstructionState, companyId: string): string[] {
         .filter((locationId) => !mapState.tile(locationId).face.paths.length)
 }
 
+/**
+ * A medium city is printed with both its choices; its first tile shows towns or cities, and the
+ * printed stops of the other kind go (§X Laying Track). A tile showing neither keeps them all.
+ */
+function unchosenBoomtownStops(before: TileFace, after: TileFace): string[] {
+    if (!isBoomtown(before)) return []
+    const shows = (kind: TileNode['kind']) => after.nodes.some((node) => node.kind === kind)
+    const unchosen = shows('city') ? 'town' : shows('town') ? 'city' : undefined
+    return before.nodes.filter((node) => node.kind === unchosen).map((node) => node.id)
+}
+
 /** A tile where Beijing's starting sections are printed keeps their connection (§X). */
-function dropsStub(request: TrackRequest): boolean {
-    const stub = PrintedStubs1880[request.locationId]
+function dropsStub({ locationId, definitionId, rotation }: TrackPlacement): boolean {
+    const stub = PrintedStubs1880[locationId]
     if (stub === undefined) return false
-    const definition = TileSet1880.definitions.find((entry) => entry.id === request.definitionId)
-    return !!definition && !tileExits(rotateTileFace(definition.face, request.rotation)).has(stub)
+    const definition = TileSet1880.definitions.find((entry) => entry.id === definitionId)
+    return !!definition && !tileExits(rotateTileFace(definition.face, rotation)).has(stub)
 }
 
 /**
@@ -83,6 +96,7 @@ export const TrackRules1880: TrackRules = {
     availableColors: (state) => Phases1880.phase(state.phaseId).tileColors,
     allowance,
     preservesStops: preservesStops1880,
+    removedStops: (_locationId, before, after) => unchosenBoomtownStops(before, after),
     // A city upgraded to brown takes a six-sided tile where one fits (§X Upgrading Tiles).
     mostExits: (before) =>
         before.color === 'green' &&
@@ -111,7 +125,8 @@ export const TrackRules1880: TrackRules = {
         const homes = untrackedHomes(state, request.companyId)
         if (homes.length && !homes.includes(request.locationId))
             return 'A company lays its first tile in its home hex.'
-        if (dropsStub(request)) return 'The tile must keep the printed starting section.'
         return undefined
-    }
+    },
+    placementRestriction: (placement) =>
+        dropsStub(placement) ? 'The tile must keep the printed starting section.' : undefined
 }

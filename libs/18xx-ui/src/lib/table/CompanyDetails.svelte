@@ -41,6 +41,8 @@
     import CertificateBadge from '../finance/CertificateBadge.svelte'
     import { multiShareMark } from '../finance/multiShareCertificates.js'
     import CompanyTradePopover from '../stock/CompanyTradePopover.svelte'
+    import './cardOpener.css'
+    import { controlMiddleY, pressesCardItself } from './cardPress.js'
     import RemainingStationTokens from './RemainingStationTokens.svelte'
     import { sessionStationTokens } from './stationTokens.js'
     import { shareSourceName } from '../stock/purchaseSources.js'
@@ -86,7 +88,6 @@
     )
     const owner = $derived({ kind: 'company', companyId: company.id } as const)
     const cash = $derived(cashOwnedBy(gameState, owner))
-    const control = $derived(controllingOwner(gameState, company.id))
     function investorTint(entry: { owner: Owner }) {
         const investor = entry.owner
         const playerId =
@@ -95,7 +96,7 @@
                 : investor.kind === 'company' && !sameOwner(investor, owner)
                   ? controllingOwner(gameState, investor.companyId)?.playerId
                   : undefined
-        return playerId ? session.colors.getPlayerBgColorValue(playerId) : undefined
+        return playerId ? session.playerColorValue(playerId) : undefined
     }
     const sellers = $derived(
         gameState.machineState === 'StockRound' && !gameState.stockRound.completed
@@ -151,19 +152,6 @@
             return privateCompanyOwner && sameOwner(privateCompanyOwner, owner)
         })
     })
-    const personalPrivates = $derived(
-        session.privates.companies.flatMap((item) => {
-            const privateCompanyOwner = privateOwner(gameState, item.id)
-            const priceRange = session.decisions.privatePurchasePriceRange(company.id, item.id)
-            return !item.closed &&
-                privateCompanyOwner &&
-                control &&
-                sameOwner(privateCompanyOwner, control) &&
-                priceRange
-                ? [{ ...item, maximumPrice: priceRange.maximum }]
-                : []
-        })
-    )
     const trades = $derived(offersTrades ? session.stock.companyTrades(company.id) : undefined)
     const tradeLabel = $derived(
         [trades?.offers.length ? 'Buy' : '', trades?.sales.length ? 'Sell' : '']
@@ -196,10 +184,7 @@
         tradeOpening = { number: openings, anchor: card.getBoundingClientRect(), pointerY }
     }
     function toggleTradesFromCard(event: MouseEvent) {
-        if (
-            !tradeLabel ||
-            (event.target instanceof Element && event.target.closest('button, a, input, select'))
-        ) {
+        if (!tradeLabel || !pressesCardItself(event)) {
             pressedWhileOpen = false
             return
         }
@@ -320,12 +305,10 @@
                         >{/if}
                     {#if tradeLabel}<button
                             type="button"
-                            class="trade-opener"
+                            class="card-opener"
                             aria-label={`Trade ${session.companyName(company.id)} shares`}
-                            onclick={(event) => {
-                                const bounds = event.currentTarget.getBoundingClientRect()
-                                toggleTrades(bounds.y + bounds.height / 2)
-                            }}>{tradeLabel}</button
+                            onclick={(event) => toggleTrades(controlMiddleY(event.currentTarget))}
+                            >{tradeLabel}</button
                         >{/if}
                 </span>
             </div>
@@ -391,7 +374,7 @@
                         : 'No issued shares.'}
                 </p>{/if}
         </section>
-        {#if !vertical || privates.length || personalPrivates.length || investmentCompanies.length}
+        {#if !vertical || privates.length || investmentCompanies.length}
             <section aria-label="Company assets">
                 <section aria-label="Private companies and powers">
                     {#if !vertical || privates.length}
@@ -399,18 +382,6 @@
                         {#each privates as item (item.id)}
                             {@render privateCard(item)}
                         {:else}<p class="empty">None</p>{/each}
-                    {/if}
-                    {#if personalPrivates.length && control}
-                        {#if !vertical || privates.length}<hr />{/if}
-                        <h3>Purchasable privates</h3>
-                        {#each personalPrivates as item (item.id)}
-                            {@render privateCard(
-                                item,
-                                item.maximumPrice === undefined
-                                    ? 'No maximum'
-                                    : `${money(item.maximumPrice)}`
-                            )}
-                        {/each}
                     {/if}
                 </section>
                 {#if investmentCompanies.length}
@@ -534,7 +505,7 @@
     </div>
 {/snippet}
 
-{#snippet privateCard(item: (typeof session.privates.companies)[number], purchasePrice?: string)}
+{#snippet privateCard(item: (typeof session.privates.companies)[number])}
     <article class="private" data-private-description-row>
         <div class="private-heading">
             <div class="private-name">
@@ -547,15 +518,18 @@
                     shortName={session.companyName(item.id)}
                     fullName={session.companyFullName(item.id)}
                     description={item.description}
-                    income={item.closed ? undefined : item.revenue}
+                    income={item.closed || session.presentation.privatesWithoutIncome
+                        ? undefined
+                        : item.revenue}
                 />{#each session.privateActions.powersFor(item.id) as power, index (index)}<span
                         class="private-power"
                         ><PrivatePowerButton
                             {session}
                             {power}
-                            label={session.privateActions.powersFor(item.id).length > 1 &&
-                            'label' in power
-                                ? power.label
+                            label={session.privateActions.powersFor(item.id).length > 1
+                                ? 'label' in power
+                                    ? power.label
+                                    : power.option?.label
                                 : undefined}
                         /></span
                     >{/each}{#if !item.closed}{@const held = session.presentation.privateHoldings?.(
@@ -564,13 +538,14 @@
                     )}{#if held}<small class="private-holdings">{held}</small>{/if}{/if}
             </div>
             <span
-                >{purchasePrice ??
-                    (item.closed
-                        ? 'Closed'
-                        : companyPowers
-                          ? ''
-                          : (session.presentation.privateStatus?.(gameState, item.id) ??
-                            `${money(item.revenue)} / OR`))}</span
+                >{item.closed
+                    ? 'Closed'
+                    : companyPowers
+                      ? ''
+                      : (session.presentation.privateStatus?.(gameState, item.id) ??
+                        (session.presentation.privatesWithoutIncome
+                            ? ''
+                            : `${money(item.revenue)} / OR`))}</span
             >
         </div>
         {#if privatePowerUsed(gameState, item.id)}<span class="status">One-time power used</span
@@ -737,7 +712,7 @@
         padding-inline: 4px;
     }
     .financial-summary .prices .market-value {
-        background: #1b3d4580;
+        background: var(--rail-market, #1f343d);
     }
     .financial-summary .prices .market-value.market-zone-tint {
         background: var(--market-tint);
@@ -1042,10 +1017,10 @@
         font-weight: 650;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #f1e6c8;
+        color: var(--rail-sold-out, #f1e6c8);
     }
     .share-status.unfloated {
-        color: #e2a84f;
+        color: var(--rail-unfloated, #e2a84f);
     }
     .heading-end {
         display: flex;
@@ -1059,20 +1034,6 @@
     .company-detail.trading {
         border-color: var(--rail-focus, #a87948);
     }
-    .trade-opener {
-        border: 0;
-        padding: 0;
-        background: transparent;
-        color: var(--rail-focus, #a87948);
-        font: inherit;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-    .trade-opener:focus-visible {
-        outline: 2px solid var(--rail-focus, #a87948);
-        outline-offset: 2px;
-    }
     .ownership-heading h3 {
         margin-bottom: 0;
     }
@@ -1081,7 +1042,11 @@
     }
     tr.player-tinted-row > th,
     tr.player-tinted-row > td {
-        background: color-mix(in srgb, var(--player-color) 15%, var(--rail-surface, #222c37));
+        background: color-mix(
+            in srgb,
+            var(--player-color) var(--player-tint, 15%),
+            var(--rail-surface, #222c37)
+        );
     }
     .president > th,
     .president > td {
@@ -1146,11 +1111,6 @@
     }
     .section-heading {
         margin-top: 12px;
-    }
-    hr {
-        border: 0;
-        border-top: 1px solid var(--rail-border, #e3d9cd);
-        margin: 8px 0;
     }
     .investment {
         display: flex;

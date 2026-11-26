@@ -3,7 +3,6 @@
     import type { EighteenXXSessionView } from '../session/eighteenXXSession.svelte.js'
     import { getCompany, isCompanyPurchaseOffer, placeReference } from '@tabletop/18xx'
     import CompanyToken from '../tokens/CompanyToken.svelte'
-    import { privateMarkerLabel } from '../maps/mapDrawing.js'
     import CompanyBuying from './CompanyBuying.svelte'
     import DecisionResponse from './DecisionResponse.svelte'
     import Tile from '../tiles/Tile.svelte'
@@ -163,7 +162,7 @@
                             <header class="private-track-prompt">
                                 <span
                                     >{privateTilePrompts[power.privateCompanyId] ??
-                                        `Place a tile using ${session.actionCompanyName(power.privateCompanyId)}`}</span
+                                        `Place a tile using ${session.actionCompanyName(power.privateCompanyId)}${power.option ? `: ${power.option.label}` : ''}`}</span
                                 >
                                 {#if gameState.privateTrackLay && !gameState.privateTrackLay.required}
                                     <span>or</span>
@@ -182,7 +181,9 @@
                             {#each session.privateActions.sharedTrackPowers as power, index (index)}
                                 <button
                                     onclick={() => session.privateActions.chooseTrackPower(power)}
-                                    >{session.actionCompanyName(power.privateCompanyId)}</button
+                                    >{session.actionCompanyName(
+                                        power.privateCompanyId
+                                    )}{power.option ? `: ${power.option.label}` : ''}</button
                                 >
                             {/each}
                             {#each session.privateActions.titlePowers as power (`${power.playerId}:${power.privateCompanyId}:${power.label}`)}
@@ -193,37 +194,6 @@
                                 >
                             {/each}
                         {/if}
-                    </div>
-                {/if}
-                {#if session.privateActions.selection === 'powers' && session.decisions.privateMarkerOptions.length}
-                    <div class="private-track" aria-label="Private markers">
-                        {#each session.decisions.privateMarkerOptions as option (`${option.privateCompanyId}:${option.locationId}:${option.nodeId ?? ''}`)}
-                            <button
-                                disabled={!session.decisions.canResolve}
-                                onclick={() => session.decisions.placePrivateMarker(option)}
-                                >Place {privateMarkerLabel(
-                                    session.mapView,
-                                    option.kind,
-                                    option.locationId
-                                )}{option.stopOrdinal
-                                    ? `, stop ${option.stopOrdinal.index} of ${option.stopOrdinal.count}`
-                                    : ''} ({session.actionCompanyName(
-                                    option.privateCompanyId
-                                )})</button
-                            >
-                        {/each}
-                    </div>
-                {/if}
-                {#if session.privateActions.selection === 'powers' && session.decisions.privateTokenOptions.length}
-                    <div class="private-track" aria-label="Private stations">
-                        {#each session.decisions.privateTokenOptions as option (`${option.privateCompanyId}:${option.position.locationId}:${option.position.nodeId}`)}
-                            <button
-                                disabled={!session.decisions.canResolve}
-                                onclick={() => session.decisions.placePrivateToken(option)}
-                                >Place the {session.actionCompanyName(option.privateCompanyId)} station
-                                for free</button
-                            >
-                        {/each}
                     </div>
                 {/if}
                 {#if showPowers && session.decisions.privateTrainOptions.length}
@@ -319,6 +289,7 @@
     .private-track {
         width: 100%;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: center;
         gap: 8px;

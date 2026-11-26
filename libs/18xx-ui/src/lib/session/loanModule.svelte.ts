@@ -5,9 +5,10 @@ import {
     companyLoans,
     isPayInterest,
     loanRate,
+    loanRateTable,
     loansOutstanding,
-    loansRemaining,
     nextOperatingCompany,
+    turnInterestOwed,
     type EighteenXXState,
     type EighteenXXTitleRules
 } from '@tabletop/18xx'
@@ -40,16 +41,12 @@ export class LoanModule {
     )
     /** The title's printed rate table, where its rate rises with the loans outstanding. */
     rateTable = $derived.by(() => {
-        const table = this.rules?.rate
-        if (!table || typeof table === 'function') return undefined
         const state = this.session.state
+        const table = this.rules && loanRateTable(state, this.rules)
+        if (!table) return undefined
         const roundRate = this.operatingRoundInProgress() ? state.interestRate : undefined
         return loanRateTableView(table, loansOutstanding(state), roundRate)
     })
-    /** Loans the bank can still lend. */
-    remaining = $derived.by(() =>
-        this.rules ? loansRemaining(this.session.state, this.rules) : undefined
-    )
     operatingCompanyId = $derived.by(() =>
         this.rules && this.session.state.machineState !== 'StockRound'
             ? nextOperatingCompany(this.session.state)
@@ -67,6 +64,13 @@ export class LoanModule {
             .slice(turnStart + 1)
             .find((action) => isPayInterest(action) && action.companyId === companyId)
         return payment && isPayInterest(payment) ? payment.metadata : undefined
+    })
+    /** The interest the operating company will owe this turn on its loans now, until it pays. */
+    interestDue = $derived.by(() => {
+        const rules = this.rules
+        const companyId = this.operatingCompanyId
+        if (!rules || rules.automatic || !companyId || this.interestPaid) return undefined
+        return turnInterestOwed(this.session.state, rules, companyId) || undefined
     })
     canRepay = $derived.by(
         () => this.session.interactive && this.session.validActionTypes.includes('RepayLoan')

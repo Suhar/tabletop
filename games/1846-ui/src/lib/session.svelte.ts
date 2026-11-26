@@ -3,6 +3,7 @@ import {
     type HydratedEighteenFortySixState,
     BuyOpeningCompany,
     isBlank,
+    passCardNumber,
     PassOpeningPurchase,
     openingPurchaseChoices,
     unboughtOpeningCompanies,
@@ -203,6 +204,8 @@ export class EighteenFortySixSession extends BaseSession {
                     construction: {
                         choices: (locationId) =>
                             choices.filter((choice) => choice.locationId === locationId),
+                        hasChoice: (locationId) =>
+                            choices.some((choice) => choice.locationId === locationId),
                         canReach: (locationId) =>
                             choices.some((choice) => choice.locationId === locationId),
                         evaluate: (request) => {
@@ -374,6 +377,9 @@ export class EighteenFortySixSession extends BaseSession {
             `${this.gameState.id}:${this.gameState.actionCount}:${this.myPlayer?.id}`,
         publishing: () => this.updatingVisibleState
     })
+    draftCardName(cardId: string): string {
+        return isBlank(cardId) ? `Pass ${passCardNumber(cardId)}` : this.companyName(cardId)
+    }
     protected override get draftedCompanies() {
         const draft = this.gameState.draft
         const playerId = this.myPlayer?.id

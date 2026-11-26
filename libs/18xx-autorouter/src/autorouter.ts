@@ -42,6 +42,8 @@ type FleetSearch = {
     companyId: string
     evaluation: RouteEvaluation
     deadline: number
+    /** The time each of its searches is paced for, whatever the ones before left of the deadline. */
+    paceMs: number
 }
 type FleetAnswer = {
     routes: TrainRoute[]
@@ -49,6 +51,8 @@ type FleetAnswer = {
     searched: number
     exhaustive: boolean
 }
+/** One way of attaching rolling stock, with the search for its trains that are routed together. */
+type AttachedFleet = { trains: readonly EncodedTrain[]; together?: EncodedRoutes }
 type SearchMetrics = Pick<
     AutoroutingResult['metrics'],
     | 'compileMs'
@@ -143,6 +147,10 @@ export class Autorouter {
             !(rules.fleet && requiredEnds),
             'Fleet policy cannot combine with required-route enumeration'
         )
+        assert(
+            !(rules.stopGroupRouteLimits && requiredEnds),
+            'Stop group route limits cannot combine with required-route enumeration'
+        )
         if (requiredEnds)
             return this.solveRequired(state, rules, companyId, requiredEnds, timeLimitMs)
         const started = performance.now()
@@ -151,7 +159,11 @@ export class Autorouter {
         assertExists(available.result, available.reason ?? 'Company cannot run trains')
         const fleet = { state, rules, companyId, evaluation }
         if (this.routesApart(fleet))
-            return this.solveApart({ ...fleet, deadline: started + timeLimitMs })
+            return this.solveApart({
+                ...fleet,
+                deadline: started + timeLimitMs,
+                paceMs: timeLimitMs
+            })
         const encoded = new EncodedRoutes(state, rules, companyId, evaluation.network, {
             timeLimitMs,
             memoryBudgetBytes: SolverMemoryBudgetBytes
@@ -249,7 +261,7 @@ export class Autorouter {
         rules,
         companyId,
         evaluation
-    }: Omit<FleetSearch, 'deadline'>): boolean {
+    }: Omit<FleetSearch, 'deadline' | 'paceMs'>): boolean {
         if (evaluation.attachments(companyId).length) return true
         return evaluation.runnableTrains(companyId).some((train) => {
             const definition = rules.depot.trainDefinition(train.definitionId)
@@ -265,10 +277,11 @@ export class Autorouter {
 
     /**
      * The best run of a fleet whose trains are not all routed together. Each way of attaching the
-     * company's rolling stock is tried. Trains sharing track are routed alone, as nothing they use
-     * is closed to the others. Station-run trains' few runs are listed and the rest of the fleet
-     * routed beside each choice of them that could beat the best so far. A bonus one route earns
-     * is first given to every train; if more than one route then earns it, each train in turn is
+     * company's rolling stock is tried, in an even share of the time left, but for a way another
+     * outearns at every stop. Trains sharing track are routed alone, as nothing they use is closed
+     * to the others. Station-run trains' few runs are listed and the rest of the fleet routed
+     * beside each choice of them that could beat the best so far. A bonus one route earns is
+     * first given to every train; if more than one route then earns it, each train in turn is
      * routed as its only earner.
      */
     private solveApart(search: FleetSearch): AutoroutingResult {
@@ -295,14 +308,21 @@ export class Autorouter {
             if (!best || checked.result.revenue > best.revenue) best = checked.result
             return checked.result
         }
-        for (const fleet of this.attachedFleets(search)) {
-            const answer = this.solveFleet(search, fleet, metrics)
+        const fleets = this.worthwhileFleets(search)
+        for (const [index, { trains, together }] of fleets.entries()) {
+            const now = performance.now()
+            const share = {
+                ...search,
+                deadline: now + (search.deadline - now) / (fleets.length - index),
+                paceMs: search.paceMs / fleets.length
+            }
+            const answer = this.solveFleet(share, trains, metrics, together)
             if (routeRevenue(consider(answer)) === answer.searched) continue
-            for (const earner of [...fleet.map(({ train }) => train.id), undefined])
+            for (const earner of [...trains.map(({ train }) => train.id), undefined])
                 consider(
                     this.solveFleet(
-                        search,
-                        fleet.map((entry) =>
+                        share,
+                        trains.map((entry) =>
                             entry.train.id === earner
                                 ? entry
                                 : { ...entry, withoutOncePerRun: true as const }
@@ -325,6 +345,41 @@ export class Autorouter {
                 memoryBytes
             }
         }
+    }
+
+    /**
+     * The ways of attaching the company's rolling stock that are worth a search: not one whose
+     * trains are all routed together when another such way pays every train at least as much at
+     * every stop and is otherwise the same search, so that its best run earns no less.
+     */
+    private worthwhileFleets(search: FleetSearch): AttachedFleet[] {
+        const fleets = this.attachedFleets(search).map((trains): AttachedFleet => {
+            const together = trains.every(
+                ({ definition }) => !definition.sharesTrack && !definition.distance.stationRun
+            )
+            return together ? { trains, together: this.encodedFleet(search, trains) } : { trains }
+        })
+        return fleets.filter(
+            ({ together }, index) =>
+                !together ||
+                !fleets.some(
+                    (other, at) =>
+                        at !== index &&
+                        other.together?.outearns(together) &&
+                        (at < index || !together.outearns(other.together))
+                )
+        )
+    }
+
+    private encodedFleet(
+        { state, rules, companyId, evaluation, deadline }: FleetSearch,
+        trains: readonly EncodedTrain[]
+    ): EncodedRoutes {
+        return new EncodedRoutes(state, rules, companyId, evaluation.network, {
+            timeLimitMs: Math.max(1, deadline - performance.now()),
+            memoryBudgetBytes: SolverMemoryBudgetBytes,
+            fleet: trains
+        })
     }
 
     /** Each distinct way of attaching the company's rolling stock to its trains, or leaving it off. */
@@ -382,24 +437,21 @@ export class Autorouter {
     private solveFleet(
         search: FleetSearch,
         fleet: readonly EncodedTrain[],
-        metrics: SearchMetrics
+        metrics: SearchMetrics,
+        together?: EncodedRoutes
     ): FleetAnswer {
-        const { state, rules, companyId, evaluation, deadline } = search
+        const { deadline } = search
         const routes: TrainRoute[] = []
         let searched = 0
         let exhaustive = true
-        const encode = (trains: readonly EncodedTrain[]) =>
-            new EncodedRoutes(state, rules, companyId, evaluation.network, {
-                timeLimitMs: Math.max(1, deadline - performance.now()),
-                memoryBudgetBytes: SolverMemoryBudgetBytes,
-                fleet: trains
-            })
+        const encode = (trains: readonly EncodedTrain[]) => this.encodedFleet(search, trains)
         const run = (problem: SolverProblem): SolverSolution => {
             let solution: SolverSolution
             try {
                 solution = this.solveEncoded({
                     ...problem,
-                    budget_ms: Math.max(1, deadline - performance.now())
+                    budget_ms: Math.max(1, deadline - performance.now()),
+                    pace_ms: search.paceMs
                 })
             } catch (error) {
                 this.instantiate()
@@ -424,13 +476,17 @@ export class Autorouter {
         const others = fleet.filter(
             ({ definition }) => !definition.sharesTrack && !definition.distance.stationRun
         )
+        assert(
+            !search.rules.stopGroupRouteLimits || others.length === fleet.length,
+            'Stop group route limits are counted only among trains routed together'
+        )
         for (const train of sharing) {
             const encoded = encode([train])
             const solution = run(encoded.problem)
             routes.push(...encoded.decode(solution))
             searched += solution.revenue
         }
-        const encoded = others.length ? encode(others) : undefined
+        const encoded = others.length ? (together ?? encode(others)) : undefined
         const open = encoded && run(encoded.problem)
         const openRevenue = open?.revenue ?? 0
         const runs = stationed.map((train) => {
@@ -589,7 +645,8 @@ export class Autorouter {
                 if (rest.problem.trains.length) {
                     const solution = this.solveEncoded({
                         ...rest.problem,
-                        budget_ms: Math.max(1, deadline - performance.now())
+                        budget_ms: Math.max(1, deadline - performance.now()),
+                        pace_ms: timeLimitMs
                     })
                     solves++
                     exhaustive &&= solution.exhaustive
