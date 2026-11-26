@@ -43,6 +43,18 @@
     let shown = $derived(
         bagShown || dealing.length > 0 || (cards && gameSession.turnHand.some((card) => card.held))
     )
+    // The room the cards stand in. Three cards wide while the bag is on show and through the
+    // deal, so the bag never moves; a draw of one or two (a bag nearly empty) is dealt to the
+    // middle of that room, and once the bag has gone the room closes in on the cards, which stay
+    // where they are while whatever stands beside them draws up.
+    const CARD_WIDTH = 66
+    const CARD_GAP = 12
+    const roomFor = (count: number) => count * CARD_WIDTH + Math.max(count - 1, 0) * CARD_GAP
+    let room = $derived(
+        bagShown || dealing.length > 0
+            ? roomFor(3)
+            : roomFor(Math.min(gameSession.turnHand.length, 3))
+    )
     let column = $derived(side !== undefined && sideShown)
     let specialsOpen = $derived(
         specials !== undefined && specialsShown && !bagShown && dealing.length === 0
@@ -75,8 +87,10 @@
              capture the fixed popups of the technology chips beside them. It is dropped while
              the bag's prompt stands here instead of cards, for the popup of its Rules pill. -->
         <div
-            class="flex min-h-[104px] min-w-[222px] flex-wrap items-center gap-3"
-            style={bagShown && dealing.length === 0 ? '' : 'perspective: 900px'}
+            class="hand-room flex min-h-[104px] flex-wrap items-center justify-center gap-3"
+            style="min-width: {room}px;{bagShown && dealing.length === 0
+                ? ''
+                : ' perspective: 900px'}"
         >
             {#if dealing.length > 0}
                 {#each dealing as piece (piece.id)}
@@ -193,6 +207,10 @@
             opacity 300ms ease-out 200ms;
     }
 
+    .hand-room {
+        transition: min-width 350ms ease-out;
+    }
+
     /* Clipped across only: a card lifting on hover, or its glow, may still rise above the row. */
     .opening > div {
         min-width: 0;
@@ -200,6 +218,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+        .hand-room,
         .opening,
         .opening.open {
             transition: none;
