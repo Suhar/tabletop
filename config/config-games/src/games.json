@@ -6,5 +6,9 @@
     {
         "gameId": "earendel",
         "packageId": "earendel"
+    },
+    {
+        "gameId": "conduit",
+        "packageId": "conduit"
     }
 ]

@@ -1,0 +1,3822 @@
+{
+    "game": {
+        "id": "scenario-mid-game-grid",
+        "isPublic": false,
+        "status": "started",
+        "typeId": "conduit",
+        "deleted": false,
+        "name": "mid-game-grid",
+        "ownerId": "owner",
+        "players": [
+            {
+                "id": "p0",
+                "name": "Ada",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p1",
+                "name": "Ben",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p2",
+                "name": "Cleo",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p3",
+                "name": "Dev",
+                "isHuman": true,
+                "status": "joined"
+            }
+        ],
+        "config": {},
+        "hotseat": false,
+        "winningPlayerIds": [],
+        "seed": 3367980177,
+        "activePlayerIds": [],
+        "createdAt": "2026-11-26T00:58:37.645Z",
+        "storage": "remote",
+        "category": "standard",
+        "startedAt": "2026-11-26T00:58:37.646Z",
+        "protectedInformation": true,
+        "progress": {
+            "fraction": 0,
+            "label": "Round 1 of 5"
+        }
+    },
+    "state": {
+        "systemVersion": 3,
+        "id": "TmL_qHmd2LyHozwqFFou3",
+        "gameId": "scenario-mid-game-grid",
+        "seed": 3367980177,
+        "prng": {
+            "seed": 3367980177,
+            "invocations": 221
+        },
+        "protectedPrng": {
+            "algorithm": "chacha20-v1",
+            "seed": "033aacbe6212a2c9bee0cb5c71682e564dd13d1188be676e6f5a533a83f821c3",
+            "invocations": 119
+        },
+        "masterSeed": "0123456789abcdef0123456789abcdef",
+        "activePlayerIds": ["p3"],
+        "winningPlayerIds": [],
+        "actionCount": 50,
+        "actionChecksum": 1794973155,
+        "players": [
+            {
+                "playerId": "p0",
+                "color": "blue",
+                "cash": 10,
+                "supply": 7,
+                "reserve": 7
+            },
+            {
+                "playerId": "p1",
+                "color": "purple",
+                "cash": 5,
+                "supply": 8,
+                "reserve": 7
+            },
+            {
+                "playerId": "p2",
+                "color": "red",
+                "cash": 8,
+                "supply": 7,
+                "reserve": 7
+            },
+            {
+                "playerId": "p3",
+                "color": "green",
+                "cash": 8,
+                "supply": 9,
+                "reserve": 6
+            }
+        ],
+        "turnManager": {
+            "series": [
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 0,
+                    "end": 1
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 1,
+                    "end": 2
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 2,
+                    "end": 3
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 3,
+                    "end": 4
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 4,
+                    "end": 5
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 5,
+                    "end": 6
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 6,
+                    "end": 7
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 7,
+                    "end": 8
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 8,
+                    "end": 9
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 9,
+                    "end": 10
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 10,
+                    "end": 11
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 11,
+                    "end": 12
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 12,
+                    "end": 13
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 13,
+                    "end": 14
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 14,
+                    "end": 15
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 15,
+                    "end": 16
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 16,
+                    "end": 17
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 17,
+                    "end": 18
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 18,
+                    "end": 19
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 19,
+                    "end": 20
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 23,
+                    "end": 24
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 24,
+                    "end": 25
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 25,
+                    "end": 26
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 26,
+                    "end": 27
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 27,
+                    "end": 28
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 28,
+                    "end": 29
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 29,
+                    "end": 30
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 30,
+                    "end": 31
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 31,
+                    "end": 32
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 32,
+                    "end": 33
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 33,
+                    "end": 34
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 34,
+                    "end": 35
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 35,
+                    "end": 36
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 36,
+                    "end": 37
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 37,
+                    "end": 38
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 38,
+                    "end": 39
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 39,
+                    "end": 40
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 40,
+                    "end": 41
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 41,
+                    "end": 42
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 42,
+                    "end": 43
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 43,
+                    "end": 44
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 44,
+                    "end": 45
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 45,
+                    "end": 46
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 46,
+                    "end": 47
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 50
+                }
+            ],
+            "turnOrder": ["p3", "p2", "p1", "p0"],
+            "turnCounts": {
+                "p0": 13,
+                "p1": 11,
+                "p2": 11,
+                "p3": 9
+            }
+        },
+        "machineState": "Bidding",
+        "roundManager": {
+            "series": [
+                {
+                    "type": "round",
+                    "start": 0,
+                    "number": 1,
+                    "end": 22
+                },
+                {
+                    "type": "round",
+                    "start": 22,
+                    "number": 2,
+                    "end": 49
+                },
+                {
+                    "type": "round",
+                    "start": 49,
+                    "number": 3
+                }
+            ]
+        },
+        "deck": {
+            "items": [
+                43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29, 46, 22, 45,
+                32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58, 62, 38, 6, 24, 17, 34,
+                49, 18, 8
+            ],
+            "remaining": 46
+        },
+        "market": [
+            {
+                "spot": 1,
+                "tileId": 57,
+                "bids": []
+            },
+            {
+                "spot": 2,
+                "tileId": 63,
+                "bids": []
+            },
+            {
+                "spot": 3,
+                "tileId": 56,
+                "bids": []
+            },
+            {
+                "spot": 4,
+                "tileId": 50,
+                "bids": []
+            },
+            {
+                "spot": 5,
+                "tileId": 9,
+                "bids": []
+            }
+        ],
+        "board": {
+            "stations": [
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -1
+                    },
+                    "tileId": 2,
+                    "rotation": 3,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": 0
+                    },
+                    "tileId": 21,
+                    "rotation": 1,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": 1
+                    },
+                    "tileId": 47,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": 0
+                    },
+                    "tileId": 60,
+                    "rotation": 2,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -2
+                    },
+                    "tileId": 42,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": -1
+                    },
+                    "tileId": 13,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": -1
+                    },
+                    "tileId": 31,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 2,
+                        "row": 0
+                    },
+                    "tileId": 1,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": 1
+                    },
+                    "tileId": 27,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 1,
+                    "ownerId": "p0"
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": 2
+                    },
+                    "tileId": 5,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 1,
+                    "ownerId": "p2"
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": 1
+                    },
+                    "tileId": 26,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -2,
+                        "row": 0
+                    },
+                    "tileId": 10,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -3
+                    },
+                    "tileId": 44,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                }
+            ]
+        },
+        "bidPasses": []
+    },
+    "actions": [
+        {
+            "id": "mid-game-grid-0",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.656Z",
+            "index": 0,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/0/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-1",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.658Z",
+            "index": 1,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 935963940
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-2",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.659Z",
+            "index": 2,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 181081356
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-3",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.660Z",
+            "index": 3,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1221825058
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-4",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.661Z",
+            "index": 4,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 263882651
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-5",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.661Z",
+            "index": 5,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 736978878
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-6",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.662Z",
+            "index": 6,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 6
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 41788447
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-7",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.663Z",
+            "index": 7,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 7
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 749292820
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-8",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.664Z",
+            "index": 8,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 506250910
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-9",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.665Z",
+            "index": 9,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1104939520
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/10"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-10",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.665Z",
+            "index": 10,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 576989991
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/10/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/11"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-11",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.666Z",
+            "index": 11,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 11
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -813790925
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/11/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/12"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/3"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-12",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.667Z",
+            "metadata": {
+                "tileId": 42,
+                "price": 3,
+                "payments": []
+            },
+            "index": 12,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 12
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 709603754
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/12/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/13"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 42,
+                        "bids": ["p1", "p1"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-13",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": -2
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.669Z",
+            "metadata": {
+                "tileId": 42,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 13,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 13
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1803073513
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/13/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/14"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 42,
+                        "bids": [],
+                        "buyerId": "p1"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/4"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-14",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.670Z",
+            "metadata": {
+                "tileId": 13,
+                "price": 3,
+                "payments": []
+            },
+            "index": 14,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 14
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1092995416
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/14/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/15"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 13,
+                        "bids": ["p0", "p0"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-15",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 1,
+                "row": -1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.671Z",
+            "metadata": {
+                "tileId": 13,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 15,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 15
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1555904416
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/15/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/16"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 13,
+                        "bids": [],
+                        "buyerId": "p0"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/5"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-16",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.672Z",
+            "metadata": {
+                "tileId": 31,
+                "price": 3,
+                "payments": []
+            },
+            "index": 16,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 16
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1963333901
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/16/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/17"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/2",
+                    "value": {
+                        "spot": 3,
+                        "tileId": 31,
+                        "bids": ["p3", "p3"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-17",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -1,
+                "row": -1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.673Z",
+            "metadata": {
+                "tileId": 31,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 17,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 17
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1132039338
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/17/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/18"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/2",
+                    "value": {
+                        "spot": 3,
+                        "tileId": 31,
+                        "bids": [],
+                        "buyerId": "p3"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/6"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-18",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.674Z",
+            "metadata": {
+                "tileId": 1,
+                "price": 3,
+                "payments": []
+            },
+            "index": 18,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 18
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 362169228
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/18/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/19"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 1,
+                        "bids": ["p2", "p2"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-19",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 2,
+                "row": 0
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.675Z",
+            "metadata": {
+                "tileId": 1,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 19,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 11
+                },
+                {
+                    "op": "add",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 19
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 863654887
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/19/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 1,
+                        "bids": [],
+                        "buyerId": "p2"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/7"
+                }
+            ]
+        },
+        {
+            "id": "nZMJxbg1z7cets1nPj2H8",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "payRevenue",
+            "createdAt": "2026-11-26T00:58:37.676Z",
+            "metadata": {
+                "revenues": [
+                    {
+                        "playerId": "p1",
+                        "tileId": 42,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 13,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            }
+                        ],
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "tileId": 31,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 1,
+                        "route": [
+                            {
+                                "col": 2,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            }
+                        ],
+                        "amount": 3
+                    }
+                ]
+            },
+            "index": 20,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 46
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 20
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 746451566
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "PayingRevenue"
+                }
+            ]
+        },
+        {
+            "id": "FWav9NQuyIv6GgFj8xNnw",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "loseInfrastructure",
+            "createdAt": "2026-11-26T00:58:37.677Z",
+            "metadata": {
+                "flippedTileIds": [2, 21, 47, 60],
+                "refills": [
+                    {
+                        "playerId": "p0",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p1",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p2",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "amount": 3
+                    }
+                ],
+                "roundEnded": true
+            },
+            "index": 21,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 81
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 21
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -2141034454
+                },
+                {
+                    "op": "replace",
+                    "path": "/players",
+                    "value": [
+                        {
+                            "playerId": "p0",
+                            "color": "blue",
+                            "cash": 4,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p1",
+                            "color": "purple",
+                            "cash": 1,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p2",
+                            "color": "red",
+                            "cash": 4,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p3",
+                            "color": "green",
+                            "cash": 1,
+                            "supply": 3,
+                            "reserve": 10
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnOrder",
+                    "value": ["p1", "p0", "p3", "p2"]
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "LosingInfrastructure"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/0/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/0/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/1/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/2/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/3/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/4/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/5/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/6/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/7/cubes",
+                    "value": 2
+                }
+            ]
+        },
+        {
+            "id": "75CYtXcGAM4hhN24pqazH",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "fillMarket",
+            "revealsInfo": true,
+            "createdAt": "2026-11-26T00:58:37.679Z",
+            "metadata": {
+                "round": 2,
+                "tileIds": [27, 5, 26, 10, 44]
+            },
+            "index": 22,
+            "undoPatch": [
+                {
+                    "op": "remove",
+                    "path": "/activePlayerIds/0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 22
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1365999617
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/20"
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "FillingMarket"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/deck",
+                    "value": {
+                        "items": [
+                            43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29,
+                            46, 22, 45, 32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58,
+                            62, 38, 6, 24, 17, 34, 49, 18, 8, 9, 50, 56, 63, 57, 44, 10, 26, 5, 27
+                        ],
+                        "remaining": 56
+                    }
+                },
+                {
+                    "op": "replace",
+                    "path": "/market",
+                    "value": [
+                        {
+                            "spot": 1,
+                            "bids": []
+                        },
+                        {
+                            "spot": 2,
+                            "bids": []
+                        },
+                        {
+                            "spot": 3,
+                            "bids": []
+                        },
+                        {
+                            "spot": 4,
+                            "bids": []
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/bidPasses",
+                    "value": ["p1", "p0", "p3", "p2"]
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-20",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.681Z",
+            "index": 23,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 23
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1671102423
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/20/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/21"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-21",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.682Z",
+            "index": 24,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 24
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 581316414
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/21/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/22"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-22",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.682Z",
+            "index": 25,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 25
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1528148914
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/22/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/23"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-23",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.683Z",
+            "index": 26,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 26
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -903299464
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/23/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/24"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-24",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 5,
+            "createdAt": "2026-11-26T00:58:37.684Z",
+            "index": 27,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 27
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -2072996318
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/24/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/25"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/4/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-25",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.685Z",
+            "index": 28,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 28
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2036557804
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/25/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/26"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-26",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.685Z",
+            "index": 29,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 29
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2107386548
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/26/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/27"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-27",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.686Z",
+            "index": 30,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 30
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 75860101
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/27/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/28"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-28",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.687Z",
+            "index": 31,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 31
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1569511792
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/28/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/29"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-29",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.687Z",
+            "index": 32,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 32
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1514560326
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/29/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/30"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-30",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.688Z",
+            "index": 33,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 33
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1708034463
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/30/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/31"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-31",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.689Z",
+            "index": 34,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 34
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1376008448
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/31/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/32"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 7
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/3"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-32",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.690Z",
+            "metadata": {
+                "tileId": 27,
+                "price": 3,
+                "payments": [
+                    {
+                        "playerId": "p3",
+                        "amount": 1
+                    }
+                ]
+            },
+            "index": 35,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 35
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -98229872
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/32/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/33"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 27,
+                        "bids": ["p0", "p3"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-33",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 1,
+                "row": 1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.693Z",
+            "metadata": {
+                "tileId": 27,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 36,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 36
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1805076010
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/33/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/34"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 27,
+                        "bids": [],
+                        "buyerId": "p0"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/8"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-34",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.694Z",
+            "metadata": {
+                "tileId": 5,
+                "price": 3,
+                "cubes": 1
+            },
+            "index": 37,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 37
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1337040802
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/34/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/35"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 8
+                },
+                {
+                    "op": "add",
+                    "path": "/market/1/bids/0",
+                    "value": "p3"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-35",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.695Z",
+            "metadata": {
+                "tileId": 5,
+                "price": 2,
+                "payments": []
+            },
+            "index": 38,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 38
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1655100535
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/35/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/36"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 5,
+                        "bids": ["p2"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-36",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": 2
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.696Z",
+            "metadata": {
+                "tileId": 5,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 39,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 39
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 790732874
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/36/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/37"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 5,
+                        "bids": [],
+                        "buyerId": "p2"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/9"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-37",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.697Z",
+            "metadata": {
+                "tileId": 26,
+                "price": 3,
+                "cubes": 1
+            },
+            "index": 40,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 40
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1244267829
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/37/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/38"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 10
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/bids/0",
+                    "value": "p2"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-38",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.698Z",
+            "metadata": {
+                "tileId": 26,
+                "price": 2,
+                "cubes": 1
+            },
+            "index": 41,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 41
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -507234211
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/38/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/39"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/bids/0",
+                    "value": "p1"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-39",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -1,
+                "row": 1
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.699Z",
+            "metadata": {
+                "tileId": 26,
+                "faceUp": false
+            },
+            "index": 42,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 42
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 473043985
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/39/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/40"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/tileId",
+                    "value": 26
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/10"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-40",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.700Z",
+            "metadata": {
+                "tileId": 10,
+                "price": 2,
+                "payments": []
+            },
+            "index": 43,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 43
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 38128055
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/40/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/41"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 10,
+                        "bids": ["p1"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-41",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -2,
+                "row": 0
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.701Z",
+            "metadata": {
+                "tileId": 10,
+                "faceUp": true
+            },
+            "index": 44,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 44
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -982370253
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/41/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/42"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 10,
+                        "bids": [],
+                        "buyerId": "p1"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/11"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-42",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.702Z",
+            "metadata": {
+                "tileId": 44,
+                "price": 2,
+                "cubes": 1
+            },
+            "index": 45,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 45
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1670818053
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/42/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/43"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 11
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/4/bids/0",
+                    "value": "p0"
+                }
+            ]
+        },
+        {
+            "id": "mid-game-grid-43",
+            "gameId": "scenario-mid-game-grid",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": -3
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.703Z",
+            "metadata": {
+                "tileId": 44,
+                "faceUp": false
+            },
+            "index": 46,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 116
+                },
+                {
+                    "op": "add",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 46
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -124886856
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/43/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 12
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/4/tileId",
+                    "value": 44
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/12"
+                }
+            ]
+        },
+        {
+            "id": "7LTA2TiGAiIvQbwUvCkxA",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "payRevenue",
+            "createdAt": "2026-11-26T00:58:37.704Z",
+            "metadata": {
+                "revenues": [
+                    {
+                        "playerId": "p1",
+                        "tileId": 42,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 13,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": -1,
+                                "row": -1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p3",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p3",
+                        "tileId": 31,
+                        "route": [
+                            {
+                                "col": -1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -2
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p1",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 1,
+                        "route": [
+                            {
+                                "col": 2,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p0",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 27,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": 1
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -2
+                            }
+                        ],
+                        "amount": 4,
+                        "tolls": [
+                            {
+                                "playerId": "p1",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 5,
+                        "route": [
+                            {
+                                "col": 0,
+                                "row": 2
+                            },
+                            {
+                                "col": 0,
+                                "row": 1
+                            },
+                            {
+                                "col": 1,
+                                "row": 1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p0",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p1",
+                        "tileId": 10,
+                        "route": [
+                            {
+                                "col": -2,
+                                "row": 0
+                            },
+                            {
+                                "col": -1,
+                                "row": 0
+                            },
+                            {
+                                "col": -1,
+                                "row": -1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p3",
+                                "amount": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            "index": 47,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 151
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 47
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1438468591
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "PayingRevenue"
+                }
+            ]
+        },
+        {
+            "id": "VoNswFN0HgvMy43YGK6ba",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "loseInfrastructure",
+            "createdAt": "2026-11-26T00:58:37.705Z",
+            "metadata": {
+                "flippedTileIds": [],
+                "refills": [
+                    {
+                        "playerId": "p0",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p1",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p2",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "amount": 3
+                    }
+                ],
+                "roundEnded": true
+            },
+            "index": 48,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 186
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 48
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1987008392
+                },
+                {
+                    "op": "replace",
+                    "path": "/players",
+                    "value": [
+                        {
+                            "playerId": "p0",
+                            "color": "blue",
+                            "cash": 10,
+                            "supply": 4,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p1",
+                            "color": "purple",
+                            "cash": 5,
+                            "supply": 5,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p2",
+                            "color": "red",
+                            "cash": 8,
+                            "supply": 4,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p3",
+                            "color": "green",
+                            "cash": 8,
+                            "supply": 6,
+                            "reserve": 8
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnOrder",
+                    "value": ["p0", "p3", "p2", "p1"]
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "LosingInfrastructure"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/1/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/4/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/4/ownerId",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/5/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/5/ownerId",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/6/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/6/ownerId",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/7/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/7/ownerId",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/8/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/9/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/11/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/11/ownerId",
+                    "value": "p1"
+                }
+            ]
+        },
+        {
+            "id": "buyBpfkzxSPnInCmLcy62",
+            "gameId": "scenario-mid-game-grid",
+            "source": "system",
+            "type": "fillMarket",
+            "revealsInfo": true,
+            "createdAt": "2026-11-26T00:58:37.706Z",
+            "metadata": {
+                "round": 3,
+                "tileIds": [57, 63, 56, 50, 9]
+            },
+            "index": 49,
+            "undoPatch": [
+                {
+                    "op": "remove",
+                    "path": "/activePlayerIds/0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 49
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 542858413
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/44"
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "FillingMarket"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/deck",
+                    "value": {
+                        "items": [
+                            43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29,
+                            46, 22, 45, 32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58,
+                            62, 38, 6, 24, 17, 34, 49, 18, 8, 9, 50, 56, 63, 57
+                        ],
+                        "remaining": 51
+                    }
+                },
+                {
+                    "op": "replace",
+                    "path": "/market",
+                    "value": [
+                        {
+                            "spot": 1,
+                            "bids": []
+                        },
+                        {
+                            "spot": 2,
+                            "bids": []
+                        },
+                        {
+                            "spot": 3,
+                            "bids": []
+                        },
+                        {
+                            "spot": 4,
+                            "bids": []
+                        },
+                        {
+                            "spot": 5,
+                            "bids": []
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/bidPasses",
+                    "value": ["p0", "p3", "p2", "p1"]
+                }
+            ]
+        }
+    ]
+}
