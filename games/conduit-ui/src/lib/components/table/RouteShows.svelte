@@ -6,10 +6,7 @@
     import type { RouteShow } from '$lib/animators/routeAnimator.svelte.js'
     import RouteFlow from './RouteFlow.svelte'
 
-    // The revenue animation's drawing for each paying station, hidden until the route animator
-    // reveals it: the search's segments and the cells it reached by distance, the destinations it
-    // found, tied routes, the chosen route, captions and payouts. The animator only tweens these
-    // elements' attributes; they go when the payout's state is shown.
+    // Hidden until the route animator reveals each part; it only tweens these elements' attributes.
     let { bounds }: { bounds: BoardBounds } = $props()
 
     const gameSession = getGameSession()
@@ -64,7 +61,6 @@
 
 {#snippet drawing(show: RouteShow, id: string)}
     {@const home = centre(show.station)}
-    <!-- Captions sit above the station, or below it on the board's top row. -->
     {@const above = {
         x: home.x,
         y: show.station.row > bounds.minRow ? home.y - half - 4 : home.y + half + 4
@@ -114,9 +110,8 @@
             ></polyline>
         {/each}
         {#if show.route.length > 1}
-            <!-- The route draws in, then becomes the glowing, flowing route as it pays. The glow is
-                 shown, never faded: a fade over its blur and moving dashes would repaint them all
-                 every frame. -->
+            <!-- The glow is shown, never faded: a fade over its blur and moving dashes would repaint them all
+every frame. -->
             <g data-show-glow={id} visibility="hidden">
                 <RouteFlow
                     id="conduit-show-glow-{show.key}"

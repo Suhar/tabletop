@@ -11,8 +11,6 @@ export class ConduitGameExploration implements GameExploration<ConduitProjectedS
         return new HydratedConduitGameState(structuredClone(state)).dehydrate()
     }
 
-    // Every tile not on the board or in the market is still in the stack, in an order nobody has
-    // seen.
     createFromProjectedState({
         state,
         random
@@ -20,7 +18,7 @@ export class ConduitGameExploration implements GameExploration<ConduitProjectedS
         const sample = structuredClone(state)
         const seen = new Set([
             ...sample.board.stations.map((station) => station.tileId),
-            ...sample.market.flatMap((slot) => (slot.tileId === undefined ? [] : [slot.tileId]))
+            ...sample.market.flatMap((spot) => (spot.tileId === undefined ? [] : [spot.tileId]))
         ])
         const unseen = BaseLetters.flatMap((letter) => tileIdsOfLetter(letter)).filter(
             (tileId) => !seen.has(tileId)

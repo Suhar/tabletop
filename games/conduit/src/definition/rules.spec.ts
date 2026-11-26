@@ -22,7 +22,7 @@ function bidAround(session: TestSession) {
         if (session.hydrated().canPassBid(session.activePlayerId())) {
             session.passBid()
         } else {
-            session.bid(spot % session.state.market.length)
+            session.bid((spot % session.state.market.length) + 1)
             spot += 1
         }
     }
@@ -119,10 +119,10 @@ describe('bidding', () => {
     it('goes clockwise from the Start Player, one cube from supply at a time', () => {
         const session = startTestGame(3)
         const order = session.state.turnManager.turnOrder
-        session.bid(0)
-        expect(session.activePlayerId()).toBe(order[1])
-        session.bid(0)
         session.bid(1)
+        expect(session.activePlayerId()).toBe(order[1])
+        session.bid(1)
+        session.bid(2)
         expect(session.state.market[0].bids).toEqual([order[0], order[1]])
         expect(player(session.state, order[0]).supply).toBe(4)
         expect(session.activePlayerId()).toBe(order[0])
@@ -142,24 +142,24 @@ describe('bidding', () => {
         session.edit((draft) => {
             player(draft, second).supply = 0
         })
-        session.bid(0)
-        expect(session.activePlayerId()).toBe(third)
         session.bid(1)
+        expect(session.activePlayerId()).toBe(third)
+        session.bid(2)
         expect(session.activePlayerId()).toBe(first)
         expect(session.hydrated().canBid(second)).toBe(false)
     })
 
     it('refuses a pass before the player has placed two cubes', () => {
         const session = startTestGame(3)
-        session.bid(0)
-        session.bid(0)
-        session.bid(0)
+        session.bid(1)
+        session.bid(1)
+        session.bid(1)
         expect(() => passBid(session)).toThrow()
     })
 
     it('lets players pass with tiles still unbid, which then go face down', () => {
         const session = startTestGame(3)
-        for (let bid = 0; bid < 6; bid++) session.bid(0)
+        for (let bid = 0; bid < 6; bid++) session.bid(1)
         for (let pass = 0; pass < 3; pass++) passBid(session)
         expect(session.state.machineState).toBe(MachineState.Offering)
         expect(session.state.market.map((slot) => slot.bids.length)).toEqual([6, 0, 0])
@@ -170,14 +170,14 @@ describe('bidding', () => {
     it('goes on past two bids until everyone has passed', () => {
         const session = startTestGame(3)
         const [first, second, third] = session.state.turnManager.turnOrder
-        for (let bid = 0; bid < 6; bid++) session.bid(bid % 3)
+        for (let bid = 0; bid < 6; bid++) session.bid((bid % 3) + 1)
         expect(session.state.machineState).toBe(MachineState.Bidding)
         expect(session.activePlayerId()).toBe(first)
         passBid(session)
-        session.bid(0)
+        session.bid(1)
         passBid(session)
         expect(session.activePlayerId()).toBe(second)
-        session.bid(1)
+        session.bid(2)
         expect(session.activePlayerId()).toBe(second)
         passBid(session)
         expect(session.state.machineState).toBe(MachineState.Offering)
@@ -187,11 +187,22 @@ describe('bidding', () => {
 
     it('lets a passed player back into bidding next round', () => {
         const session = startTestGame(3)
-        for (let bid = 0; bid < 6; bid++) session.bid(bid % 3)
+        for (let bid = 0; bid < 6; bid++) session.bid((bid % 3) + 1)
         for (let pass = 0; pass < 3; pass++) passBid(session)
         resolveAll(session, () => 'pass')
         expect(session.state.machineState).toBe(MachineState.Bidding)
         expect(session.state.bidPasses).toEqual([])
+    })
+
+    it('names each auction spot by its printed number, which stays as its tile resolves', () => {
+        const session = startTestGame(4)
+        expect(session.state.market.map((spot) => spot.spot)).toEqual([1, 2, 3, 4])
+        session.bid(3)
+        expect(session.state.market[2].bids).toEqual([session.state.turnManager.turnOrder[0]])
+        expect(() => session.bid(5)).toThrow()
+        bidAround(session)
+        resolveAll(session, () => 'pass')
+        expect(session.state.market.map((spot) => spot.spot)).toEqual([1, 2, 3, 4, 5])
     })
 
     it('refuses a full track', () => {
@@ -199,7 +210,7 @@ describe('bidding', () => {
         session.edit((draft) => {
             draft.market[0].bids = Array.from({ length: BidTrackSpaces }, () => 'p1')
         })
-        expect(() => session.bid(0)).toThrow()
+        expect(() => session.bid(1)).toThrow()
     })
 })
 

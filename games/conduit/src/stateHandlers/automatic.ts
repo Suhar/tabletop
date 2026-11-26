@@ -70,7 +70,6 @@ export class PayingRevenueStateHandler implements MachineStateHandler<
     }
 }
 
-// After the fifth round, revenue and infrastructure loss repeat until no cubes remain on the board.
 export class LosingInfrastructureStateHandler implements MachineStateHandler<
     HydratedLoseInfrastructure,
     HydratedConduitGameState

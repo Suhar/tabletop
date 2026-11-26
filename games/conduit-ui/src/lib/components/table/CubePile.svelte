@@ -3,8 +3,7 @@
     import { centredTextShift } from '$lib/utils/tableLayout.js'
     import Cube from './Cube.svelte'
 
-    // A station's cubes in its top-left corner, piled two high. More than four show four and the
-    // count. Each cube has its own wrapper for the table animator to lift or drop.
+    // Each cube has its own wrapper for the table animator to lift or drop.
     let { key, count, color }: { key: string; count: number; color: string } = $props()
 
     const shape = cubeShape(PileCubeSize)

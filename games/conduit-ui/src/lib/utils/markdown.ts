@@ -1,7 +1,6 @@
 import { marked, type Token } from 'marked'
 
-// The rules are Markdown; they are turned into these plain blocks and drawn by Svelte, so no HTML
-// string ever reaches the page.
+// Drawn by Svelte from plain blocks, so no HTML string ever reaches the page.
 export type Inline =
     | { kind: 'text'; text: string }
     | { kind: 'strong'; children: Inline[] }

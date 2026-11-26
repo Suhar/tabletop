@@ -9,8 +9,7 @@ export enum StationLetter {
     A = 'A',
     B = 'B',
     C = 'C',
-    D = 'D',
-    E = 'E'
+    D = 'D'
 }
 
 export const BaseLetters = [
@@ -38,15 +37,13 @@ export interface StationTile {
     terminals: Record<Side, Terminal>
 }
 
-const PrintedLetters = [...BaseLetters, StationLetter.E] as const
-
 // Each letter prints all 16 terminal combinations. Tile numbers follow the printed art: within a
 // letter, bits 8, 4, 2 and 1 of (number - 1) mark a positive (red) North, East, South and West.
 function printedTile(letterIndex: number, combination: number): StationTile {
     const terminal = (bit: number) => (combination & bit ? Terminal.Positive : Terminal.Negative)
     return {
         id: letterIndex * TilesPerLetter + combination + 1,
-        letter: PrintedLetters[letterIndex],
+        letter: BaseLetters[letterIndex],
         terminals: {
             [Side.North]: terminal(8),
             [Side.East]: terminal(4),
@@ -56,7 +53,7 @@ function printedTile(letterIndex: number, combination: number): StationTile {
     }
 }
 
-export const StationTiles: readonly StationTile[] = PrintedLetters.flatMap((_, letterIndex) =>
+export const StationTiles: readonly StationTile[] = BaseLetters.flatMap((_, letterIndex) =>
     Array.from({ length: TilesPerLetter }, (_, combination) =>
         printedTile(letterIndex, combination)
     )
@@ -74,7 +71,7 @@ export function tileIdsOfLetter(letter: StationLetter): number[] {
     return StationTiles.filter((tile) => tile.letter === letter).map((tile) => tile.id)
 }
 
-// A route runs from a station to one of the next letter; D leads back to A.
+// Rules: A follows D.
 export function nextLetter(letter: StationLetter): BaseLetter {
     const index = BaseLetters.findIndex((candidate) => candidate === letter)
     return BaseLetters[(index + 1) % BaseLetters.length]

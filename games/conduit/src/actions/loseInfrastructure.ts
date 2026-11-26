@@ -7,7 +7,6 @@ import { HydratedConduitGameState, Payment } from '../model/gameState.js'
 export type InfrastructureLost = Type.Static<typeof InfrastructureLost>
 export const InfrastructureLost = Type.Object({
     flippedTileIds: Type.Array(Type.Integer()),
-    // Cubes each player moved from reserve to supply as the round ended.
     refills: Type.Array(Payment),
     roundEnded: Type.Boolean()
 })
@@ -40,7 +39,7 @@ export class HydratedLoseInfrastructure
         super(data, LoseInfrastructureValidator)
     }
 
-    // The payouts after the fifth round are not rounds of their own, so only a round in progress ends.
+    // The payouts after the fifth round are not rounds of their own.
     apply(state: HydratedConduitGameState) {
         const flippedTileIds = state.loseInfrastructure()
         const roundEnded = state.roundManager.currentRound !== undefined

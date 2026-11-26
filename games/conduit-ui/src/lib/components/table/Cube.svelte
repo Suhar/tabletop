@@ -1,8 +1,7 @@
 <script lang="ts">
     import { cubeShape } from '$lib/utils/cubeShape.js'
 
-    // One wooden cube in perspective, its top face's back corner at (0, 0). Shading comes from the
-    // player's colour, lighter on top and darker on the right, with no filters.
+    // Shaded by colour mixes rather than filters, which cost phones dearly.
     let { size, color }: { size: number; color: string } = $props()
     const shape = $derived(cubeShape(size))
 </script>

@@ -32,10 +32,10 @@
         "winningPlayerIds": [],
         "seed": 3367980177,
         "activePlayerIds": [],
-        "createdAt": "2026-11-25T20:39:41.181Z",
+        "createdAt": "2026-11-26T00:58:37.710Z",
         "storage": "remote",
         "category": "standard",
-        "startedAt": "2026-11-25T20:39:41.181Z",
+        "startedAt": "2026-11-26T00:58:37.711Z",
         "protectedInformation": true,
         "progress": {
             "fraction": 0,
@@ -44,7 +44,7 @@
     },
     "state": {
         "systemVersion": 3,
-        "id": "_RqJb1n-seoC_4y7ORMUJ",
+        "id": "tT6ywLzQHJpw9ZfElKe4a",
         "gameId": "scenario-stacked-offer",
         "seed": 3367980177,
         "prng": {
@@ -179,14 +179,17 @@
         },
         "market": [
             {
+                "spot": 1,
                 "tileId": 42,
                 "bids": ["p0", "p0", "p1", "p0"]
             },
             {
+                "spot": 2,
                 "tileId": 13,
                 "bids": ["p2", "p1", "p2"]
             },
             {
+                "spot": 3,
                 "tileId": 31,
                 "bids": []
             }
@@ -244,8 +247,8 @@
             "playerId": "p0",
             "source": "user",
             "type": "placeBid",
-            "slot": 0,
-            "createdAt": "2026-11-25T20:39:41.183Z",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.713Z",
             "index": 0,
             "undoPatch": [
                 {
@@ -293,8 +296,8 @@
             "playerId": "p2",
             "source": "user",
             "type": "placeBid",
-            "slot": 1,
-            "createdAt": "2026-11-25T20:39:41.183Z",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.713Z",
             "index": 1,
             "undoPatch": [
                 {
@@ -342,8 +345,8 @@
             "playerId": "p1",
             "source": "user",
             "type": "placeBid",
-            "slot": 1,
-            "createdAt": "2026-11-25T20:39:41.184Z",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.713Z",
             "index": 2,
             "undoPatch": [
                 {
@@ -391,8 +394,8 @@
             "playerId": "p0",
             "source": "user",
             "type": "placeBid",
-            "slot": 0,
-            "createdAt": "2026-11-25T20:39:41.184Z",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.713Z",
             "index": 3,
             "undoPatch": [
                 {
@@ -440,8 +443,8 @@
             "playerId": "p2",
             "source": "user",
             "type": "placeBid",
-            "slot": 1,
-            "createdAt": "2026-11-25T20:39:41.184Z",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.714Z",
             "index": 4,
             "undoPatch": [
                 {
@@ -489,8 +492,8 @@
             "playerId": "p1",
             "source": "user",
             "type": "placeBid",
-            "slot": 0,
-            "createdAt": "2026-11-25T20:39:41.184Z",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.714Z",
             "index": 5,
             "undoPatch": [
                 {
@@ -538,8 +541,8 @@
             "playerId": "p0",
             "source": "user",
             "type": "placeBid",
-            "slot": 0,
-            "createdAt": "2026-11-25T20:39:41.185Z",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.714Z",
             "index": 6,
             "undoPatch": [
                 {
@@ -587,7 +590,7 @@
             "playerId": "p2",
             "source": "user",
             "type": "passBid",
-            "createdAt": "2026-11-25T20:39:41.185Z",
+            "createdAt": "2026-11-26T00:58:37.714Z",
             "index": 7,
             "undoPatch": [
                 {
@@ -630,7 +633,7 @@
             "playerId": "p1",
             "source": "user",
             "type": "passBid",
-            "createdAt": "2026-11-25T20:39:41.185Z",
+            "createdAt": "2026-11-26T00:58:37.715Z",
             "index": 8,
             "undoPatch": [
                 {
@@ -673,7 +676,7 @@
             "playerId": "p0",
             "source": "user",
             "type": "passBid",
-            "createdAt": "2026-11-25T20:39:41.186Z",
+            "createdAt": "2026-11-26T00:58:37.715Z",
             "index": 9,
             "undoPatch": [
                 {

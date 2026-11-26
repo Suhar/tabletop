@@ -21,8 +21,8 @@ import { BaseLetters, Side, StationLetter, tileIdsOfLetter } from '../components
 import { MachineState } from './states.js'
 import { ConduitColors } from './colors.js'
 
-// One tile from each of the A-D groups forms a cross around the Central Station: A to the North,
-// B to the East, C to the South and D to the West, each turned at random.
+// Rules: one tile of each letter around the Central Station, A north, B east, C south and D
+// west, each turned at random.
 const SetupCross = [
     { letter: StationLetter.A, side: Side.North },
     { letter: StationLetter.B, side: Side.East },
@@ -52,8 +52,8 @@ export class ConduitGameInitializer
         )
         const turnManager = HydratedTurnManager.generate(players, prng.random, assignment)
 
-        // Each letter's tiles are shuffled apart for the cross; the rest are shuffled together into
-        // one stack.
+        // Rules: each letter is shuffled apart for the cross, then the rest together into one
+        // stack.
         const groups = BaseLetters.map((letter) => {
             const tileIds = tileIdsOfLetter(letter)
             shuffle(tileIds, protectedPrng.random)

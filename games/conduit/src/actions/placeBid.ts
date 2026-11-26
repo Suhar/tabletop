@@ -4,7 +4,6 @@ import { GameAction, HydratableAction } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { HydratedConduitGameState } from '../model/gameState.js'
 
-// A cube from supply goes on the lowest free space of a bid track.
 export type PlaceBid = Type.Static<typeof PlaceBid>
 export const PlaceBid = Type.Evaluate(
     Type.Intersect([
@@ -12,7 +11,7 @@ export const PlaceBid = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.PlaceBid),
             playerId: Type.String(),
-            slot: Type.Integer({ minimum: 0 })
+            spot: Type.Integer({ minimum: 1 })
         })
     ])
 )
@@ -26,17 +25,17 @@ export function isPlaceBid(action?: GameAction): action is PlaceBid {
 export class HydratedPlaceBid extends HydratableAction<typeof PlaceBid> implements PlaceBid {
     declare type: ActionType.PlaceBid
     declare playerId: string
-    declare slot: number
+    declare spot: number
 
     constructor(data: PlaceBid) {
         super(data, PlaceBidValidator)
     }
 
     apply(state: HydratedConduitGameState) {
-        state.placeBid(this.playerId, this.slot)
+        state.placeBid(this.playerId, this.spot)
     }
 
-    static canPlaceBid(state: HydratedConduitGameState, playerId: string, slot: number): boolean {
-        return state.canBid(playerId) && state.biddableSlots().includes(slot)
+    static canPlaceBid(state: HydratedConduitGameState, playerId: string, spot: number): boolean {
+        return state.canBid(playerId) && state.biddableSpots().includes(spot)
     }
 }

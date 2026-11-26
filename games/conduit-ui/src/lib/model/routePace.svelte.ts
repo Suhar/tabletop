@@ -1,5 +1,3 @@
-// How revenue shows each route: one station at a time with its search drawn out, or all routes
-// at once. A viewer's preference, kept in their browser.
 export type Pace = 'steps' | 'quick'
 
 const PaceKey = 'conduit-route-pace'

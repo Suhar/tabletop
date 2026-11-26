@@ -4,7 +4,6 @@
 
     const gameSession = getGameSession()
 
-    // Seats in clockwise order, starting from the viewer.
     const seats = $derived.by(() => {
         const order = gameSession.gameState.turnManager.turnOrder
         const myIndex = gameSession.primaryGame.hotseat

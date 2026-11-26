@@ -14,6 +14,7 @@ import {
     PassTile,
     PlaceBid,
     PlaceTile,
+    AuctionSpots,
     isPayRevenue,
     MachineState,
     MaxExtraCubes,
@@ -35,7 +36,6 @@ import { boardBounds, cellKey } from '$lib/utils/boardLayout.js'
 import { TableAnimator } from '$lib/animators/tableAnimator.svelte.js'
 import { RouteAnimator } from '$lib/animators/routeAnimator.svelte.js'
 import { RoutePace } from './routePace.svelte.js'
-import { AuctionSpots } from '$lib/utils/tableLayout.js'
 import { MediaQuery } from 'svelte/reactivity'
 
 type SessionOptions = ConstructorParameters<
@@ -52,7 +52,6 @@ export class ConduitGameSession extends GameSession<
 > {
     private readonly phone = new MediaQuery('max-width: 639px')
     private readonly wide = new MediaQuery('min-aspect-ratio: 5/4')
-    // A wide screen puts the auction board, in two columns, beside the grid instead of above it.
     readonly tableBeside = $derived(!this.phone.current && this.wide.current)
     readonly auctionColumns = $derived(this.phone.current ? 3 : this.tableBeside ? 2 : AuctionSpots)
     readonly tableAnimator = new TableAnimator(this)
@@ -60,9 +59,7 @@ export class ConduitGameSession extends GameSession<
     readonly routeAnimator = new RouteAnimator(this)
     rulesOpen = $state(false)
     inspectedCell: OffsetCoordinates | undefined = $state()
-    // A station under the mouse previews its route until the pointer leaves.
     hoveredCell: OffsetCoordinates | undefined = $state()
-    // The route option under the mouse while an owner chooses a route.
     previewOption: number | undefined = $state()
 
     private selection: PlacementSelection = $state({})
@@ -73,7 +70,7 @@ export class ConduitGameSession extends GameSession<
             undoableStagedSelection(
                 PlacementStageOrder,
                 () => this.selection,
-                (selection) => (this.selection = selection)
+                (selection) => this.restoreSelection(selection)
             )
         )
     }
@@ -91,16 +88,13 @@ export class ConduitGameSession extends GameSession<
             (this.hasLocalSelection || Boolean(this.undoableAction))
     )
 
-    // The state the table shows: the published state, or while a chain of actions animates, the
-    // step it has reached.
+    // While a chain of actions animates, the table shows the step it has reached.
     readonly tableState: HydratedConduitGameState = $derived(this.tableAnimator.shownState)
 
     readonly grid = $derived(this.tableState.grid())
     readonly bounds = $derived(boardBounds(this.tableState.board))
     readonly closedConnections = $derived(this.grid.closedConnections())
 
-    // What each Power Station would earn if revenue were paid now, and the tolls its route would
-    // pay other players.
     readonly stationRoutes: Map<string, StationRoute> = $derived(
         new Map(
             stationEarnings(this.tableState.board).map(({ station, route, amount, tolls }) => [
@@ -110,8 +104,6 @@ export class ConduitGameSession extends GameSession<
         )
     )
 
-    // What each player would earn if revenue were paid now: their stations' routes plus the tolls
-    // other players' routes would pay them.
     readonly projectedIncome: Map<string, number> = $derived.by(() => {
         const totals = new Map<string, number>()
         const add = (playerId: string, amount: number) =>
@@ -133,26 +125,23 @@ export class ConduitGameSession extends GameSession<
             : undefined
     )
 
-    // A revenue step viewed in the history shows what each station was paid, and by which route.
     readonly paidRevenues: StationRevenue[] | undefined = $derived(
         this.isViewingHistory && isPayRevenue(this.currentAction)
             ? this.currentAction.metadata?.revenues
             : undefined
     )
 
-    // A route being chosen, for everyone at the table, and the player's own choice to make.
     readonly shownRouteChoice = $derived(
         this.tableState.machineState === MachineState.ChoosingRoutes
             ? this.tableState.pendingRouteChoice()
             : undefined
     )
     readonly routeChoice = $derived(
-        // Not while a chain of actions animates: the published state still holds the old choice.
+        // The published state still holds the old choice while a chain animates.
         this.canTake(ActionType.ChooseRoute) && !this.busy
             ? this.gameState.pendingRouteChoice()
             : undefined
     )
-    // The option the board shows brightly: the one under the mouse, else the first.
     readonly focusedOption = $derived(this.shownRouteChoice ? (this.previewOption ?? 0) : undefined)
 
     readonly shownRoutes: ShownRoute[] = $derived.by(() => {
@@ -193,8 +182,6 @@ export class ConduitGameSession extends GameSession<
             : []
     })
 
-    // The badge on each Power Station: what it was paid in a viewed revenue step, otherwise what
-    // it would earn now.
     readonly stationBadges: Map<string, number> = $derived.by(() => {
         const paid = this.paidRevenues
         if (!paid) {
@@ -216,7 +203,6 @@ export class ConduitGameSession extends GameSession<
     readonly shownOffer = $derived(this.tableState.currentOffer())
     readonly shownPlacement = $derived(this.tableState.pendingPlacement())
 
-    // A player's cash as the table shows it: during revenue it rises payout by payout.
     cashOf(playerId: string): number {
         return (
             this.routeAnimator.cash?.get(playerId) ?? this.tableState.getPlayerState(playerId).cash
@@ -228,8 +214,8 @@ export class ConduitGameSession extends GameSession<
     }
 
     readonly isBidding = $derived(this.canTake(ActionType.PlaceBid))
-    readonly biddableSlots: number[] = $derived(
-        this.isBidding ? this.gameState.biddableSlots() : []
+    readonly biddableSpots: number[] = $derived(
+        this.isBidding ? this.gameState.biddableSpots() : []
     )
     readonly canPassBid = $derived(this.canTake(ActionType.PassBid))
     readonly canBuy = $derived(this.canTake(ActionType.BuyTile))
@@ -239,7 +225,7 @@ export class ConduitGameSession extends GameSession<
     readonly placement = $derived(
         this.canTake(ActionType.PlaceTile) ? this.pendingPlacement : undefined
     )
-    // Placement targets wait while a change animates, since the board may still be catching up.
+    // The board may still be catching up while a change animates.
     readonly placementOptions: Placement[] = $derived(
         this.placement && !this.busy
             ? this.grid.legalPlacements(this.placement.tileId, this.placement.faceUp)
@@ -251,15 +237,13 @@ export class ConduitGameSession extends GameSession<
             (option) => this.chosenCell && sameCoordinates(option.cell, this.chosenCell)
         )?.rotations ?? []
     )
-    // A chosen cell shows the tile in its first legal turn until the player turns it.
     readonly chosenRotation: number | undefined = $derived(
         this.selection.rotation?.value ?? this.rotationsForChosenCell[0]
     )
-    // Which way the last press turned the tile, so the preview turns the same way.
-    turnedTo: { rotation: number; direction: 1 | -1 } | undefined = $state()
+    // Counts on past a full turn, so the preview turns the way the player pressed and the short way
+    // back on Undo.
+    previewTurns = $state(0)
     readonly mySupply = $derived(this.myPlayerState?.supply ?? 0)
-    // Each extra-cube count the player may put on a new station, with what it costs: the supply,
-    // the three-cube limit and the player's cash all limit it.
     readonly extraCubeChoices: { count: number; price: number; affordable: boolean }[] =
         $derived.by(() => {
             const most = Math.min(this.mySupply, MaxExtraCubes)
@@ -300,8 +284,8 @@ export class ConduitGameSession extends GameSession<
                 : cell
     }
 
-    async bid(slot: number) {
-        await this.applyAction(this.createPlayerAction(PlaceBid, { slot }))
+    async bid(spot: number) {
+        await this.applyAction(this.createPlayerAction(PlaceBid, { spot }))
     }
 
     async passBid() {
@@ -312,7 +296,6 @@ export class ConduitGameSession extends GameSession<
         await this.applyAction(this.createPlayerAction(BuyTile))
     }
 
-    // Chooses the option at this position in the choice, naming its route by its cells.
     async chooseRoute(option: number) {
         const choice = this.routeChoice
         const route = choice?.options[option]?.cells
@@ -330,8 +313,6 @@ export class ConduitGameSession extends GameSession<
         await this.applyAction(this.createPlayerAction(PassTile))
     }
 
-    // A face-down tile has nothing more to choose. A face-up tile shows in its first legal turn,
-    // to be turned and given extra cubes; with one turn and no cubes to add, it goes straight down.
     async chooseCell(cell: OffsetCoordinates) {
         const placement = this.placement
         if (!placement || this.busy) return
@@ -352,18 +333,32 @@ export class ConduitGameSession extends GameSession<
             return
         }
         this.selection = chooseCell(this.selection, cell)
+        this.previewTurns = option.rotations[0]
     }
 
-    // Turns the tile to its next legal turn clockwise (1) or anticlockwise (-1). Each press
-    // replaces the last, so one Undo puts the tile back in its first turn.
+    // Each press replaces the last, so one Undo puts the tile back in its first turn.
     turnTile(direction: 1 | -1) {
         const rotations = this.rotationsForChosenCell
         const current = this.chosenRotation
         if (this.busy || current === undefined || rotations.length < 2) return
         const index = rotations.indexOf(current)
         const next = rotations[(index + direction + rotations.length) % rotations.length]
-        this.turnedTo = { rotation: next, direction }
+        this.turnPreview(next, direction)
         this.selection = chooseRotation(this.selection, next, 'manual')
+    }
+
+    private restoreSelection(selection: PlacementSelection) {
+        this.selection = selection
+        const rotation = this.chosenRotation
+        if (rotation !== undefined) this.turnPreview(rotation)
+    }
+
+    private turnPreview(rotation: number, direction?: 1 | -1) {
+        const current = ((this.previewTurns % 4) + 4) % 4
+        let step = (((rotation - current) % 4) + 4) % 4
+        if (direction === -1 && step > 0) step -= 4
+        else if (direction === undefined && step > 2) step -= 4
+        this.previewTurns += step
     }
 
     async chooseExtraCubes(extraCubes: number) {

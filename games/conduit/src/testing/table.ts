@@ -85,8 +85,8 @@ export function createTestSession(game: TestGame, initialState: ConduitProjected
             return state.activePlayerIds[0]
         },
         act,
-        bid(slot: number, playerId: string = state.activePlayerIds[0]) {
-            return act(playerId, ActionType.PlaceBid, { slot })
+        bid(spot: number, playerId: string = state.activePlayerIds[0]) {
+            return act(playerId, ActionType.PlaceBid, { spot })
         },
         buy(playerId: string = state.activePlayerIds[0]) {
             return act(playerId, ActionType.BuyTile)
@@ -105,7 +105,6 @@ export function createTestSession(game: TestGame, initialState: ConduitProjected
         ) {
             return act(playerId, ActionType.PlaceTile, { cell, rotation, extraCubes })
         },
-        // Chooses the pending choice's option at this position.
         chooseRoute(option: number, playerId: string = state.activePlayerIds[0]) {
             const choice = ConduitRuntime.hydrator
                 .hydrateState(structuredClone(state))

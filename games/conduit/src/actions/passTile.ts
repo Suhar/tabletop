@@ -8,7 +8,6 @@ export type TilePassed = Type.Static<typeof TilePassed>
 export const TilePassed = Type.Object({
     tileId: Type.Integer(),
     price: Type.Integer(),
-    // The passer's cubes taken off the bottom of the track together.
     cubes: Type.Integer()
 })
 

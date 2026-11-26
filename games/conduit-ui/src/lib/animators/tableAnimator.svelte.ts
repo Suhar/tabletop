@@ -6,7 +6,6 @@ import {
     isFillMarket,
     isLoseInfrastructure,
     isPassTile,
-    isPayRevenue,
     isPlaceBid,
     isPlaceTile,
     type HydratedConduitGameState,
@@ -27,12 +26,11 @@ import {
 type Timeline = AnimationContext['actionTimeline']
 
 export type FlyingTile = {
-    slot: number
+    spot: number
     tileId: number
     faceUp: boolean
     from: Point
     to: Point
-    // Cubes the new station takes, the winning cube first, and their owner's colour.
     cubes: number
     ownerId: string | undefined
 }
@@ -45,8 +43,6 @@ type Session = {
     removeGameStateChangeListener(listener: GameStateChangeListener<HydratedConduitGameState>): void
 }
 
-// A pose an animated wrapper is drawn in: offset, turn (degrees), scale and opacity, about a
-// pivot in the wrapper's own coordinates.
 type Pose = {
     x: number
     y: number
@@ -64,17 +60,13 @@ const CubeDrop = 0.3
 const CubeLift = 0.35
 const Flip = 0.18
 
-// Explains each committed action on the table. A placement plays as a chain of actions (the tile,
-// revenue, infrastructure loss, the next market), each animated in turn before the chain's final
-// state is published; the table shows the state each step reached, so every step animates from
-// what is on screen. Undo and history steps without an action swap the state at once.
+// A chain of actions is published only after it animates, so the table shows the state each step
+// reached and every step animates from what is on screen.
 export class TableAnimator {
     flyingTile: FlyingTile | undefined = $state()
-    // Stations shown face down mid-flip, before the state that flips them is shown.
     flipped: ReadonlySet<string> = $state.raw(new Set())
 
-    // The state the latest step reached, for the published state it started from. A newly
-    // published state supersedes it, so a step can never stick on screen.
+    // Keyed to the published state, so a step can never stick on screen.
     private stepped:
         { state: HydratedConduitGameState; over: HydratedConduitGameState } | undefined =
         $state.raw()
@@ -86,7 +78,6 @@ export class TableAnimator {
     )
 
     private svg: SVGSVGElement | undefined
-    // Wrappers this step has posed, put back at rest when the step's state is shown.
     private readonly posed = new Set<SVGElement>()
 
     constructor(private readonly session: Session) {}
@@ -101,7 +92,6 @@ export class TableAnimator {
         }
     }
 
-    // The published state supersedes every step; put away what the steps left out.
     settle() {
         this.flyingTile = undefined
         this.flipped = new Set()
@@ -126,9 +116,6 @@ export class TableAnimator {
             this.resolvePass(from, to, timeline)
         } else if (isPlaceTile(action) && action.metadata) {
             await this.flyTile(action, action.metadata.faceUp, from, to, timeline)
-        } else if (isPayRevenue(action)) {
-            // The route animator explains the payouts; cubes paid out come off afterwards.
-            this.liftSpentCubes(from, to, animationContext.finalTimeline, 0)
         } else if (isLoseInfrastructure(action)) {
             this.liftSpentCubes(from, to, timeline, 0)
             this.flipEmptied(from, to, timeline, 0.3)
@@ -137,7 +124,6 @@ export class TableAnimator {
         }
     }
 
-    // Shows the state a step reached, with every posed wrapper back at rest, in one update.
     private showStep(state: HydratedConduitGameState) {
         this.restPosed()
         this.flyingTile = undefined
@@ -157,8 +143,7 @@ export class TableAnimator {
         return this.svg?.querySelector<SVGGElement>(selector) ?? undefined
     }
 
-    // Tweens a wrapper from one pose to another, writing its transform itself (GSAP's own SVG
-    // transforms misplace pieces under zoom). An arrival is drawn in its first pose at once.
+    // Writes the transform itself: GSAP's own SVG transforms misplace pieces under zoom.
     private pose(
         timeline: Timeline,
         element: SVGElement | undefined,
@@ -191,33 +176,31 @@ export class TableAnimator {
         )
     }
 
-    // A bid cube drops onto its track space.
     private async dropBid(
         from: HydratedConduitGameState,
         to: HydratedConduitGameState,
         timeline: Timeline
     ) {
-        const slot = to.market.findIndex(
-            (spot, index) => spot.bids.length > (from.market[index]?.bids.length ?? 0)
+        const grown = to.market.find(
+            (entry) => entry.bids.length > from.marketSpot(entry.spot).bids.length
         )
-        if (slot < 0) return
-        const index = from.market[slot].bids.length
+        if (!grown) return
+        const index = from.marketSpot(grown.spot).bids.length
         this.showStep(to)
         await tick()
         this.pose(
             timeline,
-            this.find(`[data-bid="${slot}-${index}"]`),
+            this.find(`[data-bid="${grown.spot}-${index}"]`),
             { y: -44, opacity: 0 },
             { y: 0, opacity: 1 },
             { duration: 0.42, ease: 'bounce.out', at: 0, arrival: true }
         )
     }
 
-    // The bottom cube moves onto the bought tile; every other cube lifts back to its owner.
     private resolveBuy(from: HydratedConduitGameState, timeline: Timeline) {
         const offer = from.currentOffer()
         if (!offer) return
-        const bids = from.market[offer.slot].bids
+        const bids = from.marketSpot(offer.spot).bids
         const cube = cubeShape(TrackCubeSize)
         const start = trackCellOrigin(0)
         const onTile = {
@@ -230,7 +213,7 @@ export class TableAnimator {
         }
         this.pose(
             timeline,
-            this.find(`[data-bid="${offer.slot}-0"]`),
+            this.find(`[data-bid="${offer.spot}-0"]`),
             {},
             { ...onTile, scaleX: 1.2, scaleY: 1.2 },
             { duration: 0.5, ease: 'power2.inOut', at: 0.1 }
@@ -239,7 +222,7 @@ export class TableAnimator {
             if (index === 0) return
             this.pose(
                 timeline,
-                this.find(`[data-bid="${offer.slot}-${index}"]`),
+                this.find(`[data-bid="${offer.spot}-${index}"]`),
                 {},
                 { y: -30, opacity: 0 },
                 { duration: CubeLift, at: 0.1 + 0.06 * index }
@@ -247,7 +230,6 @@ export class TableAnimator {
         })
     }
 
-    // The passer's bottom cubes lift off and the cubes above slide down the track.
     private resolvePass(
         from: HydratedConduitGameState,
         to: HydratedConduitGameState,
@@ -255,10 +237,10 @@ export class TableAnimator {
     ) {
         const offer = from.currentOffer()
         if (!offer) return
-        const before = from.market[offer.slot].bids.length
-        const removed = before - to.market[offer.slot].bids.length
+        const before = from.marketSpot(offer.spot).bids.length
+        const removed = before - to.marketSpot(offer.spot).bids.length
         for (let index = 0; index < before; index++) {
-            const element = this.find(`[data-bid="${offer.slot}-${index}"]`)
+            const element = this.find(`[data-bid="${offer.spot}-${index}"]`)
             if (index < removed) {
                 this.pose(
                     timeline,
@@ -281,8 +263,6 @@ export class TableAnimator {
         }
     }
 
-    // The tile flies from its auction spot to its cell, turns to the chosen rotation, and the
-    // extra cubes drop onto it one by one.
     private async flyTile(
         action: PlaceTile,
         faceUp: boolean,
@@ -299,11 +279,11 @@ export class TableAnimator {
         )
         const cubes = faceUp ? 1 + action.extraCubes : 0
         this.flyingTile = {
-            slot: placement.slot,
+            spot: placement.spot,
             tileId: placement.tileId,
             faceUp,
-            from: spotTileOrigin(placement.slot, before),
-            // Where the cell is on the board as shown; the board grows to fit once the tile lands.
+            from: spotTileOrigin(placement.spot, before),
+            // The board grows to fit once the tile lands.
             to: cellTableOrigin(action.cell, before),
             cubes,
             ownerId: faceUp ? action.playerId : undefined
@@ -327,7 +307,7 @@ export class TableAnimator {
             { x: flight.to.x, y: flight.to.y, scaleX: 1, scaleY: 1 },
             { duration: TileFlight, ease: 'power2.inOut', at: 0, arrival: true }
         )
-        const turns = faceUp ? shortestTurns(action.rotation) : 0
+        const turns = faceUp ? this.shortestTurns(action.rotation) : 0
         if (turns !== 0) {
             this.pose(
                 timeline,
@@ -360,7 +340,6 @@ export class TableAnimator {
         })
     }
 
-    // One cube comes off each station that lost one, back to its owner's reserve.
     private liftSpentCubes(
         from: HydratedConduitGameState,
         to: HydratedConduitGameState,
@@ -385,7 +364,6 @@ export class TableAnimator {
         }
     }
 
-    // A station left empty turns over: it narrows to an edge, shows its back, and widens again.
     private flipEmptied(
         from: HydratedConduitGameState,
         to: HydratedConduitGameState,
@@ -419,35 +397,32 @@ export class TableAnimator {
         timeline.call(() => (this.flipped = new Set(keys)), [], at + Flip)
     }
 
-    // The new market's tiles turn face up one after another.
     private async fillMarket(
         from: HydratedConduitGameState,
         to: HydratedConduitGameState,
         timeline: Timeline
     ) {
+        const dealt = new Set(
+            from.market.flatMap((entry) => (entry.tileId === undefined ? [] : [entry.tileId]))
+        )
         const fresh = to.market
-            .map((spot, slot) => ({ spot, slot }))
-            .filter(
-                ({ spot, slot }) =>
-                    spot.tileId !== undefined && spot.tileId !== from.market[slot]?.tileId
-            )
-            .map(({ slot }) => slot)
+            .filter((entry) => entry.tileId !== undefined && !dealt.has(entry.tileId))
+            .map((entry) => entry.spot)
         if (fresh.length === 0) return
         this.showStep(to)
         await tick()
-        fresh.forEach((slot, order) => {
+        fresh.forEach((spot, order) => {
             this.pose(
                 timeline,
-                this.find(`[data-market-tile="${slot}"]`),
+                this.find(`[data-market-tile="${spot}"]`),
                 { scaleX: 0 },
                 { scaleX: 1 },
                 { duration: 0.26, at: 0.1 * order, arrival: true }
             )
         })
     }
-}
 
-// Quarter turns from the printed orientation to a rotation, the short way round.
-function shortestTurns(rotation: number): number {
-    return rotation === 3 ? -1 : rotation
+    private shortestTurns(rotation: number): number {
+        return rotation === 3 ? -1 : rotation
+    }
 }

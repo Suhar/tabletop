@@ -8,10 +8,9 @@ import { StationLetter } from '../components/tiles.js'
 import { Grid, type PlacedStation } from '../model/board.js'
 import { startTestGame } from '../testing/table.js'
 
-// A tie the owner settles (designer ruling, 2026-11-25): p0's D sits between two A stations one
-// step away, one p1's and one p2's, every touching terminal negative so both connections open. Both routes pass two stations, one of them p0's own, so
-// only the toll differs.
-const LetterIndex: Record<StationLetter, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 }
+// Designer ruling, 2026-11-25: p0's D sits between p1's A and p2's A, one step away each. Both
+// routes pass two stations, one of them p0's own, so only the toll differs.
+const LetterIndex: Record<StationLetter, number> = { A: 0, B: 1, C: 2, D: 3 }
 
 function station(
     letter: StationLetter,

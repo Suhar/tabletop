@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
-import { tick } from 'svelte'
-import type { Game, OffsetCoordinates } from '@tabletop/common'
+import { flushSync, tick } from 'svelte'
+import { assertExists, type Game, type OffsetCoordinates } from '@tabletop/common'
 import type { AnimationContext, GameStateChangeListener } from '@tabletop/frontend-components'
 import {
     Grid,
@@ -16,16 +16,12 @@ import { emblemOutline } from '$lib/utils/emblem.js'
 
 type Timeline = AnimationContext['actionTimeline']
 
-// One station's payout as the revenue animation explains it: the search for its route as the
-// engine ran it, the route chosen, and what it paid.
 export type RouteShow = {
     key: string
     color: string
     station: OffsetCoordinates
-    // The station's emblem outline and turn, which lights up instead of a ring.
     emblem: Emblem
     caption: string
-    // Why one route won when the search found several destinations at once.
     tie?: string
     verdict: string
     layers: SearchStep[][]
@@ -34,7 +30,6 @@ export type RouteShow = {
     route: OffsetCoordinates[]
     amount: number
     tolls: { cell: OffsetCoordinates; color: string; amount: number }[]
-    // Who the payout pays: the owner, and each toll's player.
     payments: { playerId: string; amount: number }[]
 }
 
@@ -47,7 +42,6 @@ type Session = {
     removeGameStateChangeListener(listener: GameStateChangeListener<HydratedConduitGameState>): void
 }
 
-// Seconds for each part of a station's explanation.
 const Intro = 0.45
 const Layer = 0.34
 const FoundHold = 0.35
@@ -56,18 +50,12 @@ const RouteStep = 0.22
 const PayHold = 1.1
 const NoRouteHold = 1.1
 
-// Explains a revenue payout. Step by step, each paying station in turn shows its search spreading
-// out one distance at a time along open connections, the destinations it found, how a tie was
-// broken, and the route it chose, then what it paid; cash rises as each payout lands. Quick
-// shows every route and payout at once. Undo and history steps without an action skip it.
 export class RouteAnimator {
     shows: RouteShow[] = $state.raw([])
-    // Each player's cash as the payouts so far have left it, while revenue animates.
     cash: ReadonlyMap<string, number> | undefined = $state.raw()
-    // The shows drawn now: step by step, only the station being explained, so a payout never
-    // mounts every station's search at once.
+    // Step by step, only the station being explained is mounted, so a payout never mounts every
+    // station's search at once.
     mounted: ReadonlySet<number> = $state.raw(new Set())
-    // Whether the shows draw their search, which only step by step plays.
     detailed = $state(false)
 
     private svg: SVGSVGElement | undefined
@@ -123,7 +111,6 @@ export class RouteAnimator {
             const name = this.session.nameOf(revenue.playerId)
             const route = revenue.route.length > 1 ? revenue.route : []
             const candidates = search.candidates.length > 1 ? search.candidates : []
-            // An owner who chose among tied routes: show the routes they chose between.
             const chose = from.routeChoices?.find((choice) => choice.tileId === station.tileId)
             const tolls = revenue.tolls?.length
                 ? route.slice(1).flatMap((cell) => {
@@ -149,23 +136,24 @@ export class RouteAnimator {
                     key: `${revenue.tileId}-${index}`,
                     color: this.session.colors.getPlayerBgColorValue(revenue.playerId),
                     station: station.cell,
-                    emblem: emblemOf(station),
+                    emblem: this.emblemOf(station),
                     caption: `${name}’s ${letter} → nearest ${search.target}`,
                     tie: chose
                         ? `Tie: ${name} chose who gets the toll`
                         : candidates.length > 0
-                          ? tieRule(search.candidates)
+                          ? this.tieRule(search.candidates)
                           : undefined,
-                    // A route pays $1 plus $1 per station it passes, both ends included;
-                    // face-down tiles on the way are not stations.
+                    // Rules: $1 plus $1 per station, both ends included; face-down tiles are
+                    // not stations.
                     verdict:
                         route.length > 0
                             ? `+$${revenue.amount} · ${revenue.amount - 1} stations`
                             : `No ${search.target} in reach`,
                     layers: search.layers,
                     ends: search.candidates.map((candidate) => {
-                        const cell = candidate.cells.at(-1)!
-                        return { cell, emblem: emblemOf(grid.stationAt(cell) ?? station) }
+                        const cell = candidate.cells.at(-1)
+                        assertExists(cell, 'A candidate route ends at a destination')
+                        return { cell, emblem: this.emblemOf(grid.stationAt(cell) ?? station) }
                     }),
                     candidates: chose
                         ? chose.options.map((option) => option.cells)
@@ -190,31 +178,29 @@ export class RouteAnimator {
         return [...(this.svg?.querySelectorAll<SVGElement>(selector) ?? [])]
     }
 
-    // Each station gets a part of the timeline as long as its explanation. When the part starts,
-    // the station's drawing mounts and the part fills with its tweens.
     private playSteps(animationContext: AnimationContext) {
         const timeline = animationContext.actionTimeline
         let at = 0
         this.shows.forEach((show, index) => {
-            const length = scheduleOf(show).end
+            const length = this.scheduleOf(show).end
             const part = gsap.timeline()
             part.to({}, { duration: length }, 0)
             timeline.add(part, at)
-            timeline.call(() => void this.mountAndExplain(part, show, index), [], at)
+            timeline.call(() => this.mountAndExplain(part, show, index), [], at)
             at += length
         })
     }
 
-    private async mountAndExplain(part: Timeline, show: RouteShow, index: number) {
+    // Mounts synchronously, so the part's tweens find the drawing while it plays.
+    private mountAndExplain(part: Timeline, show: RouteShow, index: number) {
         this.mounted = new Set([index])
-        await tick()
+        flushSync()
         this.explain(part, show, index)
     }
 
-    // One station's search, start to finish.
     private explain(timeline: Timeline, show: RouteShow, index: number) {
         const id = `${index}`
-        const { searching, found, drawing, paid, end } = scheduleOf(show)
+        const { searching, found, drawing, paid, end } = this.scheduleOf(show)
         this.reveal(timeline, id, 0)
         this.ring(timeline, this.find(`[data-show-ring="${id}"]`), 0)
         this.fade(timeline, this.find(`[data-show-caption="${id}"]`), 1, 0, 0.2)
@@ -270,7 +256,6 @@ export class RouteAnimator {
         this.hide(timeline, id, end)
     }
 
-    // Every route and payout at once.
     private playQuick(animationContext: AnimationContext) {
         const timeline = animationContext.actionTimeline
         this.shows.forEach((show, index) => {
@@ -309,8 +294,6 @@ export class RouteAnimator {
         if (element) timeline.to(element, { attr: { opacity }, duration, ease: 'none' }, at)
     }
 
-    // A ring closes in on a station as it lights up.
-    // A station's emblem outline pops in, closing onto the emblem.
     private ring(timeline: Timeline, element: SVGElement | undefined, at: number) {
         if (!element) return
         const pop = { scale: 1.45, opacity: 0 }
@@ -330,7 +313,6 @@ export class RouteAnimator {
         )
     }
 
-    // "+$N" rises from the station and each toll from the station it pays; cash follows.
     private payout(timeline: Timeline, id: string, at: number) {
         for (const pill of this.findAll(`[data-show-pay="${id}"]`)) {
             const rise = { y: 0, opacity: 0 }
@@ -349,8 +331,6 @@ export class RouteAnimator {
                 at
             )
         }
-        // The drawn route gives way to the glowing, flowing one at once, and the rings marking
-        // the station and the destinations found fade.
         const glow = this.find(`[data-show-glow="${id}"]`)
         if (glow) timeline.set(glow, { attr: { visibility: 'visible' } }, at)
         for (const line of this.findAll(`[data-show-route="${id}"]`)) {
@@ -372,37 +352,35 @@ export class RouteAnimator {
         }
         this.cash = cash
     }
+
+    private emblemOf(station: PlacedStation): Emblem {
+        return {
+            points: emblemOutline(stationTile(station.tileId).letter),
+            rotation: station.rotation * 90
+        }
+    }
+
+    private scheduleOf(show: RouteShow) {
+        const searching = Intro
+        const found = searching + show.layers.length * Layer
+        if (show.route.length === 0) {
+            return { searching, found, drawing: found, paid: found, end: found + NoRouteHold }
+        }
+        const drawing = found + FoundHold + (show.tie ? TieHold : 0)
+        const paid = drawing + Math.max(0.45, RouteStep * show.route.length)
+        return { searching, found, drawing, paid, end: paid + PayHold }
+    }
+
+    // Rules: a tie goes to the most stations passed, then the fewest of the owner's own.
+    private tieRule(candidates: { stations: number; own: number }[]): string {
+        const most = Math.max(...candidates.map((candidate) => candidate.stations))
+        const longest = candidates.filter((candidate) => candidate.stations === most)
+        if (longest.length < candidates.length) return 'Tie: most stations wins'
+        const fewest = Math.min(...longest.map((candidate) => candidate.own))
+        if (longest.some((candidate) => candidate.own !== fewest))
+            return 'Tie: fewest own stations wins'
+        return 'Tie: equal routes'
+    }
 }
 
 export type Emblem = { points: string; rotation: number }
-
-function emblemOf(station: PlacedStation): Emblem {
-    return {
-        points: emblemOutline(stationTile(station.tileId).letter),
-        rotation: station.rotation * 90
-    }
-}
-
-// When each part of a station's explanation starts, in seconds from its own start.
-function scheduleOf(show: RouteShow) {
-    const searching = Intro
-    const found = searching + show.layers.length * Layer
-    if (show.route.length === 0) {
-        return { searching, found, drawing: found, paid: found, end: found + NoRouteHold }
-    }
-    const drawing = found + FoundHold + (show.tie ? TieHold : 0)
-    const paid = drawing + Math.max(0.45, RouteStep * show.route.length)
-    return { searching, found, drawing, paid, end: paid + PayHold }
-}
-
-// What broke a tie between destinations at the same distance (rules v0.8.2): the most stations
-// passed, then the fewest of the owner's own.
-function tieRule(candidates: { stations: number; own: number }[]): string {
-    const most = Math.max(...candidates.map((candidate) => candidate.stations))
-    const longest = candidates.filter((candidate) => candidate.stations === most)
-    if (longest.length < candidates.length) return 'Tie: most stations wins'
-    const fewest = Math.min(...longest.map((candidate) => candidate.own))
-    if (longest.some((candidate) => candidate.own !== fewest))
-        return 'Tie: fewest own stations wins'
-    return 'Tie: equal routes'
-}

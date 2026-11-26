@@ -4,14 +4,12 @@ import { GameAction, HydratableAction, OffsetCoordinates } from '@tabletop/commo
 import { ActionType } from '../definition/actions.js'
 import { HydratedConduitGameState } from '../model/gameState.js'
 
-// Who the chosen route's tolls pay, one entry per station passed, for the history.
 export type RouteChosen = Type.Static<typeof RouteChosen>
 export const RouteChosen = Type.Object({
     tolls: Type.Array(Type.String())
 })
 
-// Before revenue, the owner of a station whose equally good routes would pay tolls to different
-// players chooses which route it takes (designer ruling, 2026-11-25), naming it by its cells.
+// Designer ruling, 2026-11-25.
 export type ChooseRoute = Type.Static<typeof ChooseRoute>
 export const ChooseRoute = Type.Evaluate(
     Type.Intersect([

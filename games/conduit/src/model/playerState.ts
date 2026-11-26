@@ -66,7 +66,6 @@ export class HydratedConduitPlayerState
         this.supply += count
     }
 
-    // A station's revenue costs it a cube, which goes to its owner's reserve.
     retireCube() {
         this.reserve += 1
     }

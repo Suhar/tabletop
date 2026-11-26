@@ -1,11 +1,7 @@
 import { StationLetter } from '@tabletop/conduit'
 
-// The outline of a station tile's central emblem, centred on (0, 0) in the tile's printed
-// orientation (tile = 100 units): A a chamfered square, B a chamfered diamond, C a hexagon with a
-// point at the top, D an octagon. Measured from the tile art by
-// tmp/conduit/scripts/measure-emblems.mjs, which finds how far each emblem reaches toward each of
-// its edges and runs the outline's stroke centre 5.25 units outside every edge, so a 4.5-unit
-// stroke leaves an even 3-unit gap all round.
+// Each emblem's outline, measured from the tile art, runs 5.25 units outside every edge so a
+// 4.5-unit stroke leaves an even 3-unit gap.
 const Outlines: Record<string, [number, number][]> = {
     [StationLetter.A]: [
         [26.9, 19.9],

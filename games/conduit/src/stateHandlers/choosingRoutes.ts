@@ -7,8 +7,6 @@ import { PayRevenue } from '../actions/payRevenue.js'
 import type { HydratedConduitGameState } from '../model/gameState.js'
 import { endTurn, startTurn } from './flow.js'
 
-// Owners choose, one station at a time, among equally good routes that would pay tolls to
-// different players; revenue follows the last choice.
 export class ChoosingRoutesStateHandler implements MachineStateHandler<
     HydratedChooseRoute,
     HydratedConduitGameState

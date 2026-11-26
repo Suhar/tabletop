@@ -1,11 +1,9 @@
 <script lang="ts">
     import type { Point } from '@tabletop/common'
 
-    // A route as a glowing line in its owner's colour, with dashes flowing from the origin
-    // station to the destination (MarraCash's route preview). The blur covers only this route,
-    // and the moving dashes sit above it, not under it, so they never repaint the glow. Moving
-    // dashes repaint their whole route every frame, so only a route shown alone flows: several at
-    // once hold their dashes still (on a 3x phone, four flowing routes cost about 130 MB more).
+    // Moving dashes repaint their whole route every frame, so only a route shown alone
+    // flows; on a 3x phone four flowing routes cost about 130 MB more. The dashes sit above
+    // the blur, not under it.
     let {
         id,
         line,
@@ -17,11 +15,9 @@
     const GlowReach = 16
     const Dash = 14
     const Gap = 12
-    // Pixels a second the dashes travel.
     const Speed = 34
 
-    // The dash pattern moves toward a line's start as its offset grows, so the line is drawn
-    // from the destination back to the origin.
+    // Dash offsets move toward a line's start, so the line runs from the destination back.
     const points = $derived(
         line
             .toReversed()

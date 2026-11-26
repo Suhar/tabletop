@@ -10,8 +10,8 @@ export interface BoardBounds {
     maxRow: number
 }
 
-// The board shows every placed tile and every empty cell beside one, so it does not jump when a
-// placement lights up its candidate cells.
+// The board includes every empty cell beside a tile, so it does not jump when placement targets
+// light up.
 export function boardBounds(board: Board): BoardBounds {
     const occupied = [CentralCell, ...board.stations.map((station) => station.cell)]
     const cells = occupied.flatMap((cell) => [

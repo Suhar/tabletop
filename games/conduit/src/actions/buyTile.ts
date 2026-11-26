@@ -8,7 +8,6 @@ export type TileBought = Type.Static<typeof TileBought>
 export const TileBought = Type.Object({
     tileId: Type.Integer(),
     price: Type.Integer(),
-    // What each other bidder was paid for their cubes; the rest of the price went to the bank.
     payments: Type.Array(Payment)
 })
 

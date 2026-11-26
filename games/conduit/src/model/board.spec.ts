@@ -12,7 +12,7 @@ import {
 import { Grid, type PlacedStation } from './board.js'
 import { revenueFor, stationEarnings } from './gameState.js'
 
-const LetterIndex: Record<StationLetter, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 }
+const LetterIndex: Record<StationLetter, number> = { A: 0, B: 1, C: 2, D: 3 }
 
 // The printed tile of a letter whose listed sides are positive and the rest negative.
 function tileId(letter: StationLetter, positive: Side[] = []): number {
@@ -52,7 +52,7 @@ const cells = (placements: { cell: OffsetCoordinates }[]) =>
 
 describe('station tiles', () => {
     it('prints every terminal combination once per letter', () => {
-        for (const letter of [...BaseLetters, StationLetter.E]) {
+        for (const letter of BaseLetters) {
             const combos = StationTiles.filter((tile) => tile.letter === letter).map((tile) =>
                 [Side.North, Side.East, Side.South, Side.West]
                     .map((side) => tile.terminals[side])

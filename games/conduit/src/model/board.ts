@@ -29,7 +29,7 @@ export const Board = Type.Object({
 
 export const CentralCell: OffsetCoordinates = { col: 0, row: 0 }
 
-// The whole grid, Central Station included, must fit within this many tiles each way (rules v0.8.1).
+// Rules: the whole grid, Central Station included, fits within 6x6 tiles.
 export const MaxGridSize = 6
 
 // A cap on the equally short routes considered for one station; a 6x6 grid never comes near it.
@@ -51,33 +51,23 @@ export interface Route {
     stations: number
 }
 
-// A cell the route search reached, and the cell it was reached from.
 export interface SearchStep {
     cell: OffsetCoordinates
     from: OffsetCoordinates
 }
 
 export interface RouteSearch {
-    // The letter the route must end at.
     target: StationLetter
-    // The cells reached at each distance from the station, nearest first.
+    // Nearest first.
     layers: SearchStep[][]
-    // The best route to each destination found at the nearest distance, with how many of the
-    // owner's own stations it passes.
     candidates: (Route & { own: number })[]
     route: Route | undefined
 }
 
-// The best way found to reach a cell: stations passed (both ends included) and how many of them the
-// route's owner owns.
 interface RouteStep {
     stations: number
     own: number
     previous?: OffsetCoordinates
-}
-
-function isBetterStep(a: RouteStep, b: RouteStep): boolean {
-    return a.stations > b.stations || (a.stations === b.stations && a.own < b.own)
 }
 
 export interface ClosedConnection {
@@ -110,17 +100,6 @@ export function terminalOf(face: TileFace, side: Side): Terminal | undefined {
     return face.faceUp ? terminalAt(stationTile(face.tileId), face.rotation, side) : undefined
 }
 
-// Matching terminals, or a face-down tile on either side, make an open connection. Opposite
-// terminals, and every edge of the Central Station, are closed.
-function isOpen(from: Occupant, to: Occupant, side: Side): boolean {
-    if (from.kind === 'central' || to.kind === 'central') {
-        return false
-    }
-    const near = terminalOf(from.face, side)
-    const far = terminalOf(to.face, oppositeSide(side))
-    return near === undefined || far === undefined || near === far
-}
-
 export class Grid {
     private readonly byCell: Map<string, PlacedStation>
 
@@ -143,7 +122,7 @@ export class Grid {
                 const neighbor = neighborCell(cell, side)
                 const from = this.occupant(cell)
                 const to = this.occupant(neighbor)
-                if (from && to && !isOpen(from, to, side)) {
+                if (from && to && !this.isOpen(from, to, side)) {
                     closed.push({ cell, side })
                 }
             }
@@ -151,8 +130,8 @@ export class Grid {
         return closed
     }
 
-    // A tile must border another tile and keep the grid within 6x6 (rules v0.8.1). Among those spots
-    // it must make an open connection when it can.
+    // Rules: a tile must border another and keep the grid within 6x6, and make an open
+    // connection if it can.
     legalPlacements(tileId: number, faceUp: boolean): Placement[] {
         const allowed = this.emptyCellsTouchingBoard().filter((cell) => this.fitsWithLimit(cell))
         const rotations = faceUp ? [0, 1, 2, 3] : [0]
@@ -177,16 +156,12 @@ export class Grid {
         )
     }
 
-    // The shortest route through open connections to another face-up station of the next letter,
-    // A following D. Among equally short routes the owner must take the one through the most
-    // face-up stations, then the one through the fewest of their own.
+    // Rules: the shortest route to a station of the next letter; among equals, the most stations,
+    // then the fewest of the owner's own.
     bestRoute(from: OffsetCoordinates): Route | undefined {
         return this.routeSearch(from)?.route
     }
 
-    // The search for a station's route, step by step, for showing how a route was found: the
-    // cells reached at each distance and the cell each was reached from, the destinations found at
-    // the first distance that has any, each one's best route, and the route chosen among them.
     routeSearch(from: OffsetCoordinates): RouteSearch | undefined {
         const start = this.stationAt(from)
         if (!start || !start.faceUp) {
@@ -209,7 +184,9 @@ export class Grid {
             const ends = next.filter((cell) => this.isStationOf(cell, target))
             if (ends.length > 0) {
                 const end = ends.reduce((leader, cell) =>
-                    isBetterStep(this.stepTo(cell, best), this.stepTo(leader, best)) ? cell : leader
+                    this.isBetterStep(this.stepTo(cell, best), this.stepTo(leader, best))
+                        ? cell
+                        : leader
                 )
                 return {
                     target,
@@ -226,16 +203,13 @@ export class Grid {
         return { target, layers, candidates: [], route: undefined }
     }
 
-    // Every route a station's owner may take: the shortest routes to the nearest stations of the
-    // letter it needs, then those through the most stations, then the fewest of the owner's own.
-    // Routes left tied may still pass different players' stations, which matters for tolls.
+    // Tied routes may pay tolls to different players, so every one is kept.
     bestRoutes(from: OffsetCoordinates): (Route & { own: number })[] {
         const start = this.stationAt(from)
         if (!start || !start.faceUp) {
             return []
         }
         const target = nextLetter(stationTile(start.tileId).letter)
-        // Each cell's distance from the station, and every cell one step nearer that leads to it.
         const depth = new Map<string, number>([[cellKey(from), 0]])
         const parents = new Map<string, OffsetCoordinates[]>()
         let layer: OffsetCoordinates[] = [from]
@@ -248,7 +222,7 @@ export class Grid {
                     const neighbor = neighborCell(cell, side)
                     const key = cellKey(neighbor)
                     const there = this.occupant(neighbor)
-                    if (!here || !there || !isOpen(here, there, side)) {
+                    if (!here || !there || !this.isOpen(here, there, side)) {
                         continue
                     }
                     const known = depth.get(key)
@@ -310,7 +284,7 @@ export class Grid {
                 const neighbor = neighborCell(cell, side)
                 const key = cellKey(neighbor)
                 const to = this.occupant(neighbor)
-                if (!from || !to || !isOpen(from, to, side)) {
+                if (!from || !to || !this.isOpen(from, to, side)) {
                     continue
                 }
                 if (best.has(key) && !reached.has(key)) {
@@ -327,7 +301,7 @@ export class Grid {
                     previous: cell
                 }
                 const known = best.get(key)
-                if (!known || isBetterStep(step, known)) {
+                if (!known || this.isBetterStep(step, known)) {
                     best.set(key, step)
                 }
                 reached.set(key, neighbor)
@@ -395,7 +369,22 @@ export class Grid {
         const placed: Occupant = { kind: 'tile', face }
         return SidesClockwise.some((side) => {
             const neighbor = this.occupant(neighborCell(cell, side))
-            return neighbor !== undefined && isOpen(placed, neighbor, side)
+            return neighbor !== undefined && this.isOpen(placed, neighbor, side)
         })
+    }
+
+    private isBetterStep(a: RouteStep, b: RouteStep): boolean {
+        return a.stations > b.stations || (a.stations === b.stations && a.own < b.own)
+    }
+
+    // Rules: matching terminals or a face-down tile make an open connection; the Central Station's
+    // edges are all closed.
+    private isOpen(from: Occupant, to: Occupant, side: Side): boolean {
+        if (from.kind === 'central' || to.kind === 'central') {
+            return false
+        }
+        const near = terminalOf(from.face, side)
+        const far = terminalOf(to.face, oppositeSide(side))
+        return near === undefined || far === undefined || near === far
     }
 }

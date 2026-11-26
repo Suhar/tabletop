@@ -12,8 +12,6 @@ export function endTurn(state: HydratedConduitGameState) {
     state.turnManager.endTurn(state.actionCount)
 }
 
-// Tiles resolve left to right: an offer while cubes remain on the track, then a placement by the
-// buyer, or by the Start Player when no one bought it. Revenue follows the last tile.
 export function nextResolutionState(
     context: MachineContext<HydratedConduitGameState>
 ): MachineState {
@@ -27,8 +25,6 @@ export function nextResolutionState(
     return startRevenue(context)
 }
 
-// Revenue waits while owners choose among equally good routes that would pay tolls to different
-// players.
 export function startRevenue(context: MachineContext<HydratedConduitGameState>): MachineState {
     const state = context.gameState
     const choices = state.findRouteChoices()

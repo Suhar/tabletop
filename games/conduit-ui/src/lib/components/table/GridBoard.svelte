@@ -38,8 +38,6 @@
         )
     )
 
-    // A route being chosen, and who the option in focus would pay: each other player's station on
-    // it with a cube, the destination included.
     const choice = $derived(gameSession.isViewingHistory ? undefined : gameSession.shownRouteChoice)
     const focusedTolls = $derived.by(() => {
         const option =
@@ -58,7 +56,6 @@
         })
     })
 
-    // A single highlighted route dims the stations it doesn't pass.
     const focusRoute = $derived(
         gameSession.shownRoutes.length === 1 ? gameSession.shownRoutes[0] : undefined
     )
@@ -95,24 +92,6 @@
         if (event.pointerType !== 'mouse') return
         gameSession.hoverStation(station?.cell)
     }
-
-    // The preview tile turns the way the player turned it, the short way round otherwise (Undo),
-    // so its quarter turns keep counting past a full circle rather than unwinding.
-    let turnsSoFar = 0
-    const previewTurns = $derived.by(() => {
-        const rotation = gameSession.chosenRotation
-        if (rotation === undefined) return turnsSoFar
-        const current = ((turnsSoFar % 4) + 4) % 4
-        const turned = gameSession.turnedTo
-        let step = (((rotation - current) % 4) + 4) % 4
-        if (turned?.rotation === rotation && turned.direction === -1) {
-            step = step === 0 ? 0 : step - 4
-        } else if (turned?.rotation !== rotation && step > 2) {
-            step -= 4
-        }
-        turnsSoFar += step
-        return turnsSoFar
-    })
 </script>
 
 <rect class="ground" x="0" y="0" width={size.width} height={size.height} rx="12"></rect>
@@ -180,7 +159,6 @@
 {/each}
 
 {#if choice}
-    <!-- The other tied routes, faint, beneath the one in focus. -->
     {#each choice.options as option, index (index)}
         {#if index !== gameSession.focusedOption}
             <polyline
@@ -204,7 +182,6 @@
     />
 {/each}
 
-<!-- The tolls the route in focus would pay, on the stations they go to. -->
 {#each focusedTolls as toll (cellKey(toll.cell))}
     {@const point = centreOf(toll.cell)}
     <g class="toll-chip" transform="translate({point.x} {point.y - 30})">
@@ -236,7 +213,7 @@
     >
         {#if chosen && gameSession.placement}
             <g transform="translate({half} {half})">
-                <g class="preview" style:transform="rotate({previewTurns * 90}deg)">
+                <g class="preview" style:transform="rotate({gameSession.previewTurns * 90}deg)">
                     <image
                         href={tileFaceUrl(gameSession.placement.tileId)}
                         x={-half}
@@ -247,7 +224,7 @@
                 </g>
             </g>
         {/if}
-        <!-- The placement popup anchors here: the frame keeps its size while the preview turns. -->
+        <!-- The popup anchors here: the frame keeps its size while the preview turns. -->
         <rect
             id={cellElementId(option.cell)}
             class="target-frame"

@@ -9,12 +9,9 @@ export type TilePlaced = Type.Static<typeof TilePlaced>
 export const TilePlaced = Type.Object({
     tileId: Type.Integer(),
     faceUp: Type.Boolean(),
-    // Paid for extra cubes: $1, $2 and $3 for the first, second and third.
     extraPrice: Type.Optional(Type.Integer({ minimum: 0 }))
 })
 
-// A bought tile goes face up with the winning cube and any extra cubes from supply; a tile no one
-// bought goes face down, placed by the Start Player.
 export type PlaceTile = Type.Static<typeof PlaceTile>
 export const PlaceTile = Type.Evaluate(
     Type.Intersect([

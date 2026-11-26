@@ -1,7 +1,6 @@
 <script lang="ts">
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
-        AuctionSpots,
         SpotWidth,
         spotOrigin,
         SpotHeight,
@@ -13,15 +12,15 @@
     } from '$lib/utils/tableLayout.js'
     import { tileFaceUrl } from '$lib/utils/tileArt.js'
     import { cubeShape, TrackCubeSize } from '$lib/utils/cubeShape.js'
-    import { BasePrice, BidTrackSpaces } from '@tabletop/conduit'
+    import { AuctionSpots, BasePrice, BidTrackSpaces } from '@tabletop/conduit'
     import Cube from './Cube.svelte'
 
     const gameSession = getGameSession()
     const market = $derived(gameSession.tableState.market)
-    const offerSlot = $derived(gameSession.shownOffer?.slot)
-    const placingSlot = $derived(gameSession.shownPlacement?.slot)
+    const offerSpot = $derived(gameSession.shownOffer?.spot)
+    const placingSpot = $derived(gameSession.shownPlacement?.spot)
+    const spots = Array.from({ length: AuctionSpots }, (_, index) => index + 1)
     const offerPrice = $derived(gameSession.shownOffer?.price)
-    // A cube in a track space, centred, and the buyer's cube resting on a bought tile.
     const cube = cubeShape(TrackCubeSize)
     const cubeInset = { x: TrackCell / 2, y: (TrackCell - cube.height) / 2 }
     const myColor = $derived(
@@ -33,27 +32,27 @@
     const tracks = Array.from({ length: BidTrackSpaces }, (_, index) => index)
     const tileCentre = { x: TileOrigin.x + TileInSpot / 2, y: TileOrigin.y + TileInSpot / 2 }
 
-    function activate(event: KeyboardEvent, slot: number) {
+    function activate(event: KeyboardEvent, spot: number) {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
-        void gameSession.bid(slot)
+        void gameSession.bid(spot)
     }
 </script>
 
-{#each Array.from({ length: AuctionSpots }, (_, index) => index) as slot (slot)}
-    {@const spot = market[slot]}
-    {@const biddable = gameSession.biddableSlots.includes(slot)}
-    {@const inPlay = slot < market.length}
+{#each spots as spot (spot)}
+    {@const entry = market.find((candidate) => candidate.spot === spot)}
+    {@const biddable = gameSession.biddableSpots.includes(spot)}
+    {@const inPlay = entry !== undefined}
     <g
         class="spot"
         class:biddable
         class:unused={!inPlay}
-        transform="translate({spotOrigin(slot, columns).x} {spotOrigin(slot, columns).y})"
+        transform="translate({spotOrigin(spot, columns).x} {spotOrigin(spot, columns).y})"
     >
         <rect
             class="frame"
-            class:offer={offerSlot === slot}
-            class:placing={placingSlot === slot}
+            class:offer={offerSpot === spot}
+            class:placing={placingSpot === spot}
             x="0"
             y="0"
             width={SpotWidth}
@@ -63,11 +62,11 @@
         <g transform="translate(8 8)">
             {#each tracks as index (index)}
                 {@const origin = trackCellOrigin(index)}
-                {@const bidder = spot?.bids[index]}
+                {@const bidder = entry?.bids[index]}
                 <rect class="track" x={origin.x} y={origin.y} width={TrackCell} height={TrackCell}
                 ></rect>
                 {#if bidder}
-                    {#if index === 0 && offerSlot === slot}
+                    {#if index === 0 && offerSpot === spot}
                         <rect
                             class="bottom"
                             x={origin.x + 1.5}
@@ -78,14 +77,14 @@
                         ></rect>
                     {/if}
                     <g transform="translate({origin.x + cubeInset.x} {origin.y + cubeInset.y})">
-                        <g data-bid="{slot}-{index}">
+                        <g data-bid="{spot}-{index}">
                             <Cube
                                 size={TrackCubeSize}
                                 color={gameSession.colors.getPlayerBgColorValue(bidder)}
                             />
                         </g>
                     </g>
-                {:else if spot?.tileId !== undefined}
+                {:else if entry?.tileId !== undefined}
                     <text
                         class="space-price"
                         x={origin.x + TrackCell / 2}
@@ -93,7 +92,7 @@
                         dy={centredTextShift(11)}
                         text-anchor="middle">${BasePrice + index + 1}</text
                     >
-                    {#if biddable && index === spot.bids.length && myColor}
+                    {#if biddable && index === entry.bids.length && myColor}
                         <g
                             class="ghost"
                             transform="translate({origin.x + cubeInset.x} {origin.y + cubeInset.y})"
@@ -103,28 +102,28 @@
                     {/if}
                 {/if}
             {/each}
-            {#if spot?.tileId !== undefined && gameSession.tableAnimator.flyingTile?.slot !== slot}
+            {#if entry?.tileId !== undefined && gameSession.tableAnimator.flyingTile?.spot !== spot}
                 <g transform="translate({tileCentre.x} {tileCentre.y})">
-                    <g data-market-tile={slot}>
+                    <g data-market-tile={spot}>
                         <image
-                            href={tileFaceUrl(spot.tileId)}
+                            href={tileFaceUrl(entry.tileId)}
                             x={-TileInSpot / 2}
                             y={-TileInSpot / 2}
                             width={TileInSpot}
                             height={TileInSpot}
                         ></image>
-                        {#if spot.buyerId}
+                        {#if entry.buyerId}
                             <g transform="translate(0 {-cube.height / 2})">
                                 <Cube
                                     size={TrackCubeSize + 4}
-                                    color={gameSession.colors.getPlayerBgColorValue(spot.buyerId)}
+                                    color={gameSession.colors.getPlayerBgColorValue(entry.buyerId)}
                                 />
                             </g>
                         {/if}
                     </g>
                 </g>
             {/if}
-            {#if offerSlot === slot && offerPrice !== undefined}
+            {#if offerSpot === spot && offerPrice !== undefined}
                 <text
                     class="price"
                     x={tileCentre.x}
@@ -135,7 +134,7 @@
             {/if}
         </g>
         <text class="number" x={SpotWidth - 10} y="18" dy={centredTextShift(14)} text-anchor="end"
-            >{slot + 1}</text
+            >{spot}</text
         >
         {#if biddable}
             <rect
@@ -145,9 +144,9 @@
                 rx="8"
                 role="button"
                 tabindex="0"
-                aria-label="Bid on spot {slot + 1}"
-                onclick={() => gameSession.bid(slot)}
-                onkeydown={(event) => activate(event, slot)}
+                aria-label="Bid on spot {spot}"
+                onclick={() => gameSession.bid(spot)}
+                onkeydown={(event) => activate(event, spot)}
             ></rect>
         {/if}
     </g>

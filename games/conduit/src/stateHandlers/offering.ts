@@ -8,7 +8,6 @@ import { endTurn, nextResolutionState, offeredPlayerId, startTurn } from './flow
 
 type OfferAction = HydratedBuyTile | HydratedPassTile
 
-// The owner of the bottom cube on the track buys the tile or passes it up the track.
 export class OfferingStateHandler implements MachineStateHandler<
     OfferAction,
     HydratedConduitGameState

@@ -12,14 +12,12 @@
     const standings = $derived(
         [...state.players].sort((a, b) => b.cash - a.cash || b.supply - a.supply)
     )
-    // What the last player to act did, for everyone waiting.
     const lastMove = $derived.by(() => {
         const action = gameSession.actions.findLast((candidate) => candidate.playerId)
         return action ? describeAction(action, name) : undefined
     })
     const myBids = $derived(gameSession.myPlayer ? state.bidsBy(gameSession.myPlayer.id) : 0)
 
-    // Who a route's tolls pay, as "Ada +$1, Ben +$2", or "No toll".
     function tollLabel(tolls: string[]): string {
         if (tolls.length === 0) return 'No toll'
         const totals = new Map<string, number>()

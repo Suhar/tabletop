@@ -57,8 +57,6 @@ function table(slug, playerCount) {
     }
     const hydrated = () => ConduitRuntime.hydrator.hydrateState(structuredClone(state))
 
-    // A plain player: bids along the spots and passes after two bids, buys anything up to $4,
-    // places on the first legal cell with one extra cube when it can pay for it.
     const step = () => {
         const view = hydrated()
         switch (state.machineState) {
@@ -68,8 +66,8 @@ function table(slug, playerCount) {
                     act(ActionType.PassBid)
                     return
                 }
-                const slots = view.biddableSlots()
-                act(ActionType.PlaceBid, { slot: slots[count % slots.length] })
+                const spots = view.biddableSpots()
+                act(ActionType.PlaceBid, { spot: spots[count % spots.length] })
                 return
             }
             case MachineState.Offering: {
@@ -92,7 +90,6 @@ function table(slug, playerCount) {
                 return
             }
             case MachineState.ChoosingRoutes: {
-                // A tie deciding who gets a toll: the first option.
                 const choice = view.pendingRouteChoice()
                 act(ActionType.ChooseRoute, {
                     tileId: choice.tileId,
@@ -122,22 +119,18 @@ function table(slug, playerCount) {
     return { act, playUntil, write, hydrated }
 }
 
-// Round 3, bidding: a grid with owned stations, face-down tiles and closed connections.
 {
     const scenario = table('mid-game-grid', 4)
     scenario.playUntil((view) => view.round === 3 && view.machineState === MachineState.Bidding)
     scenario.write()
 }
 
-// An offer where the first bidder also holds the cube above: passing takes both back for $1.
 {
     const scenario = table('stacked-offer', 3)
     const order = scenario.hydrated().turnManager.turnOrder
     const [first, , third] = order
-    // The first market has three tiles. After two bids each the first bidder bids once more on
-    // spot 1, then everyone passes, leaving tile 3 unbid.
-    const bids = [0, 1, 1, 0, 1, 0, 0]
-    for (const slot of bids) scenario.act(ActionType.PlaceBid, { slot })
+    const bids = [1, 2, 2, 1, 2, 1, 1]
+    for (const spot of bids) scenario.act(ActionType.PlaceBid, { spot })
     for (let pass = 0; pass < 3; pass++) scenario.act(ActionType.PassBid)
     const view = scenario.hydrated()
     if (view.machineState !== MachineState.Offering) throw Error('stacked-offer: bidding goes on')
@@ -146,8 +139,6 @@ function table(slug, playerCount) {
     scenario.write()
 }
 
-// A bought tile waiting to be placed once the grid spans six tiles one way, so the 6x6 limit
-// leaves some bordering cells unlit.
 {
     const span = (values) => Math.max(...values, 0) - Math.min(...values, 0) + 1
     const spans = (view) => [
@@ -167,20 +158,17 @@ function table(slug, playerCount) {
     scenario.write()
 }
 
-// The last tile of round 5: placing it starts the final payouts, which run until the grid is empty.
 {
     const scenario = table('last-tile', 3)
     scenario.playUntil(
         (view) =>
             view.round === 5 &&
             view.machineState === MachineState.Placing &&
-            view.market.filter((slot) => slot.tileId !== undefined).length === 1
+            view.market.filter((spot) => spot.tileId !== undefined).length === 1
     )
     scenario.write()
 }
 
-// An owner choosing which of two equally good routes their station takes: the routes pay their
-// tolls to different players (designer ruling, 2026-11-25).
 {
     const scenario = table('route-choice', 4)
     scenario.playUntil((view) => view.machineState === MachineState.ChoosingRoutes)

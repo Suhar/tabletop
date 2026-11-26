@@ -22,7 +22,6 @@ export type HistoryEntry = {
     title: string
     playerId?: string
     lines: string[]
-    // The last action's index in the game, for jumping to the table as that action left it.
     lastIndex: number
 }
 
@@ -34,11 +33,10 @@ const tileName = (tileId: number) => `${stationTile(tileId).letter} tile`
 const dollars = (amount: number) => `$${amount}`
 const cubes = (count: number) => `${count} cube${count === 1 ? '' : 's'}`
 
-// Describes one action from its input and metadata alone.
 export function describeAction(action: GameAction, name: Name): string | undefined {
     const who = action.playerId ? name(action.playerId) : ''
     if (isPlaceBid(action)) {
-        return `${who} bid on spot ${action.slot + 1}`
+        return `${who} bid on spot ${action.spot}`
     }
     if (isPassBid(action)) {
         return `${who} passed`
@@ -114,8 +112,6 @@ function tileOf(action: GameAction): number | undefined {
     return undefined
 }
 
-// Groups the actions into history entries: a round's market, its bidding, each tile's offers and
-// placement, revenue and infrastructure loss, with a divider at each round and the final payouts.
 export function historyItems(actions: readonly GameAction[], name: Name): HistoryItem[] {
     const items: HistoryItem[] = [{ kind: 'divider', key: 'round-1', label: 'Round 1' }]
     let open: HistoryEntry | undefined

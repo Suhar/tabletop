@@ -13,8 +13,6 @@ import { endTurn, nextResolutionState, startTurn } from './flow.js'
 
 type BiddingAction = HydratedPlaceBid | HydratedPassBid
 
-// Starting with the Start Player, players in turn place one cube each, skipping anyone who cannot.
-// A player may pass once they have placed two cubes, and is then out for the round.
 export class BiddingStateHandler implements MachineStateHandler<
     BiddingAction,
     HydratedConduitGameState
@@ -26,7 +24,7 @@ export class BiddingStateHandler implements MachineStateHandler<
         const state = context.gameState
         if (!state.isActivePlayer(action.playerId ?? '')) return false
         if (isPlaceBid(action)) {
-            return HydratedPlaceBid.canPlaceBid(state, action.playerId, action.slot)
+            return HydratedPlaceBid.canPlaceBid(state, action.playerId, action.spot)
         }
         if (isPassBid(action)) return this.canPass(action.playerId, context)
         return false
@@ -64,7 +62,7 @@ export class BiddingStateHandler implements MachineStateHandler<
     // After a pass, the turn still moves on from the player who just acted.
     private nextBidder(state: HydratedConduitGameState): string {
         const canBid = (playerId: string) => state.canBid(playerId)
-        const anyBids = state.market.some((slot) => slot.bids.length > 0)
+        const anyBids = state.market.some((spot) => spot.bids.length > 0)
         const lastBidder = state.turnManager.lastPlayer()
         const bidder = anyBids
             ? state.turnManager.nextPlayer(lastBidder, canBid)

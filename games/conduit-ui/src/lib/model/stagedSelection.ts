@@ -1,12 +1,10 @@
 import type { OffsetCoordinates } from '@tabletop/common'
 import {
-    popHighestManualStagedSelection,
     setStagedSelectionValue,
     type StagedSelectionSource,
     type StagedSelectionState
 } from '@tabletop/frontend-components'
 
-// Placing a bought tile: the cell, then the tile's turn, then how many extra cubes go on it.
 export type PlacementValues = {
     cell: OffsetCoordinates
     rotation: number
@@ -44,9 +42,4 @@ export function chooseRotation(
         rotation,
         source
     )
-}
-
-export function popPlacementSelection(selection: PlacementSelection): PlacementSelection {
-    return popHighestManualStagedSelection<PlacementValues>(selection, PlacementStageOrder)
-        .nextState
 }

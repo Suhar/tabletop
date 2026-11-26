@@ -14,8 +14,8 @@ describe('history entries', () => {
     it('groups bidding, each tile, revenue and rounds', () => {
         const items = historyItems(
             [
-                action(ActionType.PlaceBid, { playerId: 'p0', slot: 0 }),
-                action(ActionType.PlaceBid, { playerId: 'p1', slot: 1 }),
+                action(ActionType.PlaceBid, { playerId: 'p0', spot: 1 }),
+                action(ActionType.PlaceBid, { playerId: 'p1', spot: 2 }),
                 action(ActionType.PassTile, {
                     playerId: 'p0',
                     metadata: { tileId: 3, price: 2, cubes: 1 }

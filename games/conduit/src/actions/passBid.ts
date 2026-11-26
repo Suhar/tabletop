@@ -4,8 +4,6 @@ import { GameAction, HydratableAction } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { HydratedConduitGameState } from '../model/gameState.js'
 
-// Once a player has placed two cubes they may pass instead of bidding, and are then out of
-// bidding for the round.
 export type PassBid = Type.Static<typeof PassBid>
 export const PassBid = Type.Evaluate(
     Type.Intersect([

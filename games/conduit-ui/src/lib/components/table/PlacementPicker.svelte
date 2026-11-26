@@ -9,7 +9,7 @@
     const rotations = $derived(gameSession.rotationsForChosenCell)
     const rotation = $derived(gameSession.chosenRotation)
     const cubeChoices = $derived(gameSession.extraCubeChoices)
-    // When extra cubes cost money every choice shows its price, $0 included, so the counts line up.
+    // Every count shows its price, $0 included, so the counts line up.
     const priced = $derived(cubeChoices.some((choice) => choice.price > 0))
 </script>
 
