@@ -1,0 +1,4543 @@
+{
+    "game": {
+        "id": "scenario-placing-a-station",
+        "isPublic": false,
+        "status": "started",
+        "typeId": "conduit",
+        "deleted": false,
+        "name": "placing-a-station",
+        "ownerId": "owner",
+        "players": [
+            {
+                "id": "p0",
+                "name": "Ada",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p1",
+                "name": "Ben",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p2",
+                "name": "Cleo",
+                "isHuman": true,
+                "status": "joined"
+            },
+            {
+                "id": "p3",
+                "name": "Dev",
+                "isHuman": true,
+                "status": "joined"
+            }
+        ],
+        "config": {},
+        "hotseat": false,
+        "winningPlayerIds": [],
+        "seed": 3367980177,
+        "activePlayerIds": [],
+        "createdAt": "2026-11-26T00:58:37.716Z",
+        "storage": "remote",
+        "category": "standard",
+        "startedAt": "2026-11-26T00:58:37.716Z",
+        "protectedInformation": true,
+        "progress": {
+            "fraction": 0,
+            "label": "Round 1 of 5"
+        }
+    },
+    "state": {
+        "systemVersion": 3,
+        "id": "Hf6xm3g1qqtEN477Ajt79",
+        "gameId": "scenario-placing-a-station",
+        "seed": 3367980177,
+        "prng": {
+            "seed": 3367980177,
+            "invocations": 221
+        },
+        "protectedPrng": {
+            "algorithm": "chacha20-v1",
+            "seed": "033aacbe6212a2c9bee0cb5c71682e564dd13d1188be676e6f5a533a83f821c3",
+            "invocations": 119
+        },
+        "masterSeed": "0123456789abcdef0123456789abcdef",
+        "activePlayerIds": ["p2"],
+        "winningPlayerIds": [],
+        "actionCount": 63,
+        "actionChecksum": -846048021,
+        "players": [
+            {
+                "playerId": "p0",
+                "color": "blue",
+                "cash": 10,
+                "supply": 5,
+                "reserve": 7
+            },
+            {
+                "playerId": "p1",
+                "color": "purple",
+                "cash": 6,
+                "supply": 7,
+                "reserve": 7
+            },
+            {
+                "playerId": "p2",
+                "color": "red",
+                "cash": 5,
+                "supply": 5,
+                "reserve": 7
+            },
+            {
+                "playerId": "p3",
+                "color": "green",
+                "cash": 8,
+                "supply": 7,
+                "reserve": 6
+            }
+        ],
+        "turnManager": {
+            "series": [
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 0,
+                    "end": 1
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 1,
+                    "end": 2
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 2,
+                    "end": 3
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 3,
+                    "end": 4
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 4,
+                    "end": 5
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 5,
+                    "end": 6
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 6,
+                    "end": 7
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 7,
+                    "end": 8
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 8,
+                    "end": 9
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 9,
+                    "end": 10
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 10,
+                    "end": 11
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 11,
+                    "end": 12
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 12,
+                    "end": 13
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 13,
+                    "end": 14
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 14,
+                    "end": 15
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 15,
+                    "end": 16
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 16,
+                    "end": 17
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 17,
+                    "end": 18
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 18,
+                    "end": 19
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 19,
+                    "end": 20
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 23,
+                    "end": 24
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 24,
+                    "end": 25
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 25,
+                    "end": 26
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 26,
+                    "end": 27
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 27,
+                    "end": 28
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 28,
+                    "end": 29
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 29,
+                    "end": 30
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 30,
+                    "end": 31
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 31,
+                    "end": 32
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 32,
+                    "end": 33
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 33,
+                    "end": 34
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 34,
+                    "end": 35
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 35,
+                    "end": 36
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 36,
+                    "end": 37
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 37,
+                    "end": 38
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 38,
+                    "end": 39
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 39,
+                    "end": 40
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 40,
+                    "end": 41
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 41,
+                    "end": 42
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 42,
+                    "end": 43
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 43,
+                    "end": 44
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 44,
+                    "end": 45
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 45,
+                    "end": 46
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 46,
+                    "end": 47
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 50,
+                    "end": 51
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 51,
+                    "end": 52
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 52,
+                    "end": 53
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 53,
+                    "end": 54
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 54,
+                    "end": 55
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 55,
+                    "end": 56
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 56,
+                    "end": 57
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 57,
+                    "end": 58
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p3",
+                    "start": 58,
+                    "end": 59
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 59,
+                    "end": 60
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p1",
+                    "start": 60,
+                    "end": 61
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p0",
+                    "start": 61,
+                    "end": 62
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 62,
+                    "end": 63
+                },
+                {
+                    "type": "turn",
+                    "playerId": "p2",
+                    "start": 63
+                }
+            ],
+            "turnOrder": ["p3", "p2", "p1", "p0"],
+            "turnCounts": {
+                "p0": 16,
+                "p1": 14,
+                "p2": 15,
+                "p3": 12
+            }
+        },
+        "machineState": "Placing",
+        "roundManager": {
+            "series": [
+                {
+                    "type": "round",
+                    "start": 0,
+                    "number": 1,
+                    "end": 22
+                },
+                {
+                    "type": "round",
+                    "start": 22,
+                    "number": 2,
+                    "end": 49
+                },
+                {
+                    "type": "round",
+                    "start": 49,
+                    "number": 3
+                }
+            ]
+        },
+        "deck": {
+            "items": [
+                43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29, 46, 22, 45,
+                32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58, 62, 38, 6, 24, 17, 34,
+                49, 18, 8
+            ],
+            "remaining": 46
+        },
+        "market": [
+            {
+                "spot": 1,
+                "tileId": 57,
+                "bids": [],
+                "buyerId": "p2"
+            },
+            {
+                "spot": 2,
+                "tileId": 63,
+                "bids": ["p1", "p0"]
+            },
+            {
+                "spot": 3,
+                "tileId": 56,
+                "bids": ["p0"]
+            },
+            {
+                "spot": 4,
+                "tileId": 50,
+                "bids": ["p3"]
+            },
+            {
+                "spot": 5,
+                "tileId": 9,
+                "bids": ["p3", "p2"]
+            }
+        ],
+        "board": {
+            "stations": [
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -1
+                    },
+                    "tileId": 2,
+                    "rotation": 3,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": 0
+                    },
+                    "tileId": 21,
+                    "rotation": 1,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": 1
+                    },
+                    "tileId": 47,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": 0
+                    },
+                    "tileId": 60,
+                    "rotation": 2,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -2
+                    },
+                    "tileId": 42,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": -1
+                    },
+                    "tileId": 13,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": -1
+                    },
+                    "tileId": 31,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 2,
+                        "row": 0
+                    },
+                    "tileId": 1,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 1,
+                        "row": 1
+                    },
+                    "tileId": 27,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 1,
+                    "ownerId": "p0"
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": 2
+                    },
+                    "tileId": 5,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 1,
+                    "ownerId": "p2"
+                },
+                {
+                    "cell": {
+                        "col": -1,
+                        "row": 1
+                    },
+                    "tileId": 26,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": -2,
+                        "row": 0
+                    },
+                    "tileId": 10,
+                    "rotation": 0,
+                    "faceUp": true,
+                    "cubes": 0
+                },
+                {
+                    "cell": {
+                        "col": 0,
+                        "row": -3
+                    },
+                    "tileId": 44,
+                    "rotation": 0,
+                    "faceUp": false,
+                    "cubes": 0
+                }
+            ]
+        },
+        "bidPasses": ["p3", "p2", "p1", "p0"]
+    },
+    "actions": [
+        {
+            "id": "placing-a-station-0",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.717Z",
+            "index": 0,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/0/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-1",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.717Z",
+            "index": 1,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 61497267
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/1/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-2",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.718Z",
+            "index": 2,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -48087707
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/2/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-3",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.718Z",
+            "index": 3,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 73516665
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/3/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 0
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-4",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.719Z",
+            "index": 4,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -261428711
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/4/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-5",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.719Z",
+            "index": 5,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -411986564
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/5/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-6",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.720Z",
+            "index": 6,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 6
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -155561897
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/6/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-7",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.720Z",
+            "index": 7,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 7
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -99639006
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/7/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 1
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-8",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.721Z",
+            "index": 8,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -42825245
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/8/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-9",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.721Z",
+            "index": 9,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 653382122
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/9/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/10"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-10",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.721Z",
+            "index": 10,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -258958122
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/10/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/11"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-11",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.722Z",
+            "index": 11,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 11
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1565712318
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/11/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/12"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/3"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-12",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.722Z",
+            "metadata": {
+                "tileId": 42,
+                "price": 3,
+                "payments": []
+            },
+            "index": 12,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 12
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -379270450
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/12/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/13"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 42,
+                        "bids": ["p1", "p1"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-13",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": -2
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.723Z",
+            "metadata": {
+                "tileId": 42,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 13,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 13
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1017871686
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/13/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/14"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 42,
+                        "bids": [],
+                        "buyerId": "p1"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/4"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-14",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.724Z",
+            "metadata": {
+                "tileId": 13,
+                "price": 3,
+                "payments": []
+            },
+            "index": 14,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 14
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -896229444
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/14/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/15"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 13,
+                        "bids": ["p0", "p0"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-15",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 1,
+                "row": -1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.725Z",
+            "metadata": {
+                "tileId": 13,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 15,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 15
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 953401625
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/15/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/16"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 13,
+                        "bids": [],
+                        "buyerId": "p0"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/5"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-16",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.725Z",
+            "metadata": {
+                "tileId": 31,
+                "price": 3,
+                "payments": []
+            },
+            "index": 16,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 16
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1842881712
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/16/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/17"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/2",
+                    "value": {
+                        "spot": 3,
+                        "tileId": 31,
+                        "bids": ["p3", "p3"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-17",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -1,
+                "row": -1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.726Z",
+            "metadata": {
+                "tileId": 31,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 17,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 17
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1923412104
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/17/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/18"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/2",
+                    "value": {
+                        "spot": 3,
+                        "tileId": 31,
+                        "bids": [],
+                        "buyerId": "p3"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/6"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-18",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.727Z",
+            "metadata": {
+                "tileId": 1,
+                "price": 3,
+                "payments": []
+            },
+            "index": 18,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 18
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1918346834
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/18/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/19"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 1,
+                        "bids": ["p2", "p2"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-19",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 2,
+                "row": 0
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.727Z",
+            "metadata": {
+                "tileId": 1,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 19,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 11
+                },
+                {
+                    "op": "add",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 19
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1782298709
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/19/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 1,
+                        "bids": [],
+                        "buyerId": "p2"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/7"
+                }
+            ]
+        },
+        {
+            "id": "nZMJxbg1z7cets1nPj2H8",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "payRevenue",
+            "createdAt": "2026-11-26T00:58:37.728Z",
+            "metadata": {
+                "revenues": [
+                    {
+                        "playerId": "p1",
+                        "tileId": 42,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 13,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            }
+                        ],
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "tileId": 31,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 1,
+                        "route": [
+                            {
+                                "col": 2,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            }
+                        ],
+                        "amount": 3
+                    }
+                ]
+            },
+            "index": 20,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 46
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 20
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -271842650
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "PayingRevenue"
+                }
+            ]
+        },
+        {
+            "id": "FWav9NQuyIv6GgFj8xNnw",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "loseInfrastructure",
+            "createdAt": "2026-11-26T00:58:37.729Z",
+            "metadata": {
+                "flippedTileIds": [2, 21, 47, 60],
+                "refills": [
+                    {
+                        "playerId": "p0",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p1",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p2",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "amount": 3
+                    }
+                ],
+                "roundEnded": true
+            },
+            "index": 21,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 81
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 21
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1137940706
+                },
+                {
+                    "op": "replace",
+                    "path": "/players",
+                    "value": [
+                        {
+                            "playerId": "p0",
+                            "color": "blue",
+                            "cash": 4,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p1",
+                            "color": "purple",
+                            "cash": 1,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p2",
+                            "color": "red",
+                            "cash": 4,
+                            "supply": 3,
+                            "reserve": 10
+                        },
+                        {
+                            "playerId": "p3",
+                            "color": "green",
+                            "cash": 1,
+                            "supply": 3,
+                            "reserve": 10
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnOrder",
+                    "value": ["p1", "p0", "p3", "p2"]
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "LosingInfrastructure"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/0/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/0/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/1/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/2/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/3/faceUp",
+                    "value": true
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/4/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/5/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/6/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/7/cubes",
+                    "value": 2
+                }
+            ]
+        },
+        {
+            "id": "75CYtXcGAM4hhN24pqazH",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "fillMarket",
+            "revealsInfo": true,
+            "createdAt": "2026-11-26T00:58:37.730Z",
+            "metadata": {
+                "round": 2,
+                "tileIds": [27, 5, 26, 10, 44]
+            },
+            "index": 22,
+            "undoPatch": [
+                {
+                    "op": "remove",
+                    "path": "/activePlayerIds/0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 22
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1831178039
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/20"
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "FillingMarket"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/deck",
+                    "value": {
+                        "items": [
+                            43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29,
+                            46, 22, 45, 32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58,
+                            62, 38, 6, 24, 17, 34, 49, 18, 8, 9, 50, 56, 63, 57, 44, 10, 26, 5, 27
+                        ],
+                        "remaining": 56
+                    }
+                },
+                {
+                    "op": "replace",
+                    "path": "/market",
+                    "value": [
+                        {
+                            "spot": 1,
+                            "bids": []
+                        },
+                        {
+                            "spot": 2,
+                            "bids": []
+                        },
+                        {
+                            "spot": 3,
+                            "bids": []
+                        },
+                        {
+                            "spot": 4,
+                            "bids": []
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/bidPasses",
+                    "value": ["p1", "p0", "p3", "p2"]
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-20",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.732Z",
+            "index": 23,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 23
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1607790817
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/20/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/21"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-21",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.733Z",
+            "index": 24,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 24
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1813070365
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/21/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/22"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-22",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.734Z",
+            "index": 25,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 25
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2140735542
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/22/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/23"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-23",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.735Z",
+            "index": 26,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 26
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1608405210
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/23/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/24"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-24",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 5,
+            "createdAt": "2026-11-26T00:58:37.736Z",
+            "index": 27,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 27
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 527423106
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/24/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/25"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/4/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-25",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.736Z",
+            "index": 28,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 28
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -914202308
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/25/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/26"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-26",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.737Z",
+            "index": 29,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 29
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 109139200
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/26/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/27"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-27",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.737Z",
+            "index": 30,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 30
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 746307576
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/27/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/28"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-28",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.738Z",
+            "index": 31,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 31
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1826827113
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/28/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/29"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-29",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.739Z",
+            "index": 32,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 32
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 18252453
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/29/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/30"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-30",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.740Z",
+            "index": 33,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 33
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1276533290
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/30/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/31"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-31",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.740Z",
+            "index": 34,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 34
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1712854183
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/31/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/32"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 7
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/3"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-32",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.742Z",
+            "metadata": {
+                "tileId": 27,
+                "price": 3,
+                "payments": [
+                    {
+                        "playerId": "p3",
+                        "amount": 1
+                    }
+                ]
+            },
+            "index": 35,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 35
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -664469002
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 4
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/32/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/33"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 27,
+                        "bids": ["p0", "p3"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-33",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 1,
+                "row": 1
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.743Z",
+            "metadata": {
+                "tileId": 27,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 36,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 36
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -324266648
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/33/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/34"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 27,
+                        "bids": [],
+                        "buyerId": "p0"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/8"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-34",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.744Z",
+            "metadata": {
+                "tileId": 5,
+                "price": 3,
+                "cubes": 1
+            },
+            "index": 37,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 37
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 31052264
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 5
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/34/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/35"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 8
+                },
+                {
+                    "op": "add",
+                    "path": "/market/1/bids/0",
+                    "value": "p3"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-35",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.745Z",
+            "metadata": {
+                "tileId": 5,
+                "price": 2,
+                "payments": []
+            },
+            "index": 38,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 38
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -511906561
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/35/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/36"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 5,
+                        "bids": ["p2"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-36",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": 2
+            },
+            "rotation": 0,
+            "extraCubes": 1,
+            "createdAt": "2026-11-26T00:58:37.746Z",
+            "metadata": {
+                "tileId": 5,
+                "faceUp": true,
+                "extraPrice": 1
+            },
+            "index": 39,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 39
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 558372713
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/36/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/37"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/1",
+                    "value": {
+                        "spot": 2,
+                        "tileId": 5,
+                        "bids": [],
+                        "buyerId": "p2"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/9"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-37",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.747Z",
+            "metadata": {
+                "tileId": 26,
+                "price": 3,
+                "cubes": 1
+            },
+            "index": 40,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 40
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -788691490
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/37/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/38"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 10
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/bids/0",
+                    "value": "p2"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-38",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.747Z",
+            "metadata": {
+                "tileId": 26,
+                "price": 2,
+                "cubes": 1
+            },
+            "index": 41,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 41
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 686246044
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 4
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/38/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/39"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 8
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/bids/0",
+                    "value": "p1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-39",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -1,
+                "row": 1
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.748Z",
+            "metadata": {
+                "tileId": 26,
+                "faceUp": false
+            },
+            "index": 42,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 42
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1285755416
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/39/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/40"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/2/tileId",
+                    "value": 26
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/10"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-40",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.749Z",
+            "metadata": {
+                "tileId": 10,
+                "price": 2,
+                "payments": []
+            },
+            "index": 43,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 43
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -936070042
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 2
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/40/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/41"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 9
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 10,
+                        "bids": ["p1"]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-41",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": -2,
+                "row": 0
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.750Z",
+            "metadata": {
+                "tileId": 10,
+                "faceUp": true
+            },
+            "index": 44,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 44
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 441282227
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/41/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/42"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 10
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/3",
+                    "value": {
+                        "spot": 4,
+                        "tileId": 10,
+                        "bids": [],
+                        "buyerId": "p1"
+                    }
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/11"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-42",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passTile",
+            "createdAt": "2026-11-26T00:58:37.751Z",
+            "metadata": {
+                "tileId": 44,
+                "price": 2,
+                "cubes": 1
+            },
+            "index": 45,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 45
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -390660147
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 3
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/42/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/43"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 11
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/4/bids/0",
+                    "value": "p0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-43",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeTile",
+            "cell": {
+                "col": 0,
+                "row": -3
+            },
+            "rotation": 0,
+            "extraCubes": 0,
+            "createdAt": "2026-11-26T00:58:37.752Z",
+            "metadata": {
+                "tileId": 44,
+                "faceUp": false
+            },
+            "index": 46,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 116
+                },
+                {
+                    "op": "add",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 46
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1806085133
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/43/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 12
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Placing"
+                },
+                {
+                    "op": "add",
+                    "path": "/market/4/tileId",
+                    "value": 44
+                },
+                {
+                    "op": "remove",
+                    "path": "/board/stations/12"
+                }
+            ]
+        },
+        {
+            "id": "7LTA2TiGAiIvQbwUvCkxA",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "payRevenue",
+            "createdAt": "2026-11-26T00:58:37.752Z",
+            "metadata": {
+                "revenues": [
+                    {
+                        "playerId": "p1",
+                        "tileId": 42,
+                        "route": [],
+                        "amount": 0
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 13,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": -1,
+                                "row": -1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p3",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p3",
+                        "tileId": 31,
+                        "route": [
+                            {
+                                "col": -1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -2
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p1",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 1,
+                        "route": [
+                            {
+                                "col": 2,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": 1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p0",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p0",
+                        "tileId": 27,
+                        "route": [
+                            {
+                                "col": 1,
+                                "row": 1
+                            },
+                            {
+                                "col": 1,
+                                "row": 0
+                            },
+                            {
+                                "col": 1,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -1
+                            },
+                            {
+                                "col": 0,
+                                "row": -2
+                            }
+                        ],
+                        "amount": 4,
+                        "tolls": [
+                            {
+                                "playerId": "p1",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p2",
+                        "tileId": 5,
+                        "route": [
+                            {
+                                "col": 0,
+                                "row": 2
+                            },
+                            {
+                                "col": 0,
+                                "row": 1
+                            },
+                            {
+                                "col": 1,
+                                "row": 1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p0",
+                                "amount": 1
+                            }
+                        ]
+                    },
+                    {
+                        "playerId": "p1",
+                        "tileId": 10,
+                        "route": [
+                            {
+                                "col": -2,
+                                "row": 0
+                            },
+                            {
+                                "col": -1,
+                                "row": 0
+                            },
+                            {
+                                "col": -1,
+                                "row": -1
+                            }
+                        ],
+                        "amount": 3,
+                        "tolls": [
+                            {
+                                "playerId": "p3",
+                                "amount": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            "index": 47,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 151
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 47
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -489367915
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/cash",
+                    "value": 1
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 0
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/cash",
+                    "value": 3
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "PayingRevenue"
+                }
+            ]
+        },
+        {
+            "id": "VoNswFN0HgvMy43YGK6ba",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "loseInfrastructure",
+            "createdAt": "2026-11-26T00:58:37.753Z",
+            "metadata": {
+                "flippedTileIds": [],
+                "refills": [
+                    {
+                        "playerId": "p0",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p1",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p2",
+                        "amount": 3
+                    },
+                    {
+                        "playerId": "p3",
+                        "amount": 3
+                    }
+                ],
+                "roundEnded": true
+            },
+            "index": 48,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/prng/invocations",
+                    "value": 186
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 48
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1056519948
+                },
+                {
+                    "op": "replace",
+                    "path": "/players",
+                    "value": [
+                        {
+                            "playerId": "p0",
+                            "color": "blue",
+                            "cash": 10,
+                            "supply": 4,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p1",
+                            "color": "purple",
+                            "cash": 5,
+                            "supply": 5,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p2",
+                            "color": "red",
+                            "cash": 8,
+                            "supply": 4,
+                            "reserve": 8
+                        },
+                        {
+                            "playerId": "p3",
+                            "color": "green",
+                            "cash": 8,
+                            "supply": 6,
+                            "reserve": 8
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnOrder",
+                    "value": ["p0", "p3", "p2", "p1"]
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "LosingInfrastructure"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/1/end"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/4/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/4/ownerId",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/5/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/5/ownerId",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/6/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/6/ownerId",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/7/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/7/ownerId",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/8/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/9/cubes",
+                    "value": 2
+                },
+                {
+                    "op": "replace",
+                    "path": "/board/stations/11/cubes",
+                    "value": 1
+                },
+                {
+                    "op": "add",
+                    "path": "/board/stations/11/ownerId",
+                    "value": "p1"
+                }
+            ]
+        },
+        {
+            "id": "buyBpfkzxSPnInCmLcy62",
+            "gameId": "scenario-placing-a-station",
+            "source": "system",
+            "type": "fillMarket",
+            "revealsInfo": true,
+            "createdAt": "2026-11-26T00:58:37.754Z",
+            "metadata": {
+                "round": 3,
+                "tileIds": [57, 63, 56, 50, 9]
+            },
+            "index": 49,
+            "undoPatch": [
+                {
+                    "op": "remove",
+                    "path": "/activePlayerIds/0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 49
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1758280745
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/44"
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "FillingMarket"
+                },
+                {
+                    "op": "remove",
+                    "path": "/roundManager/series/2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/deck",
+                    "value": {
+                        "items": [
+                            43, 14, 4, 52, 3, 20, 12, 28, 48, 41, 7, 40, 55, 30, 33, 61, 53, 11, 29,
+                            46, 22, 45, 32, 25, 64, 23, 54, 59, 36, 37, 51, 19, 16, 35, 39, 15, 58,
+                            62, 38, 6, 24, 17, 34, 49, 18, 8, 9, 50, 56, 63, 57
+                        ],
+                        "remaining": 51
+                    }
+                },
+                {
+                    "op": "replace",
+                    "path": "/market",
+                    "value": [
+                        {
+                            "spot": 1,
+                            "bids": []
+                        },
+                        {
+                            "spot": 2,
+                            "bids": []
+                        },
+                        {
+                            "spot": 3,
+                            "bids": []
+                        },
+                        {
+                            "spot": 4,
+                            "bids": []
+                        },
+                        {
+                            "spot": 5,
+                            "bids": []
+                        }
+                    ]
+                },
+                {
+                    "op": "replace",
+                    "path": "/bidPasses",
+                    "value": ["p0", "p3", "p2", "p1"]
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-44",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 5,
+            "createdAt": "2026-11-26T00:58:37.755Z",
+            "index": 50,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 50
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 577469799
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 9
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/44/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/45"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 9
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/4/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-45",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.756Z",
+            "index": 51,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 51
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -441342335
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/45/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/46"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 11
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-46",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.756Z",
+            "index": 52,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 52
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 226680686
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 8
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/46/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/47"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 11
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-47",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 3,
+            "createdAt": "2026-11-26T00:58:37.757Z",
+            "index": 53,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 53
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 2118171401
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/47/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/48"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 13
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/2/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-48",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 4,
+            "createdAt": "2026-11-26T00:58:37.758Z",
+            "index": 54,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 54
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -994153549
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/3/supply",
+                    "value": 8
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/48/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/49"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 10
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/3/bids/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-49",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 5,
+            "createdAt": "2026-11-26T00:58:37.759Z",
+            "index": 55,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 55
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -923314169
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/49/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/50"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 12
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/4/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-50",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 1,
+            "createdAt": "2026-11-26T00:58:37.760Z",
+            "index": 56,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 56
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -461160422
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 7
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/50/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/51"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 12
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/0/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-51",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "placeBid",
+            "spot": 2,
+            "createdAt": "2026-11-26T00:58:37.760Z",
+            "index": 57,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 57
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 952100698
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/0/supply",
+                    "value": 6
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/51/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/52"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 14
+                },
+                {
+                    "op": "remove",
+                    "path": "/market/1/bids/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-52",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p3",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.761Z",
+            "index": 58,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p3"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 58
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1379937527
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/52/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/53"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p3",
+                    "value": 11
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/0"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-53",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.762Z",
+            "index": 59,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p2"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 59
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -1530015530
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/53/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/54"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 13
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/1"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-54",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p1",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.763Z",
+            "index": 60,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p1"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 60
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1305836722
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/54/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/55"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p1",
+                    "value": 13
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/2"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-55",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p0",
+            "source": "user",
+            "type": "passBid",
+            "createdAt": "2026-11-26T00:58:37.764Z",
+            "index": 61,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/activePlayerIds/0",
+                    "value": "p0"
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 61
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": -637260759
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/55/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/56"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p0",
+                    "value": 15
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Bidding"
+                },
+                {
+                    "op": "remove",
+                    "path": "/bidPasses/3"
+                }
+            ]
+        },
+        {
+            "id": "placing-a-station-56",
+            "gameId": "scenario-placing-a-station",
+            "playerId": "p2",
+            "source": "user",
+            "type": "buyTile",
+            "createdAt": "2026-11-26T00:58:37.764Z",
+            "metadata": {
+                "tileId": 57,
+                "price": 3,
+                "payments": [
+                    {
+                        "playerId": "p1",
+                        "amount": 1
+                    }
+                ]
+            },
+            "index": 62,
+            "undoPatch": [
+                {
+                    "op": "replace",
+                    "path": "/actionCount",
+                    "value": 62
+                },
+                {
+                    "op": "replace",
+                    "path": "/actionChecksum",
+                    "value": 1168181228
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/cash",
+                    "value": 5
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/1/supply",
+                    "value": 6
+                },
+                {
+                    "op": "replace",
+                    "path": "/players/2/cash",
+                    "value": 8
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/56/end"
+                },
+                {
+                    "op": "remove",
+                    "path": "/turnManager/series/57"
+                },
+                {
+                    "op": "replace",
+                    "path": "/turnManager/turnCounts/p2",
+                    "value": 14
+                },
+                {
+                    "op": "replace",
+                    "path": "/machineState",
+                    "value": "Offering"
+                },
+                {
+                    "op": "replace",
+                    "path": "/market/0",
+                    "value": {
+                        "spot": 1,
+                        "tileId": 57,
+                        "bids": ["p2", "p1"]
+                    }
+                }
+            ]
+        }
+    ]
+}
