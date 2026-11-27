@@ -44,7 +44,13 @@ type SessionOptions = ConstructorParameters<
 
 export type StationRoute = { route: Route | undefined; amount: number; bonuses: Payment[] }
 
-export type ShownRoute = { key: string; color: string; cells: OffsetCoordinates[] }
+// branch: one of several equally good routes from the inspected station, drawn as an alternative.
+export type ShownRoute = {
+    key: string
+    color: string
+    cells: OffsetCoordinates[]
+    branch?: boolean
+}
 
 export class ConduitGameSession extends GameSession<
     ConduitProjectedState,
@@ -119,12 +125,6 @@ export class ConduitGameSession extends GameSession<
 
     private readonly highlightedCell = $derived(this.inspectedCell ?? this.hoveredCell)
 
-    readonly inspectedRoute: Route | undefined = $derived(
-        this.highlightedCell
-            ? this.stationRoutes.get(cellKey(this.highlightedCell))?.route
-            : undefined
-    )
-
     readonly paidRevenues: StationRevenue[] | undefined = $derived(
         this.isViewingHistory && isPayRevenue(this.currentAction)
             ? this.currentAction.metadata?.revenues
@@ -167,19 +167,17 @@ export class ConduitGameSession extends GameSession<
                     cells: revenue.route
                 }))
         }
-        const route = this.inspectedRoute
-        const ownerId = this.highlightedCell
-            ? this.grid.stationAt(this.highlightedCell)?.ownerId
-            : undefined
-        return route && route.cells.length > 1
-            ? [
-                  {
-                      key: 'inspected',
-                      color: this.colors.getPlayerBgColorValue(ownerId),
-                      cells: route.cells
-                  }
-              ]
-            : []
+        const cell = this.highlightedCell
+        if (!cell) return []
+        // Every equally good route, so a tie shows all its possibilities.
+        const routes = this.grid.bestRoutes(cell).filter((route) => route.cells.length > 1)
+        const color = this.colors.getPlayerBgColorValue(this.grid.stationAt(cell)?.ownerId)
+        return routes.map((route, index) => ({
+            key: `inspected-${index}`,
+            color,
+            cells: route.cells,
+            branch: routes.length > 1
+        }))
     })
 
     readonly stationBadges: Map<string, number> = $derived.by(() => {

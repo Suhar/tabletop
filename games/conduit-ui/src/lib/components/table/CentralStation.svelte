@@ -1,5 +1,6 @@
 <script lang="ts">
     import { CellSize } from '$lib/utils/boardLayout.js'
+    import { CautionStripesId } from '$lib/utils/tileArt.js'
 
     let { x, y }: { x: number; y: number } = $props()
     const middle = CellSize / 2
@@ -10,7 +11,15 @@
     {#each [0, 90, 180, 270] as angle (angle)}
         <g transform="rotate({angle} {middle} {middle})">
             <rect class="conduit" x={middle - 6} y="4" width="12" height="20"></rect>
-            <rect class="block" x={middle - 14} y="4" width="28" height="6" rx="2"></rect>
+            <rect
+                class="block"
+                x={middle - 14}
+                y="4"
+                width="28"
+                height="6"
+                rx="2"
+                fill="url(#{CautionStripesId})"
+            ></rect>
         </g>
     {/each}
     <circle class="core" cx={middle} cy={middle} r="22"></circle>
@@ -23,17 +32,13 @@
 
 <style>
     .body {
-        fill: #2a313c;
-        stroke: #5b6b80;
+        fill: #0b1d38;
+        stroke: #49d6ff;
         stroke-width: 2;
     }
 
     .conduit {
         fill: #8c96a3;
-    }
-
-    .block {
-        fill: #e3342f;
     }
 
     .core {

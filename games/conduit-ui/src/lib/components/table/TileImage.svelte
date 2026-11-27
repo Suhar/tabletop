@@ -1,8 +1,9 @@
 <script lang="ts">
     import { SidesClockwise, stationTile } from '@tabletop/conduit'
     import {
-        TerminalColors,
+        TerminalOutlineWidth,
         TerminalRadius,
+        TerminalStyles,
         TileArtCentre,
         TileArtSize,
         TileBoardId,
@@ -25,11 +26,14 @@
     {#if tile}
         {#each SidesClockwise as side (side)}
             {@const centre = terminalCentre(side)}
+            {@const style = TerminalStyles[tile.terminals[side]]}
             <circle
                 cx={centre.x}
                 cy={centre.y}
                 r={TerminalRadius}
-                fill={TerminalColors[tile.terminals[side]]}
+                fill={style.fill}
+                stroke={style.outline}
+                stroke-width={style.outline ? TerminalOutlineWidth : undefined}
             ></circle>
         {/each}
         <use href="#{emblemId(tile.letter)}" x={TileArtCentre} y={TileArtCentre}></use>

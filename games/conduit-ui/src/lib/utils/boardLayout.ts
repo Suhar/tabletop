@@ -1,5 +1,11 @@
 import type { OffsetCoordinates, Point } from '@tabletop/common'
-import { type Board, CentralCell, neighborCell, SidesClockwise } from '@tabletop/conduit'
+import {
+    type Board,
+    CentralCell,
+    MaxGridSize,
+    neighborCell,
+    SidesClockwise
+} from '@tabletop/conduit'
 
 export const CellSize = 100
 
@@ -10,13 +16,20 @@ export interface BoardBounds {
     maxRow: number
 }
 
-// The board includes every empty cell beside a tile, so it does not jump when placement targets
-// light up.
+// The board includes every empty cell beside a tile that could still take one, so it does not jump
+// when placement targets light up. Cells past the 6x6 limit never can, so the board is at most
+// one cell wider than the limit.
 export function boardBounds(board: Board): BoardBounds {
     const occupied = [CentralCell, ...board.stations.map((station) => station.cell)]
+    const cols = occupied.map((cell) => cell.col)
+    const rows = occupied.map((cell) => cell.row)
+    const fits = (values: number[], value: number) =>
+        Math.max(...values, value) - Math.min(...values, value) + 1 <= MaxGridSize
     const cells = occupied.flatMap((cell) => [
         cell,
-        ...SidesClockwise.map((side) => neighborCell(cell, side))
+        ...SidesClockwise.map((side) => neighborCell(cell, side)).filter(
+            (neighbor) => fits(cols, neighbor.col) && fits(rows, neighbor.row)
+        )
     ])
     return {
         minCol: Math.min(...cells.map((cell) => cell.col)),

@@ -1,22 +1,27 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import RoundReadout from './RoundReadout.svelte'
 
     const gameSession = getGameSession()
     const turnPlayerId = $derived(gameSession.gameState.activePlayerIds[0])
 </script>
 
 <div class="header">
-    <div class="tag">
-        {#if gameSession.isViewingHistory}
-            History
-        {:else if gameSession.gameState.result}
-            End of game
-        {:else if gameSession.isMyTurn}
-            Your turn
-        {:else if turnPlayerId}
-            <PlayerName playerId={turnPlayerId} possessive={true} /> turn
-        {/if}
+    <div class="status">
+        <div class="tag">
+            {#if gameSession.isViewingHistory}
+                History
+            {:else if gameSession.gameState.result}
+                End of game
+            {:else if gameSession.isMyTurn}
+                Your turn
+            {:else if turnPlayerId}
+                <PlayerName playerId={turnPlayerId} possessive={true} /> turn
+            {/if}
+        </div>
+        <!-- Phones show it in the history controls row instead: the header has no room. -->
+        <div class="wide-only"><RoundReadout /></div>
     </div>
     <div class="buttons">
         <button
@@ -54,15 +59,38 @@
         padding: 0 12px;
     }
 
+    .status {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        min-width: 0;
+    }
+
+    /* Lit up, with a green status light. */
     .tag {
         display: flex;
         flex-shrink: 0;
         white-space: nowrap;
         align-items: center;
         gap: 4px;
+        font-family: var(--conduit-display);
         font-size: 18px;
-        font-weight: 700;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.06em;
+        color: #bff0ff;
+        text-shadow:
+            0 0 6px var(--conduit-live),
+            0 0 16px var(--conduit-glow);
+    }
+
+    .tag::before {
+        content: '';
+        flex-shrink: 0;
+        width: 10px;
+        height: 10px;
+        margin-right: 4px;
+        border-radius: 50%;
+        background: #7dffb0;
+        box-shadow: 0 0 6px 2px #3dff8c;
     }
 
     .buttons {
@@ -75,19 +103,23 @@
         display: none;
     }
 
+    /* The mono, thickened, like the action buttons. */
     .button {
         white-space: nowrap;
         padding: 4px 14px;
-        border-radius: 6px;
+        border-radius: 2px;
+        font-family: var(--conduit-readout);
+        -webkit-text-stroke: 0.4px currentColor;
         font-size: 14px;
-        font-weight: 600;
-        color: var(--conduit-ink);
-        background: var(--conduit-panel-raised);
-        box-shadow: inset 0 0 0 1px var(--conduit-line);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #cfefff;
+        background: #081a33;
+        box-shadow: inset 0 0 0 1px var(--conduit-accent);
     }
 
     .button:hover {
-        background: var(--conduit-line);
+        background: #0b2a4f;
     }
 
     .rules.open {
@@ -106,13 +138,29 @@
             padding: 0 8px;
         }
 
+        .wide-only {
+            display: none;
+        }
+
         .tag {
-            font-size: 15px;
+            font-size: 14px;
+            letter-spacing: 0.02em;
+        }
+
+        .status {
+            gap: 6px;
+        }
+
+        .tag::before {
+            width: 8px;
+            height: 8px;
+            margin-right: 2px;
         }
 
         .button {
-            padding: 2px 10px;
-            font-size: 13px;
+            padding: 2px 7px;
+            font-size: 12px;
+            letter-spacing: 0.02em;
         }
 
         .long {

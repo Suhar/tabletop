@@ -3,7 +3,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CellSize, cellOrigin, type BoardBounds } from '$lib/utils/boardLayout.js'
     import { RingStroke } from '$lib/utils/emblem.js'
-    import { centredTextShift } from '$lib/utils/tableLayout.js'
+    import { centredShift, MonoFace, OcrFace, textWidth } from '$lib/utils/textMetrics.js'
     import type { RouteShow } from '$lib/animators/routeAnimator.svelte.js'
     import RouteFlow from './RouteFlow.svelte'
 
@@ -15,7 +15,10 @@
     const mounted = $derived(gameSession.routeAnimator.mounted)
     const detailed = $derived(gameSession.routeAnimator.detailed)
     const half = CellSize / 2
-    const CaptionFont = 19
+    // Captions are sentences, too long for OCR-A's wide letters: they use the narrower mono.
+    const CaptionFont = 18
+    const PayFont = 19
+    const BonusFont = 16
 
     function centre(cell: OffsetCoordinates) {
         const origin = cellOrigin(cell, bounds)
@@ -32,7 +35,7 @@
     }
 
     function pillWidth(text: string): number {
-        return Math.round(text.length * CaptionFont * 0.56 + 22)
+        return Math.round(textWidth(MonoFace, text, CaptionFont) + 22)
     }
 </script>
 
@@ -47,8 +50,11 @@
                 height="34"
                 rx="17"
             ></rect>
-            <text class="caption-text" text-anchor="middle" dy={centredTextShift(CaptionFont)}
-                >{text}</text
+            <text
+                class="caption-text"
+                text-anchor="middle"
+                dy={centredShift(MonoFace, CaptionFont)}
+                font-size={CaptionFont}>{text}</text
             >
         </g>
     </g>
@@ -150,30 +156,41 @@ every frame. -->
         {/if}
         {@render pill(show.verdict, 'data-show-verdict', id, above)}
         {#if show.amount > 0}
+            {@const pay = `+$${show.amount}`}
+            {@const payWidth = textWidth(OcrFace, pay, PayFont) + 16}
             <g transform="translate({home.x} {home.y})">
                 <g data-show-pay={id} opacity="0">
-                    <rect class="pay" x="-28" y="-16" width="56" height="32" rx="16"></rect>
-                    <text class="pay-text" text-anchor="middle" dy={centredTextShift(19)}
-                        >+${show.amount}</text
+                    <rect class="pay" x={-payWidth / 2} y="-16" width={payWidth} height="32" rx="16"
+                    ></rect>
+                    <text
+                        class="pay-text"
+                        text-anchor="middle"
+                        dy={centredShift(OcrFace, PayFont)}
+                        font-size={PayFont}>{pay}</text
                     >
                 </g>
             </g>
         {/if}
         {#each show.bonuses as bonus (`${bonus.cell.col},${bonus.cell.row}`)}
             {@const point = centre(bonus.cell)}
+            {@const paid = `+$${bonus.amount}`}
+            {@const paidWidth = textWidth(OcrFace, paid, BonusFont) + 14}
             <g transform="translate({point.x} {point.y})">
                 <g data-show-pay={id} opacity="0">
                     <rect
                         class="bonus"
-                        x="-24"
+                        x={-paidWidth / 2}
                         y="-14"
-                        width="48"
+                        width={paidWidth}
                         height="28"
                         rx="14"
                         style:fill={bonus.color}
                     ></rect>
-                    <text class="bonus-text" text-anchor="middle" dy={centredTextShift(16)}
-                        >+${bonus.amount}</text
+                    <text
+                        class="bonus-text"
+                        text-anchor="middle"
+                        dy={centredShift(OcrFace, BonusFont)}
+                        font-size={BonusFont}>{paid}</text
                     >
                 </g>
             </g>
@@ -237,10 +254,13 @@ every frame. -->
         stroke-width: 2;
     }
 
+    /* The mono, thickened like the OCR-A labels. */
     .caption-text {
-        font-size: 19px;
-        font-weight: 700;
+        font-family: var(--conduit-readout);
         fill: #e8eef6;
+        stroke: #e8eef6;
+        stroke-width: 0.5;
+        stroke-linejoin: round;
     }
 
     .pay {
@@ -249,10 +269,12 @@ every frame. -->
         stroke-width: 1.5;
     }
 
+    /* Thickened like the income badges. */
     .pay-text {
-        font-size: 19px;
-        font-weight: 800;
         fill: #1b1505;
+        stroke: #1b1505;
+        stroke-width: 0.7;
+        stroke-linejoin: round;
     }
 
     .bonus {
@@ -261,8 +283,6 @@ every frame. -->
     }
 
     .bonus-text {
-        font-size: 16px;
-        font-weight: 800;
         fill: #fff;
         stroke: #000;
         stroke-width: 3px;

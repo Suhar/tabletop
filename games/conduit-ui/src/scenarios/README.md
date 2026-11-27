@@ -10,7 +10,7 @@ connection.
 
 - Click an owned station: its route to the nearest station of the next letter lights up, matching
   its revenue badge.
-- Check the red stick sits on the edge where two opposite terminals meet.
+- Check the striped stick sits on the edge where two opposite terminals meet.
 - Bid on any spot: the cube goes on the lowest free space of that track.
 
 ## Stacked offer
