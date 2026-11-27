@@ -1,51 +1,12 @@
-import { StationLetter } from '@tabletop/conduit'
+import type { StationLetter } from '@tabletop/conduit'
+import { CellSize } from './boardLayout.js'
+import { EmblemStroke, TileArtSize, emblemPath } from './tileArt.js'
 
-// Each emblem's outline, measured from the tile art, runs 5.25 units outside every edge so a
-// 4.5-unit stroke leaves an even 3-unit gap.
-const Outlines: Record<string, [number, number][]> = {
-    [StationLetter.A]: [
-        [26.9, 19.9],
-        [19.9, 26.9],
-        [-19.9, 26.9],
-        [-26.9, 19.9],
-        [-26.9, -19.9],
-        [-19.9, -26.9],
-        [19.9, -26.9],
-        [26.9, -19.9]
-    ],
-    [StationLetter.B]: [
-        [33.2, 5.1],
-        [5.1, 33.2],
-        [-5.1, 33.2],
-        [-33.2, 5.1],
-        [-33.2, -5.1],
-        [-5.1, -33.2],
-        [5.1, -33.2],
-        [33.2, -5.1]
-    ],
-    [StationLetter.C]: [
-        [29.5, 17.1],
-        [0, 34.1],
-        [-29.5, 17.1],
-        [-29.5, -17.1],
-        [0, -34.1],
-        [29.5, -17.1]
-    ],
-    [StationLetter.D]: [
-        [32.4, 13.1],
-        [13.1, 32.4],
-        [-12.9, 32.4],
-        [-32.4, 12.9],
-        [-32.4, -12.9],
-        [-12.9, -32.4],
-        [12.9, -32.4],
-        [32.4, -12.9]
-    ]
-}
+export const RingStroke = 4.5
+const RingGap = 3
 
-export const EmblemStroke = 4.5
-
-export function emblemOutline(letter: StationLetter): string {
-    const points = Outlines[letter] ?? Outlines[StationLetter.D]
-    return points.map(([x, y]) => `${x},${y}`).join(' ')
+export function emblemRing(letter: StationLetter): string {
+    const scale = CellSize / TileArtSize
+    const outsideOutline = EmblemStroke / 2 + (RingGap + RingStroke / 2) / scale
+    return emblemPath(letter, outsideOutline, scale)
 }

@@ -10,11 +10,11 @@
         cellOrigin
     } from '$lib/utils/boardLayout.js'
     import { centredTextShift } from '$lib/utils/tableLayout.js'
-    import { TileBackUrl, tileFaceUrl } from '$lib/utils/tileArt.js'
     import CentralStation from './CentralStation.svelte'
     import CubePile from './CubePile.svelte'
     import RouteFlow from './RouteFlow.svelte'
     import RouteShows from './RouteShows.svelte'
+    import TileImage from './TileImage.svelte'
 
     const gameSession = getGameSession()
     const bounds = $derived(gameSession.bounds)
@@ -39,7 +39,7 @@
     )
 
     const choice = $derived(gameSession.isViewingHistory ? undefined : gameSession.shownRouteChoice)
-    const focusedTolls = $derived.by(() => {
+    const focusedBonuses = $derived.by(() => {
         const option =
             choice && gameSession.focusedOption !== undefined
                 ? choice.options[gameSession.focusedOption]
@@ -107,14 +107,11 @@
     <g class="station" class:owned transform="translate({origin.x} {origin.y})">
         <g data-station-tile={key}>
             {#if faceUp}
-                <image
-                    href={tileFaceUrl(station.tileId)}
-                    width={CellSize}
-                    height={CellSize}
-                    transform="rotate({station.rotation * 90} {half} {half})"
-                ></image>
+                <g transform="rotate({station.rotation * 90} {half} {half})">
+                    <TileImage tileId={station.tileId} size={CellSize} />
+                </g>
             {:else}
-                <image href={TileBackUrl} width={CellSize} height={CellSize}></image>
+                <TileImage size={CellSize} />
             {/if}
             <rect class="edge" x="0.5" y="0.5" width={CellSize - 1} height={CellSize - 1}></rect>
         </g>
@@ -182,10 +179,10 @@
     />
 {/each}
 
-{#each focusedTolls as toll (cellKey(toll.cell))}
-    {@const point = centreOf(toll.cell)}
-    <g class="toll-chip" transform="translate({point.x} {point.y - 30})">
-        <rect x="-24" y="-14" width="48" height="28" rx="14" style:fill={toll.color}></rect>
+{#each focusedBonuses as bonus (cellKey(bonus.cell))}
+    {@const point = centreOf(bonus.cell)}
+    <g class="bonus-chip" transform="translate({point.x} {point.y - 30})">
+        <rect x="-24" y="-14" width="48" height="28" rx="14" style:fill={bonus.color}></rect>
         <text text-anchor="middle" dy={centredTextShift(16)}>+$1</text>
     </g>
 {/each}
@@ -214,13 +211,12 @@
         {#if chosen && gameSession.placement}
             <g transform="translate({half} {half})">
                 <g class="preview" style:transform="rotate({gameSession.previewTurns * 90}deg)">
-                    <image
-                        href={tileFaceUrl(gameSession.placement.tileId)}
+                    <TileImage
+                        tileId={gameSession.placement.tileId}
                         x={-half}
                         y={-half}
-                        width={CellSize}
-                        height={CellSize}
-                    ></image>
+                        size={CellSize}
+                    />
                 </g>
             </g>
         {/if}
@@ -287,16 +283,16 @@
         pointer-events: none;
     }
 
-    .toll-chip {
+    .bonus-chip {
         pointer-events: none;
     }
 
-    .toll-chip rect {
+    .bonus-chip rect {
         stroke: #1b1505;
         stroke-width: 1.5;
     }
 
-    .toll-chip text {
+    .bonus-chip text {
         font-size: 16px;
         font-weight: 800;
         fill: #fff;

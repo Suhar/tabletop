@@ -3392,7 +3392,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p3",
                                 "amount": 1
@@ -3417,7 +3417,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p1",
                                 "amount": 1
@@ -3442,7 +3442,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -3475,7 +3475,7 @@
                             }
                         ],
                         "amount": 4,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p1",
                                 "amount": 1
@@ -3500,7 +3500,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -3525,7 +3525,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p3",
                                 "amount": 1

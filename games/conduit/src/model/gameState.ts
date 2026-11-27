@@ -66,7 +66,7 @@ export const StationRevenue = Type.Object({
     tileId: Type.Integer(),
     route: Type.Array(OffsetCoordinates),
     amount: Type.Integer(),
-    tolls: Type.Optional(Type.Array(Payment))
+    bonuses: Type.Optional(Type.Array(Payment))
 })
 
 export interface Offer {
@@ -76,13 +76,13 @@ export interface Offer {
     price: number
 }
 
-// Designer ruling, 2026-11-25: when tied routes would pay tolls to different players, the
+// Designer ruling, 2026-11-25: when tied routes would pay bonuses to different players, the
 // station's owner chooses one.
 export type RouteOption = Type.Static<typeof RouteOption>
 export const RouteOption = Type.Object({
     cells: Type.Array(OffsetCoordinates),
     // One entry per station passed.
-    tolls: Type.Array(Type.String())
+    bonuses: Type.Array(Type.String())
 })
 
 export type RouteChoice = Type.Static<typeof RouteChoice>
@@ -349,9 +349,9 @@ export class HydratedConduitGameState
             if (ownerId === undefined) continue
             const options = new Map<string, RouteOption>()
             for (const route of grid.bestRoutes(station.cell)) {
-                const tolls = tollPayees(grid, route.cells, ownerId).toSorted()
-                const key = tolls.join(',')
-                if (!options.has(key)) options.set(key, { cells: route.cells, tolls })
+                const bonuses = bonusPayees(grid, route.cells, ownerId).toSorted()
+                const key = bonuses.join(',')
+                if (!options.has(key)) options.set(key, { cells: route.cells, bonuses })
             }
             if (options.size > 1) {
                 choices.push({
@@ -399,18 +399,18 @@ export class HydratedConduitGameState
     payRevenue(): StationRevenue[] {
         const earnings = stationEarnings(this.board, this.chosenRoutes())
         this.routeChoices = undefined
-        for (const { ownerId, amount, tolls } of earnings) {
+        for (const { ownerId, amount, bonuses } of earnings) {
             this.getPlayerState(ownerId).earn(amount)
-            for (const toll of tolls) {
-                this.getPlayerState(toll.playerId).earn(toll.amount)
+            for (const bonus of bonuses) {
+                this.getPlayerState(bonus.playerId).earn(bonus.amount)
             }
         }
-        return earnings.map(({ station, ownerId, route, amount, tolls }) => ({
+        return earnings.map(({ station, ownerId, route, amount, bonuses }) => ({
             playerId: ownerId,
             tileId: station.tileId,
             route: route?.cells ?? [],
             amount,
-            ...(tolls.length > 0 ? { tolls } : {})
+            ...(bonuses.length > 0 ? { bonuses } : {})
         }))
     }
 
@@ -484,10 +484,10 @@ export interface StationEarning {
     ownerId: string
     route: Route | undefined
     amount: number
-    tolls: Payment[]
+    bonuses: Payment[]
 }
 
-// Designer ruling: a toll goes to each other player's Power Station on the route, the destination
+// Designer ruling: a bonus goes to each other player's Power Station on the route, the destination
 // included. The unowned setup tiles never collect.
 export function stationEarnings(
     board: Board,
@@ -506,14 +506,14 @@ export function stationEarnings(
                   stations: cells.filter((cell) => grid.stationAt(cell)?.faceUp).length
               }
             : grid.bestRoute(station.cell)
-        const tolls = route
-            ? tollPayees(grid, route.cells, ownerId).map((playerId) => ({ playerId, amount: 1 }))
+        const bonuses = route
+            ? bonusPayees(grid, route.cells, ownerId).map((playerId) => ({ playerId, amount: 1 }))
             : []
-        return [{ station, ownerId, route, amount: revenueFor(route), tolls }]
+        return [{ station, ownerId, route, amount: revenueFor(route), bonuses }]
     })
 }
 
-function tollPayees(grid: Grid, cells: OffsetCoordinates[], ownerId: string): string[] {
+function bonusPayees(grid: Grid, cells: OffsetCoordinates[], ownerId: string): string[] {
     return cells.slice(1).flatMap((cell) => {
         const passed = grid.stationAt(cell)
         return passed?.ownerId !== undefined &&

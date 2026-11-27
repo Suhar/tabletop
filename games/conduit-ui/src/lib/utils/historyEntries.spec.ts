@@ -64,7 +64,7 @@ describe('history entries', () => {
         ])
     })
 
-    it('lists the tolls a route paid other players', () => {
+    it('lists the bonuses a route paid other players', () => {
         const items = historyItems(
             [
                 action(ActionType.PayRevenue, {
@@ -76,7 +76,7 @@ describe('history entries', () => {
                                 tileId: 3,
                                 route: [],
                                 amount: 4,
-                                tolls: [
+                                bonuses: [
                                     { playerId: 'p0', amount: 1 },
                                     { playerId: 'p2', amount: 1 },
                                     { playerId: 'p0', amount: 1 }
@@ -90,7 +90,7 @@ describe('history entries', () => {
         )
         const revenue = items[1]
         expect(revenue.kind === 'entry' && revenue.lines).toEqual([
-            "P1's A tile: $4, tolls P0 $2, P2 $1"
+            "P1's A tile: $4, bonuses P0 $2, P2 $1"
         ])
     })
 })

@@ -3089,7 +3089,7 @@
             ],
             "createdAt": "2026-11-26T00:58:37.793Z",
             "metadata": {
-                "tolls": ["p0"]
+                "bonuses": ["p0"]
             },
             "index": 37,
             "undoPatch": [
@@ -3165,7 +3165,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -3190,7 +3190,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -3223,7 +3223,7 @@
                             }
                         ],
                         "amount": 4,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p2",
                                 "amount": 1
@@ -3256,7 +3256,7 @@
                             }
                         ],
                         "amount": 4,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -3325,7 +3325,7 @@
                                             "row": 1
                                         }
                                     ],
-                                    "tolls": ["p0"]
+                                    "bonuses": ["p0"]
                                 },
                                 {
                                     "cells": [
@@ -3342,7 +3342,7 @@
                                             "row": -1
                                         }
                                     ],
-                                    "tolls": ["p1"]
+                                    "bonuses": ["p1"]
                                 }
                             ],
                             "chosen": [
@@ -4606,7 +4606,7 @@
             ],
             "createdAt": "2026-11-26T00:58:37.810Z",
             "metadata": {
-                "tolls": []
+                "bonuses": []
             },
             "index": 58,
             "undoPatch": [
@@ -4703,7 +4703,7 @@
                             }
                         ],
                         "amount": 5,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p1",
                                 "amount": 1
@@ -4814,7 +4814,7 @@
                                             "row": -1
                                         }
                                     ],
-                                    "tolls": []
+                                    "bonuses": []
                                 },
                                 {
                                     "cells": [
@@ -4835,7 +4835,7 @@
                                             "row": 0
                                         }
                                     ],
-                                    "tolls": ["p0"]
+                                    "bonuses": ["p0"]
                                 }
                             ],
                             "chosen": [
@@ -6099,7 +6099,7 @@
             ],
             "createdAt": "2026-11-26T00:58:37.830Z",
             "metadata": {
-                "tolls": ["p2"]
+                "bonuses": ["p2"]
             },
             "index": 79,
             "undoPatch": [
@@ -6175,7 +6175,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p1",
                                 "amount": 1
@@ -6208,7 +6208,7 @@
                             }
                         ],
                         "amount": 4,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -6241,7 +6241,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p0",
                                 "amount": 1
@@ -6266,7 +6266,7 @@
                             }
                         ],
                         "amount": 3,
-                        "tolls": [
+                        "bonuses": [
                             {
                                 "playerId": "p2",
                                 "amount": 1
@@ -6370,7 +6370,7 @@
                                             "row": 0
                                         }
                                     ],
-                                    "tolls": ["p2"]
+                                    "bonuses": ["p2"]
                                 },
                                 {
                                     "cells": [
@@ -6387,7 +6387,7 @@
                                             "row": 1
                                         }
                                     ],
-                                    "tolls": ["p1"]
+                                    "bonuses": ["p1"]
                                 }
                             ],
                             "chosen": [

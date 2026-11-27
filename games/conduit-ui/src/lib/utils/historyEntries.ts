@@ -58,10 +58,10 @@ export function describeAction(action: GameAction, name: Name): string | undefin
     }
     if (isChooseRoute(action) && action.metadata) {
         const paid = new Map<string, number>()
-        for (const playerId of action.metadata.tolls)
+        for (const playerId of action.metadata.bonuses)
             paid.set(playerId, (paid.get(playerId) ?? 0) + 1)
         const to = [...paid].map(([playerId, amount]) => `${name(playerId)} ${dollars(amount)}`)
-        return `${who} chose the route from the ${stationTile(action.tileId).letter} station paying ${to.length > 0 ? to.join(', ') : 'no toll'}`
+        return `${who} chose the route from the ${stationTile(action.tileId).letter} station paying ${to.length > 0 ? to.join(', ') : 'no bonus'}`
     }
     if (isFillMarket(action) && action.metadata) {
         return `Market: ${action.metadata.tileIds.map((tileId) => stationTile(tileId).letter).join(' ')}`
@@ -72,7 +72,7 @@ export function describeAction(action: GameAction, name: Name): string | undefin
             totals.set(playerId, (totals.get(playerId) ?? 0) + amount)
         for (const revenue of action.metadata.revenues) {
             add(revenue.playerId, revenue.amount)
-            for (const toll of revenue.tolls ?? []) add(toll.playerId, toll.amount)
+            for (const bonus of revenue.bonuses ?? []) add(bonus.playerId, bonus.amount)
         }
         return totals.size === 0
             ? 'No stations earned'
@@ -95,13 +95,13 @@ function revenueLines(revenues: StationRevenue[], name: Name): string[] {
     }
     return revenues.map((revenue) => {
         const line = `${name(revenue.playerId)}'s ${tileName(revenue.tileId)}: ${revenue.amount > 0 ? dollars(revenue.amount) : 'no route'}`
-        const tolls = new Map<string, number>()
-        for (const toll of revenue.tolls ?? []) {
-            tolls.set(toll.playerId, (tolls.get(toll.playerId) ?? 0) + toll.amount)
+        const bonuses = new Map<string, number>()
+        for (const bonus of revenue.bonuses ?? []) {
+            bonuses.set(bonus.playerId, (bonuses.get(bonus.playerId) ?? 0) + bonus.amount)
         }
-        return tolls.size === 0
+        return bonuses.size === 0
             ? line
-            : `${line}, tolls ${[...tolls].map(([playerId, amount]) => `${name(playerId)} ${dollars(amount)}`).join(', ')}`
+            : `${line}, bonuses ${[...bonuses].map(([playerId, amount]) => `${name(playerId)} ${dollars(amount)}`).join(', ')}`
     })
 }
 

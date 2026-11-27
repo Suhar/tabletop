@@ -2,11 +2,12 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CellSize } from '$lib/utils/boardLayout.js'
     import { tableGeometry } from '$lib/utils/tableLayout.js'
-    import { TileBackUrl, tileFaceUrl } from '$lib/utils/tileArt.js'
     import { cubeShape, pileOffsets, PileCubeSize } from '$lib/utils/cubeShape.js'
     import AuctionBoard from './AuctionBoard.svelte'
     import Cube from './Cube.svelte'
     import GridBoard from './GridBoard.svelte'
+    import TileArtDefs from './TileArtDefs.svelte'
+    import TileImage from './TileImage.svelte'
 
     const gameSession = getGameSession()
     const geometry = $derived(
@@ -30,6 +31,7 @@
     {@attach gameSession.tableAnimator.attach}
     {@attach gameSession.routeAnimator.attach}
 >
+    <TileArtDefs />
     <g
         transform="translate({geometry.auction.x} {geometry.auction
             .y}) scale({geometry.auctionScale})"
@@ -42,11 +44,7 @@
     {#if flying}
         <g data-flying-tile>
             <g data-flying-turn>
-                <image
-                    href={flying.faceUp ? tileFaceUrl(flying.tileId) : TileBackUrl}
-                    width={CellSize}
-                    height={CellSize}
-                ></image>
+                <TileImage tileId={flying.faceUp ? flying.tileId : undefined} size={CellSize} />
             </g>
             {#if flying.ownerId}
                 {@const color = gameSession.colors.getPlayerBgColorValue(flying.ownerId)}

@@ -6,7 +6,7 @@ import { HydratedConduitGameState } from '../model/gameState.js'
 
 export type RouteChosen = Type.Static<typeof RouteChosen>
 export const RouteChosen = Type.Object({
-    tolls: Type.Array(Type.String())
+    bonuses: Type.Array(Type.String())
 })
 
 // Designer ruling, 2026-11-25.
@@ -56,6 +56,6 @@ export class HydratedChooseRoute
 
     apply(state: HydratedConduitGameState) {
         const option = state.chooseRoute(this.playerId, this.tileId, this.route)
-        this.metadata = { tolls: option.tolls }
+        this.metadata = { bonuses: option.bonuses }
     }
 }

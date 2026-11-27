@@ -27,7 +27,9 @@
                 gameSession.routePace.set(
                     gameSession.routePace.current === 'steps' ? 'quick' : 'steps'
                 )}
-            >Routes: {gameSession.routePace.current === 'steps' ? 'Step by step' : 'Quick'}</button
+            >Routes: {#if gameSession.routePace.current === 'steps'}<span class="long"
+                    >Step by step</span
+                ><span class="short">Steps</span>{:else}Quick{/if}</button
         >
         {#if gameSession.canUndo}
             <button type="button" class="button" onclick={() => gameSession.undo()}>Undo</button>
@@ -54,6 +56,8 @@
 
     .tag {
         display: flex;
+        flex-shrink: 0;
+        white-space: nowrap;
         align-items: center;
         gap: 4px;
         font-size: 18px;
@@ -64,9 +68,15 @@
     .buttons {
         display: flex;
         gap: 8px;
+        min-width: 0;
+    }
+
+    .short {
+        display: none;
     }
 
     .button {
+        white-space: nowrap;
         padding: 4px 14px;
         border-radius: 6px;
         font-size: 14px;
@@ -103,6 +113,14 @@
         .button {
             padding: 2px 10px;
             font-size: 13px;
+        }
+
+        .long {
+            display: none;
+        }
+
+        .short {
+            display: inline;
         }
     }
 </style>
