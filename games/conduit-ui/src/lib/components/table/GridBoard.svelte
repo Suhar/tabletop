@@ -1,6 +1,12 @@
 <script lang="ts">
     import { sameCoordinates, type OffsetCoordinates } from '@tabletop/common'
-    import { CentralCell, neighborCell, Side, type PlacedStation } from '@tabletop/conduit'
+    import {
+        CentralCell,
+        neighborCell,
+        Side,
+        stationTile,
+        type PlacedStation
+    } from '@tabletop/conduit'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
         boardSize,
@@ -9,7 +15,9 @@
         cellKey,
         cellOrigin
     } from '$lib/utils/boardLayout.js'
-    import { centredTextShift } from '$lib/utils/tableLayout.js'
+    import { emblemRing, RingStroke } from '$lib/utils/emblem.js'
+    import { centredShift, OcrFace, textWidth } from '$lib/utils/textMetrics.js'
+    import { BoardGroundId, CautionStripesId } from '$lib/utils/tileArt.js'
     import CentralStation from './CentralStation.svelte'
     import CubePile from './CubePile.svelte'
     import RouteFlow from './RouteFlow.svelte'
@@ -56,16 +64,56 @@
         })
     })
 
-    const focusRoute = $derived(
-        gameSession.shownRoutes.length === 1 ? gameSession.shownRoutes[0] : undefined
+    // One route, or the equally good routes from one station: everything else dims.
+    const focusRoutes = $derived(
+        gameSession.shownRoutes.length === 1 ||
+            gameSession.shownRoutes.every((route) => route.branch)
+            ? gameSession.shownRoutes
+            : []
     )
     const offRoute = $derived(
-        focusRoute
+        focusRoutes.length > 0
             ? stations.filter(
-                  (station) => !focusRoute.cells.some((cell) => sameCoordinates(cell, station.cell))
+                  (station) =>
+                      !focusRoutes.some((route) =>
+                          route.cells.some((cell) => sameCoordinates(cell, station.cell))
+                      )
               )
             : []
     )
+
+    // Equally good routes are drawn as alternatives: each starts clear of the station, so two never
+    // read as one route passing through it, and each ends at its own ringed destination.
+    const branches = $derived(gameSession.shownRoutes.filter((route) => route.branch))
+    // Moving dashes cost phone memory, so only a few alternatives flow; they are short and close.
+    const MaxFlowingBranches = 3
+    const BadgeFont = 15
+    const BranchStartGap = 34
+
+    function routeLine(cells: OffsetCoordinates[], branch: boolean) {
+        const line = cells.map(centreOf)
+        if (!branch) return line
+        const [start, next] = line
+        const length = Math.hypot(next.x - start.x, next.y - start.y)
+        const gap = Math.min(BranchStartGap, length / 2)
+        return [
+            {
+                x: start.x + ((next.x - start.x) * gap) / length,
+                y: start.y + ((next.y - start.y) * gap) / length
+            },
+            ...line.slice(1)
+        ]
+    }
+
+    function ringAt(cell: OffsetCoordinates) {
+        const station = gameSession.grid.stationAt(cell)
+        if (!station) return undefined
+        return {
+            centre: centreOf(cell),
+            path: emblemRing(stationTile(station.tileId).letter),
+            rotation: station.rotation * 90
+        }
+    }
 
     function stickOf(cell: OffsetCoordinates, side: Side) {
         const origin = cellOrigin(cell, bounds)
@@ -94,7 +142,15 @@
     }
 </script>
 
-<rect class="ground" x="0" y="0" width={size.width} height={size.height} rx="12"></rect>
+<rect
+    class="ground"
+    x="0"
+    y="0"
+    width={size.width}
+    height={size.height}
+    rx="12"
+    fill="url(#{BoardGroundId})"
+></rect>
 
 <CentralStation x={centre.x} y={centre.y} />
 
@@ -123,14 +179,23 @@
             />
         {/if}
         {#if badge !== undefined}
-            <rect class="badge" x={CellSize - 38} y={CellSize - 26} width="34" height="22" rx="11"
+            {@const label = `$${badge}`}
+            {@const width = textWidth(OcrFace, label, BadgeFont) + 12}
+            <rect
+                class="badge"
+                x={CellSize - 4 - width}
+                y={CellSize - 26}
+                {width}
+                height="22"
+                rx="11"
             ></rect>
             <text
                 class="badge-text"
-                x={CellSize - 21}
+                x={CellSize - 4 - width / 2}
                 y={CellSize - 15}
-                dy={centredTextShift(14)}
-                text-anchor="middle">${badge}</text
+                dy={centredShift(OcrFace, BadgeFont)}
+                font-size={BadgeFont}
+                text-anchor="middle">{label}</text
             >
         {/if}
         {#if owned}
@@ -173,23 +238,55 @@
 {#each gameSession.shownRoutes as route (route.key)}
     <RouteFlow
         id="conduit-route-glow-{route.key}"
-        line={route.cells.map(centreOf)}
+        line={routeLine(route.cells, route.branch ?? false)}
         color={route.color}
-        flowing={gameSession.shownRoutes.length === 1}
+        flowing={gameSession.shownRoutes.length === 1 ||
+            (route.branch === true && branches.length <= MaxFlowingBranches)}
     />
 {/each}
+
+{#if branches.length > 0}
+    {@const home = ringAt(branches[0].cells[0])}
+    {#if home}
+        <path
+            class="branch-ring"
+            d={home.path}
+            transform="translate({home.centre.x} {home.centre.y}) rotate({home.rotation})"
+            stroke-width={RingStroke}
+            style:--route={branches[0].color}
+        ></path>
+    {/if}
+    {#each branches as route (route.key)}
+        {@const end = ringAt(route.cells[route.cells.length - 1])}
+        {#if end}
+            <path
+                class="branch-end"
+                d={end.path}
+                transform="translate({end.centre.x} {end.centre.y}) rotate({end.rotation})"
+                stroke-width={RingStroke}
+            ></path>
+        {/if}
+    {/each}
+{/if}
 
 {#each focusedBonuses as bonus (cellKey(bonus.cell))}
     {@const point = centreOf(bonus.cell)}
     <g class="bonus-chip" transform="translate({point.x} {point.y - 30})">
         <rect x="-24" y="-14" width="48" height="28" rx="14" style:fill={bonus.color}></rect>
-        <text text-anchor="middle" dy={centredTextShift(16)}>+$1</text>
+        <text text-anchor="middle" dy={centredShift(OcrFace, 16)}>+$1</text>
     </g>
 {/each}
 
 {#each sticks as closed (`${cellKey(closed.cell)}-${closed.side}`)}
     {@const stick = stickOf(closed.cell, closed.side)}
-    <rect class="stick" x={stick.x} y={stick.y} width={stick.width} height={stick.height} rx="3"
+    <rect
+        class="stick"
+        x={stick.x}
+        y={stick.y}
+        width={stick.width}
+        height={stick.height}
+        rx="3"
+        fill="url(#{CautionStripesId})"
     ></rect>
 {/each}
 
@@ -235,14 +332,13 @@
 
 <style>
     .ground {
-        fill: #141c26;
-        stroke: #263243;
+        stroke: #1d3d6e;
         stroke-width: 1;
     }
 
     .edge {
         fill: none;
-        stroke: rgb(0 0 0 / 0.35);
+        stroke: rgb(0 0 0 / 0.5);
         stroke-width: 1;
     }
 
@@ -260,16 +356,21 @@
         stroke-width: 3;
     }
 
+    /* Cream, so a station's earnings never read as a player's colour. */
     .badge {
-        fill: #10161f;
-        stroke: #f5c542;
+        fill: #f3ead2;
+        stroke: #10161f;
         stroke-width: 1.5;
     }
 
+    /* OCR-A, the emblem letters' face: electronic, and its even strokes stay clear this small. */
     .badge-text {
-        font-size: 14px;
-        font-weight: 800;
-        fill: #f5c542;
+        font-family: 'Conduit OCR', ui-monospace, monospace;
+        fill: #10161f;
+        /* OCR-A has one weight; a hairline of the same ink thickens its strokes. */
+        stroke: #10161f;
+        stroke-width: 0.6;
+        stroke-linejoin: round;
     }
 
     .other-option {
@@ -306,9 +407,23 @@
         pointer-events: none;
     }
 
+    .branch-ring,
+    .branch-end {
+        fill: none;
+        stroke-linejoin: round;
+        pointer-events: none;
+    }
+
+    .branch-ring {
+        stroke: var(--route);
+    }
+
+    .branch-end {
+        stroke: #f5c542;
+    }
+
     .stick {
-        fill: #e3342f;
-        stroke: #5c0f0c;
+        stroke: #141414;
         stroke-width: 1.5;
         pointer-events: none;
     }

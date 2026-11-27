@@ -66,21 +66,28 @@
 <style>
     .meter {
         overflow: hidden;
-        border-radius: 10px;
+        clip-path: var(--conduit-cut);
         background: var(--conduit-panel);
         box-shadow: inset 0 0 0 1px var(--conduit-line);
     }
 
+    /* The clipped corners would cut an outer glow, so the active panel glows inward. */
     .meter.active {
-        box-shadow: inset 0 0 0 2px var(--conduit-accent);
+        box-shadow:
+            inset 0 0 0 2px var(--conduit-accent),
+            inset 0 0 14px var(--conduit-glow);
     }
 
+    /* A stripe of the player's colour, like a wire's insulation. */
     header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 6px 10px;
-        background: var(--player);
+        padding: 6px 10px 6px 16px;
+        font-family: var(--conduit-display);
+        color: #fff;
+        background: linear-gradient(90deg, var(--player) 0 6px, transparent 6px);
+        border-bottom: 1px dashed var(--conduit-line);
     }
 
     .badges {
@@ -90,46 +97,49 @@
 
     .start {
         padding: 1px 8px;
-        border-radius: 999px;
+        border-radius: 2px;
+        font-family: var(--conduit-text);
         font-size: 11px;
-        font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: var(--conduit-accent-ink);
-        background: var(--conduit-accent);
+        color: #ffd36b;
+        box-shadow: inset 0 0 0 1px #ffd36b;
     }
 
+    /* The readout is all Share Tech Mono, thickened: it reads best here. */
     .readout {
         display: flex;
         gap: 12px;
         align-items: center;
         padding: 8px 10px 10px;
+        font-family: var(--conduit-readout);
     }
 
+    /* Cash reads out on a green display. */
     .cash {
         display: grid;
         place-items: center;
         min-width: 72px;
         padding: 4px 8px;
-        border-radius: 6px;
-        background: #0b1118;
-        box-shadow: inset 0 0 0 1px var(--conduit-line);
+        border-radius: 2px;
+        background: var(--conduit-lcd);
+        box-shadow: inset 0 0 0 1px var(--conduit-lcd-line);
     }
 
     .label,
     dt {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
+        font-size: 11px;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
         color: var(--conduit-muted);
+        -webkit-text-stroke: 0.3px currentColor;
     }
 
     .value {
-        font-family: 'Consolas', 'Courier New', monospace;
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--conduit-accent);
+        font-size: 28px;
+        line-height: 1.1;
+        color: var(--conduit-lcd-ink);
+        text-shadow: 0 0 8px #2bff7a;
     }
 
     .stats {
@@ -139,7 +149,7 @@
     }
 
     dd {
-        font-size: 16px;
-        font-weight: 700;
+        font-size: 18px;
+        -webkit-text-stroke: 0.5px currentColor;
     }
 </style>

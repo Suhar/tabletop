@@ -7,15 +7,16 @@
         TrackCell,
         TileInSpot,
         TileOrigin,
-        trackCellOrigin,
-        centredTextShift
+        trackCellOrigin
     } from '$lib/utils/tableLayout.js'
     import { cubeShape, TrackCubeSize } from '$lib/utils/cubeShape.js'
+    import { centredShift, OcrFace } from '$lib/utils/textMetrics.js'
     import { AuctionSpots, BasePrice, BidTrackSpaces } from '@tabletop/conduit'
     import Cube from './Cube.svelte'
     import TileImage from './TileImage.svelte'
 
     const gameSession = getGameSession()
+    const SpacePriceFont = 12
     const market = $derived(gameSession.tableState.market)
     const offerSpot = $derived(gameSession.shownOffer?.spot)
     const placingSpot = $derived(gameSession.shownPlacement?.spot)
@@ -89,7 +90,8 @@
                         class="space-price"
                         x={origin.x + TrackCell / 2}
                         y={origin.y + TrackCell / 2}
-                        dy={centredTextShift(11)}
+                        dy={centredShift(OcrFace, SpacePriceFont)}
+                        font-size={SpacePriceFont}
                         text-anchor="middle">${BasePrice + index + 1}</text
                     >
                     {#if biddable && index === entry.bids.length && myColor}
@@ -127,13 +129,17 @@
                     class="price"
                     x={tileCentre.x}
                     y={TileOrigin.y - 24}
-                    dy={centredTextShift(20)}
+                    dy={centredShift(OcrFace, 20)}
                     text-anchor="middle">${offerPrice}</text
                 >
             {/if}
         </g>
-        <text class="number" x={SpotWidth - 10} y="18" dy={centredTextShift(14)} text-anchor="end"
-            >{spot}</text
+        <text
+            class="number"
+            x={SpotWidth - 10}
+            y="18"
+            dy={centredShift(OcrFace, 14)}
+            text-anchor="end">{spot}</text
         >
         {#if biddable}
             <rect
@@ -153,8 +159,8 @@
 
 <style>
     .frame {
-        fill: #18212d;
-        stroke: #33445a;
+        fill: rgb(5 13 28 / 0.92);
+        stroke: #2a5aa0;
         stroke-width: 1.5;
     }
 
@@ -164,7 +170,7 @@
     }
 
     .frame.placing {
-        stroke: #57d3ff;
+        stroke: #49d6ff;
         stroke-width: 3;
     }
 
@@ -172,16 +178,20 @@
         opacity: 0.35;
     }
 
+    /* The bid tracks read out on the green display the cash uses. */
     .track {
-        fill: #222e3d;
-        stroke: #4a5d75;
+        fill: #020806;
+        stroke: #1d4a2a;
         stroke-width: 1;
     }
 
+    /* OCR-A, thickened like the income badges, as large as "$11" fits in a space. */
     .space-price {
-        font-size: 11px;
-        font-weight: 700;
-        fill: #5d6f86;
+        font-family: 'Conduit OCR', ui-monospace, monospace;
+        fill: #6fd49a;
+        stroke: #6fd49a;
+        stroke-width: 0.45;
+        stroke-linejoin: round;
         pointer-events: none;
     }
 
@@ -200,7 +210,7 @@
     }
 
     .biddable .frame {
-        stroke: #57d3ff;
+        stroke: #49d6ff;
         stroke-width: 2.5;
     }
 
@@ -215,7 +225,7 @@
     }
 
     .biddable:hover .frame {
-        fill: #222e3d;
+        fill: #0b1d38;
     }
 
     .biddable:has(.hit:focus-visible) .frame {
@@ -230,7 +240,6 @@
 
     .number {
         font-size: 14px;
-        font-weight: 700;
-        fill: #93a4b8;
+        fill: #6fd49a;
     }
 </style>

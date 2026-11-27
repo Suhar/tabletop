@@ -79,15 +79,17 @@
         background: rgb(0 0 0 / 0.08);
     }
 
+    /* Out of theme, for reading. */
     .text {
         padding: 18px 24px 28px;
+        font-family: var(--conduit-prose);
         font-size: 15px;
         line-height: 1.55;
     }
 
     .text :global(h1) {
         font-size: 26px;
-        font-weight: 800;
+        font-weight: 700;
         margin-bottom: 4px;
     }
 

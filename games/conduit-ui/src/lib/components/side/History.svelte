@@ -32,7 +32,10 @@
 </div>
 
 <style>
+    /* The mono, thickened, like the player readouts. */
     .history {
+        font-family: var(--conduit-readout);
+        -webkit-text-stroke: 0.3px currentColor;
         display: grid;
         gap: 6px;
         max-height: 100%;
@@ -41,8 +44,7 @@
 
     .divider {
         margin-top: 6px;
-        font-size: 12px;
-        font-weight: 800;
+        font-size: 13px;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         color: var(--conduit-accent);
@@ -64,12 +66,12 @@
     }
 
     h5 {
-        font-size: 13px;
-        font-weight: 700;
+        font-size: 15px;
+        -webkit-text-stroke: 0.5px currentColor;
     }
 
     p {
-        font-size: 13px;
+        font-size: 14px;
         color: var(--conduit-muted);
     }
 </style>

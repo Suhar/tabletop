@@ -1,5 +1,5 @@
 import type { OffsetCoordinates, Point } from '@tabletop/common'
-import { AuctionSpots, BidTrackSpaces, type Board } from '@tabletop/conduit'
+import { AuctionSpots, BidTrackSpaces, MaxGridSize, type Board } from '@tabletop/conduit'
 import { boardBounds, boardSize, CellSize, cellOrigin, type BoardBounds } from './boardLayout.js'
 
 export const TrackCell = 30
@@ -13,17 +13,14 @@ export const SpotHeight = 2 * SpotPadding + TrackHeight
 export const SpotGap = 12
 export const TableMargin = 20
 export const AuctionToBoardGap = 34
-// A 6x6 grid and the ring of empty cells shown around it.
-export const GridReach = 8 * CellSize
+// The widest the board gets: five tiles across and an empty cell either side; a sixth tile leaves
+// no room beyond it.
+export const GridReach = (MaxGridSize + 1) * CellSize
 
 export const TileOrigin: Point = { x: TrackWidth + TrackToTile, y: TrackHeight - TileInSpot }
 
 export function trackCellOrigin(index: number): Point {
     return { x: (index % 2) * TrackCell, y: ((BidTrackSpaces - 1 - index) * TrackCell) / 2 }
-}
-
-export function centredTextShift(fontSize: number): number {
-    return fontSize * 0.35
 }
 
 // On a wide screen the grid gets room for its full reach, so the table keeps its size and the

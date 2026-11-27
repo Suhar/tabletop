@@ -143,15 +143,46 @@
     .card {
         margin: 0 8px 8px;
         padding: 12px 16px;
-        border-radius: 10px;
+        clip-path: var(--conduit-cut);
         background: var(--conduit-panel);
         box-shadow: inset 0 0 0 1px var(--conduit-line);
     }
 
     /* Beside the auction, the table fits the height left below this card; one height for every
-       prompt keeps the table, and so the auction board, from rescaling at each turn. */
+       prompt keeps the table, and so the auction board, from rescaling at each turn. Buttons sit to
+       the right of the text, so that height stays low. */
     .steady {
-        min-height: 140px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        /* Up to three lines of text between two spacers, so the text centres beside the buttons. */
+        grid-template-rows: 1fr auto auto auto 1fr;
+        align-items: center;
+        column-gap: 16px;
+        min-height: 76px;
+    }
+
+    .steady > p,
+    .steady > ol {
+        grid-column: 1;
+    }
+
+    .steady > p:nth-of-type(1) {
+        grid-row: 2;
+    }
+
+    .steady > p:nth-of-type(2),
+    .steady > ol {
+        grid-row: 3;
+    }
+
+    .steady > p:nth-of-type(3) {
+        grid-row: 4;
+    }
+
+    .steady > .buttons {
+        grid-column: 2;
+        grid-row: 1 / -1;
+        margin-top: 0;
     }
 
     .settling {
@@ -159,14 +190,18 @@
     }
 
     .prompt {
+        font-family: var(--conduit-display);
         font-size: 18px;
-        font-weight: 600;
+        letter-spacing: 0.03em;
         line-height: 1.3;
     }
 
     .detail {
         margin-top: 2px;
-        font-size: 14px;
+        font-family: var(--conduit-readout);
+        -webkit-text-stroke: 0.4px currentColor;
+        font-size: 16px;
+        letter-spacing: 0.08em;
         color: var(--conduit-muted);
     }
 
@@ -177,24 +212,34 @@
         margin-top: 10px;
     }
 
+    /* The mono, thickened: OCR-A's wide letters crowd these buttons. */
     .choice {
         padding: 6px 16px;
-        border-radius: 6px;
+        border-radius: 2px;
+        font-family: var(--conduit-readout);
+        -webkit-text-stroke: 0.4px currentColor;
         font-size: 15px;
-        font-weight: 700;
-        color: var(--conduit-ink);
-        background: var(--conduit-panel-raised);
-        box-shadow: inset 0 0 0 1px var(--conduit-line);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #cfefff;
+        background: #081a33;
+        box-shadow: inset 0 0 0 1px var(--conduit-accent);
+    }
+
+    .choice:hover {
+        background: #0b2a4f;
     }
 
     .choice.focused {
-        box-shadow: inset 0 0 0 2px var(--conduit-live);
+        box-shadow:
+            inset 0 0 0 2px var(--conduit-live),
+            0 0 10px var(--conduit-glow);
     }
 
     .choice.buy {
         color: var(--conduit-accent-ink);
         background: var(--conduit-accent);
-        box-shadow: none;
+        box-shadow: 0 0 10px var(--conduit-glow);
     }
 
     .choice:disabled {
