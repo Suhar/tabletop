@@ -13,6 +13,7 @@
     import { ConduitGameSession } from '$lib/model/session.svelte'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import Header from './Header.svelte'
+    import RoundReadout from './RoundReadout.svelte'
     import ActionArea from './action/ActionArea.svelte'
     import RulesPanel from './RulesPanel.svelte'
     import Table from './table/Table.svelte'
@@ -66,13 +67,16 @@
 >
     <DefaultTableLayout>
         {#snippet mobileControlsContent()}
-            <div class="controls">
-                <HistoryControls
-                    borderClass=""
-                    bgClass="bg-transparent"
-                    enabledColor="conduit-control-on"
-                    disabledColor="conduit-control-off"
-                />
+            <div class="controls flex items-center gap-2 pe-2">
+                <div class="min-w-0 grow">
+                    <HistoryControls
+                        borderClass=""
+                        bgClass="bg-transparent"
+                        enabledColor="conduit-control-on"
+                        disabledColor="conduit-control-off"
+                    />
+                </div>
+                <RoundReadout compact />
             </div>
         {/snippet}
         {#snippet sideContent()}

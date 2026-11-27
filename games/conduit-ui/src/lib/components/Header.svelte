@@ -1,22 +1,27 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import RoundReadout from './RoundReadout.svelte'
 
     const gameSession = getGameSession()
     const turnPlayerId = $derived(gameSession.gameState.activePlayerIds[0])
 </script>
 
 <div class="header">
-    <div class="tag">
-        {#if gameSession.isViewingHistory}
-            History
-        {:else if gameSession.gameState.result}
-            End of game
-        {:else if gameSession.isMyTurn}
-            Your turn
-        {:else if turnPlayerId}
-            <PlayerName playerId={turnPlayerId} possessive={true} /> turn
-        {/if}
+    <div class="status">
+        <div class="tag">
+            {#if gameSession.isViewingHistory}
+                History
+            {:else if gameSession.gameState.result}
+                End of game
+            {:else if gameSession.isMyTurn}
+                Your turn
+            {:else if turnPlayerId}
+                <PlayerName playerId={turnPlayerId} possessive={true} /> turn
+            {/if}
+        </div>
+        <!-- Phones show it in the history controls row instead: the header has no room. -->
+        <div class="wide-only"><RoundReadout /></div>
     </div>
     <div class="buttons">
         <button
@@ -52,6 +57,13 @@
         gap: 8px;
         height: 44px;
         padding: 0 12px;
+    }
+
+    .status {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        min-width: 0;
     }
 
     /* Lit up, with a green status light. */
@@ -126,9 +138,17 @@
             padding: 0 8px;
         }
 
+        .wide-only {
+            display: none;
+        }
+
         .tag {
             font-size: 14px;
             letter-spacing: 0.02em;
+        }
+
+        .status {
+            gap: 6px;
         }
 
         .tag::before {
