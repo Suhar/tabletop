@@ -58,7 +58,7 @@ export function describeAction(action: GameAction, name: Name): string | undefin
     }
     if (isChooseRoute(action) && action.metadata) {
         const paid = new Map<string, number>()
-        for (const playerId of action.metadata.bonuses)
+        for (const playerId of action.metadata.bonuses ?? [])
             paid.set(playerId, (paid.get(playerId) ?? 0) + 1)
         const to = [...paid].map(([playerId, amount]) => `${name(playerId)} ${dollars(amount)}`)
         return `${who} chose the route from the ${stationTile(action.tileId).letter} station paying ${to.length > 0 ? to.join(', ') : 'no bonus'}`

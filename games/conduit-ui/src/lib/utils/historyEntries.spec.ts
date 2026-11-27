@@ -93,4 +93,19 @@ describe('history entries', () => {
             "P1's A tile: $4, bonuses P0 $2, P2 $1"
         ])
     })
+
+    it('reads a route choice saved before bonuses were named', () => {
+        const [entry] = historyItems(
+            [
+                action(ActionType.ChooseRoute, {
+                    playerId: 'p1',
+                    tileId: 3,
+                    route: [],
+                    metadata: { tolls: ['p0'] }
+                })
+            ],
+            name
+        ).filter((item) => item.kind === 'entry')
+        expect(entry.lines).toEqual(['P1 chose the route from the A station paying no bonus'])
+    })
 })
