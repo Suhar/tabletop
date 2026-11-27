@@ -42,7 +42,7 @@ type SessionOptions = ConstructorParameters<
     typeof GameSession<ConduitProjectedState, HydratedConduitGameState>
 >[0]
 
-export type StationRoute = { route: Route | undefined; amount: number; tolls: Payment[] }
+export type StationRoute = { route: Route | undefined; amount: number; bonuses: Payment[] }
 
 export type ShownRoute = { key: string; color: string; cells: OffsetCoordinates[] }
 
@@ -97,9 +97,9 @@ export class ConduitGameSession extends GameSession<
 
     readonly stationRoutes: Map<string, StationRoute> = $derived(
         new Map(
-            stationEarnings(this.tableState.board).map(({ station, route, amount, tolls }) => [
+            stationEarnings(this.tableState.board).map(({ station, route, amount, bonuses }) => [
                 cellKey(station.cell),
-                { route, amount, tolls }
+                { route, amount, bonuses }
             ])
         )
     )
@@ -112,7 +112,7 @@ export class ConduitGameSession extends GameSession<
             const earning = this.stationRoutes.get(cellKey(station.cell))
             if (!earning || station.ownerId === undefined) continue
             add(station.ownerId, earning.amount)
-            for (const toll of earning.tolls) add(toll.playerId, toll.amount)
+            for (const bonus of earning.bonuses) add(bonus.playerId, bonus.amount)
         }
         return totals
     })

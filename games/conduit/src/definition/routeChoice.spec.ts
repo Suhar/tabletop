@@ -9,7 +9,7 @@ import { Grid, type PlacedStation } from '../model/board.js'
 import { startTestGame } from '../testing/table.js'
 
 // Designer ruling, 2026-11-25: p0's D sits between p1's A and p2's A, one step away each. Both
-// routes pass two stations, one of them p0's own, so only the toll differs.
+// routes pass two stations, one of them p0's own, so only the bonus differs.
 const LetterIndex: Record<StationLetter, number> = { A: 0, B: 1, C: 2, D: 3 }
 
 function station(
@@ -70,12 +70,12 @@ describe('route choices', () => {
         expect(new Set(routes.map((route) => route.stations))).toEqual(new Set([2]))
     })
 
-    it('lets the owner choose when tied routes would pay tolls to different players', () => {
+    it('lets the owner choose when tied routes would pay bonuses to different players', () => {
         const state = stateWith(tie()).hydrated()
         const choices = state.findRouteChoices()
         expect(choices).toHaveLength(1)
         expect(choices[0].playerId).toBe('p0')
-        expect(choices[0].options.map((option) => option.tolls)).toEqual([['p1'], ['p2']])
+        expect(choices[0].options.map((option) => option.bonuses)).toEqual([['p1'], ['p2']])
     })
 
     it('offers no choice when every tied route pays the same players', () => {
@@ -83,7 +83,7 @@ describe('route choices', () => {
         expect(state.findRouteChoices()).toEqual([])
     })
 
-    it('pays the chosen route’s toll, then carries on to revenue', () => {
+    it('pays the chosen route’s bonus, then carries on to revenue', () => {
         const session = stateWith(tie())
         const choices = session.hydrated().findRouteChoices()
         session.edit((draft) => {
@@ -91,13 +91,13 @@ describe('route choices', () => {
             draft.routeChoices = choices
             draft.activePlayerIds = ['p0']
         })
-        const south = choices[0].options.findIndex((option) => option.tolls[0] === 'p2')
+        const south = choices[0].options.findIndex((option) => option.bonuses[0] === 'p2')
         const processed = session.chooseRoute(south, 'p0')
         const revenue = processed
             .find(isPayRevenue)
             ?.metadata?.revenues.find((paid) => paid.playerId === 'p0')
         expect(revenue?.route.at(-1)).toEqual({ col: 2, row: -1 })
-        expect(revenue?.tolls).toEqual([{ playerId: 'p2', amount: 1 }])
+        expect(revenue?.bonuses).toEqual([{ playerId: 'p2', amount: 1 }])
         expect(session.state.machineState).not.toBe(MachineState.ChoosingRoutes)
         expect(session.state.routeChoices).toBeUndefined()
     })

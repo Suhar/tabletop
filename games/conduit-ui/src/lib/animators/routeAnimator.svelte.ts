@@ -12,7 +12,7 @@ import {
     type StationRevenue
 } from '@tabletop/conduit'
 import type { Pace } from '$lib/model/routePace.svelte.js'
-import { emblemOutline } from '$lib/utils/emblem.js'
+import { emblemRing } from '$lib/utils/emblem.js'
 
 type Timeline = AnimationContext['actionTimeline']
 
@@ -29,7 +29,7 @@ export type RouteShow = {
     candidates: OffsetCoordinates[][]
     route: OffsetCoordinates[]
     amount: number
-    tolls: { cell: OffsetCoordinates; color: string; amount: number }[]
+    bonuses: { cell: OffsetCoordinates; color: string; amount: number }[]
     payments: { playerId: string; amount: number }[]
 }
 
@@ -112,7 +112,7 @@ export class RouteAnimator {
             const route = revenue.route.length > 1 ? revenue.route : []
             const candidates = search.candidates.length > 1 ? search.candidates : []
             const chose = from.routeChoices?.find((choice) => choice.tileId === station.tileId)
-            const tolls = revenue.tolls?.length
+            const bonuses = revenue.bonuses?.length
                 ? route.slice(1).flatMap((cell) => {
                       const passed = grid.stationAt(cell)
                       return passed?.ownerId !== undefined &&
@@ -139,7 +139,7 @@ export class RouteAnimator {
                     emblem: this.emblemOf(station),
                     caption: `${name}’s ${letter} → nearest ${search.target}`,
                     tie: chose
-                        ? `Tie: ${name} chose who gets the toll`
+                        ? `Tie: ${name} chose who gets the bonus`
                         : candidates.length > 0
                           ? this.tieRule(search.candidates)
                           : undefined,
@@ -160,10 +160,10 @@ export class RouteAnimator {
                         : candidates.map((candidate) => candidate.cells),
                     route,
                     amount: revenue.amount,
-                    tolls,
+                    bonuses,
                     payments: [
                         { playerId: revenue.playerId, amount: revenue.amount },
-                        ...(revenue.tolls ?? [])
+                        ...(revenue.bonuses ?? [])
                     ]
                 }
             ]
@@ -355,7 +355,7 @@ export class RouteAnimator {
 
     private emblemOf(station: PlacedStation): Emblem {
         return {
-            points: emblemOutline(stationTile(station.tileId).letter),
+            path: emblemRing(stationTile(station.tileId).letter),
             rotation: station.rotation * 90
         }
     }
@@ -383,4 +383,4 @@ export class RouteAnimator {
     }
 }
 
-export type Emblem = { points: string; rotation: number }
+export type Emblem = { path: string; rotation: number }

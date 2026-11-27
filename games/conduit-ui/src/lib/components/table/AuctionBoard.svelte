@@ -10,10 +10,10 @@
         trackCellOrigin,
         centredTextShift
     } from '$lib/utils/tableLayout.js'
-    import { tileFaceUrl } from '$lib/utils/tileArt.js'
     import { cubeShape, TrackCubeSize } from '$lib/utils/cubeShape.js'
     import { AuctionSpots, BasePrice, BidTrackSpaces } from '@tabletop/conduit'
     import Cube from './Cube.svelte'
+    import TileImage from './TileImage.svelte'
 
     const gameSession = getGameSession()
     const market = $derived(gameSession.tableState.market)
@@ -105,13 +105,12 @@
             {#if entry?.tileId !== undefined && gameSession.tableAnimator.flyingTile?.spot !== spot}
                 <g transform="translate({tileCentre.x} {tileCentre.y})">
                     <g data-market-tile={spot}>
-                        <image
-                            href={tileFaceUrl(entry.tileId)}
+                        <TileImage
+                            tileId={entry.tileId}
                             x={-TileInSpot / 2}
                             y={-TileInSpot / 2}
-                            width={TileInSpot}
-                            height={TileInSpot}
-                        ></image>
+                            size={TileInSpot}
+                        />
                         {#if entry.buyerId}
                             <g transform="translate(0 {-cube.height / 2})">
                                 <Cube

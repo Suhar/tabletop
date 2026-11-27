@@ -203,7 +203,7 @@ export class Grid {
         return { target, layers, candidates: [], route: undefined }
     }
 
-    // Tied routes may pay tolls to different players, so every one is kept.
+    // Tied routes may pay bonuses to different players, so every one is kept.
     bestRoutes(from: OffsetCoordinates): (Route & { own: number })[] {
         const start = this.stationAt(from)
         if (!start || !start.faceUp) {

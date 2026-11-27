@@ -45,7 +45,7 @@ Three players, the last tile of round 5.
 ## Route choice
 
 Four players, round 4, before revenue. Ada's D has two equally good routes (same length, same
-stations, same number of her own), one paying its $1 toll to Dev and one to Cleo, so she chooses
+stations, same number of her own), one paying its $1 bonus to Dev and one to Cleo, so she chooses
 (designer ruling, 2026-11-25). Her C station has a choice of its own after that.
 
 - Hover each button ("Dev +$1", "Cleo +$1"): the route flows on the board with a +$1 chip on the
